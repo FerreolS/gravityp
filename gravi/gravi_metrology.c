@@ -281,7 +281,7 @@ structTacConfiguration * metrology_makeDefaultTacConfiguration()
 {
     structTacConfiguration *defaultTacConfiguration;
     
-    defaultTacConfiguration = malloc((size_t) sizeof(structTacConfiguration));
+    defaultTacConfiguration = cpl_malloc((size_t) sizeof(structTacConfiguration));
     
     long tel, diode, side, comp, i;
     
@@ -343,7 +343,7 @@ structTacData * metrology_makeDefaultTacData()
     long tel, diode, idx, side, comp;
     structTacData *defaultTacData;
     
-    defaultTacData = malloc((size_t) sizeof(structTacData));
+    defaultTacData = cpl_malloc((size_t) sizeof(structTacData));
     
     defaultTacData->tacConfiguration = metrology_makeDefaultTacConfiguration();
     
@@ -1698,12 +1698,11 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
 
     
 
-	/* Init the TAC algorithm */
+	/* Init the TAC algorithm -- this allocate memory */
     structTacData * tacData;
     structTacConfiguration * tacConfiguration;
 
     tacData = metrology_makeDefaultTacData();
-
     tacConfiguration = tacData->tacConfiguration;
 
     /* Loop on time sample to run the TAC algorithm */
@@ -1814,6 +1813,10 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
 	FREE (cpl_free, flag_tel);
 	FREE (cpl_free, coher_tel_ft);
 	FREE (cpl_free, coher_tel_sc);
+
+    /* Free the TAC data */
+    FREE (cpl_free, tacConfiguration);
+    FREE (cpl_free, tacData);
 
     gravi_msg_function_exit(1);
 	return CPL_ERROR_NONE;

@@ -215,6 +215,7 @@ int gravi_calib_test(void){
     applist = gravi_compute_gain (flat_data, 4, dark_map);
 
 	gravi_data_delete(data);
+    cpl_propertylist_delete(applist);
 
 	/*
      * The bad pixel function.
@@ -392,9 +393,7 @@ int gravi_calib_test(void){
     		GRAVI_WAVE_DATA_SC_EXT));
 
     gravi_data_add_table (data_wave, plist, "OPL_TABLE", opl_table);
-    gravi_data_add_table (data_wave, plist, "P2VM_MET", p2vm_met);
-
-    cpl_propertylist_delete (plist);
+    gravi_data_add_table (data_wave, NULL, "P2VM_MET", p2vm_met);
 
     /* Compute wave test failure  */
 	test_pfailure(CPL_ERROR_NULL_INPUT, gravi_compute_wave(NULL, spectrum_data, GRAVI_FT),
@@ -435,7 +434,7 @@ int gravi_calib_test(void){
 
 //	gravi_data_delete(test);
 	gravi_data_delete(data);
-//	gravi_data_delete(data_wave);
+    gravi_data_delete(data_wave);
 
 
 	/*
