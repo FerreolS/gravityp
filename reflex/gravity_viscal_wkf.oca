@@ -1,0 +1,55 @@
+//*****************************************************
+//Classification
+//*****************************************************
+
+
+
+if PRO.CATG like "SINGLE_CAL_VIS" and INSTRUME=="GRAVITY" then 
+{
+  DO.CATG = "SINGLE_CAL_VIS";
+  EXEC.CATG = "VIS_TO_CALIB";
+  REFLEX.CATG = "SINGLE_CAL_VIS";
+  REFLEX.TARGET = "T";
+}
+
+if PRO.CATG like "SINGLE_SCI_VIS" and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "SINGLE_SCI_VIS";
+  EXEC.CATG = "VIS_TO_CALIB";
+  REFLEX.CATG = "SINGLE_SCI_VIS";
+  REFLEX.TARGET = "T";
+}
+
+if PRO.CATG like "DUAL_CAL_VIS" and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "DUAL_CAL_VIS";
+  EXEC.CATG = "VIS_TO_CALIB";
+  REFLEX.CATG = "DUAL_CAL_VIS";
+  REFLEX.TARGET = "T";
+}
+
+if PRO.CATG like "DUAL_SCI_VIS" and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "DUAL_SCI_VIS";
+  EXEC.CATG = "VIS_TO_CALIB";
+  REFLEX.CATG = "DUAL_SCI_VIS";
+  REFLEX.TARGET = "T";
+}
+
+//*****************************************************
+//Selection of actions and grouping
+//*****************************************************
+
+select execute(ACTION_VISCALIB) from inputFiles where EXEC.CATG == "VIS_TO_CALIB"
+  group by PRO.NIGHT.OBS;
+
+//*****************************************************
+//Definitions of actions 
+//*****************************************************
+
+action ACTION_VISCALIB
+{
+recipe gravi_all_viscal;
+product SINGLE_SCI_VIS_CALIBRATED {REFLEX.CATG =  "SINGLE_SCI_VIS_CALIBRATED"; PRO.CATG = " SINGLE_SCI_VIS_CALIBRATED"; PRO.EXT="single_sci_vis_calibrated.fits";}
+}
+

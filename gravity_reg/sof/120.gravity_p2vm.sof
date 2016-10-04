@@ -1,0 +1,15 @@
+001.gravity_dark.fits.1         DARK
+100.gravity_profile_map.fits.1  FLAT
+100.gravity_bad_map.fits.1        BAD
+110.gravity_wave.fits.1		WAVE
+$SOF_DATA/gravity/raw/P2VM/Flat_1.fits	FLAT_RAW
+$SOF_DATA/gravity/raw/P2VM/Flat_2.fits	FLAT_RAW
+$SOF_DATA/gravity/raw/P2VM/Flat_3.fits	FLAT_RAW
+$SOF_DATA/gravity/raw/P2VM/Flat_4.fits	FLAT_RAW
+$SOF_DATA/gravity/raw/P2VM/P2vm_1.fits	P2VM_RAW
+$SOF_DATA/gravity/raw/P2VM/P2vm_2.fits	P2VM_RAW
+$SOF_DATA/gravity/raw/P2VM/P2vm_3.fits	P2VM_RAW
+$SOF_DATA/gravity/raw/P2VM/P2vm_4.fits	P2VM_RAW
+$SOF_DATA/gravity/raw/P2VM/P2vm_5.fits	P2VM_RAW
+$SOF_DATA/gravity/raw/P2VM/P2vm_6.fits	P2VM_RAW
+$SOF_DATA/gravity/raw/P2VM/Wave.fits	WAVE_RAW

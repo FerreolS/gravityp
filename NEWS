@@ -1,0 +1,29 @@
+
+Last changes in the pipeline
+****************************
+
+
+
+2016/06/01 : r181290 : Weight the average of TF by the 1/sigma2, so that TF points with poor 
+	quality are discarded.
+
+2015/12/24 : r181259 : Implement the force-calib option in recipe gravi_all_viscal
+
+2015/12/21 : r181201 : The recipe gravi_all_viscal now accept a new option delta-time-calib=XXX [s],
+	to choose the smoothing time for the TF interpolation (was 10h, now default is 1h)
+
+------------------------------------------
+20115/12/17 : r181063 : New version 0.7.8
+------------------------------------------
+
+2015/12/15 : r180965 : Revers the UV plane to follow OIFITS convention.
+
+2015/12/09 - r180729 : in gravi_compute_p2vm : take the GD into acccount to compute
+	the coherence of the p2vm. In gravi_array_smooth compute the average instead ot the sum.
+
+2015/12/07 - r180674 : Add the option --debias_sc and --debias_ft in the recipe	gravi_single and
+	 gravi_dual to better track if the bias correction was used or not.
+
+-------------------------------------------------
+2015/12/03 - r180593 : move to ESO svn repository
+-------------------------------------------------

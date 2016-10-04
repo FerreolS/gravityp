@@ -1,0 +1,7 @@
+001.gravity_dark.fits.1         DARK
+100.gravity_profile_map.fits.1  FLAT
+100.gravity_bad_map.fits.1        BAD
+110.gravity_wave.fits.1         WAVE
+120.gravity_p2vm.fits.1	P2VM
+$SOF_DATA/gravity/raw/SCIENCE/Wave_SINGLE_CALIB_RAW0.fits 	SINGLE_CALIB_RAW
+$SOF_DATA/gravity/raw/SCIENCE/Wave_SINGLE_CALIB_RAW1.fits 	 SINGLE_CALIB_RAW

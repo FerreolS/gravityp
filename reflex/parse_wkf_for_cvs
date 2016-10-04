@@ -1,0 +1,79 @@
+#!/bin/sh
+
+cp gravity_viscal.xml gravity_viscal.xml.for_svn
+wkf_file=gravity_viscal.xml.for_svn
+
+# Input directories
+sed -i -e 's#\(<property name="ROOT_DATA_DIR" class="ptolemy.data.expr.FileParameter" value="\).*">#\1ROOT_DATA_PATH_TO_REPLACE/">#' $wkf_file
+sed -i -e 's#\(<property name="CALIB_DATA_DIR" class="ptolemy.data.expr.FileParameter" value="\).*">#\1CALIB_DATA_PATH_TO_REPLACE/gravity-@VERSION@/">#' $wkf_file
+sed -i -e 's#\(<property name="RAWDATA_DIR" class="ptolemy.data.expr.FileParameter" value="\).*">#\1$ROOT_DATA_DIR/reflex_input/gravity">#' $wkf_file
+
+# Working directories
+sed -i -e 's#\(<property name="BOOKKEEPING_DIR" class="ptolemy.data.expr.FileParameter" value="\).*">#\1$ROOT_DATA_DIR/reflex_book_keeping/gravity">#' $wkf_file
+sed -i -e 's#\(<property name="LOGS_DIR" class="ptolemy.data.expr.FileParameter" value="\).*">#\1$ROOT_DATA_DIR/reflex_logs/gravity">#' $wkf_file
+sed -i -e 's#\(<property name="TMP_PRODUCTS_DIR" class="ptolemy.data.expr.FileParameter" value="\).*">#\1$ROOT_DATA_DIR/reflex_tmp_products/gravity">#' $wkf_file
+
+# Output directories
+sed -i -e 's#\(<property name="END_PRODUCTS_DIR" class="ptolemy.data.expr.FileParameter" value="\).*">#\1$ROOT_DATA_DIR/reflex_end_products">#' $wkf_file
+
+# OCA rule file location
+sed -i -e 's#\(<property name="OCA File" class="ptolemy.data.expr.FileParameter" value="\).*">#\1@prefix@/share/esopipes/gravity-@VERSION@/reflex/gravity_viscal_wkf.oca">#' $wkf_file
+
+# Python scripts location
+sed -i -e 's#\(<property name="Python script" class="ptolemy.data.expr.FileParameter" value="\).*gravity_viscal_interact.py">#\1@prefix@/share/esopipes/gravity-@VERSION@/reflex/gravity_viscal_interact.py">#' $wkf_file
+
+# Workflow title 
+sed -i "s%Gravity Visibility Calibration Workflow (v\. [0-9]\.[0-9]\.[0-9])%Gravity Visibility Calibration Workflow (v\. @VERSION@)%g" $wkf_file
+sed -i "s%Gravity Visibility Calibration Workflow (v\. [0-9]\.[0-9]\.[0-9][0-9])%Gravity Visibility Calibration Workflow (v\. @VERSION@)%g" $wkf_file
+
+# Leftover hardcoded paths
+sed -i -e 's#\(<property name="Directory name" class="ptolemy.actor.parameters.PortParameter" value="\).*">#\1">#' $wkf_file
+sed -i -e 's#\(<entity name="Write README" class="org.geon.FileWrite">\n<property name="fileName" class="ptolemy.actor.parameters.FilePortParameter" value="\).*">#\1">#' $wkf_file
+
+#A graphical diff view like kdiff3 can be used instead of a plain diff
+meld gravity_viscal.xml.for_svn gravity_viscal.xml.in 
+#Print message
+echo "Check the file svn_diff to see the differences with respect to CVS"
+echo "If you are satisfied, execute the following commands:"
+echo "cp -f gravity_viscal.xml.for_svn gravity_viscal.xml.in"
+echo "svn ci gravity_viscal.xml.in"
+
+
+cp gravity_wkf.xml gravity_wkf.xml.for_svn
+wkf_file=gravity_wkf.xml.for_svn
+
+# Input directories
+sed -i -e 's#\(<property name="ROOT_DATA_DIR" class="ptolemy.data.expr.FileParameter" value="\).*">#\1ROOT_DATA_PATH_TO_REPLACE/">#' $wkf_file
+sed -i -e 's#\(<property name="CALIB_DATA_DIR" class="ptolemy.data.expr.FileParameter" value="\).*">#\1CALIB_DATA_PATH_TO_REPLACE/gravity-@VERSION@/">#' $wkf_file
+sed -i -e 's#\(<property name="RAWDATA_DIR" class="ptolemy.data.expr.FileParameter" value="\).*">#\1$ROOT_DATA_DIR/reflex_input/gravity">#' $wkf_file
+
+# Working directories
+sed -i -e 's#\(<property name="BOOKKEEPING_DIR" class="ptolemy.data.expr.FileParameter" value="\).*">#\1$ROOT_DATA_DIR/reflex_book_keeping/gravity">#' $wkf_file
+sed -i -e 's#\(<property name="LOGS_DIR" class="ptolemy.data.expr.FileParameter" value="\).*">#\1$ROOT_DATA_DIR/reflex_logs/gravity">#' $wkf_file
+sed -i -e 's#\(<property name="TMP_PRODUCTS_DIR" class="ptolemy.data.expr.FileParameter" value="\).*">#\1$ROOT_DATA_DIR/reflex_tmp_products/gravity">#' $wkf_file
+
+# Output directories
+sed -i -e 's#\(<property name="END_PRODUCTS_DIR" class="ptolemy.data.expr.FileParameter" value="\).*">#\1$ROOT_DATA_DIR/reflex_end_products">#' $wkf_file
+
+# OCA rule file location
+sed -i -e 's#\(<property name="OCA File" class="ptolemy.data.expr.FileParameter" value="\).*">#\1@prefix@/share/esopipes/gravity-@VERSION@/reflex/gravity_wkf.oca">#' $wkf_file
+
+# Python scripts location
+sed -i -e 's#\(<property name="Python script" class="ptolemy.data.expr.FileParameter" value="\).*gravity_viscal_interact.py">#\1@prefix@/share/esopipes/gravity-@VERSION@/reflex/gravity_viscal_interact.py">#' $wkf_file
+
+# Workflow title 
+sed -i "s%Gravity Science Workflow (v\. [0-9]\.[0-9]\.[0-9])%Gravity Science Workflow (v\. @VERSION@)%g" $wkf_file
+sed -i "s%Gravity Science Workflow (v\. [0-9]\.[0-9]\.[0-9][0-9])%Gravity Science Workflow (v\. @VERSION@)%g" $wkf_file
+
+# Leftover hardcoded paths
+sed -i -e 's#\(<property name="Directory name" class="ptolemy.actor.parameters.PortParameter" value="\).*">#\1">#' $wkf_file
+sed -i -e 's#\(<entity name="Write README" class="org.geon.FileWrite">\n<property name="fileName" class="ptolemy.actor.parameters.FilePortParameter" value="\).*">#\1">#' $wkf_file
+
+#A graphical diff view like kdiff3 can be used instead of a plain diff
+meld gravity_wkf.xml.for_svn gravity_wkf.xml.in
+#Print message
+echo "Check the file svn_diff to see the differences with respect to CVS"
+echo "If you are satisfied, execute the following commands:"
+echo "cp -f gravity_wkf.xml.for_svn gravity_wkf.xml.in"
+echo "svn ci gravity_wkf.xml.in"
+

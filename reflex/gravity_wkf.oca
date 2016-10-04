@@ -1,0 +1,252 @@
+//*****************************************************
+//Classification
+//*****************************************************
+
+// Raw data
+if DPR.CATG like "%SCIENCE%" and DPR.TYPE like "%OBJECT%" and DPR.TYPE like "%SINGLE%" and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "SINGLE_SCIENCE_RAW";
+  REFLEX.CATG = "SINGLE_SCIENCE_RAW";
+  RAW.TYPE = "SINGLE_SCIENCE_RAW";
+  REFLEX.TARGET = "T";
+}
+
+if (DPR.CATG like "%CALIB%" or DPR.CATG like "%SCIENCE%") and DPR.TYPE like "%SKY%" and and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "SINGLE_SKY_RAW";
+  REFLEX.CATG = "SINGLE_SKY_RAW";
+  RAW.TYPE = "SINGLE_SKY_RAW";
+  REFLEX.TARGET = "T";
+}
+
+if DPR.CATG like "%CALIB%" and DPR.TYPE like "%OBJECT%" and DPR.TYPE like "%SINGLE%" and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "SINGLE_CALIB_RAW";
+  REFLEX.CATG = "SINGLE_CALIB_RAW";
+  REFLEX.TARGET = "T";
+}
+
+if DPR.CATG like "%SCIENCE%"  and DPR.TYPE like "%OBJECT%" and DPR.TYPE like "%DUAL%" and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "DUAL_SCIENCE_RAW";
+  REFLEX.CATG = "DUAL_SCIENCE_RAW";
+  RAW.TYPE = "DUAL_SCIENCE_RAW";
+  REFLEX.TARGET = "T";
+}
+
+if DPR.CATG like "%CALIB%" and DPR.TYPE like "%OBJECT%" and DPR.TYPE like "%DUAL%" and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "DUAL_CALIB_RAW";
+  REFLEX.CATG = "DUAL_CALIB_RAW";
+  REFLEX.TARGET = "T";
+}
+
+if (DPR.CATG like "%CALIB%" or DPR.CATG like "%SCIENCE%") and DPR.TYPE like "%SKY%" and DPR.TYPE like "%DUAL%" and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "DUAL_SKY_RAW";
+  REFLEX.CATG = "DUAL_SKY_RAW";
+  REFLEX.TARGET = "T";
+}
+
+if DPR.CATG like "%CALIB%" and DPR.TECH like "%INTERFEROMETRY%" and DPR.TYPE like "%DARK%" and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "DARK_RAW";
+  REFLEX.CATG = "DARK_RAW";
+  RAW.TYPE = "DARK_RAW";
+}
+
+if DPR.CATG like "%CALIB%" and DPR.TECH like "%INTERFEROMETRY%" and DPR.TYPE like "%FLAT%" and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "FLAT_RAW";
+  REFLEX.CATG = "FLAT_RAW";
+}
+
+if DPR.CATG like "%CALIB%" and DPR.TECH like "%INTERFEROMETRY%" and DPR.TYPE like "WAVE" and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "WAVE_RAW";
+  REFLEX.CATG = "WAVE_RAW";
+}
+
+if DPR.CATG like "%CALIB%" and DPR.TECH like "%INTERFEROMETRY%" and DPR.TYPE like "%DARK%" and TPL.NAME like "%P2VM%" and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "DARK_RAW";
+  RAW.TYPE = "P2VM_DARK";
+  REFLEX.CATG = "DARK_RAW";
+}
+
+if DPR.CATG like "%CALIB%" and DPR.TECH like "%INTERFEROMETRY%" and DPR.TYPE like "%FLAT%" and TPL.NAME like "%P2VM%" and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "FLAT_RAW";
+  RAW.TYPE = "P2VM_CAL";
+  REFLEX.CATG = "FLAT_RAW";
+}
+
+if DPR.CATG like "%CALIB%" and DPR.TECH like "%INTERFEROMETRY%" and DPR.TYPE=="WAVE" and TPL.NAME like "%P2VM%"and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "WAVE_RAW";
+  RAW.TYPE = "P2VM_CAL";
+  REFLEX.CATG = "WAVE_RAW";
+}
+
+if DPR.CATG like "%CALIB%" and DPR.TECH like "%INTERFEROMETRY%" and DPR.TYPE like "WAVESC" and TPL.NAME like "%P2VM%"and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "WAVESC_RAW";
+  RAW.TYPE = "P2VM_CAL";
+  REFLEX.CATG = "WAVESC_RAW";
+}
+
+if DPR.CATG like "%CALIB%" and DPR.TECH like "%INTERFEROMETRY%" and DPR.TYPE like "%P2VM%" and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "P2VM_RAW";
+  RAW.TYPE = "P2VM_CAL";
+  REFLEX.CATG = "P2VM_RAW";
+}
+
+// Product
+if PRO.CATG like "%DARK%" then
+{
+  DO.CATG = "DARK";
+}
+
+if PRO.CATG like "%FLAT%" then
+{
+  DO.CATG = "FLAT";
+}
+
+if PRO.CATG like "%WAVE%" then
+{
+  DO.CATG = "WAVE";
+}
+
+if PRO.CATG like "%P2VM%" then
+{
+  DO.CATG = "P2VM";
+}
+
+//*****************************************************
+//Selection of actions and grouping
+//*****************************************************
+
+select execute(ACTION_CALIB_DARK) from inputFiles where RAW.TYPE == "DARK_RAW"
+  group by DET2.SEQ1.DIT, DET3.SEQ1.DIT, INS.SPEC.RES, INS.POLA.MODE, TPL.START;
+
+select execute(ACTION_CALIB_DARK_P2VM) from inputFiles where RAW.TYPE == "P2VM_DARK"
+  group by DET2.SEQ1.DIT, DET3.SEQ1.DIT, INS.SPEC.RES, INS.POLA.MODE, TPL.START;
+
+select execute(ACTION_CALIB_P2VM) from inputFiles where RAW.TYPE == "P2VM_CAL"
+  group by DET2.SEQ1.DIT, DET3.SEQ1.DIT, INS.SPEC.RES, INS.POLA.MODE, TPL.START;
+
+select execute(ACTION_SCIENCE_SINGLE) from inputFiles where RAW.TYPE == "SINGLE_SCIENCE_RAW"
+  group by DET2.SEQ1.DIT, DET3.SEQ1.DIT, INS.SPEC.RES, INS.POLA.MODE, TPL.START;
+
+select execute(ACTION_CALIB_SINGLE) from inputFiles where RAW.TYPE == "SINGLE_CALIB_RAW"
+  group by DET2.SEQ1.DIT, DET3.SEQ1.DIT, INS.SPEC.RES, INS.POLA.MODE, TPL.START;
+
+select execute(ACTION_SCIENCE_DUAL) from inputFiles where RAW.TYPE == "DUAL_SCIENCE_RAW"
+  group by DET2.SEQ1.DIT, DET3.SEQ1.DIT, INS.SPEC.RES, INS.POLA.MODE, TPL.START;
+
+select execute(ACTION_CALIB_DUAL) from inputFiles where RAW.TYPE == "DUAL_CALIB_RAW"
+  group by DET2.SEQ1.DIT, DET3.SEQ1.DIT, INS.SPEC.RES, INS.POLA.MODE, TPL.START;
+
+
+//*****************************************************
+//Definitions of actions 
+//*****************************************************
+
+action ACTION_CALIB_DARK
+{
+recipe gravity_dark;
+product DARK { PRO.CATG = "DARK"; PRO.EXT="dark.fits";}
+}
+
+action ACTION_CALIB_DARK_P2VM
+{
+recipe gravity_dark;
+product DARK_P2VM { PRO.CATG = "DARK_P2VM"; PRO.EXT="dark.fits";}
+}
+
+action ACTION_CALIB_P2VM
+{
+minRet = 1; maxRet = 1;
+select file as DARK from calibFiles where PRO.CATG == "DARK_P2VM" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.DET2.SEQ1.DIT==DET2.SEQ1.DIT and inputFile.DET3.SEQ1.DIT==DET3.SEQ1.DIT and inputFile.INS.FDDL.WINDOW==INS.FDDL.WINDOW and inputFile.INSTRUME==INSTRUME;
+
+recipe gravity_p2vm;
+//product DARK { PRO.CATG = "DARK"; PRO.EXT="dark.fits";}
+product FLAT { PRO.CATG = "FLAT"; PRO.EXT="flat.fits";}
+product WAVE { PRO.CATG = "WAVE"; PRO.EXT="wave.fits";}
+product P2VM { PRO.CATG = "P2VM"; PRO.EXT="p2vm.fits";}
+}
+
+
+action ACTION_SCIENCE_SINGLE
+{
+minRet = 0; maxRet = 1;
+select file as DARK from calibFiles where PRO.CATG == "DARK" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.DET2.SEQ1.DIT==DET2.SEQ1.DIT and inputFile.DET3.SEQ1.DIT==DET3.SEQ1.DIT and inputFile.INS.FDDL.WINDOW==INS.FDDL.WINDOW and inputFile.INSTRUME==INSTRUME;
+
+minRet = 1; maxRet = 1;
+select file as FLAT from calibFiles where PRO.CATG == "FLAT" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.INSTRUME==INSTRUME;
+
+minRet = 1; maxRet = 1;
+select file as WAVE from calibFiles where PRO.CATG == "WAVE" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.INSTRUME==INSTRUME;
+
+minRet = 1; maxRet = 1;
+select file as P2VM from calibFiles where PRO.CATG == "P2VM" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.INSTRUME==INSTRUME;
+
+recipe gravity_vis;
+product SINGLE_SCI_VIS { PRO.CATG = "SINGLE_SCI_VIS"; PRO.EXT="single_sci_vis.fits";}
+}
+
+action ACTION_CALIB_SINGLE
+{
+minRet = 0; maxRet = 1;
+select file as DARK from calibFiles where PRO.CATG == "DARK" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.DET2.SEQ1.DIT==DET2.SEQ1.DIT and inputFile.DET3.SEQ1.DIT==DET3.SEQ1.DIT and inputFile.INS.FDDL.WINDOW==INS.FDDL.WINDOW and inputFile.INSTRUME==INSTRUME;
+
+minRet = 1; maxRet = 1;
+select file as FLAT from calibFiles where PRO.CATG == "FLAT" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.INSTRUME==INSTRUME;
+
+minRet = 1; maxRet = 1;
+select file as WAVE from calibFiles where PRO.CATG == "WAVE" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.INSTRUME==INSTRUME;
+
+minRet = 1; maxRet = 1;
+select file as P2VM from calibFiles where PRO.CATG == "P2VM" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.INSTRUME==INSTRUME;
+
+recipe gravity_vis;
+product SINGLE_CAL_VIS { PRO.CATG = "SINGLE_CAL_VIS"; PRO.EXT="single_cal_vis.fits";}
+}
+
+action ACTION_SCIENCE_DUAL
+{
+minRet = 0; maxRet = 1;
+select file as DARK from calibFiles where PRO.CATG == "DARK" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.DET2.SEQ1.DIT==DET2.SEQ1.DIT and inputFile.DET3.SEQ1.DIT==DET3.SEQ1.DIT and inputFile.INS.FDDL.WINDOW==INS.FDDL.WINDOW and inputFile.INSTRUME==INSTRUME;
+
+minRet = 1; maxRet = 1;
+select file as FLAT from calibFiles where PRO.CATG == "FLAT" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.INSTRUME==INSTRUME;
+
+minRet = 1; maxRet = 1;
+select file as WAVE from calibFiles where PRO.CATG == "WAVE" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.INSTRUME==INSTRUME;
+
+minRet = 1; maxRet = 1;
+select file as P2VM from calibFiles where PRO.CATG == "P2VM" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.INSTRUME==INSTRUME;
+
+recipe gravity_vis;
+product DUAL_SCI_VIS { PRO.CATG = "DUAL_SCI_VIS"; PRO.EXT="dual_sci_vis.fits";}
+}
+
+action ACTION_CALIB_DUAL
+{
+minRet = 0; maxRet = 1;
+select file as DARK from calibFiles where PRO.CATG == "DARK" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.DET2.SEQ1.DIT==DET2.SEQ1.DIT and inputFile.DET3.SEQ1.DIT==DET3.SEQ1.DIT and inputFile.INS.FDDL.WINDOW==INS.FDDL.WINDOW and inputFile.INSTRUME==INSTRUME;
+
+minRet = 1; maxRet = 1;
+select file as FLAT from calibFiles where PRO.CATG == "FLAT" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.INSTRUME==INSTRUME;
+
+minRet = 1; maxRet = 1;
+select file as WAVE from calibFiles where PRO.CATG == "WAVE" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.INSTRUME==INSTRUME;
+
+minRet = 1; maxRet = 1;
+select file as P2VM from calibFiles where PRO.CATG == "P2VM" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.INSTRUME==INSTRUME;
+
+recipe gravity_vis;
+product DUAL_CAL_VIS { PRO.CATG = "DUAL_CAL_VIS"; PRO.EXT="dual_cal_vis.fits";}
+}
+

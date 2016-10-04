@@ -1,0 +1,5 @@
+001.gravity_dark.fits.1 	DARK
+$SOF_DATA/gravity/raw/FLAT/Flat_1.fits	FLAT_RAW
+$SOF_DATA/gravity/raw/FLAT/Flat_2.fits	FLAT_RAW
+$SOF_DATA/gravity/raw/FLAT/Flat_3.fits	FLAT_RAW
+$SOF_DATA/gravity/raw/FLAT/Flat_4.fits	FLAT_RAW

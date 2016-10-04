@@ -1,0 +1,156 @@
+-------------------------------
+Columns in the OI_VIS of the SC
+
+TARGET_ID : id listed in OI_TARGET
+TIME [usec] : timestamp
+MJD [day] : 
+INT_TIME [s] : integration time of this frame
+VISERR [e,e] : complex error on the coherent flux spectra
+UCOORD [m] : uv-plane of this SC frame
+VCOORD [m] : uv-plane of this SC frame
+STA_INDEX : station index in the OI_ARRAY
+
+PHASE_MET_FC [rad] : unwrap FT-SC phase as computed by the DRS algorithm
+PHASE_MET_TEL [rad] : unwrap FT-SC phase as computed by the DRS algorithm, mean of 4 diodes
+OPD_MET_FC [m] : unwrap SC-FT delay as computed by the TAC algorihm
+OPD_MET_TEL [m] : unwrap SC-FT delay as computed by the TAC algorihm, 4 diodes
+
+VISDATA [e,e] : complex coherent flux spectra of SC in this frame
+PHASE_REF [rad] : reference phase, actually -1*arg{VISDATA_FT}, re-interpolated in the SC wavelength.
+OPD_DISP [m] : OPD introduced by fibers, including dispersion (OPD_MET_FC * n(lbd)).
+
+GDELAY [m] : real-time GD computed from VISDATA
+GDELAY_FT [m] : real-time GD computed from VISDATA_FT
+GDELAY_DISP [m] : GDELAY of 
+
+
+VISDATA_FT [e,e] : <VISDATA> spectra of FT (integrated in this SC frame)
+VISPOWER_FT [e^2] : <|VISDATA|^2> spectra of FT (integrated in this SC frame)
+VISVAR_FT [e^2] : <|VISERR|^2> spectra of FT (integrated in this SC frame)
+
+NFRAME_FT : number of averaged FT frame in this SC frame
+NFRAME_MET : number of averaged MET frame in this SC frame
+
+SNR : real-time SNR
+GDELAY_BOOT [m] : best GD estimate, accounting closing triangles
+SNR_BOOT : best SNR estimate, accounting closing triangles
+
+V_FACTOR_FT : measured visibility loss on the FT
+V_FACTOR : predicted visibility loss of this SC frame (re-interpolation of V_FACTOR_FT on the SC wavelengths)
+
+FRINGEDET_RATIO : fraction of FT frame accepted in this SC frame
+REJECTION_FLAG : this frame is accepted/rejected
+
+--------------------------------
+Columns in the OI_VIS of the SC
+
+STATE : baseline tracking state as reported by OPDC
+TARGET_PHASE [rad] : target phase of the loop, including the Sylvester modulation
+
+--------------------------------
+Columns in the OI_FLUX of the SC
+
+TARGET_ID : id listed in OI_TARGET
+TIME [usec] : timestamp
+MJD [day] : 
+INT_TIME [s] : integration time of this frame
+FLUX [e] : flux spectra
+FLUXERR [e] : error on flux spectra
+STA_INDEX : station index in the OI_ARRAY
+TOTALFLUX_SC [e] : total flux of SC in this SC frame (integrated over spectrum)
+TOTALFLUX_FT [e] : total flux of FT in this SC frame (integrated over spectrum)
+
+--------------------------------
+Columns in the OI_FLUX of the FT
+
+STATE : telescope state as reported by OPDC
+
+-------------------------
+Columns in the OI_VIS_MET
+
+PHASE_TEL [rad] : 4 diodes x 4 beams phases at telescope, unwrap by pipeline algorithm (FT-SC)
+PHASE_FC [rad] : 4 beams phases at combiner, unwrap by pipeline algorithm (FT-SC)
+OPD_TEL [m] : 4 diodes x 4 beams OPD at telescope, unwrap by TAC algorithm (SC-FT)
+OPD_FC [m] : 4 beams OPDs at telescope, unwrap by TAC algorithm (SC-FT)
+FLAG_FC, FLAG_TEL: flags computed by TAC algorithm
+VAMP_FC_FT, VAMP_FC_SC, VAMP_TEL_FT, VAMP_TEL_SC: Volt amplitude
+
+-------------------------
+Columns in the OPDC table
+
+TIME [usec] : timestamp
+PIEZO_DL_OFFSET
+VLTI_DL_OFFSET
+STATE : global fringe tracking state
+STEPS : target phase modulation per baseline (scrambled), in units of pi/8
+
+----------------------------------------
+HEADER information about target position
+
+FT.ROBJ.ALPHA
+FT.ROBJ.DELTA
+FT.ROBJ.EPOCH
+FT.ROBJ.EQUINOX
+FT.ROBJ.PARALLAX
+FT.ROBJ.PMA
+FT.ROBJ.PMD
+FT.ROBJ.MAG
+FT.ROBJ.DIAMETER
+FT.ROBJ.NAME
+
+INS.SOBJ.X
+INS.SOBJ.Y
+INS.SOBJ.DIAMETER
+INS.SOBJ.MAG
+INS.SOBJ.NAME
+
+And during a SWAP:
+
+FT.ROBJ.ALPHA/DELTA += INS.SOBJ.X/Y
+INS.SOBJ.XY *= -1
+INS.SOBJ.DIAMETER <=> INS.ROBJ.DIAMETER
+INS.SOBJ.MAG <=> INS.ROBJ.MAG
+INS.SOBJ.NAME <=> FT.ROBJ.NAME
+
+
+
+
+---------------------------------------------
+Discussion on how to use the P2VMREDUCED data
+
+VISDATA * exp(1J.PHASE_REF)  captures the SC and the FT differential measurement
+
+I checked that gdelay(VISDATA) - gdelay(VISDATA_FT) ~ gdelay(VISDATA * exp(1J.PHASE_REF))
+This is true to about 100nm.
+
+But how to add the metrology:
+
+The full offset is out of the coherence length (interferometric FOV),
+Thus we should store (part of) it in a pur delay column.
+But we cannot just store the MET as a pur delay since we have the dispersion
+
+Do we want the dispersion to be followed (changed) during the integration ??
+
+What do we integrate ??
+
+signal = VISDATA * exp(1J.PHASE_REF) * exp(1J.PHASE_MET) * exp(2pi.J.OPD_MET_FC/lbd)
+
+signal = <VISDATA * exp(1J.PHASE_REF)>  *  <OPD_MET_FC>
+
+
+So we need: a pur delay and a chromatic phase
+Or a chromatic delay
+
+Where do we apply or store the dispersion phase ??
+
+Not in PHASE_REF because I would like 
+   - we may like that it contains only the FT phase (for checks)
+
+PHASE_MET DELAY_MET
+
+
+signal = 
+
+
+
+

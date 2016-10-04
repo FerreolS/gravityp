@@ -1,0 +1,4 @@
+001.gravity_dark.fits.1 	DARK
+100.gravity_profile_map.fits.1	FLAT
+100.gravity_gravi_bad_map.fits.1	BAD
+$SOF_DATA/gravity/raw/WAVE/Wave.fits	WAVE_RAW
