@@ -170,8 +170,6 @@
 
 #define gravi_pfits_get_sc_dit(plist) gravi_pfits_get_dit(plist, GRAVI_SC)
 #define gravi_pfits_get_ft_dit(plist) gravi_pfits_get_dit(plist, GRAVI_FT)
-#define gravi_pfits_get_sc_period(plist) gravi_pfits_get_period(plist, GRAVI_SC)
-#define gravi_pfits_get_ft_period(plist) gravi_pfits_get_period(plist, GRAVI_FT)
 
 /*-----------------------------------------------------------------------------
                               Private prototypes
@@ -186,7 +184,7 @@ const char * gravi_pfits_get_prcacq_start(const cpl_propertylist * plist);
 double gravi_pfits_get_sc_time (const cpl_propertylist * header, cpl_size row);
 double gravi_pfits_get_fddlwindow(const cpl_propertylist * plist);
 double gravi_pfits_get_dit(const cpl_propertylist * plist, int i);
-double gravi_pfits_get_period(const cpl_propertylist * plist, int i);
+double gravi_pfits_get_sc_period (const cpl_propertylist * plist);
 double gravi_pfits_get_mjd(const cpl_propertylist * plist);
 
 double gravi_pfits_get_ft_gain (const cpl_propertylist * plist);

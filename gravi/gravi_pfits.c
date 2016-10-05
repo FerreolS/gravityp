@@ -390,20 +390,12 @@ double gravi_pfits_get_dit (const cpl_propertylist * plist, int type_data)
   return value;
 }
 
-double gravi_pfits_get_period (const cpl_propertylist * plist, int type_data)
+double gravi_pfits_get_sc_period (const cpl_propertylist * plist)
 {
   cpl_errorstate prestate = cpl_errorstate_get();
   double value = 0.0;
 
-  if ( type_data == GRAVI_SC ) {
-	value = cpl_propertylist_get_double(plist, "ESO INS TIM1 PERIOD");
-  }
-  else if ( type_data == GRAVI_FT ) {
-	value = cpl_propertylist_get_double(plist, "ESO INS TIM2 PERIOD");
-  }
-  else {
-	cpl_msg_warning(cpl_func,"Cannot read the TIM PERIOD for type_data=%i", type_data);
-  }
+  value = cpl_propertylist_get_double(plist, "ESO INS TIM1 PERIOD");
   
   cpl_ensure(cpl_errorstate_is_equal(prestate), cpl_error_get_code(), 0.0);
   return value;
