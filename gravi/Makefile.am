@@ -53,6 +53,7 @@ noinst_HEADERS =    gravi_calib.h \
                     gravi_p2vm.h \
                     gravi_preproc.h \
                     gravi_signal.h \
+                    gravi_disp.h \
                     gravi_eop.h
 
 pkginclude_HEADERS =
