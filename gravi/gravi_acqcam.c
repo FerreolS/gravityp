@@ -123,11 +123,11 @@ cpl_table * gravi_acqcam_table_create (cpl_imagelist * acqcam_imglist,
     cpl_ensure (header,         CPL_ERROR_NULL_INPUT, NULL);
 
     cpl_size ntel = 4, nzernick = 27;
-    cpl_size ndit = cpl_imagelist_get_size (acqcam_imglist);
+    cpl_size nrow = cpl_imagelist_get_size (acqcam_imglist);
 
     /* Here we shall build the table */
     cpl_table * output_table;
-    output_table = cpl_table_new (ndit * ntel);
+    output_table = cpl_table_new (nrow * ntel);
 
     /* Time column shall contain the time from PCR.ACQ.START in [us] */
     cpl_table_new_column (output_table, "TIME", CPL_TYPE_INT);
@@ -146,12 +146,21 @@ cpl_table * gravi_acqcam_table_create (cpl_imagelist * acqcam_imglist,
     cpl_table_new_column_array (output_table, "ABERATION", CPL_TYPE_DOUBLE, nzernick);
 
 
-    /* 
-     * FIXME: fill the table with measurments done in imagelist !!
-     */
+    /* Loop on DIT in cube */
+    for (cpl_size row = 0; row < nrow; row++) {
 
-    
-    
+        /* Fill the TIME column (same value for all beams) */
+        double time = gravi_pfits_get_time_acqcam (header, row);
+        for (int tel = 0; tel < ntel; tel ++)
+            cpl_table_set (output_table, "TIME", row*ntel+tel, time);
+        
+        /* 
+         * FIXME: fill the table with measurments done in imagelist !!
+         */
+        
+
+    } /* End loop on DIT in cube */
+
     return output_table;
 }
 
