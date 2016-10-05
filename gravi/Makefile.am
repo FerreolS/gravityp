@@ -44,6 +44,7 @@ noinst_HEADERS =    gravi_calib.h \
                     gravi_data.h \
                     gravi_image.h \
                     gravi_metrology.h \
+                    gravi_acqcam.h \
                     gravi-test.h \
                     gravi_cpl.h \
                     gravi_vis.h \
@@ -66,6 +67,7 @@ libgravi_la_SOURCES =    gravi_calib.c \
                          gravi_dfs.c \
                          gravi_data.c \
                          gravi_metrology.c \
+                         gravi_acqcam.c \
                          gravi_image.c \
                          gravi-test.c \
                          gravi_cpl.c \

@@ -44,7 +44,7 @@
 #include "gravi_cpl.h"
 #include "gravi_utils.h"
 
-#include "gravity_acqcam.h"
+#include "gravi_acqcam.h"
 
 /*-----------------------------------------------------------------------------
                                Private prototypes
@@ -71,7 +71,7 @@ cpl_table * gravi_acqcam_table_create (cpl_imagelist * acqcam_imglist,
 
 cpl_error_code gravi_reduce_acqcam (gravi_data * data)
 {
-    cpl_ensure (data, CPL_ERROR_NULL_INPUT, NULL);
+    cpl_ensure_code (data, CPL_ERROR_NULL_INPUT);
 
     /* Check if extension exist */
     if (!gravi_data_has_extension (data, GRAVI_IMAGING_DATA_ACQ_EXT)) {
@@ -81,7 +81,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * data)
 
     /* Get the data and header */
     cpl_imagelist * acqcam_imglist;
-    acqcam_imglist = gravi_data_get_table (data, GRAVI_IMAGING_DATA_ACQ_EXT);
+    acqcam_imglist = gravi_data_get_cube (data, GRAVI_IMAGING_DATA_ACQ_EXT);
 
     cpl_propertylist * data_header;
     data_header = gravi_data_get_header (data);
@@ -122,10 +122,35 @@ cpl_table * gravi_acqcam_table_create (cpl_imagelist * acqcam_imglist,
     cpl_ensure (acqcam_imglist, CPL_ERROR_NULL_INPUT, NULL);
     cpl_ensure (header,         CPL_ERROR_NULL_INPUT, NULL);
 
+    cpl_size ntel = 4, nzernick = 27;
     cpl_size ndit = cpl_imagelist_get_size (acqcam_imglist);
 
-    /* Here we shall build the table, 
-     * by calling the external */
+    /* Here we shall build the table */
+    cpl_table * output_table;
+    output_table = cpl_table_new (ndit * ntel);
+
+    /* Time column shall contain the time from PCR.ACQ.START in [us] */
+    cpl_table_new_column (output_table, "TIME", CPL_TYPE_INT);
+    cpl_table_set_column_unit (output_table, "TIME", "us");
+
+    /* Field positions (or we use array of 2) */
+    cpl_table_new_column (output_table, "FIELD_X", CPL_TYPE_DOUBLE);
+    cpl_table_new_column (output_table, "FIELD_Y", CPL_TYPE_DOUBLE);
+
+    /* Pupil positions (or we use array of 3)  */
+    cpl_table_new_column (output_table, "PUPIL_X", CPL_TYPE_DOUBLE);
+    cpl_table_new_column (output_table, "PUPIL_Y", CPL_TYPE_DOUBLE);
+    cpl_table_new_column (output_table, "PUPIL_Z", CPL_TYPE_DOUBLE);
+
+    /* Aberation as arrays of 27 coefficients */
+    cpl_table_new_column_array (output_table, "ABERATION", CPL_TYPE_DOUBLE, nzernick);
+
+
+    /* 
+     * FIXME: fill the table with measurments done in imagelist !!
+     */
+
+    
     
     return output_table;
 }
