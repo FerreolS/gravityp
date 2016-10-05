@@ -248,6 +248,7 @@ double gravi_pfits_get_double_silentdefault(const cpl_propertylist * plist, cons
 const char * gravi_pfits_get_string_default (const cpl_propertylist * plist, const char *name, const char *def);
 
 cpl_error_code gravi_pfits_add_check (cpl_propertylist * header, char *msg);
+cpl_error_code gravi_pfits_add_pipe_build (cpl_propertylist * header);
 
 cpl_error_code gravi_pfits_update_double (cpl_propertylist * plist, const char * name, double value);
 cpl_error_code gravi_pfits_update_int (cpl_propertylist * plist, const char * name, int value);

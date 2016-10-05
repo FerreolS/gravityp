@@ -1169,5 +1169,46 @@ cpl_error_code gravi_pfits_add_check (cpl_propertylist * header, char *msg)
   return CPL_ERROR_NONE;
 }
 
+/*---------------------------------------------------------------------------*/
+/**
+ * @brief Add the ESO PRO REC# PIPE LAST_BUILD in header
+ * 
+ * @param header: the propertylist to update (in-place)
+ *
+ * The header is updated with a string keyword 'ESO PRO REC# PIPE LAST_BUILD'
+ * where # is incremented to avoid overwriting the same keyword. The 
+ * value is set to __DATE__ __TIME__, which are compiler-macro with the last
+ * time of full rebuilt.
+ */
+/*---------------------------------------------------------------------------*/
+
+cpl_error_code gravi_pfits_add_pipe_build (cpl_propertylist * header)
+{
+  gravi_msg_function_start(0);
+  cpl_ensure_code (header, CPL_ERROR_NULL_INPUT);
+
+  char name[100];
+  char value[100];
+  
+  /* Increment counter until empty slot */
+  int i = 0;
+  do {
+      i++;
+      sprintf (name, "ESO PRO REC%i PIPE LAST_BUILD", i);
+  } while (cpl_propertylist_has (header, name));
+
+  /* Define the last build string */
+  sprintf (value, "%s %s", __DATE__,__TIME__);
+  cpl_msg_info (cpl_func, "%s = '%s'", name, value);
+  
+  /* Write into header */
+  cpl_propertylist_update_string (header, name, value);
+  cpl_propertylist_set_comment (header, name, "Last 'make clean all install'");
+  CPLCHECK_MSG ("Cannot add PIPE LAST_BUILD...");
+  
+  gravi_msg_function_exit(0);
+  return CPL_ERROR_NONE;
+}
+
 
 /**@}*/
