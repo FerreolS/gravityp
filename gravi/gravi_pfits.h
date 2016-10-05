@@ -168,8 +168,7 @@
 #define gravi_pfits_get_type_decep(plist,type) (type==GRAVI_SC?gravi_pfits_get_sobj_decep(plist):gravi_pfits_get_robj_decep(plist))
 #define gravi_pfits_get_type_raep(plist,type) (type==GRAVI_SC?gravi_pfits_get_sobj_raep(plist):gravi_pfits_get_robj_raep(plist))
 
-#define gravi_pfits_get_sc_dit(plist) gravi_pfits_get_dit(plist, GRAVI_SC)
-#define gravi_pfits_get_ft_dit(plist) gravi_pfits_get_dit(plist, GRAVI_FT)
+#define gravi_pfits_get_dit(plist, type) (type==GRAVI_SC ? gravi_pfits_get_dit_sc(plist) : gravi_pfits_get_dit_ft(plist))
 
 /*-----------------------------------------------------------------------------
                               Private prototypes
@@ -179,13 +178,22 @@
 const char * gravi_pfits_get_met_ph(const cpl_propertylist * );
 double gravi_pfits_get_metfc_lockmjd (const cpl_propertylist * plist, int tel);
 
-const char * gravi_pfits_get_tim1_start(const cpl_propertylist * plist);
-const char * gravi_pfits_get_prcacq_start(const cpl_propertylist * plist);
-double gravi_pfits_get_sc_time (const cpl_propertylist * header, cpl_size row);
-double gravi_pfits_get_fddlwindow(const cpl_propertylist * plist);
-double gravi_pfits_get_dit(const cpl_propertylist * plist, int i);
-double gravi_pfits_get_sc_period (const cpl_propertylist * plist);
-double gravi_pfits_get_mjd(const cpl_propertylist * plist);
+const char * gravi_pfits_get_start_sc (const cpl_propertylist * plist);
+const char * gravi_pfits_get_start_acqcam (const cpl_propertylist * plist);
+const char * gravi_pfits_get_start_prcacq (const cpl_propertylist * plist);
+
+double gravi_pfits_get_fddlwindow (const cpl_propertylist * plist);
+
+double gravi_pfits_get_period_sc (const cpl_propertylist * plist);
+double gravi_pfits_get_period_acqcam (const cpl_propertylist * plist);
+double gravi_pfits_get_dit_ft (const cpl_propertylist * plist);
+double gravi_pfits_get_dit_sc (const cpl_propertylist * plist);
+double gravi_pfits_get_dit_acqcam (const cpl_propertylist * plist);
+
+double gravi_pfits_get_time_sc (const cpl_propertylist * header, cpl_size row);
+double gravi_pfits_get_time_acqcam (const cpl_propertylist * header, cpl_size row);
+
+double gravi_pfits_get_mjd (const cpl_propertylist * plist);
 
 double gravi_pfits_get_ft_gain (const cpl_propertylist * plist);
 double gravi_pfits_get_sc_gain (const cpl_propertylist * plist);

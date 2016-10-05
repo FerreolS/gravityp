@@ -1318,7 +1318,7 @@ cpl_table * gravi_metrology_create (cpl_table * metrology_table, cpl_propertylis
 	cpl_table_set_column_unit (vis_met, "PHASE_TEL", "rad");
 	
 	const char * date = gravi_pfits_get_met_ph(header);
-	const char * acq_date = gravi_pfits_get_prcacq_start(header);
+	const char * acq_date = gravi_pfits_get_start_prcacq(header);
     CPLCHECK_NUL ("Cannot get dates");
     
     double k_phase[4]={0,0,0,0};
@@ -1756,7 +1756,7 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
 	
 	/* Get the TIME of the header reference phase */
 	const char * date = gravi_pfits_get_met_ph (header);
-	const char * acq_date = gravi_pfits_get_prcacq_start (header);
+	const char * acq_date = gravi_pfits_get_start_prcacq (header);
 	double time_ref = 86400*1e6*(gravi_convert_to_mjd (date) - gravi_convert_to_mjd (acq_date));
 	int * time_met = cpl_table_get_data_int (metrology_table, "TIME");
 

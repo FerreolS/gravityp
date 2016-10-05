@@ -86,43 +86,6 @@ int gravi_pfits_get_window_start (const cpl_propertylist * plist)
     return value;
 }
 
-double gravi_pfits_get_fddlwindow (const cpl_propertylist * plist)
-{
-	cpl_errorstate prestate = cpl_errorstate_get();
-    double value = cpl_propertylist_get_double(plist, "ESO INS FDDL WINDOW");
-    cpl_ensure(cpl_errorstate_is_equal(prestate), cpl_error_get_code(), 0.0);
-    return value;
-}
-
-double gravi_pfits_get_mjd (const cpl_propertylist * plist)
-{
-	cpl_errorstate prestate = cpl_errorstate_get();
-    double value = cpl_propertylist_get_double(plist, "MJD-OBS");
-    cpl_ensure (cpl_errorstate_is_equal(prestate), cpl_error_get_code(), 0.0);
-    return value;
-}
-
-const char * gravi_pfits_get_met_ph (const cpl_propertylist * plist)
-{
-	const char * tim1_start = cpl_propertylist_get_string(plist, "ESO OCS MET PH_DATE");
-	cpl_ensure (tim1_start != NULL, cpl_error_get_code(), NULL);
-    return tim1_start;
-}
-
-const char * gravi_pfits_get_tim1_start (const cpl_propertylist * plist)
-{
-	const char * tim1_start = cpl_propertylist_get_string(plist, "ESO INS TIM1 START");
-	cpl_ensure (tim1_start != NULL, cpl_error_get_code(), NULL);
-    return tim1_start;
-}
-
-const char * gravi_pfits_get_prcacq_start (const cpl_propertylist * plist)
-{
-	const char * acq_start = cpl_propertylist_get_string(plist, "ESO PCR ACQ START");
-	cpl_ensure (acq_start != NULL, cpl_error_get_code(), NULL);
-    return acq_start;
-}
-
 double gravi_pfits_get_diameter (const cpl_propertylist * plist, int type_data)
 {
     cpl_errorstate prestate = cpl_errorstate_get();
@@ -371,34 +334,101 @@ double gravi_pfits_get_robj_diam (const cpl_propertylist * plist)
     return value;
 }
 
-double gravi_pfits_get_dit (const cpl_propertylist * plist, int type_data)
-{
-  cpl_errorstate prestate = cpl_errorstate_get();
-  double value = 0.0;
 
-  if ( type_data == GRAVI_SC ) {
-	value = cpl_propertylist_get_double(plist, "ESO DET2 SEQ1 DIT");
-  }
-  else if ( type_data == GRAVI_FT ) {
-	value = cpl_propertylist_get_double(plist, "ESO DET3 SEQ1 DIT");
-  }
-  else {
-	cpl_msg_warning(cpl_func,"Cannot read the DET SEQ1 DIT for type_data=%i", type_data);
-  }
-  
-  cpl_ensure(cpl_errorstate_is_equal(prestate), cpl_error_get_code(), 0.0);
-  return value;
+/*-----------------------------------------------------------------------------
+                                 TIMING
+ -----------------------------------------------------------------------------*/
+
+double gravi_pfits_get_fddlwindow (const cpl_propertylist * plist)
+{
+	cpl_errorstate prestate = cpl_errorstate_get();
+    double value = cpl_propertylist_get_double(plist, "ESO INS FDDL WINDOW");
+    cpl_ensure(cpl_errorstate_is_equal(prestate), cpl_error_get_code(), 0.0);
+    return value;
 }
 
-double gravi_pfits_get_sc_period (const cpl_propertylist * plist)
+double gravi_pfits_get_mjd (const cpl_propertylist * plist)
 {
-  cpl_errorstate prestate = cpl_errorstate_get();
-  double value = 0.0;
+	cpl_errorstate prestate = cpl_errorstate_get();
+    double value = cpl_propertylist_get_double(plist, "MJD-OBS");
+    cpl_ensure (cpl_errorstate_is_equal(prestate), cpl_error_get_code(), 0.0);
+    return value;
+}
 
-  value = cpl_propertylist_get_double(plist, "ESO INS TIM1 PERIOD");
-  
-  cpl_ensure(cpl_errorstate_is_equal(prestate), cpl_error_get_code(), 0.0);
-  return value;
+const char * gravi_pfits_get_met_ph (const cpl_propertylist * plist)
+{
+	const char * tim1_start = cpl_propertylist_get_string(plist, "ESO OCS MET PH_DATE");
+	cpl_ensure (tim1_start != NULL, cpl_error_get_code(), NULL);
+    return tim1_start;
+}
+
+const char * gravi_pfits_get_start_sc (const cpl_propertylist * plist)
+{
+    /* SC = TIM1 = DET2 */
+	const char * tim1_start = cpl_propertylist_get_string(plist, "ESO INS TIM1 START");
+	cpl_ensure (tim1_start != NULL, cpl_error_get_code(), NULL);
+    return tim1_start;
+}
+
+const char * gravi_pfits_get_start_acqcam (const cpl_propertylist * plist)
+{
+    /* ACQCAM = TIM2 = DET1 */
+	const char * tim1_start = cpl_propertylist_get_string(plist, "ESO INS TIM2 START");
+	cpl_ensure (tim1_start != NULL, cpl_error_get_code(), NULL);
+    return tim1_start;
+}
+
+const char * gravi_pfits_get_start_prcacq (const cpl_propertylist * plist)
+{
+    /* This is the recording start of RMN tables */
+	const char * acq_start = cpl_propertylist_get_string(plist, "ESO PCR ACQ START");
+	cpl_ensure (acq_start != NULL, cpl_error_get_code(), NULL);
+    return acq_start;
+}
+
+double gravi_pfits_get_dit_acqcam (const cpl_propertylist * plist)
+{
+    /* ACQCAM = TIM2 = DET1 */
+    cpl_errorstate prestate = cpl_errorstate_get();
+    double value = cpl_propertylist_get_double(plist, "ESO DET1 SEQ1 DIT");
+    cpl_ensure(cpl_errorstate_is_equal(prestate), cpl_error_get_code(), 0.0);
+    return value;
+}
+
+double gravi_pfits_get_dit_sc (const cpl_propertylist * plist)
+{
+    /* SC = TIM1 = DET2 */
+    cpl_errorstate prestate = cpl_errorstate_get();
+    double value = cpl_propertylist_get_double(plist, "ESO DET2 SEQ1 DIT");
+    cpl_ensure(cpl_errorstate_is_equal(prestate), cpl_error_get_code(), 0.0);
+    return value;
+}
+
+double gravi_pfits_get_dit_ft (const cpl_propertylist * plist)
+{
+    /* FT = PCRACQ = DET3 */
+    cpl_errorstate prestate = cpl_errorstate_get();
+    double value = cpl_propertylist_get_double(plist, "ESO DET3 SEQ1 DIT");
+    cpl_ensure(cpl_errorstate_is_equal(prestate), cpl_error_get_code(), 0.0);
+    return value;
+}
+
+double gravi_pfits_get_period_sc (const cpl_propertylist * plist)
+{
+    /* SC = TIM1 = DET2 */
+    cpl_errorstate prestate = cpl_errorstate_get();
+    double value = cpl_propertylist_get_double(plist, "ESO INS TIM1 PERIOD");
+    cpl_ensure(cpl_errorstate_is_equal(prestate), cpl_error_get_code(), 0.0);
+    return value;
+}
+
+double gravi_pfits_get_period_acqcam (const cpl_propertylist * plist)
+{
+    /* ACQCAM = TIM2 = DET1 */
+    cpl_errorstate prestate = cpl_errorstate_get();
+    double value = cpl_propertylist_get_double(plist, "ESO INS TIM2 PERIOD");
+    cpl_ensure(cpl_errorstate_is_equal(prestate), cpl_error_get_code(), 0.0);
+    return value;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -411,7 +441,7 @@ double gravi_pfits_get_sc_period (const cpl_propertylist * plist)
  */
 /*---------------------------------------------------------------------------*/
 
-double gravi_pfits_get_sc_time (const cpl_propertylist * header, cpl_size row)
+double gravi_pfits_get_time_sc (const cpl_propertylist * header, cpl_size row)
 {
     gravi_msg_function_start(0);
     cpl_ensure (header, CPL_ERROR_NULL_INPUT, 0.0);
@@ -421,19 +451,53 @@ double gravi_pfits_get_sc_time (const cpl_propertylist * header, cpl_size row)
     /* Time of the middle of the exposure in
      * [us] with respect to PRC.ACQ.START.  */
     double window_time = gravi_pfits_get_fddlwindow (header);
-    double scperiod    = gravi_pfits_get_sc_period (header);
+    double period    = gravi_pfits_get_period_sc (header);
     
-    double time_sc = 86400 * 1e6 *
-        (gravi_convert_to_mjd (gravi_pfits_get_tim1_start (header)) -
-         gravi_convert_to_mjd (gravi_pfits_get_prcacq_start (header)) ) + 
-        (scperiod-window_time)/2. * 1e6 +
-        row * scperiod * 1e6;
+    double time = 86400 * 1e6 *
+        (gravi_convert_to_mjd (gravi_pfits_get_start_sc (header)) -
+         gravi_convert_to_mjd (gravi_pfits_get_start_prcacq (header)) ) + 
+        (period-window_time)/2. * 1e6 +
+        row * period * 1e6;
 
     /* Return 0 if error */
     cpl_ensure (cpl_errorstate_is_equal(prestate), cpl_error_get_code(), 0.0);
     
     gravi_msg_function_exit(0);
-    return time_sc;
+    return time;
+}
+
+/*---------------------------------------------------------------------------*/
+/**
+ * @brief Time of the middle of the ACQCAM exposure row in [us],
+ *        counted from PRC.ACQ.START
+ * @param header   The main header
+ * @param row      The frame number (0..NDIT-1)
+ * @return The time value
+ */
+/*---------------------------------------------------------------------------*/
+
+double gravi_pfits_get_time_acqcam (const cpl_propertylist * header, cpl_size row)
+{
+    gravi_msg_function_start(0);
+    cpl_ensure (header, CPL_ERROR_NULL_INPUT, 0.0);
+    cpl_ensure (row>=0, CPL_ERROR_ILLEGAL_INPUT, 0.0);
+	cpl_errorstate prestate = cpl_errorstate_get();
+    
+    /* Time of the middle of the exposure in
+     * [us] with respect to PRC.ACQ.START.  */
+    double period    = gravi_pfits_get_period_acqcam (header);
+    
+    double time = 86400 * 1e6 *
+        (gravi_convert_to_mjd (gravi_pfits_get_start_acqcam (header)) -
+         gravi_convert_to_mjd (gravi_pfits_get_start_acqcam (header)) ) + 
+        period/2. * 1e6 +
+        row * period * 1e6;
+
+    /* Return 0 if error */
+    cpl_ensure (cpl_errorstate_is_equal(prestate), cpl_error_get_code(), 0.0);
+    
+    gravi_msg_function_exit(0);
+    return time;
 }
 
 const char * gravi_pfits_get_insname (const cpl_propertylist * plist)

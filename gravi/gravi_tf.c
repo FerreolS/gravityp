@@ -202,8 +202,8 @@ char * gravi_calib_setupstring (gravi_data * data)
 								   gravi_pfits_get_spec_res (hdr_data),
 								   gravi_pfits_get_pola_mode (hdr_data, GRAVI_SC),
 								   gravi_pfits_get_pola_mode (hdr_data, GRAVI_FT),
-								   gravi_pfits_get_ft_dit (hdr_data) * 1e3,
-								   gravi_pfits_get_sc_dit (hdr_data) );
+								   gravi_pfits_get_dit_ft (hdr_data) * 1e3,
+								   gravi_pfits_get_dit_sc (hdr_data) );
 
   cpl_msg_debug (cpl_func, "Get setup string: %s", setupstring);
   

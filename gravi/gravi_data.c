@@ -1781,9 +1781,9 @@ cpl_error_code gravi_data_check_consistency (gravi_data * data)
    * [us] with respect to PRC.ACQ.START. We need RMN data over
    * the entire first and last DITs of SC */
   int    ndit     = cpl_propertylist_get_int (header, "ESO DET2 NDIT");
-  double scdit    = gravi_pfits_get_sc_dit (header);
-  double start_sc = gravi_pfits_get_sc_time (header, 0) - scdit/2. * 1e6;
-  double end_sc   = gravi_pfits_get_sc_time (header, ndit-1) + scdit/2. * 1e6;
+  double scdit    = gravi_pfits_get_dit_sc (header);
+  double start_sc = gravi_pfits_get_time_sc (header, 0) - scdit/2. * 1e6;
+  double end_sc   = gravi_pfits_get_time_sc (header, ndit-1) + scdit/2. * 1e6;
   
   cpl_msg_debug (cpl_func,"start = %8.0f and end = %10.0f (%s [us] from PCR.ACQ.START)",
                  start_sc, end_sc, "SC");

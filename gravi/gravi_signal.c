@@ -499,7 +499,7 @@ cpl_error_code gravi_compute_snr (gravi_data * p2vmred_data,
   int nbase = 6;
   
   cpl_propertylist * p2vmred_header = gravi_data_get_header (p2vmred_data);
-  double periode_sc = gravi_pfits_get_sc_period (p2vmred_header); // [s]
+  double periode_sc = gravi_pfits_get_period_sc (p2vmred_header); // [s]
   CPLCHECK_MSG ("Cannot get header");
 
   /*
@@ -2164,8 +2164,8 @@ cpl_error_code gravi_compute_signals (gravi_data * p2vmred_data,
   }
 
   
-  /* Get the DIT */
-  double dit_sc = gravi_pfits_get_sc_dit (p2vmred_header) * 1e6;
+  /* Get the SC DIT */
+  double dit_sc = gravi_pfits_get_dit_sc (p2vmred_header) * 1e6;
   cpl_msg_info (cpl_func,"dit_sc = %g [us]", dit_sc);
   
 

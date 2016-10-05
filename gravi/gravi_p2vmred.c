@@ -594,7 +594,7 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
              * (in MJD) to the TIME column */
 			cpl_array * mjds = cpl_array_cast (times, CPL_TYPE_DOUBLE);
 			cpl_array_divide_scalar (mjds, 86400.E6);
-            double mjd0 = gravi_convert_to_mjd (gravi_pfits_get_prcacq_start (preproc_header));
+            double mjd0 = gravi_convert_to_mjd (gravi_pfits_get_start_prcacq (preproc_header));
 			cpl_array_add_scalar (mjds, mjd0);
 
 			/* We keep the TIME column of the P2VMRED in [us] from

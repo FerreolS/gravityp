@@ -796,7 +796,7 @@ cpl_error_code gravi_wave_compute_opds (gravi_data * spectrum_data,
 
     /* Get DIT */
 	cpl_propertylist * spectrum_header = gravi_data_get_header (spectrum_data);
-    double dit_sc = gravi_pfits_get_sc_dit (spectrum_header)*1e6; // [us]
+    double dit_sc = gravi_pfits_get_dit_sc (spectrum_header)*1e6; // [us]
     CPLCHECK_MSG ("Cannot get DIT");
     
     /* Get the input */

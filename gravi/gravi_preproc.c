@@ -724,7 +724,7 @@ gravi_data * gravi_extract_spectrum (gravi_data * raw_data,
         cpl_table_new_column (spectrum_table, "TIME", CPL_TYPE_INT);
         for (cpl_size row = 0; row < n_row; row ++) {
             cpl_table_set_int (spectrum_table, "TIME", row,
-                               gravi_pfits_get_sc_time (raw_header, row));
+                               gravi_pfits_get_time_sc (raw_header, row));
         }
 	
         /* Check if the SC profil extraction is flux conservative */
