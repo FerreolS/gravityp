@@ -2046,7 +2046,7 @@ cpl_error_code gravi_average_vis (gravi_data * oi_data)
       cpl_size nrow = cpl_table_get_nrow (gravi_data_get_oi_vis (oi_data, type_data, pol, npol))/nbase;
       if (nrow == 1) {
           cpl_msg_info (cpl_func, "OI_VIS %s has only one observation, skip", GRAVI_TYPE(type_data));
-        continue;
+          continue;
       }
 
 	  /* OI_VIS */

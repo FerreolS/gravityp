@@ -5,9 +5,9 @@
 // Raw data
 if DPR.CATG like "%SCIENCE%"  and DPR.TYPE like "%OBJECT%" and DPR.TYPE like "%SINGLE%" and INSTRUME=="GRAVITY" then
 {
-  DO.CATG = "SINGLE_SCIENCE_RAW";
-  REFLEX.CATG = "SINGLE_SCIENCE_RAW";
-  RAW.TYPE = "SINGLE_SCIENCE_RAW";
+  DO.CATG = "SINGLE_SCI_RAW";
+  REFLEX.CATG = "SINGLE_SCI_RAW";
+  RAW.TYPE = "SINGLE_SCI_RAW";
   REFLEX.TARGET = "T";
 }
 
@@ -21,17 +21,17 @@ if (DPR.CATG like "%CALIB%" or DPR.CATG like "%SCIENCE%")  and DPR.TYPE like "%S
 
 if DPR.CATG like "%CALIB%"  and DPR.TYPE like "%OBJECT%" and DPR.TYPE like "%SINGLE%" and INSTRUME=="GRAVITY" then
 {
-  DO.CATG = "SINGLE_CALIB_RAW";
-  REFLEX.CATG = "SINGLE_CALIB_RAW";
-  RAW.TYPE = "SINGLE_CALIB_RAW";
+  DO.CATG = "SINGLE_CAL_RAW";
+  REFLEX.CATG = "SINGLE_CAL_RAW";
+  RAW.TYPE = "SINGLE_CAL_RAW";
   REFLEX.TARGET = "T";
 }
 
 if DPR.CATG like "%SCIENCE%"  and DPR.TYPE like "%OBJECT%" and DPR.TYPE like "%DUAL%" and INSTRUME=="GRAVITY" then
 {
-  DO.CATG = "DUAL_SCIENCE_RAW";
-  REFLEX.CATG = "DUAL_SCIENCE_RAW";
-  RAW.TYPE = "DUAL_SCIENCE_RAW";
+  DO.CATG = "DUAL_SCI_RAW";
+  REFLEX.CATG = "DUAL_SCI_RAW";
+  RAW.TYPE = "DUAL_SCI_RAW";
   REFLEX.TARGET = "T";
 }
 
@@ -74,16 +74,16 @@ if PRO.CATG like "%P2VM%" then
 //*****************************************************
 
 
-select execute(ACTION_SCIENCE_SINGLE) from inputFiles where RAW.TYPE == "SINGLE_SCIENCE_RAW"
+select execute(ACTION_SCIENCE_SINGLE) from inputFiles where RAW.TYPE == "SINGLE_SCI_RAW"
   group by DET2.SEQ1.DIT, DET3.SEQ1.DIT, INS.SPEC.RES, INS.POLA.MODE, TPL.START;
 
-select execute(ACTION_CALIB_SINGLE) from inputFiles where RAW.TYPE == "SINGLE_CALIB_RAW"
+select execute(ACTION_CALIB_SINGLE) from inputFiles where RAW.TYPE == "SINGLE_CAL_RAW"
   group by DET2.SEQ1.DIT, DET3.SEQ1.DIT, INS.SPEC.RES, INS.POLA.MODE, TPL.START;
 
-select execute(ACTION_SCIENCE_DUAL) from inputFiles where RAW.TYPE == "DUAL_SCIENCE_RAW"
+select execute(ACTION_SCIENCE_DUAL) from inputFiles where RAW.TYPE == "DUAL_SCI_RAW"
   group by DET2.SEQ1.DIT, DET3.SEQ1.DIT, INS.SPEC.RES, INS.POLA.MODE, TPL.START;
 
-select execute(ACTION_CALIB_DUAL) from inputFiles where RAW.TYPE == "DUAL_CALIB_RAW"
+select execute(ACTION_CALIB_DUAL) from inputFiles where RAW.TYPE == "DUAL_CAL_RAW"
   group by DET2.SEQ1.DIT, DET3.SEQ1.DIT, INS.SPEC.RES, INS.POLA.MODE, TPL.START;
 
 
