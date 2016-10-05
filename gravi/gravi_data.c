@@ -679,6 +679,9 @@ cpl_error_code gravi_data_save_new (gravi_data 		  * self,
         cpl_propertylist_append (applist, tmp);
         FREE (cpl_propertylist_delete, tmp);
     }
+    
+    /* Add the PIPE LAST_BUILD keyword */
+    gravi_pfits_add_pipe_build (applist);
 
 	/* Select the name extension depending on this catg */
 	char catg_ext[800];
