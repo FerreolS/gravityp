@@ -849,7 +849,7 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
      * each region is bias. Use the median of the bias-pixel
      * per column !!*/
 
-    gravi_msg_fixme ("Remove bias per column -- experimental");
+    gravi_msg_warning ("FIXME","Remove bias per column is experimental");
 		
 	cpl_vector * bias = cpl_vector_new (nx);
 	cpl_vector * bias_column = cpl_vector_new (nreg);

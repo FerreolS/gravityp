@@ -91,8 +91,7 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
     gravi_msg_function_start(1);
 	cpl_ensure (vis_data, CPL_ERROR_NULL_INPUT, NULL);
 
-    /* FIXME */
-    gravi_msg_fixme ("gravi_compute_disp assumes same OI_WAVE for both polar");
+    gravi_msg_warning ("FIXME", "Assumes same OI_WAVE for both polar of SC");
 
     /* Get data */
     cpl_size nbase = 6, ntel = 4, npol = 2;
@@ -777,7 +776,7 @@ cpl_error_code gravi_compute_argon_pos (gravi_data * preproc_data)
     CPLCHECK_MSG ("Cannot get data");
 
     /* Get the OI_WAVE */
-    gravi_msg_fixme ("Assumes same OI_WAVE for both polarisation");
+    gravi_msg_warning ("FIXME", "Assumes same OI_WAVE for both polar of SC");
 	cpl_table * oi_wave = gravi_data_get_oi_wave (preproc_data, GRAVI_SC, 0, npol);
 
     /* Ensure */

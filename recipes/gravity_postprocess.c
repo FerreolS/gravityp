@@ -410,7 +410,7 @@ static int gravity_postprocess(cpl_frameset * frameset,
 	/* Co-add them if required (FIXME: and if VIS) */
     if (gravi_param_get_bool (parlist, "gravity.postprocess.average-vis")) {
 	  
-	  gravi_msg_fixme ("Average the different observations = EXPERIMENTAL");
+      gravi_msg_warning ("FIXME", "Average the different observations = EXPERIMENTAL");
 	  gravi_average_vis (data_merged);
 	  
 	  CPLCHECK_CLEAN ("Cannot average VIS");
@@ -420,7 +420,7 @@ static int gravity_postprocess(cpl_frameset * frameset,
 	cpl_size resamp_sc = gravi_param_get_int (parlist, "gravity.postprocess.nbin-lambda-sc");
     if ( resamp_sc > 1) {
 	  
-	  gravi_msg_fixme ("Resamp the SC data = EXPERIMENTAL");
+	  gravi_msg_warning ("FIXME", "Resamp the SC data = EXPERIMENTAL");
 	  gravi_vis_resamp (data_merged, resamp_sc);
 	  
 	  CPLCHECK_CLEAN ("Cannot resamp SC");

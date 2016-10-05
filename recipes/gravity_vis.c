@@ -772,8 +772,6 @@ static int gravity_vis(cpl_frameset * frameset,
 
 	/* Co-add the observations if requested */
     if (gravi_param_get_bool (parlist, "gravity.postprocess.average-vis")) {
-	  
-	  gravi_msg_fixme ("Average the different observation (if any) = EXPERIMENTAL");
 	  gravi_average_vis (vis_data);
 	  
 	} else {

@@ -2021,6 +2021,8 @@ cpl_error_code gravi_average_vis (gravi_data * oi_data)
   gravi_msg_function_start(1);
   cpl_ensure_code (oi_data, CPL_ERROR_NULL_INPUT);
 
+  gravi_msg_warning ("FIXME", "Average the different observation is EXPERIMENTAL");
+  
   cpl_msg_warning (cpl_func, "FIXME: Weightening of UVCOORD and MJD is not done properly yet !");
   cpl_msg_warning (cpl_func, "FIXME: Integration of INT_TIME is not done properly yet !");
 
@@ -2059,7 +2061,7 @@ cpl_error_code gravi_average_vis (gravi_data * oi_data)
 	  gravi_vis_average_amp (oi_table, "RVIS",  "RVISERR", 6);
 	  gravi_vis_average_amp (oi_table, "IVIS",  "IVISERR", 6);
 	  // gravi_vis_average_amp (oi_table, "VISDATA",  "VISERR"); // FIXME: to be done !!
-	  gravi_msg_fixme ("VISDATA are not averaged !!!!");
+	  gravi_msg_warning ("FIXME", "VISDATA are not averaged !!!!");
 	  cpl_table_erase_window (oi_table, 6, CPL_SIZE_MAX);
 	  
 	  CPLCHECK_MSG ("Cannot co-add OI_VIS");
@@ -2281,7 +2283,7 @@ cpl_error_code gravi_vis_resamp (gravi_data * oi_data, cpl_size nsamp)
 	cpl_table_set_column_depth (oi_table, "FLAG", nwave_new);
 	gravi_vis_flag_threshold (oi_table, "VISAMPERR", "FLAG", 1.);
     
-	gravi_msg_fixme ("VISDATA is not properly resampled !!");
+    gravi_msg_warning ("FIXME", "VISDATA is not properly resampled !!");
 	cpl_table_set_column_depth (oi_table, "VISDATA", nwave_new);
 	cpl_table_set_column_depth (oi_table, "VISERR", nwave_new);
 	CPLCHECK_MSG ("Cannot resamp OI_VIS");

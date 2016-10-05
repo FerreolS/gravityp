@@ -118,13 +118,13 @@ const char * gravi_get_license(void)
     return gravi_license ;
 }
 
-cpl_error_code gravi_msg_fixme (const char * msg)
+cpl_error_code gravi_msg_warning (const char * component, const char * msg)
 {
-    cpl_msg_warning ("FIXME","***********************************************");
-    cpl_msg_warning ("FIXME","                                               ");
-    cpl_msg_warning ("FIXME"," %s ", msg);
-    cpl_msg_warning ("FIXME","                                               ");
-    cpl_msg_warning ("FIXME","***********************************************");
+    cpl_msg_warning (component,"***********************************************");
+    cpl_msg_warning (component,"                                               ");
+    cpl_msg_warning (component," %s ", msg);
+    cpl_msg_warning (component,"                                               ");
+    cpl_msg_warning (component,"***********************************************");
     return CPL_ERROR_NONE;
 }
 

@@ -151,7 +151,7 @@ extern char GRAVI_DATAERR[50][10];
  -----------------------------------------------------------------------------*/
 
 const char * gravi_get_license (void) ;
-cpl_error_code gravi_msg_fixme (const char * msg);
+cpl_error_code gravi_msg_warning (const char * component, const char * msg);
 cpl_error_code gravi_dump_the_boss (double ra, double dec);
 
 int gravi_get_shutter (cpl_propertylist *, int);

@@ -278,7 +278,7 @@ gravi_data * gravi_average_dark (gravi_data ** data, cpl_size ndata)
   gravi_msg_function_start(0);
   cpl_ensure (data, CPL_ERROR_NULL_INPUT, NULL);
   
-  gravi_msg_fixme ("Averaging DARK or SKY is experimental");
+  gravi_msg_warning ("FIXME","Averaging DARK or SKY is experimental");
 
   gravi_data * output_data = gravi_data_duplicate (data[0]);
 

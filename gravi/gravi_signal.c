@@ -2011,7 +2011,7 @@ cpl_error_code gravi_vis_create_opddisp_sc (cpl_table * vis_SC,
 
   if (cpl_table_has_column (disp_table,"N_MEAN")) {
       /* Backward compatibility with previous format of DISP_MODEL */
-      gravi_msg_fixme ("Use old version of DISP_MODEL -- update it");
+      gravi_msg_warning ("FIXME","Use old version of DISP_MODEL -- update it");
       cpl_size disp_order = cpl_table_get_column_depth (disp_table, "N_MEAN");
       for (int t = 0; t < 4; t++) {
           for (int w = 0; w < nwave_sc; w++ ) {
@@ -2160,7 +2160,7 @@ cpl_error_code gravi_compute_signals (gravi_data * p2vmred_data,
 
   /* FIXME: probably doesn't work with npol_sc != npol_ft */
   if ( npol_sc != npol_ft ) {
-	gravi_msg_fixme ("Not sure this function works with npol_sc != npol_ft");
+      gravi_msg_warning ("FIXME", "Not sure this function works with npol_sc != npol_ft");
   }
 
   
