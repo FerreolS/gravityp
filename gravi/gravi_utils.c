@@ -794,7 +794,7 @@ int * gravi_image_extract_dimension (cpl_image * img_profile)
 
 	// increase by 1 pixels
 	i_1-=1;
-	i_2+=1;
+	i_2+=2;
 	if (i_1 < 0) i_1 = 0;
 	if (i_2 >= nx) i_2 = nx-1;
 
