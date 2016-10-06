@@ -27,8 +27,6 @@
 
 #include <cpl.h>
 #include "gravi_data.h"
-#include <gsl/gsl_matrix.h>
-#include <gsl/gsl_vector.h>
 
 /*-----------------------------------------------------------------------------
                                    Defines

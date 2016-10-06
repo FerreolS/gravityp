@@ -79,9 +79,6 @@ CPL_CHECK_LIBS
 #Check the presence of pkgconfig
 #ESO_PROG_PKGCONFIG
 
-#Check for GSL
-ESO_CHECK_GSL
-
 #Check for ERFA
 ESO_CHECK_ERFA
 
