@@ -871,6 +871,7 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
 	cpl_ensure (detector_table, CPL_ERROR_ILLEGAL_INPUT, NULL);
 
 	/* Get that the header of first file and of dark */
+    cpl_propertylist * dark_header = gravi_data_get_header (dark_map);
 	cpl_propertylist * flat0_header = gravi_data_get_header (flats_data[0]);
 
     /* Get necessary information */
@@ -956,7 +957,8 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
 
 	/* kernel for median filter. Use more 
      * pixels (~15) in HIGH, to skip the cluster */
-    cpl_size size_kernel = !strcmp(resolution, "HIGH") ? 15 : 5;
+    cpl_size size_kernel = !strcmp (resolution, "HIGH") ? 15 : 5;
+    cpl_msg_info (cpl_func, "Median filtering over %lld spectral pixels", size_kernel);
     cpl_mask * kernel = cpl_mask_new (size_kernel, 1);
     cpl_mask_not (kernel);
 
@@ -982,7 +984,7 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
         /* Create a filtered version of this FLAT */
         cpl_image * filtered_img = cpl_image_duplicate (collapsed_img);
         cpl_image_filter_mask (filtered_img, collapsed_img, kernel,
-                               CPL_FILTER_MEDIAN, CPL_BORDER_COPY);
+                               CPL_FILTER_MEDIAN, CPL_BORDER_FILTER);
         FREE (cpl_image_delete, collapsed_img);
 
         /* Crop it */
@@ -1060,7 +1062,20 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
                                       ext_dim[0] + ext_dim[1] - 1, ny);
         cpl_image_threshold (mask_img, 0.5, 0.5, 1.0, 0.0);
     }
-    
+
+    /* Update mask from FLAT itself in LOW,
+     * FIXME: to decide what we zero exactly. */
+	if ( !strcmp (resolution, "LOW") )
+    {
+        cpl_msg_info (cpl_func, "Pixels with low FLAT values"
+                      " are forced to zero in profiles.");
+        
+        double threshold = cpl_propertylist_get_double (dark_header, QC_DARKRMS_SC);
+        cpl_image * mask2_img = cpl_image_duplicate (flatsc_img);
+        cpl_image_threshold (mask2_img, threshold, threshold, 0.0, 1.0);
+        cpl_image_multiply (mask_img, mask2_img);
+        FREE (cpl_image_delete, mask2_img);
+    }
     
     /* Loop on regions */
     for (int region = 0; region < nb_region ; region++) {
