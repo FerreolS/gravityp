@@ -299,7 +299,8 @@ cpl_parameter * gravi_parameter_add_extract (cpl_parameterlist *self)
     cpl_parameter *p;
     p = cpl_parameter_new_value ("gravity.preproc.ditshift-sc", CPL_TYPE_INT,
                                  "Shift the DIT of SC by an integer value to "
-                                 "accound for lost DIT in exposure (bug!!) ",
+                                 "accound for lost frame in exposure (issue on the "
+                                 "instrument side, report to instrument team).",
                                  "gravity.preproc",0);
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "ditshift-sc");
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
