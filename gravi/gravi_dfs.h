@@ -121,6 +121,7 @@ cpl_parameter * gravi_parameter_add_p2vmred_file (cpl_parameterlist *self);
 cpl_parameter * gravi_parameter_add_astro_file (cpl_parameterlist *self);
 
 cpl_parameter * gravi_parameter_add_biasmethod (cpl_parameterlist *self);
+cpl_parameter * gravi_parameter_add_extract (cpl_parameterlist *self);
 
 cpl_parameter * gravi_parameter_add_average_vis (cpl_parameterlist *self);
 

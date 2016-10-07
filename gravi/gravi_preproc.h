@@ -40,7 +40,8 @@ gravi_data * gravi_extract_spectrum (gravi_data * raw_data,
 									 gravi_data * profile_map,
 									 gravi_data * dark_map,
 									 gravi_data * bad_map,
-									 gravi_data * sky_map);
+									 gravi_data * sky_map,
+                                     const cpl_parameterlist * parlist);
 
 cpl_error_code gravi_align_spectrum (gravi_data * spectrum_data,
                                      gravi_data * wave_map,

@@ -378,7 +378,8 @@ int gravi_calib_test(void){
 	cpl_table * p2vm_met = gravi_metrology_compute_p2vm (metrology_table);
 
     cpl_msg_info (cpl_func, "Extract SPECTRUM for WAVE_RAW");
-    gravi_data * spectrum_data = gravi_extract_spectrum (data, profile_map, dark_map, badpix_data, NULL);
+    gravi_data * spectrum_data = gravi_extract_spectrum (data, profile_map, dark_map,
+                                                         badpix_data, NULL,paralist);
 
     cpl_msg_info (cpl_func, "Compute OPDs for WAVE_RAW");
     gravi_wave_compute_opds (spectrum_data, gravi_data_get_table (data, GRAVI_METROLOGY_EXT),0);
@@ -592,7 +593,8 @@ int gravi_calib_test(void){
 		if (strstr (filename, "Wave.fits")) { cpl_msg_info (cpl_func,"Skip Wave.fits"); continue;}
 		data = gravi_data_load(filename);
 
-		test_data(preproc_data, gravi_extract_spectrum (data, profile_map, dark_map, badpix_data, NULL),
+		test_data(preproc_data, gravi_extract_spectrum (data, profile_map, dark_map,
+                                                        badpix_data, NULL,paralist),
 				   "gravi_preproc: Compute the preproc data... ", flag);
 		primary_hdr = gravi_data_get_plist(data,
 											GRAVI_PRIMARY_HDR_EXT);
@@ -741,7 +743,6 @@ int gravi_calib_test(void){
 //			             "gravi_compute_p2vm: Check the two p2vm data are the same for SC data... ", flag);
 
 	gravi_data_delete (p2vm_file);
-	cpl_parameterlist_delete (paralist);
 
 	cpl_propertylist_set_string (met_plist, "EXTNAME",
 			GRAVI_P2VM_MET_EXT);
@@ -758,8 +759,10 @@ int gravi_calib_test(void){
 	data_wave = gravi_data_load (DATADIR_TEST "gravi_wave_map.fits");
 
 	cpl_msg_info (cpl_func, "Preproc the WAVE");
-	gravi_data * preproc_data=gravi_extract_spectrum (data, profile_map, dark_map, badpix_data, NULL);
+	gravi_data * preproc_data=gravi_extract_spectrum (data, profile_map, dark_map,
+                                                      badpix_data, NULL,paralist);
     
+	cpl_parameterlist_delete (paralist);
     gravi_align_spectrum (preproc_data, data_wave, p2vm_data);
 
     /* Move extensions from raw_data and delete it */

@@ -536,13 +536,15 @@ gravi_data * gravi_extract_spectrum (gravi_data * raw_data,
 									 gravi_data * profile_map,
 									 gravi_data * dark_map,
 									 gravi_data * bad_map,
-									 gravi_data * sky_map)
+									 gravi_data * sky_map,
+                                     const cpl_parameterlist * parlist)
 {
     gravi_msg_function_start(1);
 	cpl_ensure (raw_data,     CPL_ERROR_NULL_INPUT, NULL);
-	cpl_ensure (profile_map, CPL_ERROR_NULL_INPUT, NULL);
+	cpl_ensure (profile_map,  CPL_ERROR_NULL_INPUT, NULL);
 	cpl_ensure (bad_map,      CPL_ERROR_NULL_INPUT, NULL);
 	cpl_ensure (dark_map || sky_map, CPL_ERROR_NULL_INPUT, NULL);
+    cpl_ensure (parlist,      CPL_ERROR_NULL_INPUT, NULL);
 
     /* Get header of input gravi_data */
     cpl_propertylist * raw_header = gravi_data_get_header (raw_data);
@@ -718,13 +720,20 @@ gravi_data * gravi_extract_spectrum (gravi_data * raw_data,
             cpl_table_set_column_unit (spectrum_table, GRAVI_DATA[reg], "e");
             cpl_table_set_column_unit (spectrum_table, GRAVI_DATAERR[reg], "e");
         }
+
+        /* Get the user-specified DIT shift if any */
+        int ditshift = gravi_param_get_int_default (parlist, "gravity.preproc.ditshift-sc", 0);
+        cpl_msg_info (cpl_func, "ditshift = %i", ditshift);
+
+        if (ditshift !=0 )
+            gravi_msg_warning ("CRITICAL","DITSHIFT is not set to zero... are you sure??");
         
         /* Compute the time of the middle of the SC DIT, in [us]
          * with respect to the RMN start PCR.ACQ.START */
         cpl_table_new_column (spectrum_table, "TIME", CPL_TYPE_INT);
         for (cpl_size row = 0; row < n_row; row ++) {
             cpl_table_set_int (spectrum_table, "TIME", row,
-                               gravi_pfits_get_time_sc (raw_header, row));
+                               gravi_pfits_get_time_sc (raw_header, row + ditshift));
         }
 	
         /* Check if the SC profil extraction is flux conservative */

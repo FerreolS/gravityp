@@ -445,7 +445,6 @@ double gravi_pfits_get_time_sc (const cpl_propertylist * header, cpl_size row)
 {
     gravi_msg_function_start(0);
     cpl_ensure (header, CPL_ERROR_NULL_INPUT, 0.0);
-    cpl_ensure (row>=0, CPL_ERROR_ILLEGAL_INPUT, 0.0);
 	cpl_errorstate prestate = cpl_errorstate_get();
     
     /* Time of the middle of the exposure in

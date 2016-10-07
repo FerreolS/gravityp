@@ -558,7 +558,8 @@ static int gravity_p2vm(cpl_frameset            * frameset,
 
         /* Reduce WAVE_RAW */
         cpl_msg_info (cpl_func, "Extract SPECTRUM for WAVE_RAW");
-        spectrum_data = gravi_extract_spectrum (data, profile_map, dark_map, badpix_map, NULL);
+        spectrum_data = gravi_extract_spectrum (data, profile_map, dark_map,
+                                                badpix_map, NULL, parlist);
         
         cpl_msg_info (cpl_func, "Compute OPDs for WAVE_RAW");
         gravi_wave_compute_opds (spectrum_data, gravi_data_get_table (data, GRAVI_METROLOGY_EXT),
@@ -586,7 +587,8 @@ static int gravity_p2vm(cpl_frameset            * frameset,
             gravi_data_detector_cleanup (data, parlist);
             
             cpl_msg_info (cpl_func, "Extract SPECTRUM for WAVESC_RAW");
-            spectrum_data = gravi_extract_spectrum (data, profile_map, dark_map, badpix_map, NULL);
+            spectrum_data = gravi_extract_spectrum (data, profile_map, dark_map,
+                                                    badpix_map, NULL, parlist);
             
             cpl_msg_info (cpl_func, "Compute OPDs for WAVESC_RAW");
             gravi_wave_compute_opds (spectrum_data, gravi_data_get_table (data, GRAVI_METROLOGY_EXT),
@@ -700,7 +702,8 @@ static int gravity_p2vm(cpl_frameset            * frameset,
 	  /* End if all shutters open */
 
       /* Extract spectrum */
-      preproc_data = gravi_extract_spectrum (data, profile_map, dark_map, badpix_map, NULL);
+      preproc_data = gravi_extract_spectrum (data, profile_map, dark_map,
+                                             badpix_map, NULL, parlist);
       FREE (gravi_data_delete, data);
       CPLCHECK_CLEAN ("Cannot extract spectrum");
 
@@ -747,7 +750,8 @@ static int gravity_p2vm(cpl_frameset            * frameset,
 	cpl_msg_info (cpl_func, " ***** Analyse the WAVE file to calibrate the internal closure and transmission ***** ");
 
     /* Extract spectrum */
-    preproc_data = gravi_extract_spectrum (wave_data, profile_map, dark_map, badpix_map, NULL);
+    preproc_data = gravi_extract_spectrum (wave_data, profile_map, dark_map,
+                                           badpix_map, NULL, parlist);
     CPLCHECK_CLEAN ("Cannot extract spectrum");
         
     /* Rescale to common wavelength */

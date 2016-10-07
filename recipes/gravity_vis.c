@@ -197,6 +197,9 @@ static int gravity_vis_create(cpl_plugin * plugin)
 
     /* Bias-method */
     gravi_parameter_add_biasmethod (recipe->parameters);
+
+    /* Extraction */
+    gravi_parameter_add_extract (recipe->parameters);
     
     /* Snr */
     gravi_parameter_add_compute_snr (recipe->parameters, isCalib);
@@ -625,7 +628,8 @@ static int gravity_vis(cpl_frameset * frameset,
 		}
 
         /* Extract spectrum */
-        preproc_data = gravi_extract_spectrum (data, profile_map, dark_map, badpix_map, sky_maps[isky]);
+        preproc_data = gravi_extract_spectrum (data, profile_map, dark_map, badpix_map,
+                                               sky_maps[isky], parlist);
 		CPLCHECK_CLEAN ("Cannot extract spectrum");
 
 		/* Option save the spectrum file */

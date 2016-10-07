@@ -436,7 +436,8 @@ static int gravity_piezo(cpl_frameset * frameset,
 		}
 
         /* Extract spectrum */
-        preproc_data = gravi_extract_spectrum (data, profile_map, dark_map, badpix_map, NULL);
+        preproc_data = gravi_extract_spectrum (data, profile_map, dark_map,
+                                               badpix_map, NULL, parlist);
 		CPLCHECK_CLEAN ("Cannot extract spectrum");
         
         /* Rescale to common wavelength */

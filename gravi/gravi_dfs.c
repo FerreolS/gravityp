@@ -292,6 +292,22 @@ cpl_parameter * gravi_parameter_add_biasmethod (cpl_parameterlist *self)
     return p;
 }
 
+cpl_parameter * gravi_parameter_add_extract (cpl_parameterlist *self)
+{
+    cpl_ensure (self, CPL_ERROR_NULL_INPUT, NULL);
+    
+    cpl_parameter *p;
+    p = cpl_parameter_new_value ("gravity.preproc.ditshift-sc", CPL_TYPE_INT,
+                                 "Shift the DIT of SC by an integer value to "
+                                 "accound for lost DIT in exposure (bug!!) ",
+                                 "gravity.preproc",0);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "ditshift-sc");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	cpl_parameterlist_append (self, p);
+
+    return p;
+}
+
 cpl_parameter * gravi_parameter_add_average_vis (cpl_parameterlist *self)
 {
     cpl_ensure (self, CPL_ERROR_NULL_INPUT, NULL);
