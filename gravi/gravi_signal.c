@@ -606,6 +606,7 @@ cpl_error_code gravi_compute_snr (gravi_data * p2vmred_data,
   	/* Sum the interspectre of the second polarisation. No need to deal
   	 * with polarisation shifts as they probably have the same GD */
   	gravi_table_add_columns (oi_vis_p1, "IPHASOR_BOOT", oi_vis_p2, "IPHASOR_SMT");
+  	CPLCHECK_MSG("Cannot add columns");
   	
   	/* Removing the mean phase difference from PHASOR of first polarisation 
   	 * to be able to sum with maximum SNR */
