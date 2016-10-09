@@ -352,7 +352,7 @@ static int gravity_vis(cpl_frameset * frameset,
 	
 	gravi_data * p2vm_map=NULL, * data=NULL, * wave_map=NULL, * dark_map=NULL,
         * profile_map=NULL, * badpix_map=NULL, * preproc_data=NULL, * p2vmred_data=NULL, * tmpvis_data=NULL,
-        * vis_data, * disp_map=NULL, * diamcat_data=NULL, *eop_map=NULL;
+        * vis_data=NULL, * disp_map=NULL, * diamcat_data=NULL, *eop_map=NULL;
 	gravi_data ** sky_maps = NULL;
 	
 	int nb_frame, nb_sky, isky;
@@ -801,7 +801,7 @@ static int gravity_vis(cpl_frameset * frameset,
 cleanup:
 	/* Deallocation of all variables */
 	cpl_msg_info(cpl_func,"Memory cleanup");
-	
+
 	FREELOOP (gravi_data_delete,sky_maps,nb_sky);
 	FREE (gravi_data_delete,dark_map);
 	FREE (gravi_data_delete,data);
