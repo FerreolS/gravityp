@@ -1,3 +1,4 @@
+
 /* $Id: gravi_calib.c,v 1.10 2012/03/23 15:10:40 nazouaoui Exp $
  *
  * This file is part of the GRAVI Pipeline
@@ -4743,4 +4744,152 @@ cpl_error_code gravi_array_get_group_delay_loop_new (cpl_array ** input, cpl_arr
 
   gravi_msg_function_exit(1);
   return CPL_ERROR_NONE;
+}
+
+
+
+/*
+ * Compute the group-delay in [m] as the maximum of |Env(x)| where
+ * Env(x) = < visdata(lbd) * exp(2i.pi * x / lbd) >  with <> sum over lbd
+ *
+ * Perform a double pass:
+ * - crude search over the entire coherence length, resolution 1lbd
+ * - fine search within 2lbd, resolution lbd/100
+ */
+double gravi_array_get_group_delay (cpl_array * input, cpl_array * sigma)
+{
+  cpl_ensure (input, CPL_ERROR_NULL_INPUT, 0);
+  cpl_ensure (sigma, CPL_ERROR_NULL_INPUT, 0);
+  
+  int nv = 0;
+  double width, step;
+  cpl_size nsigma = cpl_array_get_size (sigma);
+  cpl_size ninput = cpl_array_get_size (input);
+
+  cpl_ensure (nsigma == ninput, CPL_ERROR_ILLEGAL_INPUT, 0);
+
+  /* Width of a single spectral channel in [m] 
+   * Step is 1 lambda */
+  width = 1.0 * nsigma / fabs (cpl_array_get (sigma,0,&nv) - cpl_array_get (sigma,nsigma-1,&nv));
+  step = 1. / cpl_array_get (sigma,nsigma/2,&nv);
+  
+  /* Init the search for maximum */
+  double gd0 = 0.0;
+  double current_gd = -1e10;
+  double current_max = -1.0;
+
+  /* Loop on x to find the maximum of P(x) = |FT(input(sigma))| 
+   * FIXME: the get_complex in the middle of the loop is very slow */
+  for (double x = gd0-width/2.0 ; x < gd0+width/2.0 ; x += step) {
+	double complex tmp = 0.0 * I + 0.0;
+	for (cpl_size w=0; w<nsigma; w++) 
+	  tmp += cpl_array_get_complex (input, w, &nv) * cexp (-2.*I*CPL_MATH_PI * x * cpl_array_get (sigma,w,&nv));
+	if ( cabs (tmp) > current_max ) {
+	  current_max = cabs (tmp);
+	  current_gd = x;
+	}
+  }
+  
+  /* Width is 4 lambda
+   * Step is lambda/100 */
+  width = 4.0 * step;
+  step = step / 100.0;
+
+  /* Re-init the search for maximum */
+  gd0 = current_gd;
+  current_gd = -1e10;
+  current_max = -1.0;
+  
+  /* Loop on x to find the maximum of P(x) = |FT(input(sigma))| */
+  for (double x = gd0-width/2 ; x < gd0+width/2 ; x += step) {
+	double complex tmp = 0.0 * I + 0.0;
+	for (cpl_size w=0; w<nsigma; w++)
+	  tmp += cpl_array_get_complex (input, w, &nv) * cexp (-2.*I*CPL_MATH_PI * x * cpl_array_get (sigma,w,&nv));
+	if ( cabs (tmp) > current_max ) {
+	  current_max = cabs (tmp);
+	  current_gd = x;
+	}
+  }
+
+  CPLCHECK("Cannot compute GD");
+
+  return current_gd;
+}
+
+/*
+ * Compute the group-delay in [m] as the maximum of |Env(x)| where
+ * Env(x) = < visdata(lbd) * exp(2i.pi * x / lbd) >  with <> sum over lbd
+ * 
+ * Perform a single pass:
+ * - crude search over the entire coherence length, resolution 1lbd
+ */
+double gravi_array_get_group_delay_coarse (cpl_array * input, cpl_array * sigma)
+{
+  cpl_ensure (input, CPL_ERROR_NULL_INPUT, 0);
+  cpl_ensure (sigma, CPL_ERROR_NULL_INPUT, 0);
+  
+  int nv = 0;
+  double width, step;
+  cpl_size nsigma = cpl_array_get_size (sigma);
+  cpl_size ninput = cpl_array_get_size (input);
+
+  cpl_ensure (nsigma == ninput, CPL_ERROR_ILLEGAL_INPUT, 0);
+
+  /* Width of a single spectral channel in [m] 
+   * Step is 1 lambda */
+  width = 1.0 * nsigma / fabs (cpl_array_get (sigma,0,&nv) - cpl_array_get (sigma,nsigma-1,&nv));
+  step = 1. / cpl_array_get (sigma,nsigma/2,&nv);
+  
+  /* Init the search for maximum */
+  double gd0 = 0.0;
+  double current_gd = -1e10;
+  double current_max = -1.0;
+
+  /* Loop on x to find the maximum of P(x) = |FT(input(sigma))| 
+   * FIXME: the get_complex in the middle of the loop is very slow */
+  for (double x = gd0-width/2.0 ; x < gd0+width/2.0 ; x += step) {
+	double complex tmp = 0.0 * I + 0.0;
+	for (cpl_size w=0; w<nsigma; w++) 
+	  tmp += cpl_array_get_complex (input, w, &nv) * cexp (-2.*I*CPL_MATH_PI * x * cpl_array_get (sigma,w,&nv));
+	if ( cabs (tmp) > current_max ) {
+	  current_max = cabs (tmp);
+	  current_gd = x;
+	}
+  }
+
+  CPLCHECK("Cannot compute GD");
+
+  return current_gd;
+}
+
+
+/*
+ * Compute the group-delay in [m] with the Pedretii algorithm
+ * http://cdsads.u-strasbg.fr/abs/2005ApOpt..44.5173P
+ */
+double gravi_array_get_group_delay_iota (cpl_array * input, cpl_array * wavenumber)
+{
+  cpl_ensure (input,      CPL_ERROR_NULL_INPUT, 0);
+  cpl_ensure (wavenumber, CPL_ERROR_NULL_INPUT, 0);
+  
+  double complex interspectra = 0.0 + I * 0.0;
+  double sum_wavenumber_diff = 0.0;
+
+  cpl_size size  = cpl_array_get_size (input);
+  cpl_size sizew = cpl_array_get_size (wavenumber);
+
+  cpl_ensure (size == sizew, CPL_ERROR_ILLEGAL_INPUT, 0);
+  
+  for (cpl_size n = 1; n < size; n++) {
+
+	/* InterSpectre = < visData_sc_exp(i) * visData_sc_exp(i+1) > over lbd  */
+	interspectra += cpl_array_get_complex (input, n, NULL) *
+	                conj (cpl_array_get_complex (input, n - 1, NULL));
+
+	/* Sum of the wavenumber differences */
+	sum_wavenumber_diff += cpl_array_get (wavenumber, n, NULL) - cpl_array_get (wavenumber, n-1, NULL);
+  }
+
+  /* Return the group delay in [m] */
+  return carg ( interspectra ) / sum_wavenumber_diff * (size-1) / (2*M_PI);
 }

@@ -93,14 +93,12 @@ cpl_error_code gravi_table_add_scalar (cpl_table * table, const char * name, int
 cpl_array * gravi_table_create_sigma_array (cpl_table * oi_wave);
 cpl_array * gravi_table_create_wave_array (cpl_table * oi_wave);
 
-double gravi_array_get_group_delay_iota (cpl_array * input, cpl_array * wavenumber);
-double gravi_array_get_group_delay (cpl_array * input, cpl_array * sigma);
-double gravi_array_get_group_delay_coarse (cpl_array * input, cpl_array * sigma);
 cpl_error_code gravi_array_get_group_delay_loop (cpl_array ** input, cpl_array * sigma,
-												 double * gd, cpl_size nrow);
+						 double * gd, cpl_size nrow,
+						 double max_width, int verbose);
 
 cpl_error_code gravi_table_compute_group_delay (cpl_table * table, const char *input,
-												const char *output, cpl_table * oi_wave);
+						const char *output, cpl_table * oi_wave);
 
 cpl_matrix * get_matrix_from_vector (cpl_vector * , cpl_vector * );
 

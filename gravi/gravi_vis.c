@@ -923,7 +923,7 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
     srand(1);
     
     for ( int boot = 0 ; boot < nboot ; boot ++ ) {
-    	cpl_msg_debug(cpl_func,"Bootstrap %d over %d", boot+1, nboot);
+    	cpl_msg_debug (cpl_func,"Bootstrap %d over %d", boot+1, nboot);
     
     	/* Init the itegration of nseg segments */
     	cpl_array * F12_boot   = gravi_array_init_double (nwave, 0.0);
@@ -950,7 +950,7 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
     	/* End loop to integrate nseg segments randomly selected 
     	 * We now have a random realisation of a high SNR dataset 
     	 * to which we can apply the estimators */
-
+  
         /* Make sure the geometric flux is not null */
         gravi_array_threshold_min (F1F2_boot, 0.0, 1e-15);
     			  
@@ -975,7 +975,7 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
     			
     	/* Compute the VARIANCE over the bootstraped samples with the 'online_variance' algorithm.
     	 * See https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance */
-    	gravi_array_online_variance_res (vis2_res, boot, 0);
+     	gravi_array_online_variance_res (vis2_res, boot, 0);
     	gravi_array_online_variance_res (visAmp_res, boot, 0);
     	gravi_array_online_variance_res (visR_res, boot, 0);
     	gravi_array_online_variance_res (visI_res, boot, 0);
@@ -997,13 +997,13 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
     FREELOOP (cpl_array_delete, F1F2, nseg + nmontecarlo);
 
 	/* Convert variance from bootstrap to RMS */
-	cpl_msg_debug(cpl_func,"Put the RMS over bootstrap");	
+	cpl_msg_debug (cpl_func,"Put the RMS over bootstrap");	
 	cpl_array_power (vis2_res[3], 0.5);
 	cpl_array_power (visAmp_res[3], 0.5);
 	cpl_array_power (visPhi_res[3], 0.5);
 	cpl_array_power (visR_res[3], 0.5);
 	cpl_array_power (visI_res[3], 0.5);
-	CPLCHECK_MSG("while converting variance -> rms");
+	CPLCHECK_MSG ("while converting variance -> rms");
 
 	/* Normalize integration */
 	mjd_avg /= total_exptime;
@@ -1059,7 +1059,6 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
   CPLCHECK_MSG("cannot flag baddata data");
   
   /* Compute the total integration time */
-  cpl_msg_debug(cpl_func,"Total integration time = %.3f s", total_exptime);
   cpl_table_set_double (oi_vis_avg,  "INT_TIME", base, total_exptime);
   cpl_table_set_double (oi_vis2_avg, "INT_TIME", base, total_exptime);
   cpl_table_set_double (oi_vis_avg,  "MJD", base, mjd_avg);
@@ -1074,6 +1073,7 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
   cpl_table_set_int (oi_vis2_avg, "TARGET_ID", base, cpl_table_get_int (oi_vis, "TARGET_ID", base, &nv));
   cpl_table_set_array (oi_vis_avg,  "STA_INDEX", base, cpl_table_get_array (oi_vis, "STA_INDEX", base));
   cpl_table_set_array (oi_vis2_avg, "STA_INDEX", base, cpl_table_get_array (oi_vis, "STA_INDEX", base));
+
   /* Free variance */
   FREELOOP (cpl_array_delete, vis2_res, 4);
   FREELOOP (cpl_array_delete, visAmp_res, 4);
@@ -1414,7 +1414,8 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
                 cpl_array_divide (visData_sc, visErr_sc);
                 
                 /* Compute and remove the mean group delay in [m] */
-                double mean_delay = gravi_array_get_group_delay (visData_sc, wavenumber_sc);
+		double mean_delay = 0.0;
+		gravi_array_get_group_delay_loop (&visData_sc, wavenumber_sc, &mean_delay, 1, 2e-3, CPL_FALSE);
                 gravi_array_multiply_phasor (visData_sc, - 2*I*CPL_MATH_PI * mean_delay, wavenumber_sc);
                 cpl_msg_debug (cpl_func, "group-delay in SC is : %f [microns]", mean_delay * 1e6);
                 
@@ -1436,7 +1437,7 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
                 cpl_array_delete (visErr_sc);
                 
                 CPLCHECK_NUL("when computing the astrometric phase");
-                
+
                 /* Add QC parameters for SC */
                 int * reject_flag_sc = cpl_table_get_data_int (vis_SC, "REJECTION_FLAG");
                 
