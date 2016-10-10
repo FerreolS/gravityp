@@ -1198,7 +1198,9 @@ cpl_error_code gravi_p2vm_phase_correction (gravi_data * p2vm_map,
 		  cpl_msg_info (cpl_func,"Force phiA(lbd) to have zero mean and minimum GD for baselines (01,02,03)");
 		  
 		  for (int base = 0; base<3 ; base++) {
-			double gd = gravi_array_get_group_delay (visphase[base + pol*6], sigma);
+              double gd = 0.0;
+              gravi_array_get_group_delay_loop (&visphase[base + pol*6], sigma,
+                                                &gd, 1, 2e-3, CPL_FALSE);
 			cpl_array * tmp = cpl_array_duplicate (visphase[base + pol*6]);
 			gravi_array_multiply_phasor (tmp, -CPL_MATH_2PI*I*gd, sigma);
 			gd += carg (cpl_array_get_mean_complex (tmp)) / CPL_MATH_2PI / cpl_array_get_mean (sigma);
@@ -1211,7 +1213,9 @@ cpl_error_code gravi_p2vm_phase_correction (gravi_data * p2vm_map,
 		  cpl_msg_info (cpl_func,"Force phiA(lbd) to have zero-GD for baselines (01,02,03)");
 		  
 		  for (int base = 0; base<3 ; base++) {
-			double gd = gravi_array_get_group_delay (visphase[base + pol*6], sigma);
+              double gd = 0.0;
+              gravi_array_get_group_delay_loop (&visphase[base + pol*6], sigma,
+                                                &gd, 1, 2e-3, CPL_FALSE);
 			ref[base+1] = gravi_array_cexp (CPL_MATH_2PI * I * gd, sigma);
 		  }
 		} else {
