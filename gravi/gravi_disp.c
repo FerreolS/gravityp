@@ -83,6 +83,9 @@ cpl_matrix * gravi_fit_dispersion (cpl_table * oiflux_table,
  * it computes the dispersion index of the FDDL and store them into
  * columns BETA and GAMMA. This table is then stored as extention
  * DISP_MODEL into the returned, newly allocated, gravi_data.
+ *
+ * The input vis_data shall have at least 10 observation (60 rows
+ * in OI_VIS tables).
  */
 /*----------------------------------------------------------------------------*/
 
@@ -102,9 +105,15 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
 
     /* Get the number of observations */
     cpl_size nrow = cpl_table_get_nrow (oiflux_table) / ntel;
-    cpl_ensure (nrow > 5, CPL_ERROR_ILLEGAL_INPUT, NULL);
-
     cpl_msg_info (cpl_func,"Input vis_data has %lld observation",nrow);
+
+    /* Check the number of observation */
+    if (nrow < 10) {
+        cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
+                               "Not enough observations to compute"
+                               "a dispersion model. Check input SOF");
+        return NULL;
+    }
 
     /* 
      * Create output data
