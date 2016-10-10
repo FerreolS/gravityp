@@ -816,7 +816,7 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
   for ( int row=0 ; row<nrow; row++ ) if ( flag[row * nbase + base] == 0 ) nvalid++;
 
   /* Build an optimal number of segment and nrow_per_segment */
-  cpl_size nrow_per_seg = CPL_MAX( nvalid / nseg, 1);
+  cpl_size nrow_per_seg = CPL_MAX (nvalid / nseg, 1);
   nseg = nvalid / nrow_per_seg;
 
   /* Ensure there are at least 5 samples to bootstrap on,
