@@ -1006,24 +1006,33 @@ cpl_array * gravi_array_smooth (cpl_array * input, int nsmooth)
   return output;
 }
 
-
-/*
- * Compute the group-delay in [m] as the maximum of |Env(x)| where
- * Env(x) = < visdata(lbd) * exp(2i.pi * x / lbd) >  with <> sum over lbd
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Optimized computation of GDELAY for a list of arrays
+ *
+ * @param input        Pointer to arrays (complex coherent flux)
+ * @param sigma        Array with the wavenumbers [m]
+ * @param gd           Pointer to output GDELAYs  [m]
+ * @param nrow         Size of input and gd
+ * @param max_width    Maximum opd to explore     [m]
+ * @param verbose      Flag to dump the computation time in log
+ *
+ * For each input array, the group-delay in [m] as the maximum of |Env(x)|
+ * where Env(x) = < visdata(lbd) * exp(2i.pi * x / lbd) >
+ * with <> sum over lbd
  * 
- * This is optimized to run on a column of arrays.
- * Perform a triple pass:
- * - crude search over the entire coherence length, resolution 2lbd
+ * This is optimized to run on a column of arrays:
+ * - guess the delay with the interspectra
+ * - crude search over the max_width, resolution 2lbd
  * - fine search resolution lbd/10
  * - fine search resolution lbd/100
- *
- * FIXME: this shall be optimized for the SC, since the first search
- * takes very long over the entire coherence length...
  */
+/*----------------------------------------------------------------------------*/
+
 cpl_error_code gravi_array_get_group_delay_loop (cpl_array ** input, cpl_array * sigma,
-						 double * gd, cpl_size nrow,
+                                                 double * gd, cpl_size nrow,
                                                  double max_width,
-						 int verbose)
+                                                 int verbose)
 {
   gravi_msg_function_start(verbose);
   cpl_ensure_code (input, CPL_ERROR_NULL_INPUT);
@@ -1040,7 +1049,7 @@ cpl_error_code gravi_array_get_group_delay_loop (cpl_array ** input, cpl_array *
   /* Width of a single spectral channel in [m] */
   double coherence = 0.5 * nsigma / fabs (cpl_array_get (sigma,0,&nv) - cpl_array_get (sigma,nsigma-1,&nv));
 
-  /* We never explore more than 1mm... which is already a lot */
+  /* We never explore more than max_width */
   width1 = CPL_MIN (coherence, max_width);
   step1  = 2.0 * lbd;
   nstep1 = (cpl_size)(width1/step1);
@@ -1086,7 +1095,8 @@ cpl_error_code gravi_array_get_group_delay_loop (cpl_array ** input, cpl_array *
   /* Loop on rows */
   for (cpl_size row = 0; row<nrow; row++) {
     
-    /* Copy data as double complex to secure their type */
+    /* Copy data as double complex to secure their type and allow
+     * in-place modification between the different grids */
     for (w=0; w<nsigma; w++) visdata[w] = cpl_array_get_complex (input[row], w, &nv);
 
     /* IOTA method in [m] -- as starting point, with 
