@@ -1185,7 +1185,7 @@ cpl_error_code gravi_array_get_group_delay_loop (cpl_array ** input, cpl_array *
   cpl_size nsigma = cpl_array_get_size (sigma);
   double width1, step1, width2, step2, width3, step3;
   cpl_size w, s, nstep1, nstep2, nstep3;
-  double x, gd1, gd2, gd3, current_max = -1.0;
+  double x, gd0, gd1, gd2, gd3, current_max = -1.0;
   double lbd = 1.0 / cpl_array_get (sigma,nsigma/2,&nv);
   
   /* Width of a single spectral channel in [m], Step is lambda 
@@ -1216,6 +1216,12 @@ cpl_error_code gravi_array_get_group_delay_loop (cpl_array ** input, cpl_array *
   /* Copy data as double to secure their type */
   for (w=0; w<nsigma; w++) sigdata[w] = cpl_array_get (sigma, w, &nv);
 
+  /* Sum of wavenumber differences */
+  double ds = 0.0;
+  for (w=1; w<nsigma; w++) ds += sigdata[w] - sigdata[w-1];
+  ds /= (nsigma-1);
+
+  /* Build waveform */
   cpl_msg_info (cpl_func, "Build waveform for 3 pass -- %lli %lli %lli steps", nstep1, nstep2, nstep3);
   
   for (s=0, x = -width1/2.0; x < +width1/2.0; x+=step1)
@@ -1232,7 +1238,17 @@ cpl_error_code gravi_array_get_group_delay_loop (cpl_array ** input, cpl_array *
 	
 	/* Copy data as double complex to secure their type */
 	for (w=0; w<nsigma; w++) visdata[w] = cpl_array_get_complex (input[row], w, &nv);
-	
+
+    /* IOTA method in [m] -- as starting point */
+    double complex is = 0.0 + I * 0.0;
+    for (w=1; w<nsigma; w++) {
+        is += visdata[w] * conj(visdata[w-1]) / CPL_MAX(cabs(visdata[w]) * cabs(visdata[w-1]), 1e-15);
+    }
+    gd0 = carg (is) / ds / CPL_MATH_2PI;
+
+	/* Remove GD */
+	for (w=0; w<nsigma; w++) visdata[w] *= cexp (-2.*I*CPL_MATH_PI*gd0*sigdata[w]);
+    
 	/* Loop on x to find the maximum of P(x) = |FT(input(sigma))| */
 	for (current_max = -1.0, s = 0, x = -width1/2; x < +width1/2; x+=step1) {
 	  double complex tmp = 0.0 * I + 0.0;
@@ -1263,7 +1279,7 @@ cpl_error_code gravi_array_get_group_delay_loop (cpl_array ** input, cpl_array *
 	  if ( P > current_max) { current_max = P; gd3 = x; }
 	}
 	
-	gd[row] = gd1 + gd2 + gd3;
+	gd[row] = gd0 + gd1 + gd2 + gd3;
 	
 	/* Check by comparing with the other grid search */
 	// if (!(row%(CPL_MAX(nrow/1000,1)))) {

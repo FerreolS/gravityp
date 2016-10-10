@@ -4649,3 +4649,98 @@ cpl_table * gravi_wave_scan (cpl_table * spectrum_table,
 	return wave_table;
 }
 
+
+/*
+ * Compute the group-delay in [m] as the maximum of |Env(x)| where
+ * Env(x) = < visdata(lbd) * exp(2i.pi * x / lbd) >  with <> sum over lbd
+ *
+ * Not working in HIGH because the 
+ */
+cpl_error_code gravi_array_get_group_delay_loop_new (cpl_array ** input, cpl_array * sigma,
+                                                     double * gd, cpl_size nrow)
+{
+  gravi_msg_function_start(1);
+  cpl_ensure_code (input, CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (sigma, CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (gd, CPL_ERROR_ILLEGAL_OUTPUT);
+
+  cpl_size nsigma = cpl_array_get_size (sigma);
+  double lbd = 1.0 / cpl_array_get (sigma,nsigma/2,NULL);
+
+  /* Copy data as double to secure their type */
+  double * sigdata  = cpl_malloc (sizeof(double complex) * nsigma);
+  for (cpl_size w=0; w<nsigma; w++) sigdata[w] = cpl_array_get (sigma, w, NULL);
+  
+  /* Coherence lenght in [m] */
+  int size = 50;
+  double coherence    = 0.5 * nsigma / fabs (sigdata[0] - sigdata[nsigma-1]);
+  double coherence_bb = 1 / fabs (sigdata[0] - sigdata[nsigma-1]);
+  double width = CPL_MIN (size * coherence_bb, coherence);
+
+  cpl_msg_info ("TEST", "coh = %g and %g [um]", coherence*1e6, coherence_bb*1e6);
+
+  /* 10 maximum waveform */
+  double complex ** waveform = cpl_calloc (10, sizeof(double complex*));
+  double * step  = cpl_calloc (10, sizeof(double));
+
+  /* Allocate waveforms to explore */
+  int nloop = 0;
+  while (width > lbd/50) {
+      step[nloop] = width / size;
+      cpl_msg_info (cpl_func, "Build waveform of %g [um] with step [%gum]",
+                    width *1e6, step[nloop] *1e6);
+
+      waveform[nloop] = cpl_malloc (sizeof(double complex) * size * nsigma);
+      for (cpl_size s=0; s<size; s++) {
+          double x = (s-size/2) * step[nloop];
+          for (cpl_size w=0; w<nsigma; w++)
+              waveform[nloop][s*nsigma+w] = cexp (-2.*I*CPL_MATH_PI * x * sigdata[w]);
+      }
+      
+      width /= 10.;
+      nloop ++;
+  }
+
+  /* Allocate memory for the grid search */
+  cpl_msg_info (cpl_func, "Loop on %lli rows to compute gdelay", nrow);
+
+  /* Memory for data */
+  double complex * visdata = cpl_malloc (sizeof(double complex) * nsigma);
+
+  /* Loop on rows */
+  for (cpl_size row = 0; row<nrow; row++) {
+      gd[row] = 0.0;
+      
+      /* Copy data as double complex to secure their type */
+      for (cpl_size w=0; w<nsigma; w++) visdata[w] = cpl_array_get_complex (input[row], w, NULL);
+
+      /* Loop on resolution */
+      for (int loop = 0; loop < nloop; loop++) {
+          double current_max = -1, current_gd = 0.0;
+
+          /* Loop on x to find the maximum of P(x) = |FT(input(sigma))| */
+          for (cpl_size s=0; s<size; s++) {
+              double complex tmp = 0.0 * I + 0.0;
+              for (cpl_size w=0; w<nsigma; w++) {tmp += visdata[w] * waveform[loop][s*nsigma+w];}
+              double P = cabs (tmp);
+              if ( P > current_max) { current_max = P; current_gd = (s-size/2) * step[loop]; }
+          }
+
+          /* Remove gd */
+          for (cpl_size w=0; w<nsigma; w++) visdata[w] *= cexp (-2.*I*CPL_MATH_PI*current_gd*sigdata[w]);
+          gd[row] += current_gd;
+          
+      } /* End loop on resolution */
+
+      CPLCHECK_MSG("Cannot compute GD");
+  } /* End loop on rows */
+
+  /* Clean memory */
+  FREE (cpl_free, visdata);
+  FREE (cpl_free, sigdata);
+  FREE (cpl_free, step);
+  FREELOOP (cpl_free, waveform, 10);
+
+  gravi_msg_function_exit(1);
+  return CPL_ERROR_NONE;
+}
