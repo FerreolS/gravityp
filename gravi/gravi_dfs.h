@@ -118,6 +118,7 @@ cpl_parameter * gravi_parameter_add_biassub_file (cpl_parameterlist *self);
 cpl_parameter * gravi_parameter_add_spectrum_file (cpl_parameterlist *self);
 cpl_parameter * gravi_parameter_add_preproc_file (cpl_parameterlist *self);
 cpl_parameter * gravi_parameter_add_p2vmred_file (cpl_parameterlist *self);
+cpl_parameter * gravi_parameter_add_vis_file (cpl_parameterlist *self);
 cpl_parameter * gravi_parameter_add_astro_file (cpl_parameterlist *self);
 
 cpl_parameter * gravi_parameter_add_biasmethod (cpl_parameterlist *self);

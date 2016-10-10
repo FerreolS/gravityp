@@ -258,6 +258,21 @@ cpl_parameter * gravi_parameter_add_p2vmred_file (cpl_parameterlist *self)
     return p;
 }
 
+cpl_parameter * gravi_parameter_add_vis_file (cpl_parameterlist *self)
+{
+    cpl_ensure (self, CPL_ERROR_NULL_INPUT, NULL);
+    
+    cpl_parameter *p;
+	p = cpl_parameter_new_value ("gravity.dfs.vis-file", CPL_TYPE_BOOL,
+                                 "Save the VIS intermediate product",
+                                 "gravity.dfs", FALSE);
+	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "vis-file");
+	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	cpl_parameterlist_append (self, p);
+    
+    return p;
+}
+
 cpl_parameter * gravi_parameter_add_astro_file (cpl_parameterlist *self)
 {
     cpl_ensure (self, CPL_ERROR_NULL_INPUT, NULL);

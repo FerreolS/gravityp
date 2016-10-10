@@ -181,6 +181,7 @@ static int gravity_disp_create(cpl_plugin * plugin)
     /* Intermediate files */
     gravi_parameter_add_preproc_file (recipe->parameters);
     gravi_parameter_add_p2vmred_file (recipe->parameters);
+    gravi_parameter_add_vis_file (recipe->parameters);
 
     /* Snr */
     gravi_parameter_add_compute_snr (recipe->parameters, isCalib);
@@ -489,12 +490,32 @@ static int gravity_disp(cpl_frameset            * frameset,
 			/* Compute rejection flags for averaging */
 			gravi_compute_rejection (p2vmred_data, parlist);
 			CPLCHECK_MSG ("Cannot rejection flags signals");
-
 			
 			/* Visibility and flux are averaged and the followings
 			 * are saved in Visibility data in tables VIS, VIS2 and T3 */
 			tmpvis_data = gravi_compute_vis (p2vmred_data, parlist);
 			CPLCHECK_CLEAN ("Cannot average the visibilities");
+
+			/* Save the VIS */
+			if (gravi_param_get_bool (parlist,"gravity.dfs.vis-file")) {
+			  
+    			gravi_data_save_new (tmpvis_data, frameset, NULL, parlist,
+									 current_frameset, frame, "gravity_disp",
+                                     NULL, GRAVI_VIS_SINGLE_CALIB);
+				
+				CPLCHECK_CLEAN ("Cannot save the VIS product");
+			}
+
+			/* Save the P2VMREDUCED */
+			if (gravi_param_get_bool (parlist,"gravity.dfs.p2vmred-file")) {
+			  
+    			gravi_data_save_new (p2vmred_data, frameset, NULL, parlist,
+									 current_frameset, frame, "gravity_disp",
+                                     NULL, GRAVI_P2VMRED_SINGLE_CALIB);
+				
+				CPLCHECK_CLEAN ("Cannot save the P2VMREDUCED product");
+			}
+
 
             /* Merge with already existing */
             if (ivis == 0) {
@@ -506,16 +527,6 @@ static int gravity_disp(cpl_frameset            * frameset,
                 FREE (gravi_data_delete, tmpvis_data);
             }
 			CPLCHECK_CLEAN ("Cannot merge the visibilities");			
-
-			/* Save the P2VMREDUCED */
-			if (gravi_param_get_bool (parlist,"gravity.dfs.p2vmred-file")) {
-			  
-    			gravi_data_save_new (p2vmred_data, frameset, NULL, parlist,
-									 current_frameset, frame, "gravity_disp",
-                                     NULL, GRAVI_P2VMRED_SINGLE_CALIB);
-				
-				CPLCHECK_CLEAN ("Cannot save the P2VMREDUCED product");
-    		}
 
 			cpl_msg_info (cpl_func,"Free the p2vmreduced");
 			FREE (cpl_frameset_delete, current_frameset);
