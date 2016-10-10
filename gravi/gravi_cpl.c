@@ -589,10 +589,10 @@ cpl_error_code gravi_table_add_columns (cpl_table * oi_vis1, const char *name1,
   int row;
   cpl_msg_debug (cpl_func, "Colname (%s + %s) ",name1,name2);
   
-  cpl_type type1 = cpl_table_get_column_type(oi_vis1, name1 );
-  cpl_type type2 = cpl_table_get_column_type(oi_vis2, name2 );
-  cpl_size nrow1 = cpl_table_get_nrow ( oi_vis1 );
-  cpl_size nrow2 = cpl_table_get_nrow ( oi_vis2 );
+  cpl_type type1 = cpl_table_get_column_type (oi_vis1, name1);
+  cpl_type type2 = cpl_table_get_column_type (oi_vis2, name2);
+  cpl_size nrow1 = cpl_table_get_nrow (oi_vis1);
+  cpl_size nrow2 = cpl_table_get_nrow (oi_vis2);
   CPLCHECK_MSG("Cannot get type or nrow");
 
   if ( type1 != type2 || nrow1 != nrow2) {
@@ -601,8 +601,8 @@ cpl_error_code gravi_table_add_columns (cpl_table * oi_vis1, const char *name1,
   }
   
   if ( type1 == CPL_TYPE_DOUBLE ) {
-	double * data1 = cpl_table_get_data_double( oi_vis1, name1 );
-	double * data2 = cpl_table_get_data_double( oi_vis2, name2 );
+	double * data1 = cpl_table_get_data_double (oi_vis1, name1);
+	double * data2 = cpl_table_get_data_double (oi_vis2, name2);
 	CPLCHECK_MSG("Cannot load data");
 
 	/* Add and multiply */
@@ -630,7 +630,8 @@ cpl_error_code gravi_table_add_columns (cpl_table * oi_vis1, const char *name1,
 		data1[row] += data2[row];
 	}
   } else {
-	return cpl_error_set_message (cpl_func,CPL_ERROR_ILLEGAL_INPUT,"unknow type");
+	return cpl_error_set_message (cpl_func,CPL_ERROR_ILLEGAL_INPUT,
+                                  "unknow type -- report to DRS team");
   }
   /* End case  */
 
