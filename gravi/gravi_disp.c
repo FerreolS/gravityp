@@ -294,11 +294,19 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
     /* Add the disp_matrix into the output */
     cpl_image * disp_image = gravi_image_from_matrix (disp_matrix);
     gravi_data_add_img (disp_map, NULL, "DISP_COEFF", disp_image);
-    
+
     /* Add the displine_matrix into the output */
     cpl_image * displine_image = gravi_image_from_matrix (displine_matrix);
     gravi_data_add_img (disp_map, NULL, "DISPLINE_COEFF", displine_image);
+    
+    /* Duplicate the POS_TABLE */
+    gravi_data_add_table (disp_map, NULL, "POS_TABLE",
+                          cpl_table_duplicate (pos_table));
 
+    /* Duplicate the OI_WAVE */
+    gravi_data_add_table (disp_map, NULL, "OI_WAVE",
+                          cpl_table_duplicate (oiwave_table));
+    
     /* Add the lin_vector into the output */
     cpl_image * lin_image = gravi_image_from_vector (lin_vector);
     gravi_data_add_img (disp_map, NULL, "LIN_COEFF", lin_image);
