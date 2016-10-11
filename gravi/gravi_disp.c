@@ -300,7 +300,7 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
     gravi_data_add_img (disp_map, NULL, "DISPLINE_COEFF", displine_image);
     
     /* Duplicate the POS_TABLE */
-    gravi_data_add_table (disp_map, NULL, "POS_TABLE",
+    gravi_data_add_table (disp_map, NULL, "POS_ARGON",
                           cpl_table_duplicate (pos_table));
 
     /* Duplicate the OI_WAVE */
