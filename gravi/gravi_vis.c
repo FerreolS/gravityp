@@ -1374,8 +1374,8 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
             cpl_table * oi_vis_SC = gravi_table_oi_create (nwave_sc, 1, GRAVI_OI_VIS_EXT);
             
             /* Additional columns in final, averaged product */
-            gravi_table_new_column (oi_vis_SC, "GDELAY_ASTROMETRY", "m", CPL_TYPE_DOUBLE);
-            gravi_table_new_column (oi_vis_SC, "PHASE_ASTROMETRY", "rad", CPL_TYPE_DOUBLE);
+            gravi_table_new_column (oi_vis_SC, "GDELAY", "m", CPL_TYPE_DOUBLE);
+            gravi_table_new_column (oi_vis_SC, "PHASE", "rad", CPL_TYPE_DOUBLE);
             
             gravi_table_new_column_array (oi_vis_SC, "OPD_DISP", "m", CPL_TYPE_DOUBLE, nwave_sc);
             cpl_array ** opd_disp = cpl_table_get_data_array (oi_vis_SC, "OPD_DISP");
@@ -1385,10 +1385,6 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
             
             CPLCHECK_NUL("Cannot create columns in averaged OIFITS...");
             
-            /* Average of phi_met over the entire exposure [m] 
-             * FIXME: to be decided how we store this quantity */
-            double mean_delay_met_fc[6] = {0,0,0,0,0,0};
-
             for (int base = 0; base < nbase; base++) {
                 
                 gravi_vis_average_bootstrap (oi_vis_SC, oi_vis2_SC, vis_SC,
@@ -1404,7 +1400,8 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
                  * Re compute the astrometric phase from VISDATA to deal with absolute phase
                  * VISDATA as well as (R,I) remains unchanged.
                  */
-                
+
+                /* We duplicate VISDATA, to keep the value untouched in the table */
                 cpl_array * visData_sc, * visErr_sc;
                 visData_sc = cpl_array_cast (cpl_table_get_array (oi_vis_SC, "VISDATA", base), CPL_TYPE_DOUBLE_COMPLEX);
                 
@@ -1414,21 +1411,21 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
                 cpl_array_divide (visData_sc, visErr_sc);
                 
                 /* Compute and remove the mean group delay in [m] */
-		double mean_delay = 0.0;
-		gravi_array_get_group_delay_loop (&visData_sc, wavenumber_sc, &mean_delay, 1, 2e-3, CPL_FALSE);
+                double mean_delay = 0.0;
+                gravi_array_get_group_delay_loop (&visData_sc, wavenumber_sc, &mean_delay, 1, 2e-3, CPL_FALSE);
                 gravi_array_multiply_phasor (visData_sc, - 2*I*CPL_MATH_PI * mean_delay, wavenumber_sc);
                 cpl_msg_debug (cpl_func, "group-delay in SC is : %f [microns]", mean_delay * 1e6);
                 
-                /* Add this delay to the astrometric delay [m] */
-                cpl_table_set (oi_vis_SC, "GDELAY_ASTROMETRY", base, mean_delay_met_fc[base] + mean_delay);
+                /* Save this delay [m] */
+                cpl_table_set (oi_vis_SC, "GDELAY", base, mean_delay);
                 
                 /* Compute and remove the mean phase in [rad] */
                 double mean_phase = carg (cpl_array_get_mean_complex (visData_sc));
                 cpl_array_multiply_scalar_complex (visData_sc, cexp(- I * mean_phase));
                 cpl_msg_debug (cpl_func, "phase-delay in SC is : %f [deg]", mean_phase * 180 / CPL_MATH_PI);
                 
-                /* Add this phase to the astrometric phase [rad] */
-                cpl_table_set (oi_vis_SC, "PHASE_ASTROMETRY", base, mean_phase);
+                /* Save this phase [rad] */
+                cpl_table_set (oi_vis_SC, "PHASE", base, mean_phase);
                 
                 /* Set back the phase in [deg] */
                 cpl_array_arg (visData_sc);
