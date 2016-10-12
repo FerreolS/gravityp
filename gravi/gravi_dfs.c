@@ -349,7 +349,7 @@ cpl_error_code gravi_parameter_add_compute_snr (cpl_parameterlist *self, int isC
     cpl_parameter *p;
     
     /* Number of FT samples to average to compute SNR and GDELAY */
-	p = cpl_parameter_new_value ("gravi.nsmooth_snr_ft", CPL_TYPE_INT,
+	p = cpl_parameter_new_value ("gravity.signal.nsmooth-snr-ft", CPL_TYPE_INT,
                                  "Number of sample to average coherently when computing\n "
                                  "the real-time SNR and GDELAY of the FT (shall corresponds\n "
                                  "to the atmospheric coherence time). The runing integration\n "

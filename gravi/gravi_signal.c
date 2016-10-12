@@ -520,7 +520,7 @@ cpl_error_code gravi_compute_snr (gravi_data * p2vmred_data,
     if (type_data == GRAVI_FT) {
         /* For FT, the DIT is selected to match somehow the atmospheric
          * coherence time, hence we shall smooth over 'a few' samples */
-        nsmooth = gravi_param_get_int (parlist, "gravi.nsmooth_snr_ft");
+        nsmooth = gravi_param_get_int (parlist, "gravity.signal.nsmooth-snr-ft");
     }
     else {
         /* For SC, we select a smoothing of 1s. Note that the SNR of SC is
