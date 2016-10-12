@@ -291,25 +291,47 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
     /* Add the DISP_MODEL in the output gravi_data */
     gravi_data_add_table (disp_map, NULL, "DISP_MODEL", disp_table);
 
-    /* Add the disp_matrix into the output */
-    cpl_image * disp_image = gravi_image_from_matrix (disp_matrix);
-    gravi_data_add_img (disp_map, NULL, "DISP_COEFF", disp_image);
-
-    /* Add the displine_matrix into the output */
-    cpl_image * displine_image = gravi_image_from_matrix (displine_matrix);
-    gravi_data_add_img (disp_map, NULL, "DISPLINE_COEFF", displine_image);
     
     /* Duplicate the POS_TABLE */
-    gravi_data_add_table (disp_map, NULL, "POS_ARGON",
-                          cpl_table_duplicate (pos_table));
+    cpl_table * dispwave_table = cpl_table_duplicate (oiwave_table);
+    gravi_data_add_table (disp_map, NULL, "DISP_WAVE", dispwave_table);
 
-    /* Duplicate the OI_WAVE */
-    gravi_data_add_table (disp_map, NULL, "OI_WAVE",
-                          cpl_table_duplicate (oiwave_table));
+    /* Add the BETA and GAMMA columns */
+    cpl_msg_info ("TEST","add beta");
+    gravi_table_init_column_array (dispwave_table, "BETA",  NULL, CPL_TYPE_DOUBLE, ntel);
+    gravi_table_init_column_array (dispwave_table, "GAMMA", NULL, CPL_TYPE_DOUBLE, ntel);
     
-    /* Add the lin_vector into the output */
-    cpl_image * lin_image = gravi_image_from_vector (lin_vector);
-    gravi_data_add_img (disp_map, NULL, "LIN_COEFF", lin_image);
+    /* Fill the BETA and GAMMA columns */
+    cpl_msg_info ("TEST","fill");
+    for (cpl_size tel = 0; tel < ntel; tel++) {
+        for (cpl_size wave = 0; wave < nwave; wave ++) {
+            gravi_table_set_value (dispwave_table,"BETA",wave,tel,
+                                   cpl_matrix_get (disp_matrix, 10+tel, wave));
+            gravi_table_set_value (dispwave_table,"GAMMA",wave,tel,
+                                   cpl_matrix_get (disp_matrix, 6+tel, wave));
+            CPLCHECK_NUL ("Cannot fill the DISP_WAVE");
+        }
+    }
+
+    
+    /* Duplicate the OI_WAVE */
+    cpl_table * dispth_table = cpl_table_duplicate (pos_table);
+    gravi_data_add_table (disp_map, NULL, "DISP_WAVE_TH", dispth_table);
+
+    /* Add the BETA and GAMMA columns */
+    gravi_table_init_column_array (dispth_table, "BETA",  NULL, CPL_TYPE_DOUBLE, ntel);
+    gravi_table_init_column_array (dispth_table, "GAMMA", NULL, CPL_TYPE_DOUBLE, ntel);
+    
+    /* Fill the BETA and GAMMA columns */
+    for (cpl_size tel = 0; tel < ntel; tel++) {
+        for (cpl_size wave = 0; wave < nline; wave ++) {
+            gravi_table_set_value (dispth_table,"BETA",wave,tel,
+                                   cpl_matrix_get (displine_matrix, 10+tel, wave));
+            gravi_table_set_value (dispth_table,"GAMMA",wave,tel,
+                                   cpl_matrix_get (displine_matrix, 6+tel, wave));
+            CPLCHECK_NUL ("Cannot fill the DISP_WAVE_TH");
+        }
+    }
 
 
     /* Free results */
