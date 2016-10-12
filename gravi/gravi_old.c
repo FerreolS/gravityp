@@ -4893,3 +4893,37 @@ double gravi_array_get_group_delay_iota (cpl_array * input, cpl_array * wavenumb
   /* Return the group delay in [m] */
   return carg ( interspectra ) / sum_wavenumber_diff * (size-1) / (2*M_PI);
 }
+
+
+
+//cpl_error_code gravi_data_erase_obs (gravi_data * data,
+//                                     const cpl_parameterlist params)
+//{
+//    cpl_ensure (data,   CPL_ERROR_NULL_INPUT, NULL);    
+//    cpl_ensure (params, CPL_ERROR_NULL_INPUT, NULL);
+//
+//    if (params)
+//
+//    /* Rejection flag (1 = rejected) */
+//    cpl_size max_obs = 10000;
+//    cpl_array * flag_array = cpl_array_new (max_obs, CPL_TYPE_INT);
+//    cpl_array_fill_window (flag_array, 0, max_obs, 0);
+//
+//    /* Loop on extension */
+//    for (int ext = 0; ext < data->nb_ext ; ext++) {
+//
+//        const char * extname = gravi_pfits_get_extname (data->exts_hdrs[ext]);
+//        if (strstr (extname, GRAVI_OI_VIS_EXT) ||
+//            strstr (extname, GRAVI_OI_VIS2_EXT) ) {
+//
+//        }
+//        if (strstr (extname, GRAVI_OI_FLUX_EXT) ||
+//            strstr (extname, GRAVI_OI_T3_EXT) ) {
+//
+//        }
+//        
+//    } /* End loop on extensions */
+//    
+//    return CPL_ERROR_NONE;
+//}
+
