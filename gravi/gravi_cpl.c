@@ -184,7 +184,7 @@ double gravi_table_get_column_std (cpl_table * table, const char * name, int bas
 	return 0.0;
   }
 
-  return (mean2 / nrow - mean*mean / nrow / nrow);
+  return sqrt (mean2 / nrow - mean*mean / nrow / nrow);
 }
 
 
