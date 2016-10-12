@@ -64,7 +64,8 @@ cpl_vector * gravi_fit_fddl_lin (cpl_table * oiflux_table);
 
 cpl_matrix * gravi_fit_dispersion (cpl_table * oiflux_table,
                                    cpl_table * oivis_table,
-                                   cpl_table * oiwave_table);
+                                   cpl_table * oiwave_table,
+                                   double * GDrms);
 
 /*-----------------------------------------------------------------------------
                              Functions code
@@ -124,6 +125,11 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
     cpl_propertylist * disp_header = gravi_data_get_header (disp_map);
     cpl_propertylist_append (disp_header, vis_header);
 
+    /* Set a QC parameter with the number of observations */
+    const char * qc_name = "ESO QC DISP NEXP";
+    cpl_propertylist_update_int (disp_header, qc_name, nrow);
+    cpl_propertylist_set_comment (disp_header, qc_name, "Number of exposures used");
+    
     /* Create the output table */
     cpl_table * disp_table = cpl_table_new (ntel);
 
@@ -161,6 +167,7 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
      */
     
     cpl_matrix * disp_matrix; // (14, nwave)  in [refractive index]
+    double GDrms = 0.0;
 
     /* Loop on polarisations */
     for (int pol = 0; pol < npol; pol++) {
@@ -190,7 +197,7 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
         
         cpl_matrix * disp_matrix0;
         disp_matrix0 = gravi_fit_dispersion (oiflux_table, oivis_table,
-                                             oiwave_table);
+                                             oiwave_table, &GDrms);
         CPLCHECK_NUL ("Cannot compute disp_matrix");
 
         /* Co-add the two polarisation. So here we assume the wavelength
@@ -204,6 +211,11 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
         }
     } /* End loop on polarisations */
 
+
+    /* Set a QC parameter with the number of observations */
+    qc_name = "ESO QC DISP GDELAY_RMS";
+    cpl_propertylist_update_double (disp_header, qc_name, GDrms);
+    cpl_propertylist_set_comment (disp_header, qc_name, "[m] GDELAY rms over files");
     
     /* 
      * Interpolate dispersion at known Argon wavelength
@@ -403,6 +415,8 @@ cpl_error_code gravi_disp_cleanup (gravi_data * vis_data)
     if (nobs != nrow) {
         cpl_msg_warning (cpl_func, "LKDT not stable over all files "
                          "(keep %lld over %lld)", nobs, nrow);
+    } else {
+        cpl_msg_info (cpl_func, "LKDT stable over all files");
     }
 
     /* 
@@ -422,7 +436,7 @@ cpl_error_code gravi_disp_cleanup (gravi_data * vis_data)
 
     /* Verbose */
     cpl_size nrow_new = cpl_table_get_nrow (oivis_table) / nbase;
-    cpl_msg_info (cpl_func, "Initial data had %lld obs, now %lld", nrow, nrow_new); 
+    cpl_msg_info (cpl_func, "Initial data had %lld obs, now %lld", nrow, nrow_new);
 
     gravi_msg_function_exit(1);
     return CPL_ERROR_NONE;
@@ -515,6 +529,8 @@ cpl_vector * gravi_fit_fddl_lin (cpl_table * oiflux_table)
  * @param oivis_table    The input OI_VIS table
  * @param oiflux_table   The input OI_FLUX table
  * @param oiwave_table   The input OI_WAVELENGTH table
+ * @param GDrms          The GD RMS over obs (max value over baselines) [m]
+ * 
  * @return a matrix with nwave x 14 coefficients
  *
  * Found the  14 parameters 6Aij + 4Bi + 4Ci in 
@@ -538,7 +554,8 @@ cpl_vector * gravi_fit_fddl_lin (cpl_table * oiflux_table)
 
 cpl_matrix * gravi_fit_dispersion (cpl_table * oiflux_table,
                                    cpl_table * oivis_table,
-                                   cpl_table * oiwave_table)
+                                   cpl_table * oiwave_table,
+                                   double * GDrms)
 {
     gravi_msg_function_start(1);
 	cpl_ensure (oiflux_table, CPL_ERROR_NULL_INPUT, NULL);
@@ -612,6 +629,8 @@ cpl_matrix * gravi_fit_dispersion (cpl_table * oiflux_table,
         
         cpl_msg_info (cpl_func, "GD mean = %g [um]", mean*1e6);
         cpl_msg_info (cpl_func, "GD std  = %g [um]", std*1e6);
+
+        *GDrms = CPL_MAX (std, *GDrms);
     }
 
     
