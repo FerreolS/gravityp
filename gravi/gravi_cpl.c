@@ -1303,6 +1303,29 @@ cpl_error_code gravi_table_new_column_array (cpl_table * table, const char * nam
   return CPL_ERROR_NONE;
 }
 
+cpl_error_code gravi_table_init_column_array (cpl_table * table, const char * name, const char * unit, cpl_type type, cpl_size size)
+{
+  cpl_ensure_code (table, CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (name,  CPL_ERROR_NULL_INPUT);
+
+  if ( cpl_table_has_column (table, name) )
+      cpl_table_erase_column (table, name);
+  
+  cpl_table_new_column_array (table, name, type, size);
+  if (unit) cpl_table_set_column_unit (table, name, unit);
+
+  cpl_array * array = cpl_array_new (size, type);
+  cpl_array_fill_window (array, 0, size, 0.0);
+
+  cpl_size nrow  = cpl_table_get_nrow (table);
+  for (cpl_size row = 0; row < nrow; row++)
+      cpl_table_set_array (table, name, row, array);
+  
+  FREE (cpl_array_delete, array);
+  
+  return CPL_ERROR_NONE;
+}
+
 /*---------------------------------------------------------------------------*/
 /**
  * @brief Unwrap an imagelist an all its images

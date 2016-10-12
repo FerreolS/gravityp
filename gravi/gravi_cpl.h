@@ -78,8 +78,11 @@ cpl_error_code gravi_table_set_array_phase (cpl_table * table, const char * name
 cpl_error_code gravi_table_set_string_fixlen (cpl_table *table, const char *name,
 											  int row, const char *value, int len);
 int gravi_table_are_equal (cpl_table * first, cpl_table * second);
+
 cpl_error_code gravi_table_new_column (cpl_table * table, const char * name, const char * unit, cpl_type type);
 cpl_error_code gravi_table_new_column_array (cpl_table * table, const char * name, const char * unit, cpl_type type, cpl_size size);
+cpl_error_code gravi_table_init_column_array (cpl_table * table, const char * name, const char * unit, cpl_type type, cpl_size size);
+
 cpl_error_code gravi_table_add_columns (cpl_table * oi_vis1, const char *name1,
 										cpl_table * oi_vis2, const char *name2);
 cpl_error_code gravi_table_runint_column (cpl_table * oi_vis, const char *input_name,
