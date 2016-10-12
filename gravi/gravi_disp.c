@@ -303,8 +303,15 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
     /* Add the DISP_MODEL in the output gravi_data */
     gravi_data_add_table (disp_map, NULL, "DISP_MODEL", disp_table);
 
+
+    /* Add a table FIXME: copy correctly the table */
+    cpl_table * phase_table;
+    phase_table = cpl_table_duplicate (gravi_data_get_oi_vis (vis_data, GRAVI_SC, 0, npol));
+    gravi_data_add_table (disp_map, NULL, "PHASE", phase_table);
+
     
-    /* Duplicate the POS_TABLE */
+    
+    /* Duplicate the POS_ARGON */
     cpl_table * dispwave_table = cpl_table_duplicate (oiwave_table);
     gravi_data_add_table (disp_map, NULL, "DISP_WAVE", dispwave_table);
 
