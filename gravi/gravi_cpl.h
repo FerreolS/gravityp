@@ -110,6 +110,11 @@ cpl_imagelist * gravi_imagelist_wrap_column (cpl_table * table_data, const char 
 cpl_error_code gravi_imagelist_unwrap_images (cpl_imagelist * imglist);
     
 cpl_vector * gravi_table_get_vector (cpl_table * , cpl_size , const char * );
+cpl_vector * gravi_table_get_vector_scalar (cpl_table * table,
+                                            const char * name,
+                                            cpl_size base,
+                                            cpl_size nbase);
+
 cpl_vector * gravi_table_get_vector_diff (cpl_table * spectrum_data, int index,
                                           const char * regname1,
                                           const char * regname2);

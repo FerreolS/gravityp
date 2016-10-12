@@ -1697,6 +1697,54 @@ cpl_vector * gravi_table_get_vector (cpl_table * spectrum_data,
     return (data_value);
 }
 
+cpl_vector * gravi_table_get_vector_scalar (cpl_table * table,
+                                            const char * name,
+                                            cpl_size base,
+                                            cpl_size nbase)
+{
+	/* Check the inputs */
+	cpl_ensure (table,   CPL_ERROR_NULL_INPUT, NULL);
+	cpl_ensure (name,    CPL_ERROR_NULL_INPUT, NULL);
+	cpl_ensure (base>=0, CPL_ERROR_ILLEGAL_INPUT, NULL);
+	cpl_ensure (nbase>0, CPL_ERROR_ILLEGAL_INPUT, NULL);
+
+	/* Ensure it is scalar */
+    cpl_size size = cpl_table_get_column_depth (table, name);
+	cpl_ensure (size==0, CPL_ERROR_ILLEGAL_INPUT, NULL);
+
+	/* Allocate the vector */
+	cpl_size nrow = cpl_table_get_nrow (table) / nbase;
+	cpl_vector * vector = cpl_vector_new (nrow);
+
+    /* Get the type */
+    cpl_type type = cpl_table_get_column_type (table, name);
+
+    if (type == CPL_TYPE_DOUBLE) {
+        double * data = cpl_table_get_data_double (table, name);
+        for (cpl_size row = 0; row < nrow; row++)
+            cpl_vector_set (vector, row, data[row*nbase+base]);
+    }
+    else if (type == CPL_TYPE_FLOAT) {
+        float * data = cpl_table_get_data_float (table, name);
+        for (cpl_size row = 0; row < nrow; row++)
+            cpl_vector_set (vector, row, data[row*nbase+base]);
+    }
+    else if (type == CPL_TYPE_INT) {
+        int * data = cpl_table_get_data_int (table, name);
+        for (cpl_size row = 0; row < nrow; row++)
+            cpl_vector_set (vector, row, data[row*nbase+base]);
+    }
+    else {
+        cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
+                               "This type is not supported"
+                               "(report to DRS team).");
+        FREE (cpl_vector_delete, vector);
+        return NULL;
+    }
+
+    return vector;
+}
+
 /*---------------------------------------------------------------------------*/
 /**
  * @brief Create a vector from the row @c index of the column @c regname
