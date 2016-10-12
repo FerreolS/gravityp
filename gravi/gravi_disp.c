@@ -630,7 +630,12 @@ cpl_matrix * gravi_fit_dispersion (cpl_table * oiflux_table,
         cpl_msg_info (cpl_func, "GD mean = %g [um]", mean*1e6);
         cpl_msg_info (cpl_func, "GD std  = %g [um]", std*1e6);
 
+        /* Save the overall worst value of GD rms */
         *GDrms = CPL_MAX (std, *GDrms);
+
+        //cpl_vector * vector = gravi_table_get_vector_scalar (oivis_table, "GDELAY", base, nbase);
+        //cpl_plot_vector (NULL, NULL, NULL, vector);
+        //cpl_vector_delete (vector);
     }
 
     
