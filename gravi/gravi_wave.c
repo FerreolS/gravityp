@@ -1194,16 +1194,24 @@ cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
                 int nv = 0;
                 double wave_value = cpl_array_get (wavelength, wave, &nv);
                 double chi2_value = cpl_array_get (wavechi2, wave, &nv);
-                
+
+                /* The FT accept all channel */
+                cpl_vector_set (all_valid, pos, 1);
+
                 /* Test if accepted for the 2D fit */
-                if ((nwave > 5) &&
-                    (chi2_value > M_PI_4 ||
-                     wave_value < 2.01e-6 ||
-                     //wave_value > 2.43e-6 ||
-                     wave_value > 2.5e-6)) {
-                    cpl_vector_set (all_valid, pos, 0);
-                } else {
-                    cpl_vector_set (all_valid, pos, 1);
+                if (nwave > 1000) {
+                    /* HIGH SC */
+                    if ((chi2_value > M_PI_4 ||
+                         wave_value < 2.01e-6 ||
+                         wave_value > 2.43e-6))
+                        cpl_vector_set (all_valid, pos, 0);
+                }
+                else if (nwave > 5) {
+                    /* LOW and MEDIUM SC*/
+                    if ((chi2_value > M_PI_4 ||
+                         wave_value < 2.01e-6 ||
+                         wave_value > 2.5e-6))
+                        cpl_vector_set (all_valid, pos, 0);
                 }
                 
                 /* Set the wavelength */
