@@ -656,7 +656,7 @@ cpl_matrix * gravi_fit_dispersion (cpl_table * oiflux_table,
     /* Allocate memory for force-brut exploration of A values */
     cpl_size nA = 1000;
     double complex * phasor = cpl_calloc (nrow * nA, sizeof (double complex));
-    cpl_vector * plot_vector = cpl_vector_new (nA);
+    // cpl_vector * plot_vector = cpl_vector_new (nA);
 
     /* Allocate memory for results */
     cpl_matrix * Abl = cpl_matrix_new (nbase, nwave);
@@ -680,7 +680,7 @@ cpl_matrix * gravi_fit_dispersion (cpl_table * oiflux_table,
                     currentV += phasor[row*nA+iA] * visdata[row*nbase+base][wave];
                 }
 
-                if (base == 0 && wave == 1700) cpl_vector_set (plot_vector, iA, cabs (currentV));
+                // if (base == 0 && wave == 1700) cpl_vector_set (plot_vector, iA, cabs (currentV));
                 
                 /* Check if better fit */
                 if (cabs (currentV) > maxV) {
@@ -710,8 +710,8 @@ cpl_matrix * gravi_fit_dispersion (cpl_table * oiflux_table,
     *Amin = CPL_MIN (*Amin, cpl_matrix_get_min (Abl));
 
 
-    cpl_plot_vector (NULL, NULL, NULL, plot_vector);
-    FREE (cpl_vector_delete, plot_vector);
+    // cpl_plot_vector (NULL, NULL, NULL, plot_vector);
+    // FREE (cpl_vector_delete, plot_vector);
 
 
     /* 
