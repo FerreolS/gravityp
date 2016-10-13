@@ -827,6 +827,15 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
     {
 	    cpl_msg_info (cpl_func, "Computing the FLAT of FT");
 
+        /* Get the dark of FT */
+        cpl_table * darkft_table;
+        darkft_table = gravi_data_get_table (dark_map,  GRAVI_IMAGING_DATA_FT_EXT);
+        CPLCHECK_NUL ("Cannot get DARK data of FT");
+
+        /* Get the DARK as an image */
+        cpl_image * darkft_img;
+        darkft_img = gravi_image_from_column (darkft_table, "PIX", 0);
+
         /* Collapse each FLAT file */
         cpl_imagelist *imglist_ft = cpl_imagelist_new ();
         for (int file = 0; file < nflat; file++) {
@@ -837,6 +846,11 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
 
             cpl_imagelist * imglistft_tmp;
             imglistft_tmp = gravi_imagelist_wrap_column (dataft_table, "PIX");
+
+            /* Remove DARK */
+            cpl_imagelist_subtract_image (imglistft_tmp, darkft_img);
+
+            /* Collapse the DITs of this FLAT */
             cpl_imagelist_set (imglist_ft, cpl_imagelist_collapse_create (imglistft_tmp), file);
             gravi_imagelist_unwrap_images (imglistft_tmp);
         }
@@ -845,7 +859,7 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
         cpl_image * flatft_img = cpl_imagelist_collapse_create (imglist_ft);
         cpl_imagelist_delete (imglist_ft);
 
-        /* Create the flat_table and the FLAT array */
+        /* Create the flat_table */
         cpl_table * flatft_table = cpl_table_extract (gravi_data_get_table (flats_data[nflat-1],
                                    GRAVI_IMAGING_DATA_FT_EXT), 0, 1);
         
@@ -855,6 +869,7 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
         /* Remove median image and array */
         FREE (cpl_array_unwrap, flatft_array);
         FREE (cpl_image_delete, flatft_img);
+        FREE (cpl_image_delete, darkft_img);
 
         /* Set the FLAT as IMAGING_DATA into product */
         gravi_data_add_table (out_data, NULL, GRAVI_IMAGING_DATA_FT_EXT, flatft_table);
