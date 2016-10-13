@@ -303,15 +303,7 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
     /* Add the DISP_MODEL in the output gravi_data */
     gravi_data_add_table (disp_map, NULL, "DISP_MODEL", disp_table);
 
-
-    /* Add a table FIXME: copy correctly the table */
-    cpl_table * phase_table;
-    phase_table = cpl_table_duplicate (gravi_data_get_oi_vis (vis_data, GRAVI_SC, 0, npol));
-    gravi_data_add_table (disp_map, NULL, "PHASE", phase_table);
-
-    
-    
-    /* Duplicate the POS_ARGON */
+    /* Duplicate the OI_WAVE into DISP_WAVE */
     cpl_table * dispwave_table = cpl_table_duplicate (oiwave_table);
     gravi_data_add_table (disp_map, NULL, "DISP_WAVE", dispwave_table);
 
@@ -333,9 +325,9 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
     }
 
     
-    /* Duplicate the OI_WAVE */
+    /* Duplicate the POS_ARGON into DISP_WAVETH */
     cpl_table * dispth_table = cpl_table_duplicate (pos_table);
-    gravi_data_add_table (disp_map, NULL, "DISP_WAVE_TH", dispth_table);
+    gravi_data_add_table (disp_map, NULL, "DISP_WAVETH", dispth_table);
 
     /* Add the BETA and GAMMA columns */
     gravi_table_init_column_array (dispth_table, "BETA",  NULL, CPL_TYPE_DOUBLE, ntel);
@@ -348,7 +340,7 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
                                    cpl_matrix_get (displine_matrix, 10+tel, wave));
             gravi_table_set_value (dispth_table,"GAMMA",wave,tel,
                                    cpl_matrix_get (displine_matrix, 6+tel, wave));
-            CPLCHECK_NUL ("Cannot fill the DISP_WAVE_TH");
+            CPLCHECK_NUL ("Cannot fill the DISP_WAVETH");
         }
     }
 
