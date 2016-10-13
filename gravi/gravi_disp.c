@@ -98,7 +98,7 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
     gravi_msg_warning ("FIXME", "Assumes same OI_WAVE for both polar of SC");
 
     /* Get data */
-    cpl_size nbase = 6, ntel = 4, npol = 2;
+    cpl_size ntel = 4, npol = 2;
     cpl_propertylist * vis_header = gravi_data_get_header (vis_data);
 	cpl_table * oiflux_table = gravi_data_get_oi_flux (vis_data, GRAVI_SC, 0, npol);
 	cpl_table * oiwave_table = gravi_data_get_oi_wave (vis_data, GRAVI_SC, 0, npol);
@@ -176,24 +176,8 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
         cpl_table * oiflux_table = gravi_data_get_oi_flux (vis_data, GRAVI_SC, pol, npol);
         cpl_table * oivis_table  = gravi_data_get_oi_vis (vis_data, GRAVI_SC, pol, npol);
         
-        /* (Re) create the FDDLi = (FDDL_FTi + FDDL_SCi)/2 */
+        /* (Re) create the column   FDDLi = (FDDL_FTi + FDDL_SCi)/2 */
         gravi_flux_create_fddllin_sc (oiflux_table, disp_table);
-
-        /* (Re) compute the centered baseline metrology 
-         * METij = METi - METj - Aij   (Aij in [um]) */
-        gravi_table_new_column (oivis_table, "OPD_MET_FC", "m", CPL_TYPE_DOUBLE);
-        for (int base = 0; base<nbase; base++) {
-            double Aij = cpl_vector_get (lin_vector, base);
-            for (cpl_size row=0; row<nrow; row++) {
-                int id  = row * nbase + base;
-                int idi = row * ntel + GRAVI_BASE_TEL[base][0];
-                int idj = row * ntel + GRAVI_BASE_TEL[base][1];
-                double meti = cpl_table_get (oiflux_table, "OPD_MET_FC", idi, NULL);
-                double metj = cpl_table_get (oiflux_table, "OPD_MET_FC", idj, NULL);
-                cpl_table_set (oivis_table, "OPD_MET_FC", id, meti - metj - Aij * 1e-6);
-                CPLCHECK_NUL ("Cannot center OPD_MET");
-            }
-        }
         
         cpl_matrix * disp_matrix0;
         disp_matrix0 = gravi_fit_dispersion (oiflux_table, oivis_table,
@@ -308,12 +292,10 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
     gravi_data_add_table (disp_map, NULL, "DISP_WAVE", dispwave_table);
 
     /* Add the BETA and GAMMA columns */
-    cpl_msg_info ("TEST","add beta");
     gravi_table_init_column_array (dispwave_table, "BETA",  NULL, CPL_TYPE_DOUBLE, ntel);
     gravi_table_init_column_array (dispwave_table, "GAMMA", NULL, CPL_TYPE_DOUBLE, ntel);
     
     /* Fill the BETA and GAMMA columns */
-    cpl_msg_info ("TEST","fill");
     for (cpl_size tel = 0; tel < ntel; tel++) {
         for (cpl_size wave = 0; wave < nwave; wave ++) {
             gravi_table_set_value (dispwave_table,"BETA",wave,tel,
@@ -631,10 +613,6 @@ cpl_matrix * gravi_fit_dispersion (cpl_table * oiflux_table,
 
         /* Save the overall worst value of GD rms */
         *GDrms = CPL_MAX (std, *GDrms);
-
-        //cpl_vector * vector = gravi_table_get_vector_scalar (oivis_table, "GDELAY", base, nbase);
-        //cpl_plot_vector (NULL, NULL, NULL, vector);
-        //cpl_vector_delete (vector);
     }
 
     
