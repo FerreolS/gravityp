@@ -1177,7 +1177,6 @@ cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
             int iB = gravi_get_region (detector_table, base, 'B', pol);
             int iC = gravi_get_region (detector_table, base, 'C', pol);
             int iD = gravi_get_region (detector_table, base, 'D', pol);
-            double coord_mean = (double)(iA+1 + iB+1 + iC+1 + iD+1) / 4.;
             
             /* WAVE_FIBRE data */
             sprintf (name, "BASE_%s_%s", GRAVI_BASE_NAME[base], GRAVI_POLAR(pol,npol));
@@ -1218,8 +1217,8 @@ cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
                 cpl_vector_set (all_wavelength, pos, wave_value);
                 cpl_vector_set (all_wavechi2,   pos, chi2_value);
                 
-                /* Set the X position */
-                cpl_vector_set (coord_X, pos, coord_mean);
+                /* Set the X position as the mean of the 4 regions */
+                cpl_vector_set (coord_X, pos, (double)(iA + iB + iC + iD) / 4.);
                 
                 /* Set the Y position. Add a shift of 0.15 pixels
                  * on odd output for SC detector */
@@ -1256,7 +1255,7 @@ cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
 		 * between the position and the wavelength = F(y, x)
 		 */  
 		cpl_size  deg2d[2] = {2, 3};
-        // if (nwave < 50) deg2d[1] = 2;
+        if (nwave < 1000) {deg2d[0] = 2; deg2d[1] = 3;}
         
 		cpl_msg_info (cpl_func, "Fit a 2d polynomial {%lli..%lli} to the wavelengths map", deg2d[0], deg2d[1]);
         
