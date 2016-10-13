@@ -1194,19 +1194,18 @@ cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
                 double wave_value = cpl_array_get (wavelength, wave, &nv);
                 double chi2_value = cpl_array_get (wavechi2, wave, &nv);
 
-                /* The FT accept all channel */
+                /* The FT accept all channel for the 2D fit */
                 cpl_vector_set (all_valid, pos, 1);
 
-                /* Test if accepted for the 2D fit */
-                if (nwave > 1000) {
-                    /* HIGH SC */
+                if (nwave > 100) {
+                    /* SC HIGH and MEDIUM */
                     if ((chi2_value > M_PI_4 ||
                          wave_value < 2.01e-6 ||
                          wave_value > 2.43e-6))
                         cpl_vector_set (all_valid, pos, 0);
                 }
                 else if (nwave > 5) {
-                    /* LOW and MEDIUM SC*/
+                    /* SC LOW */
                     if ((chi2_value > M_PI_4 ||
                          wave_value < 2.01e-6 ||
                          wave_value > 2.5e-6))
@@ -1222,7 +1221,7 @@ cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
                 
                 /* Set the Y position. Add a shift of 0.15 pixels
                  * on odd output for SC detector */
-                cpl_vector_set (coord_Y, pos, wave + 1 + cpl_vector_get (odd_index, wave)*0.15);
+                cpl_vector_set (coord_Y, pos, wave + cpl_vector_get (odd_index, wave)*0.15);
                 
             } /* End loop on wave */
 		} /* End loop on base */
@@ -1302,7 +1301,7 @@ cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
             
             /* Evaluate */
             cpl_vector_set (pos, 0, region);
-            cpl_vector_set (pos, 1, wave + 1 + cpl_vector_get (odd_index, wave)*0.15);
+            cpl_vector_set (pos, 1, wave + cpl_vector_get (odd_index, wave)*0.15);
             
             double result = cpl_polynomial_eval (coef_poly[pol], pos);
             cpl_array_set (value, wave, result);
