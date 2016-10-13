@@ -1376,6 +1376,7 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
             /* Additional columns in final, averaged product */
             gravi_table_new_column (oi_vis_SC, "GDELAY", "m", CPL_TYPE_DOUBLE);
             gravi_table_new_column (oi_vis_SC, "PHASE", "rad", CPL_TYPE_DOUBLE);
+            gravi_table_new_column (oi_vis_SC, "OPD_MET_FC", "m", CPL_TYPE_DOUBLE);
             
             gravi_table_new_column_array (oi_vis_SC, "OPD_DISP", "m", CPL_TYPE_DOUBLE, nwave_sc);
             cpl_array ** opd_disp = cpl_table_get_data_array (oi_vis_SC, "OPD_DISP");
@@ -1492,6 +1493,10 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
                     opd_disp[base] = opddisp_mean;
                     CPLCHECK_NUL ("Cannot average OPD_DISP");
                 }
+
+                /* Add the OPD_MET_FC averaged over the exposure */
+                double metfc_mean = gravi_table_get_column_mean (vis_SC, "OPD_MET_FC", base, nbase);
+                cpl_table_set (oi_vis_SC, "OPD_MET_FC", base, metfc_mean);
                 
                 /* Mean PHASE_REF_COEFF */
                 cpl_array * coeff_mean;
