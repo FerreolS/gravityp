@@ -61,14 +61,14 @@
                                  Private prototypes
  -----------------------------------------------------------------------------*/
 
-cpl_vector * gravi_fit_fddl_lin (cpl_table * oiflux_table);
+cpl_table * gravi_fit_fddl_lin (cpl_table * oiflux_table);
 
-cpl_matrix * gravi_fit_dispersion (cpl_table * oiflux_table,
-                                   cpl_table * oivis_table,
-                                   cpl_table * oiwave_table,
-                                   double * GDrms,
-                                   double * Amin,
-                                   double * Amax);
+cpl_table * gravi_fit_dispersion (cpl_table * oiflux_table,
+                                  cpl_table * oivis_table,
+                                  cpl_table * oiwave_table,
+                                  double * GDrms,
+                                  double * Amin,
+                                  double * Amax);
 
 /*-----------------------------------------------------------------------------
                              Functions code
@@ -133,43 +133,21 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
     cpl_propertylist_update_int (disp_header, qc_name, nrow);
     cpl_propertylist_set_comment (disp_header, qc_name, "Number of exposures used");
     
-    /* Create the output table */
-    cpl_table * disp_table = cpl_table_new (ntel);
 
     /* 
      * Compute the coefficient of FDDL linearity
      */
     
-    cpl_vector * lin_vector; // (22)  in [um/V**i]
-    lin_vector = gravi_fit_fddl_lin (oiflux_table);
-    CPLCHECK_NUL ("Cannot compute lin_vector");
+    cpl_table * linearity_table;
+    linearity_table = gravi_fit_fddl_lin (oiflux_table);
+    CPLCHECK_NUL ("Cannot compute the FDDL linearity");
 
-    /* 
-     * Fill the linearity coefficients 
-     */
-    cpl_size lin_maxdeg = 2;
-    gravi_table_new_column_array (disp_table, "LIN_FDDL_SC", "um/V^i", CPL_TYPE_DOUBLE, lin_maxdeg+1);
-    gravi_table_new_column_array (disp_table, "LIN_FDDL_FT", "um/V^i", CPL_TYPE_DOUBLE, lin_maxdeg+1);
-
-    cpl_array * coeff = cpl_array_new (lin_maxdeg+1, CPL_TYPE_DOUBLE);
-    for (cpl_size tel = 0; tel < ntel; tel++) {
-        cpl_array_set (coeff, 0, 0);
-        cpl_array_set (coeff, 1, cpl_vector_get (lin_vector, 6 +tel));
-        cpl_array_set (coeff, 2, cpl_vector_get (lin_vector, 10+tel));
-        cpl_table_set_array (disp_table, "LIN_FDDL_FT", tel, coeff);
-        cpl_array_set (coeff, 0, 0);
-        cpl_array_set (coeff, 1, cpl_vector_get (lin_vector, 14+tel));
-        cpl_array_set (coeff, 2, cpl_vector_get (lin_vector, 18+tel));
-        cpl_table_set_array (disp_table, "LIN_FDDL_SC", tel, coeff);
-        CPLCHECK_NUL ("Cannot set dispersion coeff");
-    }
-    FREE (cpl_array_delete, coeff);
     
     /* 
      * Compute the coefficients for FDDL index dispersion
      */
     
-    cpl_matrix * disp_matrix; // (14, nwave)  in [refractive index]
+    cpl_table * dispwave_table;
     double GDrms = 0.0, Amin = 1e4, Amax = -1e4;
 
     /* Loop on polarisations */
@@ -180,22 +158,25 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
         cpl_table * oivis_table  = gravi_data_get_oi_vis (vis_data, GRAVI_SC, pol, npol);
         
         /* (Re) create the column   FDDLi = (FDDL_FTi + FDDL_SCi)/2 */
-        gravi_flux_create_fddllin_sc (oiflux_table, disp_table);
-        
-        cpl_matrix * disp_matrix0;
-        disp_matrix0 = gravi_fit_dispersion (oiflux_table, oivis_table,
-                                             oiwave_table, &GDrms,
-                                             &Amin, &Amax);
-        CPLCHECK_NUL ("Cannot compute disp_matrix");
+        gravi_flux_create_fddllin_sc (oiflux_table, linearity_table);
+
+        /* Compute the BETA and GAMMA for each wavelength */
+        cpl_table * dispwave_table0;
+        dispwave_table0 = gravi_fit_dispersion (oiflux_table, oivis_table,
+                                                oiwave_table, &GDrms,
+                                                &Amin, &Amax);
+        CPLCHECK_NUL ("Cannot compute dispersion");
 
         /* Co-add the two polarisation. So here we assume the wavelength
          * table are the same for the two polarisation */
         if (pol == 0) {
-            disp_matrix = disp_matrix0;
+            dispwave_table = dispwave_table0;
         } else {
-            cpl_matrix_add (disp_matrix, disp_matrix0);
-            cpl_matrix_divide_scalar (disp_matrix, 2.0);
-            cpl_matrix_delete (disp_matrix0);
+            gravi_table_add_columns (dispwave_table, "BETA", dispwave_table0, "BETA");
+            gravi_table_multiply_scalar (dispwave_table, "BETA", 0, 1, 0.5);
+            gravi_table_add_columns (dispwave_table, "GAMMA", dispwave_table0, "GAMMA");
+            gravi_table_multiply_scalar (dispwave_table, "GAMMA", 0, 1, 0.5);
+            cpl_table_delete (dispwave_table0);
         }
     } /* End loop on polarisations */
 
@@ -219,34 +200,31 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
     
     
     /* 
-     * Interpolate dispersion at known Argon wavelength
+     * Interpolate BETA and GAMMA at known Argon wavelength
+     * WAVE is the position of the argon line on the current OI_WAVE 
+     * WAVE_TH is the true, vaccum line wavelength 
      */
-
-    /* WAVE is the the position of the argon line on the current OI_WAVE 
-     * WAVE_TH is the true, vaccum line wavelength */
-    cpl_table * pos_table = gravi_data_get_table (vis_data, "POS_ARGON");
-    cpl_size nline = cpl_table_get_nrow (pos_table);
-    cpl_size nwave = cpl_table_get_nrow (oiwave_table);
-
-    /* Input vector of OI_WAVE */
-    cpl_vector * oiwave_vector = cpl_vector_new (nwave);
-    for (cpl_size wave = 0; wave < nwave; wave++)
-        cpl_vector_set (oiwave_vector, wave, cpl_table_get (oiwave_table, "EFF_WAVE", wave, NULL));
-
-    /* Output vector of line position */
-    cpl_vector * wave_vector = cpl_vector_new (nline);
-    for (cpl_size line = 0; line < nline; line++)
-        cpl_vector_set (wave_vector, line, cpl_table_get (pos_table, "WAVE", line, NULL));
     
-    /* Interpolate all coefficients */
-    cpl_matrix * displine_matrix; // (14, nline)
-    displine_matrix = gravi_matrix_interpolate_col (disp_matrix, oiwave_vector, wave_vector);
-    FREE (cpl_vector_delete, oiwave_vector);
-    FREE (cpl_vector_delete, wave_vector);
+    cpl_table * pos_table = gravi_data_get_table (vis_data, "POS_ARGON");
+    cpl_table * dispth_table = cpl_table_duplicate (pos_table);
 
+    gravi_table_interpolate_column (dispth_table, "WAVE", "BETA",
+                                    dispwave_table, "EFF_WAVE", "BETA");
 
+    gravi_table_interpolate_column (dispth_table, "WAVE", "GAMMA",
+                                    dispwave_table, "EFF_WAVE", "GAMMA");
+
+    CPLCHECK_NUL ("Cannot interpolate into argon lines");
+
+    
     /* 
-     * Fit by Polynomial of order 2 and fill
+     * Create the output table from the linearity table 
+     */
+    cpl_table * disp_table = linearity_table;
+    
+    
+    /* 
+     * Fit dispersion by a polynomial of order 2 and fill
      * the output table
      */
     
@@ -256,15 +234,16 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
     gravi_table_new_column (disp_table, "WAVE0", "um", CPL_TYPE_DOUBLE);
 
     /* Allocation of the fit */
+    cpl_size nline = cpl_table_get_nrow (dispth_table);
     cpl_matrix * matrix = cpl_matrix_new (1, nline);
     cpl_vector * vector = cpl_vector_new (nline);
     cpl_polynomial * poly = cpl_polynomial_new (1);
-    coeff = cpl_array_new (maxdeg+1, CPL_TYPE_DOUBLE);
+    cpl_array * coeff = cpl_array_new (maxdeg+1, CPL_TYPE_DOUBLE);
     
     /* The axis for the 1/wave_th - 1/2.2 [um^-1] */
     double wave0 = 2.2;
     for (cpl_size line = 0; line < nline; line++) {
-        double wave_th = cpl_table_get (pos_table, "WAVE_TH", line, NULL);
+        double wave_th = cpl_table_get (dispth_table, "WAVE_TH", line, NULL);
         cpl_matrix_set (matrix, 0, line, 1.e-6/wave_th - 1./wave0);
     }
 
@@ -273,7 +252,7 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
         
         /* Fit the Bi (FDDL index) */
         for (cpl_size line = 0; line < nline; line++)
-            cpl_vector_set (vector, line, cpl_matrix_get (displine_matrix, 10+tel, line));
+            cpl_vector_set (vector, line, gravi_table_get_value (dispth_table, "BETA", line, tel));
         cpl_polynomial_fit (poly, matrix, NULL, vector, NULL, CPL_FALSE, &mindeg, &maxdeg);
         for (cpl_size order = 0; order < 10; order ++)
             
@@ -283,7 +262,7 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
         
         /* Fit the Ci (MET index) */
         for (cpl_size line = 0; line < nline; line++)
-            cpl_vector_set (vector, line, cpl_matrix_get (displine_matrix, 6+tel, line));
+            cpl_vector_set (vector, line, gravi_table_get_value (dispth_table, "GAMMA", line, tel));
         cpl_polynomial_fit (poly, matrix, NULL, vector, NULL, CPL_FALSE, &mindeg, &maxdeg);
         for (cpl_size order = 0; order <= maxdeg; order ++)
             cpl_array_set (coeff, order, cpl_polynomial_get_coeff (poly, &order));
@@ -304,50 +283,12 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
     /* Add the DISP_MODEL in the output gravi_data */
     gravi_data_add_table (disp_map, NULL, "DISP_MODEL", disp_table);
 
-    /* Duplicate the OI_WAVE into DISP_WAVE */
-    cpl_table * dispwave_table = cpl_table_duplicate (oiwave_table);
+    /* Add the DISP_WAVE in the output gravi_data */
     gravi_data_add_table (disp_map, NULL, "DISP_WAVE", dispwave_table);
 
-    /* Add the BETA and GAMMA columns */
-    gravi_table_init_column_array (dispwave_table, "BETA",  NULL, CPL_TYPE_DOUBLE, ntel);
-    gravi_table_init_column_array (dispwave_table, "GAMMA", NULL, CPL_TYPE_DOUBLE, ntel);
-    
-    /* Fill the BETA and GAMMA columns */
-    for (cpl_size tel = 0; tel < ntel; tel++) {
-        for (cpl_size wave = 0; wave < nwave; wave ++) {
-            gravi_table_set_value (dispwave_table,"BETA",wave,tel,
-                                   cpl_matrix_get (disp_matrix, 10+tel, wave));
-            gravi_table_set_value (dispwave_table,"GAMMA",wave,tel,
-                                   cpl_matrix_get (disp_matrix, 6+tel, wave));
-            CPLCHECK_NUL ("Cannot fill the DISP_WAVE");
-        }
-    }
-
-    
-    /* Duplicate the POS_ARGON into DISP_WAVETH */
-    cpl_table * dispth_table = cpl_table_duplicate (pos_table);
+    /* Add the DISP_WAVETH in the output gravi_data */
     gravi_data_add_table (disp_map, NULL, "DISP_WAVETH", dispth_table);
 
-    /* Add the BETA and GAMMA columns */
-    gravi_table_init_column_array (dispth_table, "BETA",  NULL, CPL_TYPE_DOUBLE, ntel);
-    gravi_table_init_column_array (dispth_table, "GAMMA", NULL, CPL_TYPE_DOUBLE, ntel);
-    
-    /* Fill the BETA and GAMMA columns */
-    for (cpl_size tel = 0; tel < ntel; tel++) {
-        for (cpl_size wave = 0; wave < nline; wave ++) {
-            gravi_table_set_value (dispth_table,"BETA",wave,tel,
-                                   cpl_matrix_get (displine_matrix, 10+tel, wave));
-            gravi_table_set_value (dispth_table,"GAMMA",wave,tel,
-                                   cpl_matrix_get (displine_matrix, 6+tel, wave));
-            CPLCHECK_NUL ("Cannot fill the DISP_WAVETH");
-        }
-    }
-
-    
-    /* Free results */
-    FREE (cpl_vector_delete, lin_vector);
-    FREE (cpl_matrix_delete, disp_matrix);
-    FREE (cpl_matrix_delete, displine_matrix);
     
     gravi_msg_function_exit(1);
     return disp_map;
@@ -445,22 +386,26 @@ cpl_error_code gravi_disp_cleanup (gravi_data * vis_data)
  * @brief Compute the linearity coefficient of FDDLs
  * 
  * @param oiflux_table   The input OI_FLUX table
- * @return a vector with 22 coefficients [um/V^i]
+ * @return a table with the coefficients [um/V^i]
  *
- * Found the 22 parameters 6Aij  4Bi  4Ci  4Di  4Ei
+ * Found the 22 parameters 6 Aij + 4 B1i + 4 B2i + 4 C1i + 4 C2i
  * by solving the linear system:
- * METit - METjt = Aij + Bi FT_POSit    - Bj FT_POSjt
- *                     + Ci FT_POSit**2 - Cj FT_POSjt**2  
- *                     - Di SC_POSit    + Dj SC_POSjt
- *                     - Ei SC_POSit**2 + Ej SC_POSjt**2
+ * METit - METjt = Aij + B1i FT_POSit    - B1j FT_POSjt
+ *                     + B2i FT_POSit**2 - B2j FT_POSjt**2  
+ *                     - C1i SC_POSit    + C1j SC_POSjt
+ *                     - C2i SC_POSit**2 + C2j SC_POSjt**2
  *
  * The input OI_FLUX table shall contain several observation at various
  * FDDL position, so that the system is invertible. It shall contains the
  * columns OPD_MET_FC, FT_POS, SC_POS.
+ *
+ * The output table contains 4 rows, one per beam i, and columns
+ * LIN_FDDL_FT with the B0 (=0), B1, B2 coefficients
+ * LIN_FDDL_SC with the C0 (=0), C1, C2 coefficients
  */
 /*----------------------------------------------------------------------------*/
 
-cpl_vector * gravi_fit_fddl_lin (cpl_table * oiflux_table)
+cpl_table * gravi_fit_fddl_lin (cpl_table * oiflux_table)
 {
     gravi_msg_function_start(1);
 	cpl_ensure (oiflux_table, CPL_ERROR_NULL_INPUT, NULL);
@@ -512,12 +457,34 @@ cpl_vector * gravi_fit_fddl_lin (cpl_table * oiflux_table)
     FREE (cpl_matrix_delete, model_matrix);
     FREE (cpl_matrix_delete, rhs_matrix);
 
-    /* Convert to vector */
-    cpl_vector * fddl_fit = cpl_vector_wrap (22, cpl_matrix_get_data (res_matrix));
-    FREE (cpl_matrix_unwrap, res_matrix);
- 
+
+    /* 
+     * Fill the linearity coefficients in the output table
+     */
+    cpl_table * lin_table = cpl_table_new (ntel);
+    gravi_table_new_column_array (lin_table, "LIN_FDDL_SC", "um/V^i", CPL_TYPE_DOUBLE, 3);
+    gravi_table_new_column_array (lin_table, "LIN_FDDL_FT", "um/V^i", CPL_TYPE_DOUBLE, 3);
+
+    cpl_array * coeff = cpl_array_new (3, CPL_TYPE_DOUBLE);
+    for (cpl_size tel = 0; tel < ntel; tel++) {
+        cpl_array_set (coeff, 0, 0);
+        cpl_array_set (coeff, 1, cpl_matrix_get (res_matrix, 6 +tel, 0));
+        cpl_array_set (coeff, 2, cpl_matrix_get (res_matrix, 10+tel, 0));
+        cpl_table_set_array (lin_table, "LIN_FDDL_FT", tel, coeff);
+        cpl_array_set (coeff, 0, 0);
+        cpl_array_set (coeff, 1, cpl_matrix_get (res_matrix, 14+tel, 0));
+        cpl_array_set (coeff, 2, cpl_matrix_get (res_matrix, 18+tel, 0));
+        cpl_table_set_array (lin_table, "LIN_FDDL_SC", tel, coeff);
+        CPLCHECK_NUL ("Cannot set dispersion coeff");
+    }
+    
+    /* Free results */
+    FREE (cpl_matrix_delete, res_matrix);
+    FREE (cpl_array_delete, coeff);
+
+    
     gravi_msg_function_exit(1);
-    return fddl_fit;
+    return lin_table;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -531,7 +498,7 @@ cpl_vector * gravi_fit_fddl_lin (cpl_table * oiflux_table)
  * @param Amin           Minimum fine correction in wavenumber [m^-1]
  * @param Amin           Maximum fine correction in wavenumber [m^-1]
  * 
- * @return a matrix with nwave x 14 coefficients
+ * @return a table with the coefficients
  *
  * Found the  14 parameters 6Aij + 4Bi + 4Ci in 
  * by solving the linear system:
@@ -550,15 +517,19 @@ cpl_vector * gravi_fit_fddl_lin (cpl_table * oiflux_table)
  * 
  * Note that the VISDATA are modified in-place by the routine.
  *
+ * The output table contains nwave rows (size of OI_WAVELENGTH table)
+ * with the columns BETA (the 4 Ci coefficients) and GAMMA (the 4
+ * Bi coefficients). It also have a column EFF_WAVE duplicated from
+ * the input OI_WAVELENGTH table.
  */
 /*----------------------------------------------------------------------------*/
 
-cpl_matrix * gravi_fit_dispersion (cpl_table * oiflux_table,
-                                   cpl_table * oivis_table,
-                                   cpl_table * oiwave_table,
-                                   double * GDrms,
-                                   double * Amin,
-                                   double * Amax)
+cpl_table * gravi_fit_dispersion (cpl_table * oiflux_table,
+                                  cpl_table * oivis_table,
+                                  cpl_table * oiwave_table,
+                                  double * GDrms,
+                                  double * Amin,
+                                  double * Amax)
 {
     gravi_msg_function_start(1);
 	cpl_ensure (oiflux_table, CPL_ERROR_NULL_INPUT, NULL);
@@ -819,8 +790,31 @@ cpl_matrix * gravi_fit_dispersion (cpl_table * oiflux_table,
     FREE (cpl_matrix_delete, Abl);
     FREE (cpl_matrix_delete, Obl);
 
+    
+    /* Convert the result into DISP_WAVE table,
+     * inspired from OI_WAVE */
+    cpl_table * dispwave_table = cpl_table_duplicate (oiwave_table);
+
+    /* Add the BETA and GAMMA columns */
+    gravi_table_init_column_array (dispwave_table, "BETA",  NULL, CPL_TYPE_DOUBLE, ntel);
+    gravi_table_init_column_array (dispwave_table, "GAMMA", NULL, CPL_TYPE_DOUBLE, ntel);
+    
+    /* Fill the BETA and GAMMA columns */
+    for (cpl_size tel = 0; tel < ntel; tel++) {
+        for (cpl_size wave = 0; wave < nwave; wave ++) {
+            gravi_table_set_value (dispwave_table,"BETA",wave,tel,
+                                   cpl_matrix_get (disp_fits, 10+tel, wave));
+            gravi_table_set_value (dispwave_table,"GAMMA",wave,tel,
+                                   cpl_matrix_get (disp_fits, 6+tel, wave));
+            CPLCHECK_NUL ("Cannot fill the dispwave_table");
+        }
+    }
+
+    /* Delete the matrix */
+    FREE (cpl_matrix_delete, disp_fits);
+    
 	gravi_msg_function_exit (1);
-	return disp_fits;
+	return dispwave_table;
 }
 
 /*----------------------------------------------------------------------------*/
