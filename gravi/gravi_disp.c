@@ -98,14 +98,13 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
     gravi_msg_function_start(1);
 	cpl_ensure (vis_data, CPL_ERROR_NULL_INPUT, NULL);
 
-    gravi_msg_warning ("FIXME", "Assumes same OI_WAVE for both polar of SC");
-
     /* Get data */
-    cpl_size ntel = 4, npol = 2;
+    cpl_size ntel = 4;
     cpl_propertylist * vis_header = gravi_data_get_header (vis_data);
+    cpl_size npol = gravi_pfits_get_pola_num (vis_header, GRAVI_SC);
 	cpl_table * oiflux_table = gravi_data_get_oi_flux (vis_data, GRAVI_SC, 0, npol);
 	cpl_table * oiwave_table = gravi_data_get_oi_wave (vis_data, GRAVI_SC, 0, npol);
-    CPLCHECK_NUL ("Cannot get data -- need VIS file with 2 polarisation");
+    CPLCHECK_NUL ("Cannot get data");
 
     /* Get the number of observations */
     cpl_size nrow = cpl_table_get_nrow (oiflux_table) / ntel;
@@ -172,6 +171,7 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
         if (pol == 0) {
             dispwave_table = dispwave_table0;
         } else {
+            gravi_msg_warning ("FIXME", "Assumes same OI_WAVE for both polar of SC");
             gravi_table_add_columns (dispwave_table, "BETA", dispwave_table0, "BETA");
             gravi_table_multiply_scalar (dispwave_table, "BETA", 0, 1, 0.5);
             gravi_table_add_columns (dispwave_table, "GAMMA", dispwave_table0, "GAMMA");
@@ -311,12 +311,15 @@ cpl_error_code gravi_disp_cleanup (gravi_data * vis_data)
     gravi_msg_function_start(1);
     cpl_ensure_code (vis_data, CPL_ERROR_NULL_INPUT);
 
-    cpl_size npol = 2;
     cpl_size nbase = 6, ntel = 4, nclo = 4;
 
+    cpl_propertylist * header = gravi_data_get_header (vis_data);
+    cpl_size npol_sc = gravi_pfits_get_pola_num (header, GRAVI_SC);
+    cpl_size npol_ft = gravi_pfits_get_pola_num (header, GRAVI_FT);
+
     /* Get one FT OI_VIS table */
-    cpl_table * oivis_table  = gravi_data_get_oi_vis (vis_data, GRAVI_FT, 0, npol);
-    cpl_table * oiflux_table = gravi_data_get_oi_flux (vis_data, GRAVI_SC, 0, npol);
+    cpl_table * oivis_table  = gravi_data_get_oi_vis (vis_data, GRAVI_FT, 0, npol_ft);
+    cpl_table * oiflux_table = gravi_data_get_oi_flux (vis_data, GRAVI_SC, 0, npol_sc);
     cpl_size nrow = cpl_table_get_nrow (oivis_table) / nbase;
 
     /* Rejection flag (1 = rejected) */
@@ -363,6 +366,7 @@ cpl_error_code gravi_disp_cleanup (gravi_data * vis_data)
      */
     
     for (int type_data = 0; type_data < 2; type_data ++) {
+        cpl_size npol = gravi_pfits_get_pola_num (header, type_data);
         for (int pol = 0; pol < npol; pol ++) {
             gravi_vis_erase_obs (gravi_data_get_oi_flux (vis_data, type_data, pol, npol), flag_array, ntel);
             gravi_vis_erase_obs (gravi_data_get_oi_vis (vis_data, type_data, pol, npol), flag_array, nbase);
