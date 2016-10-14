@@ -343,7 +343,7 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
         }
     }
 
-
+    
     /* Free results */
     FREE (cpl_vector_delete, lin_vector);
     FREE (cpl_matrix_delete, disp_matrix);
@@ -540,7 +540,7 @@ cpl_vector * gravi_fit_fddl_lin (cpl_table * oiflux_table)
  *                                   + Ci METit - Cj METjt
  * for all wavelength independently
  *
- * The routine takes a great care the unwrap the phase 
+ * The routine takes a great care to unwrap the phase 
  * before actually performing this fit.
  *
  * The input tables shall contain several observation at various
