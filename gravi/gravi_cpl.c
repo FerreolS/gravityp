@@ -115,6 +115,86 @@ cpl_array ** gravi_array_new_list (int n, cpl_type type, int size)
   return output;
 }
 
+cpl_error_code gravi_table_interpolate_column (cpl_table * to_table,
+                                               const char * to_x,
+                                               const char * to_y,
+                                               const cpl_table * from_table,
+                                               const char * from_x,
+                                               const char * from_y)
+{
+    gravi_msg_function_start(1);
+    cpl_ensure_code (to_table,   CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (to_x,       CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (to_y,       CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (from_table, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (from_x,     CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (from_y,     CPL_ERROR_NULL_INPUT);
+
+    /* Size */
+    cpl_size nxref = cpl_table_get_nrow (from_table);
+    cpl_size nxout = cpl_table_get_nrow (to_table);
+
+    /* Xref vectors */
+    cpl_vector * xref = cpl_vector_new (nxref);
+    for (cpl_size row = 0; row < nxref; row++) {
+        cpl_vector_set (xref, row, cpl_table_get (from_table, from_x, row, NULL));
+        CPLCHECK_MSG ("Cannot get x data");
+    }
+
+    /* Xout vectors */
+    cpl_vector * xout = cpl_vector_new (nxout);
+    for (cpl_size row = 0; row < nxout; row++) {
+        cpl_vector_set (xout, row, cpl_table_get (to_table, to_x, row, NULL));
+        CPLCHECK_MSG ("Cannot get x data");
+    }
+
+    /* Allocate memory for the interpolation */
+    cpl_vector * yref = cpl_vector_new (nxref);
+    cpl_vector * yout = cpl_vector_new (nxout);
+    cpl_bivector * fref = cpl_bivector_wrap_vectors (xref, yref);
+    cpl_bivector * fout = cpl_bivector_wrap_vectors (xout, yout);
+
+    /* Shall be a column of array */
+    cpl_size depth = cpl_table_get_column_depth (from_table, from_y);
+    if (depth == 0) 
+    	cpl_error_set_message (cpl_func,CPL_ERROR_INVALID_TYPE ,
+                               "Report this error to gravity.drs");
+
+    /* Output is of type DOUBLE */
+    const char * unit = cpl_table_get_column_unit (from_table, from_y);
+    gravi_table_init_column_array (to_table, to_y, unit, CPL_TYPE_DOUBLE, depth);
+
+    /* Loop on column depth */
+    for (cpl_size size = 0; size < depth; size++) {
+        
+        /* Yref vector */
+        for (cpl_size row = 0; row < nxref; row++) {
+            double value = gravi_table_get_value (from_table, from_y, row, size);
+            cpl_vector_set (yref, row, value);
+            CPLCHECK_MSG ("Cannot get y data");
+        }
+
+        /* Interpolate linear */
+        cpl_bivector_interpolate_linear (fout, fref);
+        CPLCHECK_MSG ("Cannot interpolate");
+
+        /* fill Yout */
+        for (cpl_size row = 0; row < nxout; row++) {
+            double value = cpl_vector_get (yout, row);
+            gravi_table_set_value (to_table, to_y, row, size, value);
+            CPLCHECK_MSG ("Cannot set y data");
+        }
+        
+    } /* End loop on column depth */
+
+    /* Free memory */
+    FREE (cpl_bivector_delete, fref);
+    FREE (cpl_bivector_delete, fout);
+
+    gravi_msg_function_exit(1);
+    return CPL_ERROR_NONE;
+}
+
 double gravi_table_get_column_mean (cpl_table * table, const char * name, int base, int nbase)
 {
   cpl_ensure (table, CPL_ERROR_NULL_INPUT, 0.0);
@@ -605,29 +685,30 @@ cpl_error_code gravi_table_add_columns (cpl_table * oi_vis1, const char *name1,
 	double * data2 = cpl_table_get_data_double (oi_vis2, name2);
 	CPLCHECK_MSG("Cannot load data");
 
-	/* Add and multiply */
-	for ( row=0 ; row<nrow1 ; row++) {
-		data1[row] += data2[row];
-	}
+	for (row=0 ; row<nrow1 ; row++) data1[row] += data2[row];
   }
   else if ( type1 == CPL_TYPE_FLOAT_COMPLEX ) {
 	float complex * data1 = cpl_table_get_data_float_complex (oi_vis1, name1);
 	float complex * data2 = cpl_table_get_data_float_complex (oi_vis2, name2);
 	CPLCHECK_MSG("Cannot load data");
 
-	/* Add and multiply */
-	for ( row=0 ; row<nrow1; row++) {
-		data1[row] += data2[row];
-	}
+	for (row=0 ; row<nrow1; row++) data1[row] += data2[row];
   }
   else if ( type1 == CPL_TYPE_DOUBLE_COMPLEX ) {
 	double complex * data1 = cpl_table_get_data_double_complex (oi_vis1, name1);
 	double complex * data2 = cpl_table_get_data_double_complex (oi_vis2, name2);
 	CPLCHECK_MSG("Cannot load data");
 
-	/* Add and multiply */
-	for ( row=0 ; row<nrow1; row++) {
-		data1[row] += data2[row];
+	for (row=0 ; row<nrow1; row++) data1[row] += data2[row];
+  }
+  else if ( type1 & CPL_TYPE_POINTER ) {
+	cpl_array ** data1 = cpl_table_get_data_array (oi_vis1, name1);
+	cpl_array ** data2 = cpl_table_get_data_array (oi_vis2, name2);
+	CPLCHECK_MSG("Cannot load data");
+
+	for (row=0 ; row<nrow1; row++) {
+        cpl_array_add (data1[row], data2[row]);
+        CPLCHECK_MSG("Cannot add data");
 	}
   } else {
 	return cpl_error_set_message (cpl_func,CPL_ERROR_ILLEGAL_INPUT,
