@@ -2026,6 +2026,7 @@ cpl_error_code gravi_vis_create_opddisp_sc (cpl_table * vis_SC,
   } else {
       /* The N_MEAN and N_DIFF are described as a polynomial versus
        * 1./lbd - 1/lbd0  in [um^-1] */
+      gravi_msg_warning ("FIXME","New version of DISP_MODEL --> CODE IS BUGGY !!!");
       cpl_size disp_order = cpl_table_get_column_depth (disp_table, "BETA");
       for (int t = 0; t < 4; t++) {
           double lbd0 = cpl_table_get (disp_table, "WAVE0", t, NULL);
