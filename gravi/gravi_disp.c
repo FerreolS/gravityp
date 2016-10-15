@@ -28,7 +28,7 @@
  -----------------------------------------------------------------------------*/
 
 #define INFO_DEBUG 0
-#define GRAVI_ACOEFF_RANGE 2e3
+#define GRAVI_ACOEFF_RANGE 0.02
 
 /*-----------------------------------------------------------------------------
                                    Includes
@@ -186,17 +186,17 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
     cpl_propertylist_update_double (disp_header, qc_name, GDrms);
     cpl_propertylist_set_comment (disp_header, qc_name, "[m] GDELAY rms over files");
 
-    qc_name = "ESO QC DISP ACOEFF MIN";
+    qc_name = "ESO QC DISP BETA_CORRECTION MIN";
     cpl_propertylist_update_double (disp_header, qc_name, Amin);
-    cpl_propertylist_set_comment (disp_header, qc_name, "[m^-1] Wavenumber fine correction");
+    cpl_propertylist_set_comment (disp_header, qc_name, "Fine correction");
 
-    qc_name = "ESO QC DISP ACOEFF MAX";
+    qc_name = "ESO QC DISP BETA_CORRECTION MAX";
     cpl_propertylist_update_double (disp_header, qc_name, Amax);
-    cpl_propertylist_set_comment (disp_header, qc_name, "[m^-1] Wavenumber fine correction");
+    cpl_propertylist_set_comment (disp_header, qc_name, "Fine correction");
 
-    qc_name = "ESO QC DISP ACOEFF RANGE";
+    qc_name = "ESO QC DISP BETA_CORRECTION RANGE";
     cpl_propertylist_update_double (disp_header, qc_name, GRAVI_ACOEFF_RANGE);
-    cpl_propertylist_set_comment (disp_header, qc_name, "[m^-1] Wavenumber fine correction");
+    cpl_propertylist_set_comment (disp_header, qc_name, "Fine correction");
     
     
     /* 
@@ -546,29 +546,28 @@ cpl_table * gravi_fit_dispersion (cpl_table * oiflux_table,
     CPLCHECK_NUL ("Cannot get data");
 
     /* 
-     * Calcul of wavelength [m] and wavenumber in glass [m-1]
-     * FIXME: verify the scaling !!!
+     * Compute a guess of the BETA dispersion coefficient
      */
-    cpl_table * oiwavefb_table = cpl_table_duplicate (oiwave_table);
-    cpl_table_new_column (oiwavefb_table, "EFF_SIGMA", CPL_TYPE_DOUBLE);
+    double beta0 = 0.8651, beta1 = 1.9396;
     
+    cpl_table_new_column (oiwave_table, "BETA", CPL_TYPE_DOUBLE);
     for (cpl_size wave = 0; wave < nwave; wave ++) {
-        double lbd = cpl_table_get (oiwave_table, "EFF_WAVE", wave, NULL) * 1e6;
-        lbd = LAMBDA_MET / (0.8651+1.9396*(1/lbd-1/2.2));
-        cpl_table_set (oiwavefb_table, "EFF_WAVE", wave, lbd);
-        cpl_table_set (oiwavefb_table, "EFF_SIGMA", wave, 1./lbd);
+        double lbd  = cpl_table_get (oiwave_table, "EFF_WAVE", wave, NULL) * 1e6;
+        double beta = beta0 + beta1 * (1/lbd-1/2.2);
+        cpl_table_set (oiwave_table, "BETA", wave,  beta);
     }
-
+    
     /* Get direct pointer to data */
     double * metdata   = cpl_table_get_data_double (oivis_table, "OPD_MET_FC");
-    double * sigmadata = cpl_table_get_data_double (oiwavefb_table, "EFF_SIGMA");
     double complex ** visdata = gravi_table_get_data_array_double_complex (oivis_table, "VISDATA");
+    double * beta    = cpl_table_get_data_double (oiwave_table, "BETA");
+    float  * effwave = cpl_table_get_data_float (oiwave_table, "EFF_WAVE");
     CPLCHECK_NUL ("Cannot get data");
 
     
     /* 
      * Correction par la metrologie  (Correction # 1)
-     * VIS_ijlt *= exp (-2ipi * METC_ijt * SIGMA_l)
+     * VIS_ijlt *= exp (-2ipi * BETA_l * METC_ijt / LAMBDA_MET)
      */
     cpl_msg_info (cpl_func, "Correction #1");
     
@@ -577,7 +576,7 @@ cpl_table * gravi_fit_dispersion (cpl_table * oiflux_table,
         for (cpl_size row = 0; row < nrow ; row ++) {
             int id  = row * nbase + base;
             for (cpl_size wave = 0; wave < nwave; wave ++) {
-                visdata[id][wave] *= cexp (- 2*I*CPL_MATH_PI * metdata[id] * sigmadata[wave]);
+                visdata[id][wave] *= cexp (- 2*I*CPL_MATH_PI * beta[wave] * metdata[id] / LAMBDA_MET);
             }
         }
     }
@@ -585,13 +584,13 @@ cpl_table * gravi_fit_dispersion (cpl_table * oiflux_table,
     
     /* 
      * Correction par le groupe delay  (Correction # 2)
-     * VIS_ijlt *= exp (-2ipi * GD_ij * SIGMA_l)
+     * VIS_ijlt *= exp (-2ipi * GD_ij / LBD_l)
      * with GD_ij = <GD_ijt>
      */
     cpl_msg_info (cpl_func, "Correction #2");
 
     /* Compute the GD of all base and rows (with wavelength in glass) */
-	gravi_table_compute_group_delay (oivis_table, "VISDATA", "GDELAY", oiwavefb_table);
+	gravi_table_compute_group_delay (oivis_table, "VISDATA", "GDELAY", oiwave_table);
 
     /* Allocate memory for result */
     cpl_vector * GDb = cpl_vector_new (nbase);
@@ -605,7 +604,7 @@ cpl_table * gravi_fit_dispersion (cpl_table * oiflux_table,
         for (cpl_size row = 0; row < nrow ; row ++) {
             int id  = row * nbase + base;
             for (cpl_size wave = 0; wave < nwave; wave ++) {
-                visdata[id][wave] *= cexp (- 2*I*CPL_MATH_PI * mean * sigmadata[wave]);
+                visdata[id][wave] *= cexp (-2*I*CPL_MATH_PI * mean / effwave[wave]);
             }
         }
         
@@ -618,13 +617,13 @@ cpl_table * gravi_fit_dispersion (cpl_table * oiflux_table,
 
     
     /*
-     * Correction from the slope versus met  (Correction # 3)
-     * VIS_ijlt *= exp (-2ipi * METC_ijt * A_bl)
+     * Correction from the residual slope versus met  (Correction # 3)
+     * VIS_ijlt *= exp (-2ipi * A_bl * METC_ijt / LAMBDA_MET)
      * 
      * Where A_bl is computed such that the following is maximum:
-     *  | Sum_t[ VIS_ijlt * exp (-2ipi * METC_ijt * A_bl) ] |
+     *  | Sum_t[ VIS_ijlt * exp (-2ipi * A_bl * METC_ijt / LAMBDA_MET) ] |
      *
-     * Hence the A value is a wavenumber fine correction [m^-1].
+     * Hence the A value is a BETA coefficient fine correction.
      */
     cpl_msg_info (cpl_func, "Correction #3");
 
@@ -650,8 +649,9 @@ cpl_table * gravi_fit_dispersion (cpl_table * oiflux_table,
                  * compute the exp(i.a.METbm) only if needed */
                 double complex currentV = 0.0;
                 for (cpl_size row = 0; row < nrow; row++) {
-                    if (wave==0) phasor[row*nA+iA] = cexp (-1.* CPL_MATH_2PI * I * A *
-                                                           metdata[row*nbase+base]);
+                    if (wave==0) phasor[row*nA+iA] = cexp (-2.* CPL_MATH_PI * I * A *
+                                                           metdata[row*nbase+base] /
+                                                           LAMBDA_MET);
                     currentV += phasor[row*nA+iA] * visdata[row*nbase+base][wave];
                 }
 
@@ -676,9 +676,11 @@ cpl_table * gravi_fit_dispersion (cpl_table * oiflux_table,
     FREE (cpl_free, phasor);
 
     /* Some verbose */
-    cpl_msg_info (cpl_func, "Abl mean = %g [m^-1]",
+    cpl_msg_info (cpl_func, "Abl range = %g (beta correction)",
+                  GRAVI_ACOEFF_RANGE);
+    cpl_msg_info (cpl_func, "Abl mean  = %g (beta correction)",
                   cpl_matrix_get_mean (Abl));
-    cpl_msg_info (cpl_func, "Abl std  = %g [m^-1]",
+    cpl_msg_info (cpl_func, "Abl std   = %g (beta correction)",
                   cpl_matrix_get_stdev (Abl));
 
     *Amax = CPL_MAX (*Amax, cpl_matrix_get_max (Abl));
@@ -748,12 +750,13 @@ cpl_table * gravi_fit_dispersion (cpl_table * oiflux_table,
                 int idj = row * ntel + j;
 
                 /* Fill with unwrap phases from all the corrections
-                 * PHIblt = angle(visdata) + Obl + 2pi/lbdmet*METbt*Abl + 
-                 *          2pi*(GDb + METbt) * sigmafb */
+                 * PHIblt = angle(visdata) + Obl + 2pi*Abl*METbt*Abl/LBD_l
+                 *          2pi*GDb/LBD_l + 2pi*beta_l*METbt/LAMBDA_MET */
                 double phi = carg (visdata[id][wave]);
                 phi += cpl_matrix_get (Obl, base, wave);
-                phi += CPL_MATH_2PI * cpl_matrix_get (Abl, base, wave) * metdata[id];
-                phi += CPL_MATH_2PI * (cpl_vector_get (GDb, base) + metdata[id]) * sigmadata[wave];
+                phi += CPL_MATH_2PI * cpl_matrix_get (Abl, base, wave) * metdata[id] / LAMBDA_MET;
+                phi += CPL_MATH_2PI * cpl_vector_get (GDb, base) / effwave[wave];
+                phi += CPL_MATH_2PI * beta[wave] * metdata[id] / LAMBDA_MET;
                 cpl_matrix_set (rhs_matrix, id, 0, phi * LAMBDA_MET / CPL_MATH_2PI);
                 
                 /* Fill the model Aij (unfilled matrix are 0.0) */
@@ -787,7 +790,7 @@ cpl_table * gravi_fit_dispersion (cpl_table * oiflux_table,
 
     /* Delete pointer to data */
     FREE (cpl_free, visdata);
-    FREE (cpl_table_delete, oiwavefb_table);
+    // FREE (cpl_table_delete, oiwavefb_table);
 
     /* Delete corrections */
     FREE (cpl_vector_delete, GDb);
