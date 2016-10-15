@@ -2026,16 +2026,16 @@ cpl_error_code gravi_vis_create_opddisp_sc (cpl_table * vis_SC,
   } else {
       /* The N_MEAN and N_DIFF are described as a polynomial versus
        * 1./lbd - 1/lbd0  in [um^-1] */
-      gravi_msg_warning ("FIXME","New version of DISP_MODEL --> CODE IS BUGGY !!!");
+      gravi_msg_warning ("FIXME","New version of DISP_MODEL --> CODE MAY BE BUGGY !!!");
       cpl_size disp_order = cpl_table_get_column_depth (disp_table, "BETA");
       for (int t = 0; t < 4; t++) {
           double lbd0 = cpl_table_get (disp_table, "WAVE0", t, NULL);
           for (int w = 0; w < nwave_sc; w++ ) {
-              double lbd = cpl_table_get (wave_table, "EFF_WAVE", w, NULL) * 1e6;
-              double xfit = (1./lbd - 1./lbd0);
+              double lbd = cpl_table_get (wave_table, "EFF_WAVE", w, NULL);
+              double xfit = (1e-6/lbd - 1./lbd0);
               for (int o = 0; o < disp_order; o++) {
-                  n_mean[t][w] += gravi_table_get_value (disp_table, "BETA", t, o)  * pow (xfit, o);
-                  n_diff[t][w] += gravi_table_get_value (disp_table, "GAMMA", t, o) * pow (xfit, o);
+                  n_mean[t][w] += gravi_table_get_value (disp_table, "BETA", t, o)  * pow (xfit, o) * lbd / LAMBDA_MET;
+                  n_diff[t][w] += gravi_table_get_value (disp_table, "GAMMA", t, o) * pow (xfit, o) * lbd / LAMBDA_MET;
               }
           }
       }
