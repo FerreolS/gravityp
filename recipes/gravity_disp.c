@@ -78,8 +78,9 @@ static char gravity_disp_description[] =
     GRAVI_WAVE_MAP"               : wave calibration (PRO.CATG="GRAVI_WAVE_MAP")\n"
     GRAVI_P2VM_MAP"               : p2vm calibration (PRO.CATG="GRAVI_P2VM_MAP")\n"
     GRAVI_DARK_MAP"               : dark calibration\n"
-    GRAVI_DISP_RAW"  >10          : raw dispersion\n"
+    GRAVI_DISP_RAW"  (>50)        : raw dispersion\n"
     GRAVI_RECIPE_OUTPUT"\n"
+    GRAVI_DISP_VIS"               : intermediate product\n"
     GRAVI_DISP_MODEL"             : dispersion model of FDDL\n"
     "";
 

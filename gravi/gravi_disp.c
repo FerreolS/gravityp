@@ -506,9 +506,9 @@ cpl_table * gravi_fit_fddl_lin (cpl_table * oiflux_table)
  *
  * Found the  14 parameters 6Aij + 4Bi + 4Ci in 
  * by solving the linear system:
- * PHASEijt * LAMBDA_MET / 2pi = Aij + Bi (FDDL_FTit + FDDL_SCit)/2
- *                                   - Bj (FDDL_FTjt + FDDL_SCjt)/2
- *                                   + Ci METit - Cj METjt
+ * PHASEijt * LAMBDA_MET / 2pi = Aij + Ci (FDDL_FTit + FDDL_SCit)/2
+ *                                   - Cj (FDDL_FTjt + FDDL_SCjt)/2
+ *                                   + Bi METit - Bj METjt
  * for all wavelength independently
  *
  * The routine takes a great care to unwrap the phase 
@@ -522,8 +522,8 @@ cpl_table * gravi_fit_fddl_lin (cpl_table * oiflux_table)
  * Note that the VISDATA are modified in-place by the routine.
  *
  * The output table contains nwave rows (size of OI_WAVELENGTH table)
- * with the columns BETA (the 4 Ci coefficients) and GAMMA (the 4
- * Bi coefficients). It also have a column EFF_WAVE duplicated from
+ * with the columns BETA (the 4 Bi coefficients) and GAMMA (the 4
+ * Ci coefficients). It also have a column EFF_WAVE duplicated from
  * the input OI_WAVELENGTH table.
  */
 /*----------------------------------------------------------------------------*/
@@ -722,9 +722,9 @@ cpl_table * gravi_fit_dispersion (cpl_table * oiflux_table,
     
     /* 
      * Search for 6Aij + 4Bi + 4Ci solving the linear system:
-     * PHASEijt * LAMBDA_MET / 2pi = Aij + Bi (FDDL_FTit + FDDL_SCit)/2
-     *                                   - Bj (FDDL_FTjt + FDDL_SCjt)/2
-     *                                   + Ci METit - Cj METjt
+     * PHASEijt * LAMBDA_MET / 2pi = Aij + Ci (FDDL_FTit + FDDL_SCit)/2
+     *                                   - Cj (FDDL_FTjt + FDDL_SCjt)/2
+     *                                   + Bi METit - Bj METjt
      * for all wavelength and both polaristions
      */
     cpl_msg_info (cpl_func, "Fit dispersion model");
@@ -759,13 +759,13 @@ cpl_table * gravi_fit_dispersion (cpl_table * oiflux_table,
                 /* Fill the model Aij (unfilled matrix are 0.0) */
                 cpl_matrix_set (model_matrix, id, base, 1);
                 
-                /* Fill the model Bi, Bj */
+                /* Fill the model GAMMAi, GAMMAj */
                 double fddli = cpl_table_get (oiflux_table, "FDDL", idi, NULL);
                 double fddlj = cpl_table_get (oiflux_table, "FDDL", idj, NULL);
                 cpl_matrix_set (model_matrix, id, 6+i,    fddli);
                 cpl_matrix_set (model_matrix, id, 6+j, -1*fddlj);
 
-                /* Fill the model Ci, Cj */
+                /* Fill the model BETAi, BETAj */
                 double meti = cpl_table_get (oiflux_table, "OPD_MET_FC", idi, NULL);
                 double metj = cpl_table_get (oiflux_table, "OPD_MET_FC", idj, NULL);
                 cpl_matrix_set (model_matrix, id, 10+i,    meti);
