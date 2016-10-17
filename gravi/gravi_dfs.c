@@ -456,7 +456,7 @@ cpl_error_code gravi_parameter_add_compute_vis (cpl_parameterlist *self, int isC
 	cpl_parameterlist_append (self, p);
 
     /* Visibility correction */
-	p = cpl_parameter_new_enum ("gravity.vis.vis-correction", CPL_TYPE_STRING,
+	p = cpl_parameter_new_enum ("gravity.vis.vis-correction-sc", CPL_TYPE_STRING,
                                 "Correction of SC visibility from the losses du to long-exposure.\n "
                                 "Either using the measured visibility losses with the FT (VFACTOR\n "
                                 "and/or PFACTOR, see the manual for the algorithms) or by forcing\n "
@@ -465,7 +465,7 @@ cpl_error_code gravi_parameter_add_compute_vis (cpl_parameterlist *self, int isC
                                 "gravity.vis",
 								isCalib ? "NONE" : "VFACTOR", 5, "VFACTOR", "PFACTOR",
                                 "VFACTOR_PFACTOR","FORCE", "NONE");
-	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "vis-correction");
+	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "vis-correction-sc");
 	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
 	cpl_parameterlist_append (self, p);
 	

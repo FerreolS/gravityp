@@ -409,7 +409,7 @@ static int gravity_vis_from_p2vmred(cpl_frameset * frameset,
 
 	/* Perform the normalisation of the SC vis2 and visamp
 	 * to match those of the FT */
-    if (!strcmp (gravi_param_get_string (parlist, "gravity.vis.vis-correction"), "FORCE")) {
+    if (!strcmp (gravi_param_get_string (parlist, "gravity.vis.vis-correction-sc"), "FORCE")) {
 	  
 	  cpl_msg_info (cpl_func, "Align the SC visibilities on the FT");
 	  gravi_normalize_sc_to_ft (vis_data);

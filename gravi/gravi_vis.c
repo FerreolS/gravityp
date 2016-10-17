@@ -1326,8 +1326,8 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
     else {
 		/* Reduction parameters */
 		int exp_phase_flag_sc = 1;
-		int v_factor_flag_sc = strstr (gravi_param_get_string (parlist, "gravity.vis.vis-correction"),"VFACTOR") ? 1 : 0;
-		int p_factor_flag_sc = strstr (gravi_param_get_string (parlist, "gravity.vis.vis-correction"),"PFACTOR") ? 1 : 0;
+		int v_factor_flag_sc = strstr (gravi_param_get_string (parlist, "gravity.vis.vis-correction-sc"),"VFACTOR") ? 1 : 0;
+		int p_factor_flag_sc = strstr (gravi_param_get_string (parlist, "gravity.vis.vis-correction-sc"),"PFACTOR") ? 1 : 0;
 		int debiasing_flag_sc = gravi_param_get_bool (parlist, "gravity.vis.debias-sc");
 		int nboot_sc = gravi_param_get_int (parlist, "gravity.vis.nboot");
 		

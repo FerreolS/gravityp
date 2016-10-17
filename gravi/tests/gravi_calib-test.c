@@ -524,10 +524,10 @@ int gravi_calib_test(void){
 	cpl_parameterlist_append(parlist, p);
 
     /* -- Visibility correction */
-	p = cpl_parameter_new_enum ("gravity.vis.vis-correction",
+	p = cpl_parameter_new_enum ("gravity.vis.vis-correction-sc",
 			CPL_TYPE_STRING, "Correction of visibility losses", "gravi.vis_reduce",
 								"VFACTOR", 3, "VFACTOR", "FORCE", "NONE");
-	cpl_parameter_set_alias(p, CPL_PARAMETER_MODE_CLI, "vis-correction");
+	cpl_parameter_set_alias(p, CPL_PARAMETER_MODE_CLI, "vis-correction-sc");
 	cpl_parameter_disable(p, CPL_PARAMETER_MODE_ENV);
 	cpl_parameterlist_append(parlist, p);
 
