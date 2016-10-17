@@ -201,13 +201,10 @@ static int gravity_vis_create(cpl_plugin * plugin)
     /* Extraction */
     gravi_parameter_add_extract (recipe->parameters);
     
-    /* Snr */
+    /* Snr, signal, rejectio flags, vis */
     gravi_parameter_add_compute_snr (recipe->parameters, isCalib);
-
-    /* Rejection */
+    gravi_parameter_add_compute_signal (recipe->parameters, isCalib);
     gravi_parameter_add_rejection (recipe->parameters, isCalib);
-
-    /* Parameters for gravi_compute_vis */
     gravi_parameter_add_compute_vis (recipe->parameters, isCalib);
 
     /* Correct from internal transmission */

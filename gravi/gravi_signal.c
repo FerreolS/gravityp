@@ -92,9 +92,11 @@ cpl_error_code gravi_vis_create_vfactor_sc (cpl_table * vis_SC,
 											cpl_table * wave_table_ft);
 cpl_error_code gravi_vis_create_lockratio_sc (cpl_table * vis_SC,
 											  cpl_table * vis_FT);
+
 cpl_error_code gravi_vis_create_phaseref_sc (cpl_table * vis_SC,
 											 cpl_table * wave_table_sc,
 											 cpl_table * wave_table_ft);
+
 
 cpl_error_code gravi_vis_create_opddisp_sc (cpl_table * vis_SC,
 											cpl_table * flux_SC,
@@ -1793,22 +1795,36 @@ cpl_error_code gravi_vis_create_phaseref_sc (cpl_table * vis_SC,
   gravi_msg_function_start(1);
   cpl_ensure_code (vis_SC,        CPL_ERROR_NULL_INPUT);
   cpl_ensure_code (wavesc_table, CPL_ERROR_NULL_INPUT);
-  cpl_ensure_code (waveft_table, CPL_ERROR_NULL_INPUT);
-
-  /* Variable for fit */
-  cpl_size mindeg = 0, maxdeg = 2;
-  cpl_polynomial * fit = cpl_polynomial_new (1);
+  // cpl_ensure_code (waveft_table, CPL_ERROR_NULL_INPUT);
 
   /* Get SC and FT data */
+  // cpl_array ** visData_ftdit = cpl_table_get_data_array (vis_SC, "VISDATA_FT");
+  // double * gdelay_ftdit = cpl_table_get_data_double (vis_SC, "GDELAY_FT");
+
+  cpl_array ** visData_ftdit;
+  double * gdelay_ftdit;
+  if (waveft_table != NULL) {
+      cpl_msg_info (cpl_func, "Compute reference phase of SC from the FT data");
+      visData_ftdit = cpl_table_get_data_array (vis_SC, "VISDATA_FT");
+      gdelay_ftdit  = cpl_table_get_data_double (vis_SC, "GDELAY_FT");
+  } else {
+      gravi_msg_warning (cpl_func, "Compute reference phase of SC from the SC !!!");
+      visData_ftdit = cpl_table_get_data_array (vis_SC, "VISDATA");
+      gdelay_ftdit  = cpl_table_get_data_double (vis_SC, "GDELAY");
+      waveft_table  = wavesc_table;
+  }
+  
+  /* Get general data */
   cpl_size nbase = 6;
   cpl_size nrow_sc  = cpl_table_get_nrow (vis_SC) / nbase;
   cpl_size nwave_sc = cpl_table_get_nrow (wavesc_table);
   cpl_size nwave_ft = cpl_table_get_nrow (waveft_table);
   
-  cpl_array ** visData_ftdit = cpl_table_get_data_array (vis_SC, "VISDATA_FT");
-  double * gdelay_ftdit = cpl_table_get_data_double (vis_SC, "GDELAY_FT");
-
   CPLCHECK_MSG ("Cannot get data");
+
+  /* Variable for fit */
+  cpl_size mindeg = 0, maxdeg = 2;
+  cpl_polynomial * fit = cpl_polynomial_new (1);
 
   /* Create the vectors and matrix only once to be faster */
   cpl_matrix * wave_ft = cpl_matrix_new (1,nwave_ft);
@@ -2303,8 +2319,14 @@ cpl_error_code gravi_compute_signals (gravi_data * p2vmred_data,
 
 	/* 
 	 * Compute the phase ref, need VISDATA_FT and GDELAY_FT
+     * If the FT table is NULL, the routine will compute a
+     * self-reference phase instead of using the FT
 	 */
-	gravi_vis_create_phaseref_sc (vis_SC, oi_wavelengthsc, oi_wavelengthft);
+    if ( !strcmp (gravi_param_get_string (parlist, "gravity.signal.reference-phase-sc"), "SC")) {
+        gravi_vis_create_phaseref_sc (vis_SC, oi_wavelengthsc, NULL);
+    } else {
+        gravi_vis_create_phaseref_sc (vis_SC, oi_wavelengthsc, oi_wavelengthft);
+    }
 	
 	CPLCHECK_MSG ("Cannot compute the PHASE_REF");
   } /* End loop on pol */

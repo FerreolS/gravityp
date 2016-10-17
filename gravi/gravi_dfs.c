@@ -362,6 +362,25 @@ cpl_error_code gravi_parameter_add_compute_snr (cpl_parameterlist *self, int isC
     return CPL_ERROR_NONE;
 }
 
+cpl_error_code gravi_parameter_add_compute_signal (cpl_parameterlist *self, int isCalib)
+{
+    cpl_ensure_code (self, CPL_ERROR_NULL_INPUT);
+    cpl_parameter *p;
+    
+    /* Phase reference for SC */
+	p = cpl_parameter_new_enum ("gravity.signal.reference-phase-sc", CPL_TYPE_STRING,
+                                "Compute the reference phase of the SC from the FT\n "
+                                "(FT, normal mode) or a self-reference build from\n "
+                                "a fit of the SC phase itself for each DIT (SC)",
+                                "gravity.signal",
+								"FT", 2, "SC", "FT");
+	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "reference-phase-sc");
+	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	cpl_parameterlist_append (self, p);
+
+    return CPL_ERROR_NONE;
+}
+
 cpl_error_code gravi_parameter_add_rejection (cpl_parameterlist *self, int isCalib)
 {
     cpl_ensure_code (self, CPL_ERROR_NULL_INPUT);
