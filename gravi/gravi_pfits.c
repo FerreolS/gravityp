@@ -520,29 +520,30 @@ double gravi_pfits_get_ft_gain (const cpl_propertylist * plist)
 
   if ( cpl_propertylist_has (plist, "MJD-OBS") &&
 	   cpl_propertylist_has (plist, "ESO INS DET3 GAIN") &&
-	   cpl_propertylist_get_double (plist, "MJD-OBS") > 57617.0) {
+	   cpl_propertylist_get_double (plist, "MJD-OBS") >= 57584.83 &&
+       cpl_propertylist_get_double (plist, "MJD-OBS") <  57617.0) {
 
-	/* After 57584.83, the keyword is valid and written in [adu/e]
-	 * and the value 3.0 shall be replaced by 1.7 [adu/e] */
+	/* Between 57584.83 and 57617.0, the keyword is valid but written
+     * in [adu/e] and the value 3.0 shall be replaced by 1.7 [adu/e] */
 	gain = cpl_propertylist_get_double (plist, "ESO INS DET3 GAIN");
 	if (gain == 3.0) gain = 1.7;
-	cpl_msg_warning (cpl_func,"Use FT gain of %.1f [adu/e] (wrong units and value in header)", gain);
+	cpl_msg_warning (cpl_func,"Use FT gain of %.3f [adu/e] (wrong units and value in header)", gain);
 	
   }
   else if ( cpl_propertylist_has (plist, "MJD-OBS") &&
 			cpl_propertylist_has (plist, "ESO INS DET3 GAIN") &&
-			cpl_propertylist_get_double (plist, "MJD-OBS") > 57617.0) {
+			cpl_propertylist_get_double (plist, "MJD-OBS") >= 57617.0) {
 
 	/* After 57617.0, the keyword is valid and written in [e/adu] */
 	gain = 1. / cpl_propertylist_get_double (plist, "ESO INS DET3 GAIN");
-	cpl_msg_info (cpl_func,"Use FT gain of %.1f [adu/e] from header", gain);
+	cpl_msg_info (cpl_func,"Use FT gain of %.3f [adu/e] from header", gain);
 	
   }
   else {
 	
 	/* The keyword is not valid at all */
 	gain = 25.0;
-	cpl_msg_warning (cpl_func,"Force FT gain to %.1f [adu/e] (wrong value in header)", gain);
+	cpl_msg_warning (cpl_func,"Force FT gain to %.3f [adu/e] (wrong value or no value in header)", gain);
   }
 
   /* gain in ADU/e */
@@ -560,23 +561,21 @@ double gravi_pfits_get_ft_gain (const cpl_propertylist * plist)
 double gravi_pfits_get_sc_gain (const cpl_propertylist * plist)
 {
   double gain = 0.0;
-  double hd_gain = 1. / (gravi_pfits_get_double_default (plist, "ESO INS DET2 GAIN", 0.0) + 1e-9);
 
   if ( cpl_propertylist_has (plist, "MJD-OBS") &&
 	   cpl_propertylist_has (plist, "ESO INS DET2 GAIN") &&
 	   cpl_propertylist_get_double (plist, "MJD-OBS") > 57617.0) {
 
-	/* After 57617.0, the keyword is valid and written in [e/adu] */
-	gain = 1. / hd_gain;
-	cpl_msg_info (cpl_func,"Use SC gain of %.1f [adu/e] from header", gain);
+      /* After 57617.0, the keyword is valid and written in [e/adu] */
+      gain = 1. / cpl_propertylist_get_double (plist, "ESO INS DET2 GAIN");
+      cpl_msg_info (cpl_func,"Use SC gain of %.3f [adu/e] from header", gain);
 	
   }
   else {
 	
 	/* The keyword is not valid at all */
 	gain = 0.5;
-	cpl_msg_warning (cpl_func,"Force SC gain to %.1f [adu/e] (INS DET2=%.3f)",
-					 gain, hd_gain);
+	cpl_msg_warning (cpl_func,"Force SC gain to %.3f [adu/e]", gain);
   }
 
   /* gain in ADU/e */
