@@ -250,7 +250,7 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
     for (cpl_size tel = 0; tel < ntel; tel++) {
         cpl_table_set (disp_table, "WAVE0", tel, wave0);
         
-        /* Fit the Bi (FDDL index) */
+        /* Fit the Bi (MET = mean index) */
         for (cpl_size line = 0; line < nline; line++)
             cpl_vector_set (vector, line, gravi_table_get_value (dispth_table, "BETA", line, tel));
         cpl_polynomial_fit (poly, matrix, NULL, vector, NULL, CPL_FALSE, &mindeg, &maxdeg);
@@ -260,7 +260,7 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
             cpl_array_set (coeff, order, cpl_polynomial_get_coeff (poly, &order));
         cpl_table_set_array (disp_table, "BETA", tel, coeff);
         
-        /* Fit the Ci (MET index) */
+        /* Fit the Ci (FDDL = differential index) */
         for (cpl_size line = 0; line < nline; line++)
             cpl_vector_set (vector, line, gravi_table_get_value (dispth_table, "GAMMA", line, tel));
         cpl_polynomial_fit (poly, matrix, NULL, vector, NULL, CPL_FALSE, &mindeg, &maxdeg);
