@@ -103,7 +103,6 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
     cpl_propertylist * vis_header = gravi_data_get_header (vis_data);
     cpl_size npol = gravi_pfits_get_pola_num (vis_header, GRAVI_SC);
 	cpl_table * oiflux_table = gravi_data_get_oi_flux (vis_data, GRAVI_SC, 0, npol);
-	cpl_table * oiwave_table = gravi_data_get_oi_wave (vis_data, GRAVI_SC, 0, npol);
     CPLCHECK_NUL ("Cannot get data");
 
     /* Get the number of observations */
@@ -155,6 +154,7 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
         /* Get table for this polarisation */
         cpl_table * oiflux_table = gravi_data_get_oi_flux (vis_data, GRAVI_SC, pol, npol);
         cpl_table * oivis_table  = gravi_data_get_oi_vis (vis_data, GRAVI_SC, pol, npol);
+	cpl_table * oiwave_table = gravi_data_get_oi_wave (vis_data, GRAVI_SC, pol, npol);
         
         /* (Re) create the column   FDDLi = (FDDL_FTi + FDDL_SCi)/2 */
         gravi_flux_create_fddllin_sc (oiflux_table, linearity_table);
@@ -556,6 +556,7 @@ cpl_table * gravi_fit_dispersion (cpl_table * oiflux_table,
         double beta = beta0 + beta1 * (1/lbd-1/2.2);
         cpl_table_set (oiwave_table, "BETA", wave,  beta);
     }
+    CPLCHECK_NUL ("Cannot create BETA column");
     
     /* Get direct pointer to data */
     double * metdata   = cpl_table_get_data_double (oivis_table, "OPD_MET_FC");
