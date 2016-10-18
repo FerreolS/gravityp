@@ -184,13 +184,10 @@ static int gravity_disp_create(cpl_plugin * plugin)
     gravi_parameter_add_p2vmred_file (recipe->parameters);
     gravi_parameter_add_vis_file (recipe->parameters);
 
-    /* Snr */
+    /* Snr, signal, rejection, vis */
     gravi_parameter_add_compute_snr (recipe->parameters, isCalib);
-
-    /* Rejection */
+    gravi_parameter_add_compute_signal (recipe->parameters, isCalib);
     gravi_parameter_add_rejection (recipe->parameters, isCalib);
-
-    /* Parameters for gravi_compute_vis */
     gravi_parameter_add_compute_vis (recipe->parameters, isCalib);
 	
 	return 0;
