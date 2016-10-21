@@ -806,6 +806,7 @@ int gravi_calib_test(void){
 
 	/* Compute the signals */
 	cpl_msg_info (cpl_func, "Compute the signal");
+    gravi_parameter_add_compute_signal (parlist, 0);
 	test(gravi_compute_signals (p2vm_reduced, NULL, parlist),
 		 "gravi_compute_signals : ...", flag);
 
