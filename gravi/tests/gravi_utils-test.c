@@ -292,6 +292,7 @@ int gravi_utils_test(void){
 	test(gravi_remove_badpixel_sc(raw_imglist, gravi_data_get_img (badpix, GRAVI_IMAGING_DATA_SC_EXT)),
 			"gravi_data_remove_badpixel : "
 			"Remove bad pixels from the input data SC and FT ...", flag);
+    cpl_imagelist_delete(raw_imglist);
 
     /*
 	 * gravi_imglist_sc_collapse
