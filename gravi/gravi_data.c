@@ -1769,13 +1769,31 @@ cpl_error_code gravi_data_check_consistency (gravi_data * data)
 						   "IMAGING_DATA_FT","IMAGING_DETECTOR_FT"};
   
   for (int ext = 0; ext< nb_ext; ext++)  {
-	if ( !gravi_data_has_extension (data, extname[ext]) ) {
-	  sprintf (qc_msg, "%s is missing", extname[ext]);
-	  gravi_pfits_add_check (header, qc_msg);
-	}
+
+      /* Check if existing */
+      if ( !gravi_data_has_extension (data, extname[ext]) ) {
+          sprintf (qc_msg, "%s is missing", extname[ext]);
+          gravi_pfits_add_check (header, qc_msg);
+          continue;
+      }
+
+      cpl_propertylist * plist;
+      plist = gravi_data_get_plist (data, extname[ext]);
+
+      /* Check the frame counter if it has one */
+      if (cpl_propertylist_has (plist, "ESO DET FRAM NO")) {
+          int frame_no = cpl_propertylist_get_int (plist, "ESO DET FRAM NO");
+          int naxis_3  = cpl_propertylist_get_int (plist, "NAXIS3");
+          if ( frame_no != naxis_3) {
+              sprintf (qc_msg, "%s is missing DITs", extname[ext]);
+              gravi_pfits_add_check (header, qc_msg);
+          }
+      }
   }
 
   CPLCHECK_MSG ("Cannot check consistency of tables...");
+
+  
    
   /* Build the time of the first and last frame of SC in
    * [us] with respect to PRC.ACQ.START. We need RMN data over
