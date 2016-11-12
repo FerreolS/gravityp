@@ -71,7 +71,7 @@ cpl_image * gravi_create_profile_image (cpl_image * mean_img,
                                         cpl_vector * values_x0,
                                         cpl_vector * values_y0,
                                         cpl_vector * values_sigma,
-                                        int ref_y, int size_profile,
+                                        cpl_size iy_min, cpl_size iy_max,
                                         const char * resolution);
 
 /*-----------------------------------------------------------------------------
@@ -574,7 +574,6 @@ cpl_error_code gravi_fit_profile (cpl_vector * values_x0,
             sigma = sigma_;
         }
         
-        
         /* In HIGH Resolution, we update ref_y in order to
          * follow the curvature when extracting the data */
         if (! (strcmp(resolution, "HIGH"))) {
@@ -614,7 +613,7 @@ cpl_error_code gravi_fit_profile (cpl_vector * values_x0,
  * @param values_sigma  Input vector of profile width in spatial direction
  * @param ref_y         Spatial coordinate of the middle of the profile
  * @param size_profile  Spatial extend of the profile to fill
- * @param resolution    Spectral resolution (LOW, MED, HIGH)
+ * @param mode          "BOX", "PROFILE", "GAUSS"
  * 
  * @return The image of the profile
  *
@@ -629,8 +628,9 @@ cpl_image * gravi_create_profile_image (cpl_image * mean_img,
                                         cpl_vector * values_x0,
                                         cpl_vector * values_y0,
                                         cpl_vector * values_sigma,
-                                        int ref_y, int size_profile,
-                                        const char * resolution)
+                                        cpl_size iy_min,
+                                        cpl_size iy_max,
+                                        const char * mode)
 {
     int nv = 0;
 	gravi_msg_function_start(0);
@@ -638,14 +638,14 @@ cpl_image * gravi_create_profile_image (cpl_image * mean_img,
     cpl_ensure (values_y0,    CPL_ERROR_NULL_INPUT, NULL);
     cpl_ensure (values_sigma, CPL_ERROR_NULL_INPUT, NULL);
     cpl_ensure (mean_img,     CPL_ERROR_NULL_INPUT, NULL);
-    cpl_ensure (resolution,   CPL_ERROR_NULL_INPUT, NULL);
+    cpl_ensure (mode,         CPL_ERROR_NULL_INPUT, NULL);
 
     /* Get the image dimensions */
     int nx = cpl_image_get_size_x (mean_img);
     int ny = cpl_image_get_size_y (mean_img);
     
-    cpl_ensure (ref_y > 0 && ref_y < ny, CPL_ERROR_ILLEGAL_INPUT, NULL);
-    cpl_ensure (size_profile > 0,        CPL_ERROR_ILLEGAL_INPUT, NULL);
+    cpl_ensure (iy_min > 0 && iy_min < ny, CPL_ERROR_ILLEGAL_INPUT, NULL);
+    cpl_ensure (iy_max > 0 && iy_max < ny, CPL_ERROR_ILLEGAL_INPUT, NULL);
 
     /* Filter the profile params with a polynomial fit in spectral direction
      * FIXME: could be a running median instead of fit, surely more stable.
@@ -698,34 +698,28 @@ cpl_image * gravi_create_profile_image (cpl_image * mean_img,
         
         double sum_flux = 0, sum_flux2 = 0;
         
-        /* Define the spatial pixels over which we fill the profile */
-        int iy_min=0, iy_max=ny;
-        if (! (strcmp(resolution, "LOW") && strcmp(resolution, "MED")) ){
-            iy_min = ref_y - size_profile/2;
-            iy_max = ref_y + size_profile/2;
-        }
-        
         /* Loop on spatial direction */
         for (cpl_size iy = iy_min; iy < iy_max; iy++ ){
             
             double result;
             
-            /* If LOW or MED, we use the measured profile 
-             * Normalized latter to ensure flux conservation */
-            if (! (strcmp(resolution, "LOW") && strcmp(resolution, "MED"))) {
+            /* We use the measured profile */
+            if (!strcmp (mode, "PROFILE")) {
                 result = cpl_image_get (mean_img, ix+1, iy+1, &nv);
             }
-            /* In HIGH we use a fixed 5 pixel boxcar profile */
-            else {
+            /* We use a fixed 5 pixel boxcar profile */
+            else if (!strcmp (mode, "BOX")) {
                 result = ( (fabs(iy - cpl_vector_get (valuesfit_y0, ix)) < 3 ) ? 1.0 : 0.0);
             }
-            
-            /* Old version for HIGH:
-               result = 1 / (sqrt(2 * M_PI) *
-               cpl_vector_get(valuesfit_sig, j));
-               result_sig = (i - cpl_vector_get(vector_x0, j)) /
-               cpl_vector_get(valuesfit_sig, j);
-               result = result * exp( - pow (result_sig, 2) / 2); */
+            /* We use a Gaussian profile */
+            else if (!strcmp (mode, "GAUSS")) {
+                result = (iy - cpl_vector_get (valuesfit_y0, ix)) /
+                          cpl_vector_get (valuesfit_sig, ix);
+                result = exp( - pow (result, 2) / 2);
+            } else {
+                cpl_msg_error (cpl_func, "BUG, report to DRS team");
+                return NULL;
+            }
             
             /* Fill the profile image of this region */
             cpl_image_set (region_img, ix + 1, iy + 1, result);
@@ -745,7 +739,7 @@ cpl_image * gravi_create_profile_image (cpl_image * mean_img,
         
         /* When we use a complex profile, we have to normalize
          * it to make it flux conservative at extraction */
-        if (! (strcmp(resolution, "LOW") && strcmp(resolution, "MED")) ) {
+        if (!strcmp (mode, "PROFILE") || !strcmp (mode, "GAUSS") ) {
             
             double sum_flux = 0.0;
             double sum_flux2 = 0.0;
@@ -1091,6 +1085,18 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
         cpl_image_multiply (mask_img, mask2_img);
         FREE (cpl_image_delete, mask2_img);
     }
+
+    /* Define the mode */
+    const char * mode = gravi_param_get_string_default (params,
+                        "gravity.calib.profile-mode", "AUTO");
+    
+    if (!strcmp(mode, "AUTO")) {
+        if (!strcmp(resolution, "LOW"))  mode = "PROFILE";
+        if (!strcmp(resolution, "MED"))  mode = "PROFILE";
+        if (!strcmp(resolution, "HIGH")) mode = "BOX";
+    }
+
+    cpl_msg_info (cpl_func, "Profile computed with mode: %s  (%s)", mode, resolution);
     
     /* Loop on regions */
     for (int region = 0; region < nb_region ; region++) {
@@ -1144,16 +1150,23 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
         values_arr = cpl_array_wrap_double (cpl_vector_get_data(values_sigma), nx);
         cpl_table_set_array (params_table, "WIDTH", region, values_arr);
         cpl_array_unwrap (values_arr);
-        
+
         
         /*
          * Create and compute the profile image of this region
          */
+        
+        /* Define the spatial pixels over which we fill the profile */
+        cpl_size iy_min = 0, iy_max = ny;
+        if (! (strcmp(resolution, "LOW") && strcmp(resolution, "MED")) ){
+            iy_min = ref_y - size_profile/2;
+            iy_max = ref_y + size_profile/2;
+        }
+        
         cpl_image * region_img;
         region_img = gravi_create_profile_image (mean_img, values_x0,
                                                  values_y0, values_sigma,
-                                                 ref_y, size_profile,
-                                                 resolution);
+                                                 iy_min, iy_max, mode);
         FREE (cpl_vector_delete, values_x0);
         FREE (cpl_vector_delete, values_y0);
         FREE (cpl_vector_delete, values_sigma);

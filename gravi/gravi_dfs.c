@@ -168,6 +168,41 @@ cpl_parameter * gravi_parameter_add_badpix (cpl_parameterlist *self)
     return p;
 }
 
+cpl_parameter * gravi_parameter_add_profile (cpl_parameterlist *self)
+{
+    cpl_ensure (self, CPL_ERROR_NULL_INPUT, NULL);
+    
+    cpl_parameter *p;
+    
+    /* Method for profile */
+    p = cpl_parameter_new_enum ("gravity.calib.profile-mode", CPL_TYPE_STRING,
+                                "Methode to compute the profile",
+                                "gravity.calib", "AUTO",
+                                4, "AUTO", "PROFILE", "GAUSS", "BOX");
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "profile-mode");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	cpl_parameterlist_append (self, p);
+
+    /* How to deal with bad-pixels  */
+	p = cpl_parameter_new_value ("gravity.calib.force-badpix-to-zero", CPL_TYPE_BOOL,
+                                 "Force the badpixel to zero in profile",
+                                 "gravity.calib", TRUE);
+	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "force-badpix-to-zero");
+	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	cpl_parameterlist_append (self, p);
+
+	/* The width of the profile element */
+    p = cpl_parameter_new_value ("gravity.calib.profile-width", CPL_TYPE_INT,
+                                 "Width of profile in pixel",
+                                 "gravity.calib", 6);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "profile-width");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (self, p);
+    
+
+    return p;
+}
+
 cpl_parameter * gravi_parameter_add_static_name (cpl_parameterlist *self)
 {
     cpl_ensure (self, CPL_ERROR_NULL_INPUT, NULL);

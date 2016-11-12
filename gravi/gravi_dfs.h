@@ -111,6 +111,7 @@ cpl_error_code gravi_dfs_set_groups(cpl_frameset *);
 cpl_error_code gravi_parameter_disable (cpl_parameter * p);
 
 cpl_parameter * gravi_parameter_add_badpix (cpl_parameterlist *self);
+cpl_parameter * gravi_parameter_add_profile (cpl_parameterlist *self);
 
 cpl_parameter * gravi_parameter_add_static_name (cpl_parameterlist *self);
 cpl_parameter * gravi_parameter_add_debug_file (cpl_parameterlist *self);

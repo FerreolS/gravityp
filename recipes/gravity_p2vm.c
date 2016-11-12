@@ -181,25 +181,10 @@ static int gravity_p2vm_create(cpl_plugin * plugin)
     gravi_parameter_add_debug_file (recipe->parameters);
     gravi_parameter_add_preproc_file (recipe->parameters);
 
-    /* Badpix */
+    /* Badpix and profile */
     gravi_parameter_add_badpix (recipe->parameters);
+    gravi_parameter_add_profile (recipe->parameters);
     
-    /* --How to deal with bad-pixels  */
-	p = cpl_parameter_new_value ("gravity.calib.force-badpix-to-zero", CPL_TYPE_BOOL,
-                                 "Force the badpixel to zero in profile",
-                                 "gravity.calib", TRUE);
-	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "force-badpix-to-zero");
-	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
-	cpl_parameterlist_append (recipe->parameters, p);
-
-	/* --the width of the profile element */
-    p = cpl_parameter_new_value ("gravity.calib.profile-width", CPL_TYPE_INT,
-                                 "Width of profile in pixel",
-                                 "gravity.calib", 6);
-    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "profile-width");
-    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
-    cpl_parameterlist_append (recipe->parameters, p);
-
     /* Phase definition in P2VM */
     p = cpl_parameter_new_enum ("gravity.calib.phase-calibration", CPL_TYPE_STRING,
                                 "The relative phase of the P2VM are defined by \n "
