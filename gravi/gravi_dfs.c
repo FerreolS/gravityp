@@ -157,7 +157,7 @@ cpl_parameter * gravi_parameter_add_badpix (cpl_parameterlist *self)
     cpl_ensure (self, CPL_ERROR_NULL_INPUT, NULL);
     
     cpl_parameter *p;
-    p = cpl_parameter_new_value ("gravi.bad_dark_threshold", CPL_TYPE_INT,
+    p = cpl_parameter_new_value ("gravity.calib.bad-dark-threshold", CPL_TYPE_INT,
                                  "the rms factor for "
                                  "dark bad pixel threshold",
                                  "gravity.calib", 10);
@@ -421,7 +421,7 @@ cpl_error_code gravi_parameter_add_rejection (cpl_parameterlist *self, int isCal
     cpl_ensure_code (self, CPL_ERROR_NULL_INPUT);
     
     cpl_parameter *p;
-	p = cpl_parameter_new_value ("gravi.snr_min_ft", CPL_TYPE_DOUBLE,
+	p = cpl_parameter_new_value ("gravity.signal.snr-min-ft", CPL_TYPE_DOUBLE,
                                  "SNR threshold to accept FT frames (>0). It rizes the first bit (<<0)\n "
                                  "of column REJECTION_FLAG of FT.",
                                  "gravity.signal", isCalib ? 30.0 : 3.0);
@@ -430,7 +430,7 @@ cpl_error_code gravi_parameter_add_rejection (cpl_parameterlist *self, int isCal
 	cpl_parameterlist_append (self, p);
 
 	/* STATE threshold for fringe DET in FT */
-	p = cpl_parameter_new_value ("gravi.state_min_ft", CPL_TYPE_DOUBLE,
+	p = cpl_parameter_new_value ("gravity.signal.state-min-ft", CPL_TYPE_DOUBLE,
                                  "Minimum OPDC state to accept FT frames (>=0) It rizes the second bit\n "
                                  "(<<1) of column REJECTION_FLAG of FT.",
                                  "gravity.signal", 1.0);
@@ -439,7 +439,7 @@ cpl_error_code gravi_parameter_add_rejection (cpl_parameterlist *self, int isCal
 	cpl_parameterlist_append (self, p);
 	
 	/* Minimum detection ratio to accept SC frame */
-	p = cpl_parameter_new_value ("gravi.tracking_min_sc", CPL_TYPE_DOUBLE,
+	p = cpl_parameter_new_value ("gravity.signal.tracking-min-sc", CPL_TYPE_DOUBLE,
                                  "Minimum ratio of accepted FT frames to accept SC frames (0..1),\n "
                                  "that is, for each SC DIT, the fraction of the time the\n "
                                  "REJECTION_FLAG of the FT is not 0.\n "
@@ -450,7 +450,7 @@ cpl_error_code gravi_parameter_add_rejection (cpl_parameterlist *self, int isCal
 	cpl_parameterlist_append (self, p);
 
 	/* vFactor threshold to accept SC frame */
-	p = cpl_parameter_new_value ("gravi.vfactor_min_sc", CPL_TYPE_DOUBLE,
+	p = cpl_parameter_new_value ("gravity.signal.vfactor-min-sc", CPL_TYPE_DOUBLE,
                                  "vFactor threshold to accept SC frame (0..1).\n ",
                                  "It rizes the second bit (<<1) of column REJECTION_FLAG of SC",
                                  "gravity.signal", isCalib ? 0.8 : 0.1);

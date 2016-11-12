@@ -1561,7 +1561,7 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
         cpl_ensure (n_row == 1, CPL_ERROR_ILLEGAL_INPUT, NULL);
         
 		/* Get the rms factor for dark bad pixel threshold */
-		int bad_dark_factor = gravi_param_get_int (params, "gravi.bad_dark_threshold");
+		int bad_dark_factor = gravi_param_get_int (params, "gravity.calib.bad-dark-threshold");
 
 		CPLCHECK_NUL ("Cannot get data");
 
@@ -1633,7 +1633,7 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
         CPLCHECK_NUL ("Cannot create darkhf");
 
 		/* Get the rms factor for dark bad pixel threshold */
-		int bad_dark_factor = gravi_param_get_int (params, "gravi.bad_dark_threshold");
+		int bad_dark_factor = gravi_param_get_int (params, "gravity.calib.bad-dark-threshold");
 
 		/* Accepted range for DARK mean */
 		double dark_rms  = cpl_propertylist_get_double (dark_header, QC_DARKRMS_SC);

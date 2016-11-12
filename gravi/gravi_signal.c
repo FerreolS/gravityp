@@ -2380,8 +2380,8 @@ cpl_error_code gravi_compute_rejection (gravi_data * p2vmred_data,
       cpl_msg_info (cpl_func, "Compute rejection flags for FT");
       
       /* Get the SNR thresholds from parameter */
-      double threshold_SNR_ft = gravi_param_get_double (parlist, "gravi.snr_min_ft");
-      double threshold_STATE_ft = gravi_param_get_double (parlist, "gravi.state_min_ft");
+      double threshold_SNR_ft = gravi_param_get_double (parlist, "gravity.signal.snr-min-ft");
+      double threshold_STATE_ft = gravi_param_get_double (parlist, "gravity.signal.state-min-ft");
 
       cpl_msg_info (cpl_func,"SNR threshold to define fringe-detection in FT: %g", threshold_SNR_ft);
       cpl_msg_info (cpl_func,"STATE threshold for FT: %g", threshold_STATE_ft);
@@ -2454,8 +2454,8 @@ cpl_error_code gravi_compute_rejection (gravi_data * p2vmred_data,
       cpl_msg_info (cpl_func, "Compute rejection flags for SC");
     
       /* Get the SC rejection parameters */
-      double minlockratio_sc = gravi_param_get_double (parlist, "gravi.tracking_min_sc");
-      double minvfactor_sc = gravi_param_get_double (parlist, "gravi.vfactor_min_sc");
+      double minlockratio_sc = gravi_param_get_double (parlist, "gravity.signal.tracking-min-sc");
+      double minvfactor_sc = gravi_param_get_double (parlist, "gravity.signal.vfactor-min-sc");
       
       cpl_msg_info (cpl_func,"Fringe-detection ratio to discard frame on SC: %g", minlockratio_sc);
       cpl_msg_info (cpl_func,"vFactor threshold to discard frame on SC: %g", minvfactor_sc);

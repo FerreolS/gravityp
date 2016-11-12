@@ -226,7 +226,7 @@ int gravi_calib_test(void){
 	cpl_parameterlist * paralist;
 	paralist = cpl_parameterlist_new();
 	cpl_parameter * p;
-    p = cpl_parameter_new_value("gravi.bad_dark_threshold", CPL_TYPE_INT, "the rms factor for "
+    p = cpl_parameter_new_value("gravity.calib.bad-dark-threshold", CPL_TYPE_INT, "the rms factor for "
 					"dark bad pixel threshold", "gravi.preproc", 10);
 
     cpl_parameter_set_alias(p, CPL_PARAMETER_MODE_CLI, "Bad dark threshold");
@@ -489,28 +489,28 @@ int gravi_calib_test(void){
 	cpl_parameterlist_append(parlist, p);
 
 	/* --SNR threshold for fringe DET in FT */
-	p = cpl_parameter_new_value("gravi.snr_min_ft",
+	p = cpl_parameter_new_value("gravity.signal.snr-min-ft",
 			CPL_TYPE_DOUBLE, "SNR threshold to accept FT frames (>0)", "gravi.vis_reduce", 3.0);
 	cpl_parameter_set_alias(p, CPL_PARAMETER_MODE_CLI, "snr-min-ft");
 	cpl_parameter_disable(p, CPL_PARAMETER_MODE_ENV);
 	cpl_parameterlist_append(parlist, p);
 
 	/* --STATE threshold for fringe DET in FT */
-	p = cpl_parameter_new_value("gravi.state_min_ft",
+	p = cpl_parameter_new_value("gravity.signal.state-min-ft",
 			CPL_TYPE_DOUBLE, "minimum OPDC state to accept FT frames (>=0)", "gravi.vis_reduce", 1.0);
 	cpl_parameter_set_alias(p, CPL_PARAMETER_MODE_CLI, "state-min-ft");
 	cpl_parameter_disable(p, CPL_PARAMETER_MODE_ENV);
 	cpl_parameterlist_append(parlist, p);
 
 	/* --Minimum detection ratio to accept SC frame */
-	p = cpl_parameter_new_value("gravi.tracking_min_sc",
+	p = cpl_parameter_new_value("gravity.signal.tracking-min-sc",
 			CPL_TYPE_DOUBLE, "Minimum ratio of accepted FT frames to accept SC frames (0..1)", "gravi.vis_reduce", 0.8);
 	cpl_parameter_set_alias(p, CPL_PARAMETER_MODE_CLI, "tracking-min-sc");
 	cpl_parameter_disable(p, CPL_PARAMETER_MODE_ENV);
 	cpl_parameterlist_append(parlist, p);
 
 	/* --vFactor threshold to accept SC frame */
-	p = cpl_parameter_new_value("gravi.vfactor_min_sc",
+	p = cpl_parameter_new_value("gravity.signal.vfactor-min-sc",
 			CPL_TYPE_DOUBLE, "vFactor threshold to accept SC frame (0..1)", "gravi.vis_reduce", 0.1);
 	cpl_parameter_set_alias(p, CPL_PARAMETER_MODE_CLI, "vfactor-min-sc");
 	cpl_parameter_disable(p, CPL_PARAMETER_MODE_ENV);
@@ -532,7 +532,7 @@ int gravi_calib_test(void){
 	cpl_parameterlist_append(parlist, p);
 
     /* --Use the vis_flat */
-	p = cpl_parameter_new_value("gravi.flat_flux",
+	p = cpl_parameter_new_value("gravity.vis.flat-flux",
 			CPL_TYPE_BOOL, "Flat the OI_FLUX with instrument transmission", "gravi", FALSE);
 	cpl_parameter_set_alias(p, CPL_PARAMETER_MODE_CLI, "flat-flux");
 	cpl_parameter_disable(p, CPL_PARAMETER_MODE_ENV);
