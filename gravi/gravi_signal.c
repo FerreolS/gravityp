@@ -1380,7 +1380,7 @@ cpl_error_code gravi_flux_create_met_sc (cpl_table * flux_SC, cpl_table * vis_ME
 	  for (cpl_size row_met = first_met[nsc] ; row_met < last_met[nsc]; row_met++) {
         cpl_size nmet = row_met * ntel + tel;
         
-		/* Mean OPD_MET at Telescope (each diode) */
+		/* Mean OPD_MET_TEL at Telescope (each diode) */
         cpl_array_add (opd_metdit_tel[nsc], opd_met_tel[nmet]);
         
 		/* Mean OPD_MET_FC at Beam Combiner */
