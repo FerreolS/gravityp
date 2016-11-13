@@ -611,8 +611,8 @@ cpl_error_code gravi_fit_profile (cpl_vector * values_x0,
  * @param values_x0     Input vector of spectral channels (0..nx-1)
  * @param values_y0     Input vector of profile center in spatial direction
  * @param values_sigma  Input vector of profile width in spatial direction
- * @param ref_y         Spatial coordinate of the middle of the profile
- * @param size_profile  Spatial extend of the profile to fill
+ * @param iy_min        Min coordinate where to fill the profile (0..ny-1)
+ * @param iy_max        Max coordinate where to fill the profile (0..ny-1)
  * @param mode          "BOX", "PROFILE", "GAUSS"
  * 
  * @return The image of the profile
@@ -641,11 +641,14 @@ cpl_image * gravi_create_profile_image (cpl_image * mean_img,
     cpl_ensure (mode,         CPL_ERROR_NULL_INPUT, NULL);
 
     /* Get the image dimensions */
-    int nx = cpl_image_get_size_x (mean_img);
-    int ny = cpl_image_get_size_y (mean_img);
+    cpl_size nx = cpl_image_get_size_x (mean_img);
+    cpl_size ny = cpl_image_get_size_y (mean_img);
+
+    cpl_msg_info (cpl_func, "iy_min = %lld, iy_max = %lld, ny = %lld",
+                  iy_min, iy_max, ny);
     
-    cpl_ensure (iy_min > 0 && iy_min < ny, CPL_ERROR_ILLEGAL_INPUT, NULL);
-    cpl_ensure (iy_max > 0 && iy_max < ny, CPL_ERROR_ILLEGAL_INPUT, NULL);
+    cpl_ensure (iy_min >= 0 && iy_min < ny, CPL_ERROR_ILLEGAL_INPUT, NULL);
+    cpl_ensure (iy_max >= 0 && iy_max < ny, CPL_ERROR_ILLEGAL_INPUT, NULL);
 
     /* Filter the profile params with a polynomial fit in spectral direction
      * FIXME: could be a running median instead of fit, surely more stable.
@@ -1157,12 +1160,13 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
          */
         
         /* Define the spatial pixels over which we fill the profile */
-        cpl_size iy_min = 0, iy_max = ny;
+        cpl_size iy_min = 0, iy_max = ny-1;
         if (! (strcmp(resolution, "LOW") && strcmp(resolution, "MED")) ){
             iy_min = ref_y - size_profile/2;
             iy_max = ref_y + size_profile/2;
         }
-        
+
+        /* Fill the profile image */
         cpl_image * region_img;
         region_img = gravi_create_profile_image (mean_img, values_x0,
                                                  values_y0, values_sigma,
