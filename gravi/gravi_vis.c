@@ -87,6 +87,10 @@ cpl_error_code gravi_vis_resamp_amp (cpl_table * oi_table, const char * name, co
 cpl_error_code gravi_vis_resamp_phi (cpl_table * oi_table, const char * name, const char * err,
 									 cpl_size nsamp, cpl_size nwave_new);
 
+cpl_error_code gravi_vis_compute_column_mean (cpl_table * out_table,
+                                              cpl_table * in_table,
+                                              const char * name, int ntel);
+
 /*-----------------------------------------------------------------------------
                                   Function code
  -----------------------------------------------------------------------------*/
@@ -1376,13 +1380,15 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
             /* Additional columns in final, averaged product */
             gravi_table_new_column (oi_vis_SC, "GDELAY", "m", CPL_TYPE_DOUBLE);
             gravi_table_new_column (oi_vis_SC, "PHASE", "rad", CPL_TYPE_DOUBLE);
-            gravi_table_new_column (oi_vis_SC, "OPD_MET_FC", "m", CPL_TYPE_DOUBLE);
-            
-            gravi_table_new_column_array (oi_vis_SC, "OPD_DISP", "m", CPL_TYPE_DOUBLE, nwave_sc);
-            cpl_array ** opd_disp = cpl_table_get_data_array (oi_vis_SC, "OPD_DISP");
-            
-            gravi_table_new_column_array (oi_vis_SC, "PHASE_REF_COEFF", NULL, CPL_TYPE_DOUBLE, 3);
-            cpl_array ** phase_ref_coeff = cpl_table_get_data_array (oi_vis_SC, "PHASE_REF_COEFF");
+
+            gravi_vis_compute_column_mean (oi_vis_SC, vis_SC, "OPD_DISP", 6);
+            gravi_vis_compute_column_mean (oi_vis_SC, vis_SC, "OPD_MET_FC", 6);
+            gravi_vis_compute_column_mean (oi_vis_SC, vis_SC, "PHASE_REF_COEFF", 6);
+            gravi_vis_compute_column_mean (oi_vis_SC, vis_SC, "E_U", 6);
+            gravi_vis_compute_column_mean (oi_vis_SC, vis_SC, "E_V", 6);
+            gravi_vis_compute_column_mean (oi_vis_SC, vis_SC, "E_W", 6);
+            gravi_vis_compute_column_mean (oi_vis_SC, vis_SC, "E_AZ", 6);
+            gravi_vis_compute_column_mean (oi_vis_SC, vis_SC, "E_ZD", 6);
             
             CPLCHECK_NUL("Cannot create columns in averaged OIFITS...");
             
@@ -1484,29 +1490,12 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
                 cpl_propertylist_update_double (plist, qc_name, cpl_array_get_mean (cpl_table_get_array (oi_vis_SC, "VISAMPERR", base)));
                 cpl_propertylist_set_comment (plist, qc_name, "mean over lbd");
                 
-                CPLCHECK_NUL("Cannot set QC parameter for OI_VIS for SC");
-
-                /* Add the OPD_DISP averaged over the exposure */
-                if (cpl_table_get_array (vis_SC, "OPD_DISP",0) != NULL) {
-                    cpl_array * opddisp_mean;
-                    opddisp_mean = gravi_table_get_column_mean_array (vis_SC, "OPD_DISP", base, nbase);
-                    opd_disp[base] = opddisp_mean;
-                    CPLCHECK_NUL ("Cannot average OPD_DISP");
-                }
-
-                /* Add the OPD_MET_FC averaged over the exposure */
-                double metfc_mean = gravi_table_get_column_mean (vis_SC, "OPD_MET_FC", base, nbase);
-                cpl_table_set (oi_vis_SC, "OPD_MET_FC", base, metfc_mean);
-                
-                /* Mean PHASE_REF_COEFF */
-                cpl_array * coeff_mean;
-                coeff_mean = gravi_table_get_column_mean_array (vis_SC, "PHASE_REF_COEFF", base, nbase);
-                phase_ref_coeff[base] = coeff_mean;
-                CPLCHECK_NUL ("Cannot average PHASE_REF_COEFF");
+                double coeff2 = gravi_table_get_value (oi_vis_SC, "PHASE_REF_COEFF", base, 2);
                 sprintf (qc_name, "ESO QC PHASE_REF_COEFF2 SC%s_P%d", GRAVI_BASE_NAME[base], pol+1);
-                cpl_propertylist_update_double (plist, qc_name, cpl_array_get (coeff_mean, 2, NULL));
+                cpl_propertylist_update_double (plist, qc_name, coeff2);
                 cpl_propertylist_set_comment (plist, qc_name, "[rad] 2sd order of FT phase");
                 
+                CPLCHECK_NUL("Cannot set QC parameter for OI_VIS for SC");
             } /* End loop on base */
             
             /* 
@@ -1529,13 +1518,12 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
                 sprintf (qc_name, "ESO QC T3PHI_SC%s_P%d AVG", GRAVI_CLO_NAME[clo], pol+1);
                 cpl_propertylist_update_double (plist, qc_name, cpl_array_get_mean(cpl_table_get_array (oi_T3_SC, "T3PHI", clo)));
                 cpl_propertylist_set_comment (plist, qc_name, "[deg] mean over lbd");
-                CPLCHECK_NUL("cannot add QC T3PHI AVG");
                 
                 sprintf (qc_name, "ESO QC T3PHIERR_SC%s_P%d AVG", GRAVI_CLO_NAME[clo], pol+1);
                 cpl_propertylist_update_double (plist, qc_name, cpl_array_get_mean(cpl_table_get_array (oi_T3_SC, "T3PHIERR", clo)));
                 cpl_propertylist_set_comment (plist, qc_name, "[deg] mean over lbd");
-                CPLCHECK_NUL("cannot add QC T3PHIERR AVG");
           
+                CPLCHECK_NUL("Cannot set QC parameter for OI_T3 for SC");
             }/* End loop on triplets */
             
             /* 
@@ -1545,11 +1533,12 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
             
             cpl_table * oi_flux_SC = gravi_table_oi_create (nwave_sc, 1, GRAVI_OI_FLUX_EXT);
             
-            gravi_table_new_column (oi_flux_SC, "OPD_MET_FC", "m", CPL_TYPE_DOUBLE);
-            gravi_table_new_column (oi_flux_SC, "FT_POS", "V", CPL_TYPE_DOUBLE);
-            gravi_table_new_column (oi_flux_SC, "SC_POS", "V", CPL_TYPE_DOUBLE);
-            gravi_table_new_column (oi_flux_SC, "OPL_AIR", "m", CPL_TYPE_DOUBLE);
             gravi_table_new_column (oi_flux_SC, "LKDT_MET_FC", "mjd", CPL_TYPE_DOUBLE);
+
+            gravi_vis_compute_column_mean (oi_flux_SC, flux_SC, "OPD_MET_FC", 4);
+            gravi_vis_compute_column_mean (oi_flux_SC, flux_SC, "FT_POS", 4);
+            gravi_vis_compute_column_mean (oi_flux_SC, flux_SC, "SC_POS", 4);
+            gravi_vis_compute_column_mean (oi_flux_SC, flux_SC, "OPL_AIR", 4);
             
             CPLCHECK_NUL ("Cannot create columns");
             
@@ -1559,49 +1548,37 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
                                               nseg_sc, nboot_sc, tel);
                 
                 CPLCHECK_NUL("Cannot average flux of SC");
+
+                /* Save the FC metrology lock date */
+                double lockdate = gravi_pfits_get_metfc_lockmjd (p2vmred_header, tel);
+                cpl_table_set (oi_flux_SC, "LKDT_MET_FC", tel, lockdate);
                 
                 /* Add QC */
                 sprintf (qc_name, "ESO QC FLUX_SC%d_P%d AVG", tel+1, pol+1);
                 cpl_propertylist_update_double (plist, qc_name, cpl_array_get_mean (cpl_table_get_array (oi_flux_SC, "FLUX", tel)));
                 cpl_propertylist_set_comment (plist, qc_name, "[e/total_int_time] mean over lbd");
-                CPLCHECK_NUL("cannot add QC FLUX AVG");
                 
                 sprintf (qc_name, "ESO QC FLUXERR_SC%d_P%d AVG", tel+1, pol+1);
                 cpl_propertylist_update_double (plist, qc_name, cpl_array_get_mean (cpl_table_get_array (oi_flux_SC, "FLUXERR", tel)));
                 cpl_propertylist_set_comment (plist, qc_name, "[e/total_int_time] mean over lbd");
-                CPLCHECK_NUL("cannot add QC FLUXERR AVG");
                 
                 sprintf (qc_name, "ESO QC FLUXRATE_SC%d_P%d SUM", tel+1, pol+1);
                 double flux_rate = cpl_array_get_mean (cpl_table_get_array (oi_flux_SC, "FLUX", tel)) *
                     cpl_array_get_size(cpl_table_get_array (oi_flux_SC, "FLUX", tel)) / cpl_table_get_double (oi_flux_SC, "INT_TIME", tel, &nv);
                 cpl_propertylist_update_double (plist, qc_name, flux_rate);
                 cpl_propertylist_set_comment (plist, qc_name, "[e/s] sum over lbd");
-                CPLCHECK_NUL("cannot add QC FLUXRATE AVG");
                 
-                /* Save the OPD_MET_FC, FT_POS and SC_POS, averaged over the exposure */
-                double metfc_mean = gravi_table_get_column_mean (flux_SC, "OPD_MET_FC", tel, ntel);
-                cpl_table_set (oi_flux_SC, "OPD_MET_FC", tel, metfc_mean);
-                
-                double ftpos_mean = gravi_table_get_column_mean (flux_SC, "FT_POS", tel, ntel);
-                cpl_table_set (oi_flux_SC, "FT_POS", tel, ftpos_mean);
+                double ftpos_mean = cpl_table_get (oi_flux_SC, "FT_POS", tel, NULL);
                 sprintf (qc_name, "ESO QC FT_POS SC%d_P%d", tel+1, pol+1);
                 cpl_propertylist_update_double (plist, qc_name, ftpos_mean);
                 cpl_propertylist_set_comment (plist, qc_name, "[V]");
                 
-                double scpos_mean = gravi_table_get_column_mean (flux_SC, "SC_POS", tel, ntel);
-                cpl_table_set (oi_flux_SC, "SC_POS", tel, scpos_mean);
-                
-                double oplair_mean = gravi_table_get_column_mean (flux_SC, "OPL_AIR", tel, ntel);
-                cpl_table_set (oi_flux_SC, "OPL_AIR", tel,oplair_mean);
+                double oplair_mean = cpl_table_get (oi_flux_SC, "OPL_AIR", tel, NULL);
                 sprintf (qc_name, "ESO QC OPL_AIR SC%d_P%d", tel+1, pol+1);
                 cpl_propertylist_update_double (plist, qc_name, oplair_mean);
                 cpl_propertylist_set_comment (plist, qc_name, "[m]");
                 
-                /* Save the FC metrology lock date */
-                double lockdate = gravi_pfits_get_metfc_lockmjd (p2vmred_header, tel);
-                cpl_table_set (oi_flux_SC, "LKDT_MET_FC", tel, lockdate);
-                
-                CPLCHECK_NUL ("Cannot averaged quantities");
+                CPLCHECK_NUL("Cannot set QC parameter for OI_FLUX for SC");
             } /* End loop on beams */
 
             /* 
@@ -2436,6 +2413,127 @@ cpl_error_code gravi_vis_erase_obs (cpl_table * oi_table, cpl_array *flag_array,
     cpl_table_erase_selected (oi_table);
     CPLCHECK_MSG ("Cannot erase");
     
+    gravi_msg_function_exit(0);
+    return CPL_ERROR_NONE;
+}
+
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Compute the mean of a column in OIFITS table, and save the
+ *        result in the specified output table.
+ *
+ * @param out_table    Output table
+ * @param in_table     Input table
+ * @param name         Column name
+ * @param ntel         Number of tel (or base, or triplet)
+ *
+ * The routine create a column in the output table with the same name and units
+ * as the one in the input table. It is filled with an average of the signal
+ * over all DITs, considering the column REJECTION_FLAG if present (non-zero
+ * means frame is rejected). This averaging is performed independently for the
+ * ntel tel (or base or triplet). The output table shall thus contain ntel
+ * rows while the input table shall contain ntel*NDIT rows.
+ *
+ * Note that this routine is not optimized for performance and thus shall be
+ * used on the FT tables.
+ */
+/*----------------------------------------------------------------------------*/
+
+cpl_error_code gravi_vis_compute_column_mean (cpl_table * out_table,
+                                              cpl_table * in_table,
+                                              const char * name, int ntel)
+{
+    gravi_msg_function_start(0);
+    cpl_ensure_code (out_table, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (in_table,  CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (name,      CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (cpl_table_has_column (in_table, name),
+                     CPL_ERROR_ILLEGAL_INPUT);
+    cpl_ensure_code (ntel == cpl_table_get_nrow (out_table),
+                     CPL_ERROR_ILLEGAL_OUTPUT);
+
+    /* Cast the type into an int, to avoid warnings */
+	int type = cpl_table_get_column_type (in_table, name);
+    cpl_size depth = cpl_table_get_column_depth (in_table, name);
+
+    /* Get the number of rows */
+    cpl_size nrow  = cpl_table_get_nrow (in_table) / ntel;
+    cpl_ensure_code (nrow,  CPL_ERROR_ILLEGAL_INPUT);
+
+    /* Get the column REJECTION_FLAG */
+    int * flag = NULL;
+    if (cpl_table_has_column (in_table, "REJECTION_FLAG"))
+        flag = cpl_table_get_data_int (in_table, "REJECTION_FLAG");
+
+    cpl_msg_info (cpl_func, "Average column: %s (%s REJECTION_FLAG)",
+                  name, flag ? "with" : "without");
+
+	switch (type) {
+	case CPL_TYPE_DOUBLE:
+	case CPL_TYPE_FLOAT:
+	case CPL_TYPE_INT:
+        /* Case scalar column */
+        if (!cpl_table_has_column (out_table, name))
+            cpl_table_new_column (out_table, name, CPL_TYPE_DOUBLE);
+        for (int tel = 0; tel < ntel; tel++) {
+            cpl_size nvalid = 0;
+            double mean = 0.0;
+            for (cpl_size row = 0; row < nrow; row++) {
+                if (flag && flag[row*ntel+tel] != 0) continue;
+                nvalid ++;
+                mean += cpl_table_get (in_table, name, row*ntel+tel, NULL);
+            }
+            cpl_table_set (out_table, name, tel, mean / nvalid);
+        }
+        break;
+        
+	case CPL_TYPE_POINTER|CPL_TYPE_DOUBLE:
+	case CPL_TYPE_POINTER|CPL_TYPE_FLOAT:
+	case CPL_TYPE_POINTER|CPL_TYPE_INT:
+        /* Case real array column */
+        if (!cpl_table_has_column (out_table, name))
+            cpl_table_new_column_array (out_table, name, CPL_TYPE_DOUBLE, depth);
+        for (int tel = 0; tel < ntel; tel++) {
+            cpl_size nvalid = 0;
+            cpl_array * mean = gravi_array_init_double (depth, 0.0);
+            for (cpl_size row = 0; row < nrow; row++) {
+                if (flag && flag[row*ntel+tel] != 0) continue;
+                nvalid ++;
+                cpl_array_add (mean, cpl_table_get_array (in_table, name, row*ntel+tel));
+            }
+            cpl_array_divide_scalar (mean, nvalid);
+            cpl_table_set_array (out_table, name, tel, mean);
+            FREE (cpl_array_delete, mean);
+        }
+        break;
+
+	case CPL_TYPE_POINTER|CPL_TYPE_DOUBLE_COMPLEX:
+	case CPL_TYPE_POINTER|CPL_TYPE_FLOAT_COMPLEX:
+        /* Case complex array column */
+        if (!cpl_table_has_column (out_table, name))
+            cpl_table_new_column_array (out_table, name, CPL_TYPE_DOUBLE_COMPLEX, depth);
+        for (int tel = 0; tel < ntel; tel++) {
+            cpl_size nvalid = 0;
+            cpl_array * mean = gravi_array_init_double_complex (depth, 0.0*I+0.0);
+            for (cpl_size row = 0; row < nrow; row++) {
+                if (flag && flag[row*ntel+tel] != 0) continue;
+                nvalid ++;
+                cpl_array_add (mean, cpl_table_get_array (in_table, name, row*ntel+tel));
+            }
+            cpl_array_divide_scalar (mean, nvalid);
+            cpl_table_set_array (out_table, name, tel, mean);
+            FREE (cpl_array_delete, mean);
+        }
+        break;
+        
+        cpl_msg_error (cpl_func, "Type column not yet supported...");
+        cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,"This type is not supported.");
+        return CPL_ERROR_ILLEGAL_INPUT;
+    }
+
+    /* Copy units */
+    cpl_table_set_column_unit (out_table, name, cpl_table_get_column_unit (in_table, name));
+
     gravi_msg_function_exit(0);
     return CPL_ERROR_NONE;
 }

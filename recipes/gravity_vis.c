@@ -746,9 +746,6 @@ static int gravity_vis(cpl_frameset * frameset,
 	 * FIXME: compute QC TF only for CALIB star */
 	gravi_compute_tf_qc (vis_data, diamcat_data);
 
-    /* Compute the pointing directions with ERFA in the averaged data */
-	gravi_compute_pointing (vis_data, eop_map);
-
     /* Eventually flatten the OI_FLUX */
     if (gravi_param_get_bool (parlist, "gravity.vis.flat-flux")) {
 	  
