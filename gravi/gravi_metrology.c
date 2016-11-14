@@ -320,7 +320,7 @@ structTacConfiguration * metrology_makeDefaultTacConfiguration()
     defaultTacConfiguration->nominal_wavelength = LAMBDA_MET * 1e9;
     defaultTacConfiguration->opl_base = defaultTacConfiguration->nominal_wavelength / 1e9 / TWOPI;
     
-    defaultTacConfiguration->number_to_smooth_for_telescope = 50;
+    defaultTacConfiguration->number_to_smooth_for_telescope = 500;
     defaultTacConfiguration->sign_of_phase = 1;
     
     defaultTacConfiguration->check_for_jumps = 1;
