@@ -547,11 +547,17 @@ static int gravity_p2vm(cpl_frameset            * frameset,
                                                 badpix_map, NULL, parlist);
         
         cpl_msg_info (cpl_func, "Compute OPDs for WAVE_RAW");
-        gravi_wave_compute_opds (spectrum_data, gravi_data_get_table (data, GRAVI_METROLOGY_EXT),
-                                 gravi_param_get_bool (parlist,"gravity.dfs.debug-file"));
-        FREE (gravi_data_delete, data);
+        gravi_wave_compute_opds (spectrum_data, gravi_data_get_table (data, GRAVI_METROLOGY_EXT));
+        FREE (gravi_data_delete, data);        
         
         CPLCHECK_CLEAN ("Cannot process the WAVE_RAW");
+
+        /* Save the file with OPD_SC, OPD_FT, OI_VIS_MET */
+        if (gravi_param_get_bool (parlist,"gravity.dfs.debug-file")) {
+            gravi_data_save_new (spectrum_data, frameset, NULL, parlist,
+                                 used_frameset, frame, "gravity_p2vm",
+                                 NULL, "DEBUG");
+        }
 
         /* Compute wave calibration for FT */
         gravi_compute_wave (wave_map, spectrum_data, GRAVI_FT);
@@ -576,11 +582,17 @@ static int gravity_p2vm(cpl_frameset            * frameset,
                                                     badpix_map, NULL, parlist);
             
             cpl_msg_info (cpl_func, "Compute OPDs for WAVESC_RAW");
-            gravi_wave_compute_opds (spectrum_data, gravi_data_get_table (data, GRAVI_METROLOGY_EXT),
-                                     gravi_param_get_bool (parlist,"gravity.dfs.debug-file"));
+            gravi_wave_compute_opds (spectrum_data, gravi_data_get_table (data, GRAVI_METROLOGY_EXT));
             FREE (gravi_data_delete, data);
             
             CPLCHECK_CLEAN ("Cannot process the WAVESC_RAW");
+
+            /* Save the file with OPD_SC, OPD_FT, OI_VIS_MET */
+            if (gravi_param_get_bool (parlist,"gravity.dfs.debug-file")) {
+                gravi_data_save_new (spectrum_data, frameset, NULL, parlist,
+                                     used_frameset, frame, "gravity_p2vm",
+                                     NULL, "DEBUG");
+            }
         }
         else {
             cpl_msg_warning (cpl_func, "No WAVESC_RAW in the SOF:"

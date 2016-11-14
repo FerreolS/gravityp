@@ -787,8 +787,7 @@ cpl_table * gravi_opds_calibration (cpl_table * spectrum_table,
 /*----------------------------------------------------------------------------*/
 
 cpl_error_code gravi_wave_compute_opds (gravi_data * spectrum_data,
-                                        cpl_table  * met_table,
-                                        int debug_flag)
+                                        cpl_table  * met_table)
 {
 	gravi_msg_function_start(1);
 	cpl_ensure_code (spectrum_data, CPL_ERROR_NULL_INPUT);
