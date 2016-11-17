@@ -40,12 +40,6 @@ AC_PROG_CPP
 AM_PROG_CC_C_O
 AC_PROG_LN_S
 
-#
-# Check for purify
-#
-CHECK_PURIFY
-
-
 ESO_ENABLE_DEBUG(no)
 ESO_ENABLE_STRICT(no)
 ESO_PROG_CC_FLAG([std=c99], [CFLAGS="$CFLAGS -std=c99"])
@@ -104,7 +98,6 @@ AM_WITH_DMALLOC
 
 
 AC_CONFIG_FILES(Makefile
-		Makefile.purify
                 doxygen/Doxyfile
                 gravi/Makefile
                 gravi/tests/Makefile
