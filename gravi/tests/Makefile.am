@@ -79,9 +79,6 @@ XFAIL_TESTS =
 clean-local:
 	-rm test_data_*.fits
 	
-if PURIFY
-include $(top_builddir)/Makefile.purify
-endif
 
 EXTRA_DIST = data1.oifits \
 Dark.fits \
