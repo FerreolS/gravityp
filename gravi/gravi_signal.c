@@ -2026,10 +2026,30 @@ cpl_error_code gravi_vis_create_opddisp_sc (cpl_table * vis_SC,
       n_diff[t] = cpl_calloc (nwave_sc, sizeof(double));
   }
 
-  if (cpl_table_has_column (disp_table,"N_MEAN")) {
+  if ( cpl_table_has_column (disp_table,"N_MEAN") &&
+       cpl_table_has_column (disp_table,"WAVE0")) {
       /* The N_MEAN and N_DIFF are described as n(lbd) / n(lbdmet)
-       * with a polynomial versus (lbd-lbdmet)/lbdmet */
-      gravi_msg_warning ("FIXME","Use old version of DISP_MODEL -- update it");
+       * with a polynomial versus (wave0/wave-1) */
+      cpl_msg_info (cpl_func, "Dispersion model as N/Nmet  [wave0/wave-1]");
+      cpl_size disp_order = cpl_table_get_column_depth (disp_table, "N_MEAN");
+      for (int t = 0; t < 4; t++) {
+          double lbd0 = cpl_table_get (disp_table, "WAVE0", t, NULL);
+          for (int w = 0; w < nwave_sc; w++ ) {
+              double lbd = cpl_table_get (wave_table, "EFF_WAVE", w, NULL);
+              double xfit = lbd0/lbd - 1.0;
+              for (int o = 0; o < disp_order; o++) {
+                  n_mean[t][w] += gravi_table_get_value (disp_table, "N_MEAN", t, o) * pow (xfit, o);
+                  n_diff[t][w] += gravi_table_get_value (disp_table, "N_DIFF", t, o) * pow (xfit, o);
+              }
+          }
+      }
+  } else if ( cpl_table_has_column (disp_table,"N_MEAN") &&
+              cpl_table_has_column (disp_table,"BETA") &&
+              !cpl_table_has_column (disp_table,"WAVE0")) {
+      /* The N_MEAN and N_DIFF are described as n(lbd) / n(lbdmet)
+       * with a polynomial versus (lbd-lbdmet)/lbdmet 
+       * FIXME: This shall be removed in the medium-term */
+      gravi_msg_warning ("FIXME","Very old version of DISP_MODEL -- update it");
       cpl_size disp_order = cpl_table_get_column_depth (disp_table, "N_MEAN");
       for (int t = 0; t < 4; t++) {
           for (int w = 0; w < nwave_sc; w++ ) {
@@ -2040,22 +2060,29 @@ cpl_error_code gravi_vis_create_opddisp_sc (cpl_table * vis_SC,
               }
           }
       }
-  } else {
+  } else if ( !cpl_table_has_column (disp_table,"N_MEAN") &&
+              cpl_table_has_column (disp_table,"BETA") &&
+              cpl_table_has_column (disp_table,"WAVE0")) {
       /* The N_MEAN and N_DIFF are described as n(lbd).lbdmet / n(lbdmet).lbd
-       * with a polynomial versus 1./lbd - 1/lbd0  in [um^-1] */
-      gravi_msg_warning ("FIXME","New version of DISP_MODEL --> CODE MAY BE BUGGY !!!");
+       * with a polynomial versus 1./lbd - 1/lbd0  in [um^-1] 
+       * FIXME: shall be removed */
+      gravi_msg_warning ("FIXME","Deprecated version of DISP_MODEL -- update it");
       cpl_size disp_order = cpl_table_get_column_depth (disp_table, "BETA");
       for (int t = 0; t < 4; t++) {
           double lbd0 = cpl_table_get (disp_table, "WAVE0", t, NULL);
           for (int w = 0; w < nwave_sc; w++ ) {
               double lbd = cpl_table_get (wave_table, "EFF_WAVE", w, NULL);
-              double xfit = (1e-6/lbd - 1./lbd0);
+              double xfit = lbd0 > 1. ? 1e-6/lbd - 1./lbd0 : lbd0/lbd - 1.0;
               for (int o = 0; o < disp_order; o++) {
                   n_mean[t][w] += gravi_table_get_value (disp_table, "BETA", t, o)  * pow (xfit, o) * lbd / LAMBDA_MET;
                   n_diff[t][w] += gravi_table_get_value (disp_table, "GAMMA", t, o) * pow (xfit, o) * lbd / LAMBDA_MET;
               }
           }
       }
+  } else {
+      cpl_msg_error (cpl_func,"The DISP_MODEL is not recognized... contact the DRS team");
+      return cpl_error_set_message (cpl_func,CPL_ERROR_ILLEGAL_INPUT,
+                                    "The DISP_MODEL is not recognized... contact the DRS team");
   }
   
   CPLCHECK_MSG ("Cannot compute N_MEAN or N_DIFF");

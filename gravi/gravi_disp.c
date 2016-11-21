@@ -154,7 +154,7 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
         /* Get table for this polarisation */
         cpl_table * oiflux_table = gravi_data_get_oi_flux (vis_data, GRAVI_SC, pol, npol);
         cpl_table * oivis_table  = gravi_data_get_oi_vis (vis_data, GRAVI_SC, pol, npol);
-	cpl_table * oiwave_table = gravi_data_get_oi_wave (vis_data, GRAVI_SC, pol, npol);
+        cpl_table * oiwave_table = gravi_data_get_oi_wave (vis_data, GRAVI_SC, pol, npol);
         
         /* (Re) create the column   FDDLi = (FDDL_FTi + FDDL_SCi)/2 */
         gravi_flux_create_fddllin_sc (oiflux_table, linearity_table);
@@ -207,6 +207,7 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
     
     cpl_table * pos_table = gravi_data_get_table (vis_data, "POS_ARGON");
     cpl_table * dispth_table = cpl_table_duplicate (pos_table);
+    cpl_size nline = cpl_table_get_nrow (dispth_table);
 
     gravi_table_interpolate_column (dispth_table, "WAVE", "BETA",
                                     dispwave_table, "EFF_WAVE", "BETA");
@@ -216,6 +217,21 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
 
     CPLCHECK_NUL ("Cannot interpolate into argon lines");
 
+    /*
+     * Compute the optical index N_MEAN and N_DIFF from BETA and GAMMA 
+     * N_MEAN = BETA  * WAVE_TH / LAMBDA_MET
+     * N_DIFF = GAMMA * WAVE_TH / LAMBDA_MET
+     */
+    
+    cpl_table_duplicate_column (dispth_table, "N_MEAN", dispth_table, "BETA");
+    cpl_table_duplicate_column (dispth_table, "N_DIFF", dispth_table, "GAMMA");
+    
+    for (cpl_size line = 0; line < nline; line++) {
+        double value = cpl_table_get (dispth_table, "WAVE_TH", line, NULL) / LAMBDA_MET;
+        cpl_array_multiply_scalar (cpl_table_get_data_array (dispth_table, "N_MEAN")[line], value);
+        cpl_array_multiply_scalar (cpl_table_get_data_array (dispth_table, "N_DIFF")[line], value);
+    }
+    
     
     /* 
      * Create the output table from the linearity table 
@@ -229,44 +245,59 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
      */
     
     cpl_size mindeg = 0, maxdeg = 2;
-    gravi_table_new_column_array (disp_table, "BETA",  "um^i", CPL_TYPE_DOUBLE, maxdeg+1);
-    gravi_table_new_column_array (disp_table, "GAMMA", "um^i", CPL_TYPE_DOUBLE, maxdeg+1);
-    gravi_table_new_column (disp_table, "WAVE0", "um", CPL_TYPE_DOUBLE);
+    gravi_table_new_column_array (disp_table, "N_MEAN", NULL, CPL_TYPE_DOUBLE, maxdeg+1);
+    gravi_table_new_column_array (disp_table, "N_DIFF", NULL, CPL_TYPE_DOUBLE, maxdeg+1);
+    gravi_table_new_column (disp_table, "WAVE0", "m", CPL_TYPE_DOUBLE);
+    gravi_table_new_column_array (disp_table, "BETA",  NULL, CPL_TYPE_DOUBLE, maxdeg+1);
+    gravi_table_new_column_array (disp_table, "GAMMA", NULL, CPL_TYPE_DOUBLE, maxdeg+1);
 
     /* Allocation of the fit */
-    cpl_size nline = cpl_table_get_nrow (dispth_table);
     cpl_matrix * matrix = cpl_matrix_new (1, nline);
     cpl_vector * vector = cpl_vector_new (nline);
     cpl_polynomial * poly = cpl_polynomial_new (1);
     cpl_array * coeff = cpl_array_new (maxdeg+1, CPL_TYPE_DOUBLE);
     
-    /* The axis for the 1/wave_th - 1/2.2 [um^-1] */
-    double wave0 = 2.2;
+    /* The axis for the 2.2e-6/wave_th - 1 */
+    double wave0 = 2.2e-6;
     for (cpl_size line = 0; line < nline; line++) {
         double wave_th = cpl_table_get (dispth_table, "WAVE_TH", line, NULL);
-        cpl_matrix_set (matrix, 0, line, 1.e-6/wave_th - 1./wave0);
+        cpl_matrix_set (matrix, 0, line, wave0/wave_th - 1.);
     }
 
     for (cpl_size tel = 0; tel < ntel; tel++) {
         cpl_table_set (disp_table, "WAVE0", tel, wave0);
         
-        /* Fit the Bi (MET = mean index) */
+        /* Fit the BETA */
         for (cpl_size line = 0; line < nline; line++)
             cpl_vector_set (vector, line, gravi_table_get_value (dispth_table, "BETA", line, tel));
         cpl_polynomial_fit (poly, matrix, NULL, vector, NULL, CPL_FALSE, &mindeg, &maxdeg);
-        for (cpl_size order = 0; order < 10; order ++)
-            
         for (cpl_size order = 0; order <= maxdeg; order ++)
             cpl_array_set (coeff, order, cpl_polynomial_get_coeff (poly, &order));
         cpl_table_set_array (disp_table, "BETA", tel, coeff);
         
-        /* Fit the Ci (FDDL = differential index) */
+        /* Fit the GAMMA */
         for (cpl_size line = 0; line < nline; line++)
             cpl_vector_set (vector, line, gravi_table_get_value (dispth_table, "GAMMA", line, tel));
         cpl_polynomial_fit (poly, matrix, NULL, vector, NULL, CPL_FALSE, &mindeg, &maxdeg);
         for (cpl_size order = 0; order <= maxdeg; order ++)
             cpl_array_set (coeff, order, cpl_polynomial_get_coeff (poly, &order));
         cpl_table_set_array (disp_table, "GAMMA", tel, coeff);
+
+        /* Fit the N_MEAN */
+        for (cpl_size line = 0; line < nline; line++)
+            cpl_vector_set (vector, line, gravi_table_get_value (dispth_table, "N_MEAN", line, tel));
+        cpl_polynomial_fit (poly, matrix, NULL, vector, NULL, CPL_FALSE, &mindeg, &maxdeg);
+        for (cpl_size order = 0; order <= maxdeg; order ++)
+            cpl_array_set (coeff, order, cpl_polynomial_get_coeff (poly, &order));
+        cpl_table_set_array (disp_table, "N_MEAN", tel, coeff);
+        
+        /* Fit the N_DIFF */
+        for (cpl_size line = 0; line < nline; line++)
+            cpl_vector_set (vector, line, gravi_table_get_value (dispth_table, "N_DIFF", line, tel));
+        cpl_polynomial_fit (poly, matrix, NULL, vector, NULL, CPL_FALSE, &mindeg, &maxdeg);
+        for (cpl_size order = 0; order <= maxdeg; order ++)
+            cpl_array_set (coeff, order, cpl_polynomial_get_coeff (poly, &order));
+        cpl_table_set_array (disp_table, "N_DIFF", tel, coeff);
     }
     CPLCHECK_NUL ("Cannot fit the dispersion coefficients");
     
@@ -486,7 +517,6 @@ cpl_table * gravi_fit_fddl_lin (cpl_table * oiflux_table)
     FREE (cpl_matrix_delete, res_matrix);
     FREE (cpl_array_delete, coeff);
 
-    
     gravi_msg_function_exit(1);
     return lin_table;
 }
@@ -504,7 +534,7 @@ cpl_table * gravi_fit_fddl_lin (cpl_table * oiflux_table)
  * 
  * @return a table with the coefficients
  *
- * Found the  14 parameters 6Aij + 4Bi + 4Ci in 
+ * Found the  14 parameters 6Aij + 4Bi + CGi in 
  * by solving the linear system:
  * PHASEijt * LAMBDA_MET / 2pi = Aij + Ci (FDDL_FTit + FDDL_SCit)/2
  *                                   - Cj (FDDL_FTjt + FDDL_SCjt)/2
@@ -548,12 +578,12 @@ cpl_table * gravi_fit_dispersion (cpl_table * oiflux_table,
     /* 
      * Compute a guess of the BETA dispersion coefficient
      */
-    double beta0 = 0.8651, beta1 = 1.9396;
+    double beta0 = 0.8651, beta1 = 0.8814;
     
     cpl_table_new_column (oiwave_table, "BETA", CPL_TYPE_DOUBLE);
     for (cpl_size wave = 0; wave < nwave; wave ++) {
-        double lbd  = cpl_table_get (oiwave_table, "EFF_WAVE", wave, NULL) * 1e6;
-        double beta = beta0 + beta1 * (1/lbd-1/2.2);
+        double lbd  = cpl_table_get (oiwave_table, "EFF_WAVE", wave, NULL);
+        double beta = beta0 + beta1 * (2.2e-6/lbd - 1.0);
         cpl_table_set (oiwave_table, "BETA", wave,  beta);
     }
     CPLCHECK_NUL ("Cannot create BETA column");
