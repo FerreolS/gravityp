@@ -1212,8 +1212,8 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
                 sprintf (qc_name, "ESO QC VISAMPERR_FT%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
                 cpl_propertylist_update_double (plist, qc_name, cpl_array_get_mean(cpl_table_get_array (oi_vis_FT, "VISAMPERR", base)));
                 cpl_propertylist_set_comment (plist, qc_name, "mean over lbd");
-                CPLCHECK_NUL("Cannot compute QC parameter for OI_VIS for FT");
                 
+                CPLCHECK_NUL("Cannot compute QC parameter for OI_VIS for FT");
             } /* End loop on base */
 
             /* 
@@ -1236,13 +1236,12 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
                 sprintf (qc_name, "ESO QC T3PHI_FT%s_P%d AVG", GRAVI_CLO_NAME[clo], pol+1);
                 cpl_propertylist_update_double (plist, qc_name, cpl_array_get_mean (cpl_table_get_array (oi_T3_FT, "T3PHI", clo)));
                 cpl_propertylist_set_comment (plist, qc_name, "[deg] mean over lbd");
-                CPLCHECK_NUL("cannot add QC T3PHI AVG");
                 
                 sprintf (qc_name, "ESO QC T3PHIERR_FT%s_P%d AVG", GRAVI_CLO_NAME[clo], pol+1);
                 cpl_propertylist_update_double (plist, qc_name, cpl_array_get_mean(cpl_table_get_array (oi_T3_FT, "T3PHIERR", clo)));
                 cpl_propertylist_set_comment (plist, qc_name, "[deg] mean over lbd");
-                CPLCHECK_NUL("cannot add QC T3PHIERR AVG");
                 
+                CPLCHECK_NUL("Cannot compute QC parameter for OI_T3 for FT");
             } /* End loop on triplets */
             
             /* 
@@ -1263,20 +1262,18 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
                 sprintf (qc_name, "ESO QC FLUX_FT%d_P%d AVG", tel+1, pol+1);
                 cpl_propertylist_update_double (plist, qc_name, cpl_array_get_mean (cpl_table_get_array (oi_flux_FT, "FLUX", tel)));
                 cpl_propertylist_set_comment (plist, qc_name, "[e/total_int_time] mean over lbd");
-                CPLCHECK_NUL ("cannot add QC FLUX AVG");
                 
                 sprintf (qc_name, "ESO QC FLUXERR_FT%d_P%d AVG", tel+1, pol+1);
                 cpl_propertylist_update_double (plist, qc_name, cpl_array_get_mean (cpl_table_get_array (oi_flux_FT, "FLUXERR", tel)));
                 cpl_propertylist_set_comment (plist, qc_name, "[e/total_int_time] mean over lbd");
-                CPLCHECK_NUL ("cannot add QC FLUXERR AVG");
                 
                 sprintf (qc_name, "ESO QC FLUXRATE_FT%d_P%d SUM", tel+1, pol+1);
                 double flux_rate = cpl_array_get_mean (cpl_table_get_array (oi_flux_FT, "FLUX", tel)) *
                     cpl_array_get_size (cpl_table_get_array (oi_flux_FT, "FLUX", tel)) / cpl_table_get_double (oi_flux_FT, "INT_TIME", tel, &nv);
                 cpl_propertylist_update_double (plist, qc_name, flux_rate);
                 cpl_propertylist_set_comment (plist, qc_name, "[e/s] sum over lbd");
-                CPLCHECK_NUL("cannot add QC FLUXRATE AVG");
                 
+                CPLCHECK_NUL("Cannot compute QC parameter for OI_FLUX for FT");
             } /* End loop on beams */
             
             /* 
