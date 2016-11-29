@@ -1378,7 +1378,11 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
             gravi_table_new_column (oi_vis_SC, "GDELAY", "m", CPL_TYPE_DOUBLE);
             gravi_table_new_column (oi_vis_SC, "PHASE", "rad", CPL_TYPE_DOUBLE);
 
-            gravi_vis_compute_column_mean (oi_vis_SC, vis_SC, "OPD_DISP", 6);
+            CPLCHECK_NUL("Cannot create columns in averaged OIFITS...");
+
+            // Shall consider the case where OPD_DISP is NULL or absent
+            // gravi_vis_compute_column_mean (oi_vis_SC, vis_SC, "OPD_DISP", 6);
+            
             gravi_vis_compute_column_mean (oi_vis_SC, vis_SC, "OPD_MET_FC", 6);
             gravi_vis_compute_column_mean (oi_vis_SC, vis_SC, "PHASE_REF_COEFF", 6);
             gravi_vis_compute_column_mean (oi_vis_SC, vis_SC, "E_U", 6);
@@ -2497,6 +2501,7 @@ cpl_error_code gravi_vis_compute_column_mean (cpl_table * out_table,
                 if (flag && flag[row*ntel+tel] != 0) continue;
                 nvalid ++;
                 cpl_array_add (mean, cpl_table_get_array (in_table, name, row*ntel+tel));
+                CPLCHECK_MSG ("Cannot add arrays...");
             }
             cpl_array_divide_scalar (mean, nvalid);
             cpl_table_set_array (out_table, name, tel, mean);
