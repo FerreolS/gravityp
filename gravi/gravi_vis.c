@@ -2448,10 +2448,15 @@ cpl_error_code gravi_vis_compute_column_mean (cpl_table * out_table,
     cpl_ensure_code (out_table, CPL_ERROR_NULL_INPUT);
     cpl_ensure_code (in_table,  CPL_ERROR_NULL_INPUT);
     cpl_ensure_code (name,      CPL_ERROR_NULL_INPUT);
-    cpl_ensure_code (cpl_table_has_column (in_table, name),
-                     CPL_ERROR_ILLEGAL_INPUT);
     cpl_ensure_code (ntel == cpl_table_get_nrow (out_table),
                      CPL_ERROR_ILLEGAL_OUTPUT);
+
+    /* Check column exist */
+    if ( !cpl_table_has_column (in_table, name)) {
+        cpl_msg_error (cpl_func, "Missing column %s", name);
+        return cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
+                                      "Missing column %s", name);
+    }
 
     /* Cast the type into an int, to avoid warnings */
 	int type = cpl_table_get_column_type (in_table, name);
