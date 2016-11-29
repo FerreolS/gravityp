@@ -1411,7 +1411,8 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
 
                 /* We duplicate VISDATA, to keep the value untouched in the table */
                 cpl_array * visData_sc, * visErr_sc;
-                visData_sc = cpl_array_cast (cpl_table_get_array (oi_vis_SC, "VISDATA", base), CPL_TYPE_DOUBLE_COMPLEX);
+                visData_sc = cpl_array_cast (cpl_table_get_array (oi_vis_SC, "VISDATA", base),
+                                             CPL_TYPE_DOUBLE_COMPLEX);
                 
                 /* Normalize the phasor to avoid bad pixels */
                 visErr_sc = cpl_array_duplicate (visData_sc);
@@ -2451,11 +2452,10 @@ cpl_error_code gravi_vis_compute_column_mean (cpl_table * out_table,
     cpl_ensure_code (ntel == cpl_table_get_nrow (out_table),
                      CPL_ERROR_ILLEGAL_OUTPUT);
 
-    /* Check column exist */
+    /* Check if column exist */
     if ( !cpl_table_has_column (in_table, name)) {
-        cpl_msg_error (cpl_func, "Missing column %s", name);
-        return cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
-                                      "Missing column %s", name);
+        cpl_msg_info (cpl_func, "Cannot average column %s (not eixsting)", name);
+        return CPL_ERROR_NONE;
     }
 
     /* Cast the type into an int, to avoid warnings */
