@@ -1294,6 +1294,32 @@ cpl_table * gravi_metrology_create (cpl_table * metrology_table, cpl_propertylis
 	
 	int ntel = 4, ndiode = 4;
     char name[100];
+
+    /* Parameters */
+	int ind_sintel_FT[4][4]={{0,2,4,6},
+	                         	{8,10,12,14},
+	                         	{16,18,20,22},
+	                         	{24,26,28,30}};
+	int ind_costel_FT[4][4]={{1,3,5,7},
+	                         	{9,11,13,15},
+	                         	{17,19,21,23},
+	                         	{25,27,29,31}};
+	int ind_sintel_SC[4][4]={{32,34,36,38},
+	                         	{40,42,44,46},
+	                         	{48,50,52,54},
+	                         	{56,58,60,62}};
+	int ind_costel_SC[4][4]={{33,35,37,39},
+	                         	{41,43,45,47},
+	                         	{49,51,53,55},
+	                         	{57,59,61,63}};
+	int ind_sinfc_FT[4]={64,66,68,70};
+	int ind_cosfc_FT[4]={65,67,69,71};
+	int ind_sinfc_SC[4]={72,74,76,78};
+	int ind_cosfc_SC[4]={73,75,77,79};
+    
+	cpl_array ** raw_met=cpl_table_get_data_array(metrology_table,"VOLT");
+	CPLCHECK_NUL("get data met phase at tel");
+    
 	
 	/* 
 	 * Create the vis_met
@@ -1321,10 +1347,18 @@ cpl_table * gravi_metrology_create (cpl_table * metrology_table, cpl_propertylis
 	const char * acq_date = gravi_pfits_get_start_prcacq(header);
     CPLCHECK_NUL ("Cannot get dates");
     
-    double k_phase[4]={0,0,0,0};
 	double met_mjd = 86400*1e6*(gravi_convert_to_mjd(date) -
 								gravi_convert_to_mjd(acq_date));
-	
+    CPLCHECK_NUL ("Cannot convert dates");
+    
+
+    
+	/*
+	 * Compute the metrology phase at FC, without 
+     * any smoothing
+	 */
+    double k_phase[4]={0,0,0,0};
+    
 	/* Loop on row of the metrology */
 	int met_date_row = -1;
 	for (cpl_size row = 0; row < nbrow_met; row ++) {
@@ -1337,21 +1371,15 @@ cpl_table * gravi_metrology_create (cpl_table * metrology_table, cpl_propertylis
 		}
 	  }
 	  
-	  /* Read the voltage of this row */
-	  const cpl_array * volt = cpl_table_get_array (metrology_table, "VOLT", row);
-	  CPLCHECK_NUL ("Error at extraction");
-	  
 	  /* Loop on tel */
 	  for (int tel = 0; tel < ntel; tel++) {
 				
-		/* Compute the phase from the VOLTs */
-		int size_v = cpl_array_get_size (volt);
-		
-		double phi_ft = atan2(cpl_array_get (volt, size_v - 2*(2*ntel - tel), NULL),
-							  cpl_array_get (volt, size_v - 2*(2*ntel - tel) + 1, NULL));
-		
-		double phi_sc = atan2(cpl_array_get (volt, size_v - 2*(ntel - tel), NULL),
-							  cpl_array_get (volt, size_v - 2*(ntel - tel) + 1, NULL));
+        /* Compute the phase from the VOLTs */
+        double phi_ft = atan2 (cpl_array_get (raw_met[row],ind_sinfc_FT[tel], NULL),
+                               cpl_array_get (raw_met[row],ind_cosfc_FT[tel], NULL));
+        
+        double phi_sc = atan2 (cpl_array_get (raw_met[row],ind_sinfc_SC[tel], NULL),
+                               cpl_array_get (raw_met[row],ind_cosfc_SC[tel], NULL));
 		
 		/* Catch errors */
 		CPLCHECK_NUL("Error at computation of phase");
@@ -1409,28 +1437,12 @@ cpl_table * gravi_metrology_create (cpl_table * metrology_table, cpl_propertylis
     
 
 	/*
-	 * Compute the metrology phase at telescope
+	 * Compute the metrology phase at telescope, with a temporal
+     * smoothing over n_filter samples
 	 */
+    
     cpl_array * tel_phase = cpl_array_new (ndiode, CPL_TYPE_DOUBLE);
     
-	cpl_array ** raw_met=cpl_table_get_data_array(metrology_table,"VOLT");
-	CPLCHECK_NUL("get data met phase at tel");
-	int ind_sintel_FT[4][4]={{0,2,4,6},
-	                         	{8,10,12,14},
-	                         	{16,18,20,22},
-	                         	{24,26,28,30}};
-	int ind_costel_FT[4][4]={{1,3,5,7},
-	                         	{9,11,13,15},
-	                         	{17,19,21,23},
-	                         	{25,27,29,31}};
-	int ind_sintel_SC[4][4]={{32,34,36,38},
-	                         	{40,42,44,46},
-	                         	{48,50,52,54},
-	                         	{56,58,60,62}};
-	int ind_costel_SC[4][4]={{33,35,37,39},
-	                         	{41,43,45,47},
-	                         	{49,51,53,55},
-	                         	{57,59,61,63}};
 	int k_wrap_tel[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
 	double phase_temp_tel[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     double k_phase_tel[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
@@ -1445,11 +1457,9 @@ cpl_table * gravi_metrology_create (cpl_table * metrology_table, cpl_propertylis
 	CPLCHECK_NUL("Fill win met phase at tel");
 	int n_filter=25;
 
-	/*
-	 * Compute the sum phase_ft and phase_sc_conj of the first n_filter*2+1 row
+	/* Compute the sum phase_ft and phase_sc_conj of the first n_filter*2+1 row
 	 *  phase_ft=<cos_ft>+i<sin_ft>
-	 *  phase_sc_conj=<cos_sc>-i<sin_sc>
-	 */
+	 *  phase_sc_conj=<cos_sc>-i<sin_sc> */
 	CPLCHECK_NUL("Init met phase at tel");
 	for (cpl_size row=0; row<n_filter*2+1; row++) {
 		for (int tel = 0; tel < ntel; tel++){
@@ -1463,11 +1473,12 @@ cpl_table * gravi_metrology_create (cpl_table * metrology_table, cpl_propertylis
 									  cpl_array_get_complex(phase_sc_conj,ind, NULL)
 									  +cpl_array_get(raw_met[row],ind_costel_SC[tel][diode], NULL)
 									  -I*cpl_array_get(raw_met[row],ind_sintel_SC[tel][diode], NULL));
-				ind++;
 			}
 		}
 	}
 	CPLCHECK_NUL("Computing met phase at tel");
+
+    /* arg{FT - SC} */
 	phase = cpl_array_duplicate (phase_ft);
 	cpl_array_multiply (phase, phase_sc_conj);
 	cpl_array_arg (phase);
@@ -1536,7 +1547,6 @@ cpl_table * gravi_metrology_create (cpl_table * metrology_table, cpl_propertylis
 					phase_rtc = phase_rtc - cpl_propertylist_get_double (header, name);
 					k_phase_tel[ind] = phase_rtc - (phase_temp_tel[ind] + 2 *k_wrap_tel[ind]* M_PI);
 					k_phase_tel[ind] = floor(k_phase_tel[ind]/(2*M_PI)+0.5)*2*M_PI;
-					ind++;
 				}
 			}
 			CPLCHECK_NUL("Unwrap met phase at tel");
@@ -1588,7 +1598,43 @@ cpl_table * gravi_metrology_create (cpl_table * metrology_table, cpl_propertylis
         }
     }
     /* End loop on rows */
+
     
+	/*
+	 * Compute the TEL-FC complex phasor = Vtel * conj (Vfc)
+     * without any smoothing
+	 */
+    cpl_msg_info (cpl_func,"Compute PHASOR_TELFC");
+    
+	cpl_table_new_column_array (vis_met, "PHASOR_TELFC", CPL_TYPE_DOUBLE_COMPLEX, ndiode);
+	cpl_table_set_column_unit (vis_met, "PHASOR_TELFC", "V^4");
+    cpl_array ** phasor_telfc = cpl_table_get_data_array (vis_met, "PHASOR_TELFC");
+
+    for (cpl_size row = 0; row < nbrow_met; row++) {
+		for (int tel = 0; tel < ntel; tel++) {
+            phasor_telfc[row*ntel+tel] = cpl_array_new (ndiode, CPL_TYPE_DOUBLE_COMPLEX);
+            
+            double complex V_fc;
+            V_fc = (cpl_array_get (raw_met[row],ind_cosfc_FT[tel], NULL) +
+                    cpl_array_get (raw_met[row],ind_sinfc_FT[tel], NULL) * I) *
+                   (cpl_array_get (raw_met[row],ind_cosfc_SC[tel], NULL) - 
+                    cpl_array_get (raw_met[row],ind_sinfc_SC[tel], NULL) * I);
+            CPLCHECK_NUL ("Cannot compute V_fc");
+            
+			for (int diode = 0; diode < 4; diode++) {
+                double complex V_tel;
+                V_tel = (cpl_array_get (raw_met[row],ind_costel_FT[tel][diode], NULL) +
+                         cpl_array_get (raw_met[row],ind_sintel_FT[tel][diode], NULL) * I) *
+                        (cpl_array_get (raw_met[row],ind_costel_SC[tel][diode], NULL) - 
+                         cpl_array_get (raw_met[row],ind_sintel_SC[tel][diode], NULL) * I);
+                cpl_array_set_complex (phasor_telfc[row*ntel+tel], diode,
+                                       V_tel * conj (V_fc));
+                CPLCHECK_NUL ("Cannot set V_tel * conj (V_fc)");
+            } /* End loop on diode */
+            
+        } /* End loop on tel */
+    } /* End loop on rows */ 
+
     gravi_msg_function_exit(1);
 	return vis_met;
 }

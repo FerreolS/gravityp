@@ -1049,10 +1049,11 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
   CPLCHECK_MSG("Cannot get data");
 
   /* Get MET data */
-  double * phase_met_fc      = cpl_table_get_data_double (vis_MET, "PHASE_FC");
-  double * opd_met_fc        = cpl_table_get_data_double (vis_MET, "OPD_FC");
-  cpl_array ** phase_met_tel = cpl_table_get_data_array (vis_MET, "PHASE_TEL");
-  cpl_array ** opd_met_tel   = cpl_table_get_data_array (vis_MET, "OPD_TEL");
+  double * phase_met_fc         = cpl_table_get_data_double (vis_MET, "PHASE_FC");
+  double * opd_met_fc           = cpl_table_get_data_double (vis_MET, "OPD_FC");
+  cpl_array ** phase_met_tel    = cpl_table_get_data_array (vis_MET, "PHASE_TEL");
+  cpl_array ** opd_met_tel      = cpl_table_get_data_array (vis_MET, "OPD_TEL");
+  cpl_array ** phasor_met_telfc = cpl_table_get_data_array (vis_MET, "PHASOR_TELFC");
 
   CPLCHECK_MSG("Cannot get direct pointer to data");
 
@@ -1068,6 +1069,9 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
 
   gravi_table_new_column_array (vis_SC, "OPD_MET_TEL", "m", CPL_TYPE_DOUBLE, ndiode);
   cpl_array ** opd_metdit_tel = cpl_table_get_data_array (vis_SC, "OPD_MET_TEL");
+
+  gravi_table_new_column_array (vis_SC, "PHASOR_MET_TELFC", "V^4", CPL_TYPE_DOUBLE_COMPLEX, ndiode);
+  cpl_array ** phasor_metdit_telfc = cpl_table_get_data_array (vis_SC, "PHASOR_MET_TELFC");
 		
   CPLCHECK_MSG("Cannot create columns");
 
@@ -1076,7 +1080,8 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
 	for (cpl_size row_sc = 0; row_sc < nrow_sc; row_sc ++) {
 	  cpl_size nsc = row_sc * nbase + base;
 
-	  opd_metdit_tel[nsc] = gravi_array_init_double (ndiode, 0.0);
+	  opd_metdit_tel[nsc]      = gravi_array_init_double (ndiode, 0.0);
+      phasor_metdit_telfc[nsc] = gravi_array_init_double_complex (ndiode, 0.0+I*0.0);
 
 	  /* Sum over synch MET frames */
 	  for (cpl_size row_met = first_met[nsc] ; row_met < last_met[nsc]; row_met++) {
@@ -1096,6 +1101,11 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
 
 		/* Mean OPD_MET_FC at Beam Combiner */
 		opd_metdit_fc[nsc] += opd_met_fc[nmet0] - opd_met_fc[nmet1];
+
+        /* Mean PHASOR_MET_TELFC */
+        gravi_array_add_phasors (phasor_metdit_telfc[nsc],
+                                 phasor_met_telfc[nmet0],
+                                 phasor_met_telfc[nmet1]);
 		
 		CPLCHECK_MSG ("Fail to integrate the metrology");
 	  }
@@ -1107,6 +1117,7 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
 		  phase_metdit_tel[nsc] /= nframe;
 		  phase_metdit_fc[nsc]  /= nframe;
 		  opd_metdit_fc[nsc]  /= nframe;
+		  cpl_array_divide_scalar (phasor_metdit_telfc[nsc], (double)nframe);
 	  }
 	  CPLCHECK_MSG ("Fail to compute metrology per base from metrology per tel");
 
@@ -1357,6 +1368,7 @@ cpl_error_code gravi_flux_create_met_sc (cpl_table * flux_SC, cpl_table * vis_ME
   /* Get MET data */
   double * opd_met_fc      = cpl_table_get_data_double (vis_MET, "OPD_FC");
   cpl_array ** opd_met_tel = cpl_table_get_data_array (vis_MET, "OPD_TEL");
+  cpl_array ** phasor_met_telfc = cpl_table_get_data_array (vis_MET, "PHASOR_TELFC");
 
   CPLCHECK_MSG("Cannot get direct pointer to data");
 
@@ -1366,7 +1378,10 @@ cpl_error_code gravi_flux_create_met_sc (cpl_table * flux_SC, cpl_table * vis_ME
 
   gravi_table_new_column_array (flux_SC, "OPD_MET_TEL", "m", CPL_TYPE_DOUBLE, ndiode);
   cpl_array ** opd_metdit_tel = cpl_table_get_data_array (flux_SC, "OPD_MET_TEL");
-		
+
+  gravi_table_new_column_array (flux_SC, "PHASOR_MET_TELFC", "V^4", CPL_TYPE_DOUBLE_COMPLEX, ndiode);
+  cpl_array ** phasor_metdit_telfc = cpl_table_get_data_array (flux_SC, "PHASOR_MET_TELFC");
+  
   CPLCHECK_MSG("Cannot create columns");
 
   /* Loop on base and rows */
@@ -1375,6 +1390,7 @@ cpl_error_code gravi_flux_create_met_sc (cpl_table * flux_SC, cpl_table * vis_ME
 	  cpl_size nsc = row_sc * ntel + tel;
 
 	  opd_metdit_tel[nsc] = gravi_array_init_double (ndiode, 0.0);
+      phasor_metdit_telfc[nsc] = gravi_array_init_double_complex (ndiode, 0.0+I*0.0);
 
 	  /* Sum over synch MET frames */
 	  for (cpl_size row_met = first_met[nsc] ; row_met < last_met[nsc]; row_met++) {
@@ -1385,6 +1401,9 @@ cpl_error_code gravi_flux_create_met_sc (cpl_table * flux_SC, cpl_table * vis_ME
         
 		/* Mean OPD_MET_FC at Beam Combiner */
 		opd_metdit_fc[nsc] += opd_met_fc[nmet];
+
+        /* Mean PHASOR_MET_TELFC */
+        cpl_array_add (phasor_metdit_telfc[nsc], phasor_met_telfc[nmet]);
 		
 		CPLCHECK_MSG ("Fail to integrate the metrology");
 	  }
@@ -1394,8 +1413,9 @@ cpl_error_code gravi_flux_create_met_sc (cpl_table * flux_SC, cpl_table * vis_ME
 	  if (nframe != 0 ){
 		  cpl_array_divide_scalar (opd_metdit_tel[nsc], (double)nframe);
 		  opd_metdit_fc[nsc] /= nframe;
+		  cpl_array_divide_scalar (phasor_metdit_telfc[nsc], (double)nframe);
 	  }
-	  CPLCHECK_MSG ("Fail to compute metrology per base from metrology per tel");
+	  CPLCHECK_MSG ("Fail to integrate the metrology");
 
 	} /* End loop on SC frames */
   }/* End loop on bases */
