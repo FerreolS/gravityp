@@ -376,7 +376,7 @@ static int gravity_vis(cpl_frameset * frameset,
 	
     recipe_frameset = gravi_frameset_extract_fringe_data (frameset);
     sky_frameset = gravi_frameset_extract_sky_data (frameset);
-
+    
 	/* To use this recipe the frameset must contain the p2vm, wave and
 	 * gain calibration file. */
     if ( cpl_frameset_get_size (p2vmcalib_frameset) !=1 ||
@@ -389,6 +389,8 @@ static int gravity_vis(cpl_frameset * frameset,
 		  cpl_frameset_is_empty (sky_frameset)) ) {
 	  cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
 							 "Illegal number of P2VM, FLAT, WAVE, BAD, DARK or SKY, OBJECT file on the frameset");
+	  cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
+							 "See online help:  esorex --man gravity_vis");
 	  goto cleanup;
     }
 
@@ -700,21 +702,6 @@ static int gravity_vis(cpl_frameset * frameset,
 		gravi_compute_rejection (p2vmred_data, parlist);
 		CPLCHECK_MSG ("Cannot compute rejection flags signals");
 		
-		/* Visibility and flux are averaged and the followings
-		 * are saved in Visibility data in tables VIS, VIS2 and T3 */
-		tmpvis_data = gravi_compute_vis (p2vmred_data, parlist);
-		CPLCHECK_CLEAN ("Cannot average the P2VMRED frames into VIS");
-
-        /* Merge with already existing */
-        if (ivis == 0) {
-            vis_data = tmpvis_data; tmpvis_data = NULL;
-        }
-        else {
-            cpl_msg_info (cpl_func,"Merge with previous OI_VIS");
-            gravi_data_append (vis_data, tmpvis_data, 1);
-            FREE (gravi_data_delete, tmpvis_data);
-        }
-
 		/* Save the p2vmreduced file */
 		if (gravi_param_get_bool (parlist,"gravity.dfs.p2vmred-file")) {
 			
@@ -735,6 +722,21 @@ static int gravity_vis(cpl_frameset * frameset,
 			CPLCHECK_CLEAN ("Cannot save the ASTROREDUCED product");
 		}
 		
+		/* Visibility and flux are averaged and the followings
+		 * are saved in Visibility data in tables VIS, VIS2 and T3 */
+		tmpvis_data = gravi_compute_vis (p2vmred_data, parlist);
+		CPLCHECK_CLEAN ("Cannot average the P2VMRED frames into VIS");
+
+        /* Merge with already existing */
+        if (ivis == 0) {
+            vis_data = tmpvis_data; tmpvis_data = NULL;
+        }
+        else {
+            cpl_msg_info (cpl_func,"Merge with previous OI_VIS");
+            gravi_data_append (vis_data, tmpvis_data, 1);
+            FREE (gravi_data_delete, tmpvis_data);
+        }
+
 		cpl_msg_info (cpl_func,"Free the p2vmreduced");
 		FREE (cpl_frameset_delete, current_frameset);
 		FREE (gravi_data_delete, p2vmred_data);

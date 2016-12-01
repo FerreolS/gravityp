@@ -489,6 +489,17 @@ static int gravity_disp(cpl_frameset            * frameset,
 			gravi_compute_rejection (p2vmred_data, parlist);
 			CPLCHECK_MSG ("Cannot rejection flags signals");
 			
+			/* Save the P2VMREDUCED */
+			if (gravi_param_get_bool (parlist,"gravity.dfs.p2vmred-file")) {
+			  
+    			gravi_data_save_new (p2vmred_data, frameset, NULL, parlist,
+									 current_frameset, frame, "gravity_disp",
+                                     NULL, GRAVI_P2VMRED_SINGLE_CALIB);
+				
+				CPLCHECK_CLEAN ("Cannot save the P2VMREDUCED product");
+			}
+
+
 			/* Visibility and flux are averaged and the followings
 			 * are saved in Visibility data in tables VIS, VIS2 and T3 */
 			tmpvis_data = gravi_compute_vis (p2vmred_data, parlist);
@@ -503,17 +514,6 @@ static int gravity_disp(cpl_frameset            * frameset,
 				
 				CPLCHECK_CLEAN ("Cannot save the VIS product");
 			}
-
-			/* Save the P2VMREDUCED */
-			if (gravi_param_get_bool (parlist,"gravity.dfs.p2vmred-file")) {
-			  
-    			gravi_data_save_new (p2vmred_data, frameset, NULL, parlist,
-									 current_frameset, frame, "gravity_disp",
-                                     NULL, GRAVI_P2VMRED_SINGLE_CALIB);
-				
-				CPLCHECK_CLEAN ("Cannot save the P2VMREDUCED product");
-			}
-
 
             /* Merge with already existing */
             if (ivis == 0) {
