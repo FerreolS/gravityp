@@ -2489,7 +2489,8 @@ cpl_error_code gravi_vis_compute_column_mean (cpl_table * out_table,
                 nvalid ++;
                 mean += cpl_table_get (in_table, name, row*ntel+tel, NULL);
             }
-            if (nvalid > 0) cpl_table_set (out_table, name, tel, mean / nvalid);
+            if (nvalid > 0) mean /= nvalid;
+            cpl_table_set (out_table, name, tel, mean);
         }
         break;
         
@@ -2508,10 +2509,8 @@ cpl_error_code gravi_vis_compute_column_mean (cpl_table * out_table,
                 cpl_array_add (mean, cpl_table_get_array (in_table, name, row*ntel+tel));
                 CPLCHECK_MSG ("Cannot add arrays...");
             }
-            if (nvalid > 0) {
-                cpl_array_divide_scalar (mean, nvalid);
-                cpl_table_set_array (out_table, name, tel, mean);
-            }
+            if (nvalid > 0) cpl_array_divide_scalar (mean, nvalid);
+            cpl_table_set_array (out_table, name, tel, mean);
             FREE (cpl_array_delete, mean);
         }
         break;
@@ -2529,10 +2528,9 @@ cpl_error_code gravi_vis_compute_column_mean (cpl_table * out_table,
                 nvalid ++;
                 cpl_array_add (mean, cpl_table_get_array (in_table, name, row*ntel+tel));
             }
-            if (nvalid > 0) {
-                cpl_array_divide_scalar (mean, nvalid);
-                cpl_table_set_array (out_table, name, tel, mean);
-            }
+            if (nvalid > 0) cpl_array_divide_scalar (mean, nvalid);
+            cpl_table_set_array (out_table, name, tel, mean);
+            
             FREE (cpl_array_delete, mean);
         }
         break;
