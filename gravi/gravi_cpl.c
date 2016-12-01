@@ -997,6 +997,28 @@ cpl_error_code gravi_array_multiply_phasor (cpl_array * input, double complex fa
   return CPL_ERROR_NONE;
 }
 
+cpl_error_code gravi_array_add_phasor (cpl_array * input, double complex factor, cpl_array * phase)
+{
+  cpl_ensure_code (input, CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (phase, CPL_ERROR_NULL_INPUT);
+  
+  cpl_size size_in = cpl_array_get_size (input);
+  cpl_size size_ph = cpl_array_get_size (phase);
+
+  cpl_ensure_code (size_in == size_ph, CPL_ERROR_ILLEGAL_INPUT);
+  
+  cpl_size n;
+  int nv = 0.0;
+  for (n = 0; n < size_in; n ++) {
+	cpl_array_set_complex( input, n,
+						   cpl_array_get_complex( input, n, &nv) +
+						   cexp ( factor * cpl_array_get( phase, n, &nv) ) );
+  }
+
+  CPLCHECK_MSG ("Cannot add phasor");
+  return CPL_ERROR_NONE;
+}
+
 /* 
  * Compute input = input + factor * phase,  inplace
  */

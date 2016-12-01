@@ -67,6 +67,7 @@ cpl_error_code gravi_array_normalize_complex (cpl_array * input);
 cpl_error_code gravi_array_phase_unwrap (cpl_array * input);
 cpl_error_code gravi_array_phase_wrap (cpl_array * input);
 cpl_error_code gravi_array_multiply_phasor (cpl_array * input, double complex factor, cpl_array * phase);
+cpl_error_code gravi_array_add_phasor (cpl_array * input, double complex factor, cpl_array * phase);
 cpl_error_code gravi_array_add_phase (cpl_array * input, double factor, cpl_array * phase);
 cpl_error_code gravi_array_multiply_conj (cpl_array * input1, cpl_array * input2);
 
