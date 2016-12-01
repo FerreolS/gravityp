@@ -70,7 +70,7 @@ cpl_error_code gravi_array_multiply_phasor (cpl_array * input, double complex fa
 cpl_error_code gravi_array_add_phasor (cpl_array * input, double complex factor, cpl_array * phase);
 cpl_error_code gravi_array_add_phase (cpl_array * input, double factor, cpl_array * phase);
 cpl_error_code gravi_array_multiply_conj (cpl_array * input1, cpl_array * input2);
-
+cpl_error_code gravi_array_add_phasors (cpl_array * input, cpl_array * add, cpl_array * sub);
 
 cpl_error_code gravi_table_set_array_double_complex (cpl_table * table, const char * name,
                                                      cpl_size row, cpl_array * visR, cpl_array * visI);

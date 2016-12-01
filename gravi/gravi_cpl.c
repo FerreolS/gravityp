@@ -950,8 +950,9 @@ cpl_error_code gravi_array_phase_wrap (cpl_array * input)
   return CPL_ERROR_NONE;
 }
 
-/*
- * Return a new DOUBLE_COMPLEX array filled with cexp( factor * input )
+/**
+ * @brief Compute the complex exponention of an array:
+ *        cexp (factor * input)
  */
 cpl_array * gravi_array_cexp (double complex factor, const cpl_array * input)
 {
@@ -971,9 +972,9 @@ cpl_array * gravi_array_cexp (double complex factor, const cpl_array * input)
   return output;
 }
 
-/* 
- * Multiply a COMPLEX array by a phasor, in-place:
- * input = input * cexp( factor * phase )
+/**
+ * @brief Multiply a REAL phase to a COMPLEX array, in-place:
+ *        input = input * cexp (factor * phase)
  */
 cpl_error_code gravi_array_multiply_phasor (cpl_array * input, double complex factor, cpl_array * phase)
 {
@@ -997,6 +998,10 @@ cpl_error_code gravi_array_multiply_phasor (cpl_array * input, double complex fa
   return CPL_ERROR_NONE;
 }
 
+/**
+ * @brief Add a REAL phase to a COMPLEX array, in-place:
+ *        input = input + cexp (factor * phase)
+ */
 cpl_error_code gravi_array_add_phasor (cpl_array * input, double complex factor, cpl_array * phase)
 {
   cpl_ensure_code (input, CPL_ERROR_NULL_INPUT);
@@ -1013,14 +1018,45 @@ cpl_error_code gravi_array_add_phasor (cpl_array * input, double complex factor,
 	cpl_array_set_complex( input, n,
 						   cpl_array_get_complex( input, n, &nv) +
 						   cexp ( factor * cpl_array_get( phase, n, &nv) ) );
+    CPLCHECK_MSG ("Cannot add phasor");
   }
 
-  CPLCHECK_MSG ("Cannot add phasor");
   return CPL_ERROR_NONE;
 }
 
-/* 
- * Compute input = input + factor * phase,  inplace
+/**
+ * @brief Add a pair of COMPLEX arrays to a COMPLEX array, in-place:
+ *        input = input + add*conj(sub)
+ */
+cpl_error_code gravi_array_add_phasors (cpl_array * input, cpl_array * add, cpl_array * sub)
+{
+  cpl_ensure_code (input, CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (add,   CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (sub,   CPL_ERROR_NULL_INPUT);
+  
+  cpl_size size_in  = cpl_array_get_size (input);
+  cpl_size size_add = cpl_array_get_size (add);
+  cpl_size size_sub = cpl_array_get_size (sub);
+
+  cpl_ensure_code (size_in == size_add, CPL_ERROR_ILLEGAL_INPUT);
+  cpl_ensure_code (size_in == size_sub, CPL_ERROR_ILLEGAL_INPUT);
+  
+  cpl_size n;
+  int nv = 0.0;
+  for (n = 0; n < size_in; n ++) {
+	cpl_array_set_complex (input, n,
+						   cpl_array_get_complex (input, n, &nv) +
+						   cpl_array_get_complex (add, n, &nv) *
+                           conj (cpl_array_get_complex (sub, n, &nv)));
+    CPLCHECK_MSG ("Cannot add phasors");
+  }
+
+  return CPL_ERROR_NONE;
+}
+
+/**
+ * @brief Add a REAL phase to a REAL phase array, in-place:
+ *        input = input + factor * phase
  */
 cpl_error_code gravi_array_add_phase (cpl_array * input, double factor, cpl_array * phase)
 {
