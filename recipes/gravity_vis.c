@@ -711,6 +711,11 @@ static int gravity_vis(cpl_frameset * frameset,
 			CPLCHECK_CLEAN ("Cannot save the P2VMREDUCED product");
 		}
 
+		/* Visibility and flux are averaged and the followings
+		 * are saved in Visibility data in tables VIS, VIS2 and T3 */
+		tmpvis_data = gravi_compute_vis (p2vmred_data, parlist);
+		CPLCHECK_CLEAN ("Cannot average the P2VMRED frames into VIS");
+
 		/* Save the astro file, which is a lighter version of the p2vmreduced */
 		if (gravi_param_get_bool (parlist,"gravity.dfs.astro-file")) {
 
@@ -722,10 +727,6 @@ static int gravity_vis(cpl_frameset * frameset,
 			CPLCHECK_CLEAN ("Cannot save the ASTROREDUCED product");
 		}
 		
-		/* Visibility and flux are averaged and the followings
-		 * are saved in Visibility data in tables VIS, VIS2 and T3 */
-		tmpvis_data = gravi_compute_vis (p2vmred_data, parlist);
-		CPLCHECK_CLEAN ("Cannot average the P2VMRED frames into VIS");
 
         /* Merge with already existing */
         if (ivis == 0) {
@@ -742,7 +743,7 @@ static int gravity_vis(cpl_frameset * frameset,
 		FREE (gravi_data_delete, p2vmred_data);
         
     }
-	/* End loop on the input files to reduce */
+    /* End loop on the input files to reduce */
 
 	/* Compute the QC parameters of the TF 
 	 * FIXME: compute QC TF only for CALIB star */
