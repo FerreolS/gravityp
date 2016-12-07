@@ -1026,7 +1026,13 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
     
 	/* Compute the size_profile. For LOW and MEDIUM it is automatic.
      * For HIGH it comes from the option */
-	int n_darkline = 1;
+    int n_darkline;
+    cpl_propertylist * flat_header;
+	flat_header = gravi_data_get_header (flats_data[0]);
+    if (cpl_propertylist_get_float(flat_header, "MJD-OBS") > 57728)
+    	n_darkline= 0;
+    else
+    	n_darkline= 1;
     int size_profile;
 	if (! (strcmp(resolution, "LOW") && strcmp(resolution, "MED")) )	{
 		size_profile = (ny-(nb_region+1)*n_darkline)/nb_region;
@@ -1163,7 +1169,7 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
         cpl_size iy_min = 0, iy_max = ny-1;
         if (! (strcmp(resolution, "LOW") && strcmp(resolution, "MED")) ){
             iy_min = ref_y - size_profile/2;
-            iy_max = ref_y + size_profile/2;
+            iy_max = ref_y + size_profile/2-1;
         }
 
         /* Fill the profile image */
