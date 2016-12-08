@@ -87,7 +87,8 @@ cpl_table * gravi_wave_fibre (cpl_table * spectrum_table,
 
 cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
                                cpl_table * detector_table,
-                               cpl_size fullstartx);
+                               cpl_size fullstartx,
+                               int spatial_order);
 
 cpl_error_code gravi_wave_correct_dispersion (cpl_table * wave_fibre,
                                               double n0, double n1, double n2);
@@ -1126,7 +1127,8 @@ cpl_table * gravi_wave_fibre (cpl_table * spectrum_table,
 
 cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
                                cpl_table * detector_table,
-                               cpl_size fullstartx)
+                               cpl_size fullstartx,
+                               int spatial_order)
 {
 	gravi_msg_function_start(1);
 	cpl_ensure (wavefibre_table, CPL_ERROR_NULL_INPUT, NULL);
@@ -1254,7 +1256,8 @@ cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
 		 * between the position and the wavelength = F(y, x)
 		 */  
 		cpl_size  deg2d[2] = {2, 3};
-        if (nwave < 1000) {deg2d[0] = 2; deg2d[1] = 3;}
+        if (nwave < 1000) {deg2d[0] = 2; deg2d[1] = 3;} // FIXME Useless line ?
+        deg2d[0] = spatial_order;
         
 		cpl_msg_info (cpl_func, "Fit a 2d polynomial {%lli..%lli} to the wavelengths map", deg2d[0], deg2d[1]);
         
@@ -1631,7 +1634,7 @@ cpl_error_code gravi_wave_qc (gravi_data * wave_map, gravi_data * profile_map)
 
 cpl_error_code  gravi_compute_wave (gravi_data * wave_map,
                                     gravi_data * spectrum_data,
-                                    int type_data)
+                                    int type_data, const cpl_parameterlist * parlist)
 {
 	gravi_msg_function_start(1);
 	cpl_ensure_code (wave_map,      CPL_ERROR_NULL_INPUT);
@@ -1695,9 +1698,14 @@ cpl_error_code  gravi_compute_wave (gravi_data * wave_map,
 
     /* Interpolate table 2D */
     cpl_table * wavedata_table;
+    int spatial_order=2; // default spatial order
+    if (type_data == GRAVI_FT && gravi_param_get_bool(parlist, "gravity.calib.force-wave-ft-equal")) {
+    	spatial_order = 0;
+    	cpl_msg_info (cpl_func, "Option force-waveFT-equal applied");
+    }
     wavedata_table = gravi_wave_fit_2d (wavefibre_table,
                                         detector_table,
-                                        fullstartx);        
+                                        fullstartx, spatial_order);
     CPLCHECK_MSG ("Cannot fit 2d data");
     
     /* 

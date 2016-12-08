@@ -184,6 +184,9 @@ static int gravity_p2vm_create(cpl_plugin * plugin)
     /* Badpix and profile */
     gravi_parameter_add_badpix (recipe->parameters);
     gravi_parameter_add_profile (recipe->parameters);
+
+    /* Wave option */
+    gravi_parameter_add_wave (recipe->parameters);
     
     /* Phase definition in P2VM */
     p = cpl_parameter_new_enum ("gravity.calib.phase-calibration", CPL_TYPE_STRING,
@@ -560,7 +563,7 @@ static int gravity_p2vm(cpl_frameset            * frameset,
         }
 
         /* Compute wave calibration for FT */
-        gravi_compute_wave (wave_map, spectrum_data, GRAVI_FT);
+        gravi_compute_wave (wave_map, spectrum_data, GRAVI_FT, parlist);
         
         CPLCHECK_CLEAN ("Cannot compute wave for FT");
         
@@ -600,7 +603,7 @@ static int gravity_p2vm(cpl_frameset            * frameset,
         }
 
         /* Compute wave calibration for SC */
-        gravi_compute_wave (wave_map, spectrum_data, GRAVI_SC);
+        gravi_compute_wave (wave_map, spectrum_data, GRAVI_SC, parlist);
         
         CPLCHECK_CLEAN ("Cannot compute wave for SC");
             

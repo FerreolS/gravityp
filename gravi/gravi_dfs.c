@@ -203,6 +203,23 @@ cpl_parameter * gravi_parameter_add_profile (cpl_parameterlist *self)
     return p;
 }
 
+cpl_parameter * gravi_parameter_add_wave (cpl_parameterlist *self)
+{
+    cpl_ensure (self, CPL_ERROR_NULL_INPUT, NULL);
+
+    cpl_parameter *p;
+
+    /* Method for profile */
+    p = cpl_parameter_new_value ("gravity.calib.force-wave-ft-equal", CPL_TYPE_BOOL,
+                                "Force the spatial order of the wavelength 2D fit for FT to zero",
+                                "gravity.calib", FALSE);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "force-wave-ft-equal");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	cpl_parameterlist_append (self, p);
+
+    return p;
+}
+
 cpl_parameter * gravi_parameter_add_static_name (cpl_parameterlist *self)
 {
     cpl_ensure (self, CPL_ERROR_NULL_INPUT, NULL);
