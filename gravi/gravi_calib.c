@@ -363,13 +363,13 @@ cpl_error_code gravi_fit_profile (cpl_vector * values_x0,
     cpl_ensure_code (values_sigma, CPL_ERROR_NULL_INPUT);
     cpl_ensure_code (mean_img,     CPL_ERROR_NULL_INPUT);
     cpl_ensure_code (resolution,   CPL_ERROR_NULL_INPUT);
-        
-    /* Compute middle of size_profile */
-	int middle = floor (size_profile / 2);
 
-	/* Get the image dimensions */
-	int nx = cpl_image_get_size_x (mean_img);
-	int ny = cpl_image_get_size_y (mean_img);
+    /* Compute middle of size_profile */
+    int middle = floor (size_profile / 2);
+
+    /* Get the image dimensions */
+    int nx = cpl_image_get_size_x (mean_img);
+    int ny = cpl_image_get_size_y (mean_img);
 
     cpl_ensure_code (ref_x > 0 && ref_x < nx, CPL_ERROR_ILLEGAL_INPUT);
     cpl_ensure_code (ref_y > 0 && ref_y < ny, CPL_ERROR_ILLEGAL_INPUT);
@@ -889,6 +889,7 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
     /* Get necessary information */
     int det_startx = gravi_pfits_get_window_start (flat0_header);
 	const char * resolution = gravi_pfits_get_resolution (flat0_header);
+	const char * pola_mode = gravi_pfits_get_pola_mode(flat0_header, GRAVI_SC);
 	int nb_region = cpl_table_get_nrow (detector_table);
     
 	/* Get the DARK and BAD data */
@@ -1028,18 +1029,36 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
      * For HIGH it comes from the option */
     int n_darkline;
     cpl_propertylist * flat_header;
+    int window_mode;
 	flat_header = gravi_data_get_header (flats_data[0]);
-    if (cpl_propertylist_get_float(flat_header, "MJD-OBS") > 57728)
-    	n_darkline= 0;
-    else
-    	n_darkline= 1;
     int size_profile;
-	if (! (strcmp(resolution, "LOW") && strcmp(resolution, "MED")) )	{
-		size_profile = (ny-(nb_region+1)*n_darkline)/nb_region;
-	}
-	else{
-        size_profile = (fmod(profile_width, 2) == 0) ? profile_width + 1 : profile_width;
-	}
+    /* if the windowing mode if after the 05/12/2016 */
+    if ( cpl_propertylist_get_float(flat_header, "MJD-OBS") > 57728 ){
+        n_darkline= 0;
+        window_mode = 1;
+        cpl_msg_info(cpl_func, "Windowing after MJD = 57728");
+		if (! (strcmp(resolution, "LOW") && strcmp(resolution, "MED")) &&  !strcmp(pola_mode, "COMB"))	{
+			size_profile = ny/nb_region;
+			cpl_msg_info(cpl_func, "Use a computed size_profile of %d", size_profile);
+		}
+		else{
+			size_profile = (fmod(profile_width, 2) == 0) ? profile_width + 1 : profile_width;
+			cpl_msg_info(cpl_func, "Use a given size profile of %d", size_profile);
+		}
+    }
+    /* else keep old windowing for backward compatibility */
+    else {
+        n_darkline= 1;
+        window_mode = 0;
+		if (! (strcmp(resolution, "LOW") && strcmp(resolution, "MED")))	{
+			size_profile = (ny-(nb_region+1)*n_darkline)/nb_region;
+			cpl_msg_info(cpl_func, "Use a computed size_profile of %d", size_profile);
+		}
+		else{
+			size_profile = (fmod(profile_width, 2) == 0) ? profile_width + 1 : profile_width;
+			cpl_msg_info(cpl_func, "Use a given size profile of %d", size_profile);
+		}
+    }
 
 	/* Construction of the PROFILE_DATA table */
 	cpl_table * profile_table = cpl_table_new (1);
@@ -1130,12 +1149,27 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
         /* Convert the reference coordinates in unit of the cropped data 
          * Actually we force ref_x and ref_y in LOW and MED. */
         int ref_x, ref_y;
-        if (! (strcmp(resolution, "LOW") && strcmp(resolution, "MED")) )	{
-            ref_x = nx / 2;
-            ref_y = (region+1)*(size_profile+n_darkline)-size_profile/2;
-        } else  {
-            ref_x = ref0_x - det_startx - (1 + ext_dim[0]);
-            ref_y = ref0_y;
+
+        /* if the windowing mode if after the 05/12/2016 */
+        if ( window_mode == 1 ){
+            if (! (strcmp(resolution, "LOW") && strcmp(resolution, "MED")) &&  !strcmp(pola_mode, "COMB") )	{
+                ref_x = nx / 2;
+                ref_y = (region+1)*(size_profile)-size_profile/2;
+            } else  {
+                //ref_x = ref0_x - det_startx - (1 + ext_dim[0]);
+                ref_x = ref0_x - (1 + ext_dim[0]);
+                ref_y = ref0_y;
+            }
+        }
+        else {
+            if (! (strcmp(resolution, "LOW") && strcmp(resolution, "MED")) )	{
+                ref_x = nx / 2;
+                ref_y = (region+1)*(size_profile+n_darkline)-size_profile/2;
+            } else  {
+                //ref_x = ref0_x - det_startx - (1 + ext_dim[0]);
+                ref_x = ref0_x - (1 + ext_dim[0]);
+                ref_y = ref0_y;
+            }
         }
 
         /*
