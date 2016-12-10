@@ -702,7 +702,7 @@ cpl_image * gravi_create_profile_image (cpl_image * mean_img,
         double sum_flux = 0, sum_flux2 = 0;
         
         /* Loop on spatial direction */
-        for (cpl_size iy = iy_min; iy < iy_max; iy++ ){
+        for (cpl_size iy = iy_min; iy <= iy_max; iy++ ){
             
             double result;
             
@@ -734,7 +734,7 @@ cpl_image * gravi_create_profile_image (cpl_image * mean_img,
         
         /* Keep only effective part of the profile 
          * Force pixel <1e-7 to zero */
-        for (cpl_size iy = iy_min; iy < iy_max; iy++ ) {
+        for (cpl_size iy = iy_min; iy <= iy_max; iy++ ) {
             double img_j = cpl_image_get (region_img, ix+1, iy+1, &nv);
             if (img_j / sum_flux < 1e-7) 
                 cpl_image_set (region_img, ix+1, iy+1, 0.0);
@@ -746,13 +746,13 @@ cpl_image * gravi_create_profile_image (cpl_image * mean_img,
             
             double sum_flux = 0.0;
             double sum_flux2 = 0.0;
-            for (cpl_size iy = iy_min; iy < iy_max; iy++ ) {
+            for (cpl_size iy = iy_min; iy <= iy_max; iy++ ) {
                 double img_j = cpl_image_get (region_img, ix+1, iy+1, &nv);
                 sum_flux  += img_j;
                 sum_flux2 += img_j * img_j;
             }
             
-            for (cpl_size iy = iy_min; iy < iy_max; iy++ ) {
+            for (cpl_size iy = iy_min; iy <= iy_max; iy++ ) {
                 double img_j = cpl_image_get (region_img, ix+1, iy+1, &nv);
                 cpl_image_set (region_img, ix+1, iy+1, img_j * sum_flux / sum_flux2);
             }
