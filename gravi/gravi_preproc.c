@@ -271,12 +271,18 @@ cpl_table * gravi_table_ft_format (cpl_table * pix_table,
   
   /* Get the dimensions for the descramling */
   cpl_size npix = cpl_table_get_column_depth (pix_table, "PIX");
-  int npol, nx, ny, nypol;
+  cpl_size sizex=cpl_table_get_column_dimension(pix_table, "PIX", 0);
+  cpl_size sizey=cpl_table_get_column_dimension(pix_table, "PIX", 1);
+  int npol, nx, ny, ny_out;
 	
   if (n_region > 24) {nx = 24; npol = 2;}
   else { nx = n_region; npol = 1; }
-  ny = 5;
-  nypol = 5;
+  nx = sizex;
+  ny = sizey/npol;
+
+  /* keep the ny_out to 5 for now to keep the same size.
+   * could be ny if the pipeline accept 6 pixels spectra */
+  ny_out = 5;
 
   /* Copy the column TIME */
   if (cpl_table_has_column (pix_table, "TIME")) {
@@ -318,34 +324,42 @@ cpl_table * gravi_table_ft_format (cpl_table * pix_table,
 
 	  /* Create DATA column */
 	  const char * data = GRAVI_DATA[region*npol + pol];
-	  cpl_table_new_column_array (output_table, data, CPL_TYPE_DOUBLE, ny);
+	  cpl_table_new_column_array (output_table, data, CPL_TYPE_DOUBLE, ny_out);
 	  cpl_array ** tData = cpl_table_get_data_array (output_table, data);
 	  CPLCHECK_NUL ("Cannot create DATA column");
 
 	  /* Create DATAERR column */
 	  const char * dataerr = GRAVI_DATAERR[region*npol + pol];
-	  cpl_table_new_column_array (output_table, dataerr, CPL_TYPE_DOUBLE, ny);
+	  cpl_table_new_column_array (output_table, dataerr, CPL_TYPE_DOUBLE, ny_out);
 	  cpl_array ** tDataErr = cpl_table_get_data_array (output_table, dataerr);
 	  CPLCHECK_NUL ("Cannot create DATAERR column");
 	  	  
 	  /* Compute the flux in in [e] by loop on row and spectral direction 
 	   * - Desinterlace the FT frames 
-	   * - data     = data - mean_sky 
-	   * - var_data = data - mean_sky + var_sky
+       * - data     = data - mean_sky
+       * - var_data = data - mean_sky + var_sky
+       * If 2 pixels per element
+       * - data     = data1 - mean_sky1 + data2 - mean_sky2
+       * - var_data = data + var_sky1 + var_sky2
 	   * Allocating the arrays wrap data takes most of
 	   * the time of the extract (80%) */
 	  
 	  for (cpl_size row = 0; row < nrow; row ++) {
-		double *pData    = cpl_malloc (ny * sizeof(double));
-		double *pDataErr = cpl_malloc (ny * sizeof(double));
-		for (cpl_size j = 0; j < ny; j++) {
-		  long idx = nx * (j + nypol*pol) + region;
+		double *pData    = cpl_malloc (ny_out * sizeof(double));
+		double *pDataErr = cpl_malloc (ny_out * sizeof(double));
+		for (cpl_size j = 0; j < ny_out; j++) {
+		  long idx = nx * (j + ny*pol) + region*nx/24;
 		  double value = cpl_array_get (arr_data[row], idx, NULL) / gain - pSky[idx];
+		  /* add the second pixel if given */
+		  if (sizex == 48) value += cpl_array_get (arr_data[row], idx+1, NULL) / gain - pSky[idx+1];
 		  pData[j]    = value;
-		  pDataErr[j] = sqrt (CPL_MAX (value,0.0) + pSkyVar[idx]);
+		  double var = pSkyVar[idx];
+          /* add the second pixel if given */
+		  if (sizex == 48) var += pSkyVar[idx+1];
+		  pDataErr[j] = sqrt (CPL_MAX (value,0.0) + var);
 		}
-		tData[row]    = cpl_array_wrap_double (pData, ny);
-		tDataErr[row] = cpl_array_wrap_double (pDataErr, ny);
+		tData[row]    = cpl_array_wrap_double (pData, ny_out);
+		tDataErr[row] = cpl_array_wrap_double (pDataErr, ny_out);
 		
 		CPLCHECK_NUL ("Cannot extract and wrap data");
 	  } /* End loop on rows */
