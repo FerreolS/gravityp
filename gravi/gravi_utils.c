@@ -772,7 +772,7 @@ int * gravi_image_extract_dimension (cpl_image * img_profile)
 	max = cpl_vector_get_max  (vector);
 
 
-	sig = max / 10;
+	sig = max * 0.10; // cut the edge to 10 % of the flux
 	sum = 0;
 	i_2=nx;
 	i_1=0;
