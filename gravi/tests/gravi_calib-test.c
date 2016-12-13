@@ -59,7 +59,7 @@
 #include <gsl/gsl_linalg.h>
 
 #define DATADIR_TEST DATADIR
-//#define DATADIR_TEST ""
+#define DATADIR_TEST ""
 
 int gravi_calib_test(void);
 int gravi_calib_test(void){
@@ -382,13 +382,15 @@ int gravi_calib_test(void){
                                                          badpix_data, NULL,paralist);
 
     cpl_msg_info (cpl_func, "Compute OPDs for WAVE_RAW");
-    gravi_wave_compute_opds (spectrum_data, gravi_data_get_table (data, GRAVI_METROLOGY_EXT),0);
+    gravi_wave_compute_opds (spectrum_data, gravi_data_get_table (data, GRAVI_METROLOGY_EXT));
     FREE (gravi_data_delete, data);
 
     /* Compute wave calibration for FT and SC */
-    test(gravi_compute_wave (data_wave, spectrum_data, GRAVI_FT),
+    gravi_parameter_add_wave(paralist);
+
+    test(gravi_compute_wave (data_wave, spectrum_data, GRAVI_FT, paralist),
 			"gravi_compute_wave: Compute wave FT... ", flag);
-    test(gravi_compute_wave (data_wave, spectrum_data, GRAVI_SC),
+    test(gravi_compute_wave (data_wave, spectrum_data, GRAVI_SC, paralist),
 			"gravi_compute_wave: Compute wave FT... ", flag);
     plist = cpl_propertylist_duplicate(gravi_data_get_plist (data_wave,
     		GRAVI_WAVE_DATA_SC_EXT));
@@ -397,16 +399,16 @@ int gravi_calib_test(void){
     gravi_data_add_table (data_wave, NULL, "P2VM_MET", p2vm_met);
 
     /* Compute wave test failure  */
-	test_pfailure(CPL_ERROR_NULL_INPUT, gravi_compute_wave(NULL, spectrum_data, GRAVI_FT),
+	test_pfailure(CPL_ERROR_NULL_INPUT, gravi_compute_wave(NULL, spectrum_data, GRAVI_FT, paralist),
 			              "gravi_compute_wave: Try to compute the wave with NULL wave_data... ", flag);
 
-	test_pfailure(CPL_ERROR_NULL_INPUT, gravi_compute_wave(data_wave, NULL, GRAVI_FT),
+	test_pfailure(CPL_ERROR_NULL_INPUT, gravi_compute_wave(data_wave, NULL, GRAVI_FT, paralist),
 			              "gravi_compute_wave: Try to compute the wave from NULL spectrum data... ", flag);
 
-	test_pfailure(CPL_ERROR_ILLEGAL_INPUT, gravi_compute_wave(data_wave, spectrum_data, 10),
+	test_pfailure(CPL_ERROR_ILLEGAL_INPUT, gravi_compute_wave(data_wave, spectrum_data, 10, paralist),
 			              "gravi_compute_wave: Try to compute the wave with illegal type... ", flag);
 
-        FREE (gravi_data_delete, spectrum_data);
+    FREE (gravi_data_delete, spectrum_data);
 //	cpl_table_delete (opl_table);
 
 	if (COMPUTE_FILES) gravi_data_save_data (data_wave, "test_files/gravi_wave_map.fits", CPL_IO_CREATE);
