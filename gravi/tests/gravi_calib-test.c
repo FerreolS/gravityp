@@ -59,7 +59,7 @@
 #include <gsl/gsl_linalg.h>
 
 #define DATADIR_TEST DATADIR
-#define DATADIR_TEST ""
+//#define DATADIR_TEST ""
 
 int gravi_calib_test(void);
 int gravi_calib_test(void){
