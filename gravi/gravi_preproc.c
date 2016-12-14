@@ -273,11 +273,11 @@ cpl_table * gravi_table_ft_format (cpl_table * pix_table,
   cpl_size npix = cpl_table_get_column_depth (pix_table, "PIX");
   cpl_size sizex=cpl_table_get_column_dimension(pix_table, "PIX", 0);
   cpl_size sizey=cpl_table_get_column_dimension(pix_table, "PIX", 1);
-  int npol, nx, ny, ny_out;
+  int npol, ny, ny_out, n_output;
 	
-  if (n_region > 24) {nx = 24; npol = 2;}
-  else { nx = n_region; npol = 1; }
-  nx = sizex;
+  if (n_region > 24) {npol = 2;}
+  else { npol = 1; }
+  n_output=24;
   ny = sizey/npol;
 
   /* keep the ny_out to 5 for now to keep the same size.
@@ -291,7 +291,8 @@ cpl_table * gravi_table_ft_format (cpl_table * pix_table,
   }
 
   /* Get pointer to the sky mean [e] out of the loop */
-  double * pSky = cpl_calloc (nx * ny * npol, sizeof(double));
+//  double * pSky = cpl_calloc (nx * ny * npol, sizeof(double));
+  double * pSky = cpl_calloc (sizex * sizey, sizeof(double));
   if (skyavg_table) {
       for (cpl_size pix = 0; pix < npix; pix++) {
           pSky[pix] = gravi_table_get_value (skyavg_table, "PIX", 0, pix) / gain;
@@ -300,7 +301,8 @@ cpl_table * gravi_table_ft_format (cpl_table * pix_table,
   CPLCHECK_NUL ("Cannot get the sky data");
 
   /* Get pointer to the sky variance [e^2] out of the loop */
-  double * pSkyVar = cpl_calloc (nx * ny * npol, sizeof(double));
+//  double * pSkyVar = cpl_calloc (nx * ny * npol, sizeof(double));
+  double * pSkyVar = cpl_calloc (sizex * sizey, sizeof(double));
   if (skystd_table) {
       for (cpl_size pix = 0; pix < npix; pix++) {
           pSkyVar[pix] = gravi_table_get_value (skystd_table, "PIX", 0, pix);
@@ -311,7 +313,7 @@ cpl_table * gravi_table_ft_format (cpl_table * pix_table,
   
 
   /* Loop on regions */
-  for (cpl_size region = 0; region < n_region; region++) {
+  for (cpl_size region = 0; region < n_output; region++) {
 	
 	/* Loop on polarisation */
 	for (int pol = 0; pol < npol; pol ++) {
@@ -320,7 +322,7 @@ cpl_table * gravi_table_ft_format (cpl_table * pix_table,
 	  if ( !(region+pol) || !((region*npol+pol+1)%6) )
 		cpl_msg_info_overwritable (cpl_func,
 								   "Extract region of FT %lld over %d (fast-no-cpl)",
-								   (region*npol+pol+1), nx*npol);
+								   (region*npol+pol+1), n_output*npol);
 
 	  /* Create DATA column */
 	  const char * data = GRAVI_DATA[region*npol + pol];
@@ -348,7 +350,7 @@ cpl_table * gravi_table_ft_format (cpl_table * pix_table,
 		double *pData    = cpl_malloc (ny_out * sizeof(double));
 		double *pDataErr = cpl_malloc (ny_out * sizeof(double));
 		for (cpl_size j = 0; j < ny_out; j++) {
-		  long idx = nx * (j + ny*pol) + region*nx/24;
+		  long idx = sizex * (j + ny*pol) + region*sizex/n_output;
 		  double value = cpl_array_get (arr_data[row], idx, NULL) / gain - pSky[idx];
 		  /* add the second pixel if given */
 		  if (sizex == 48) value += cpl_array_get (arr_data[row], idx+1, NULL) / gain - pSky[idx+1];
@@ -614,6 +616,7 @@ gravi_data * gravi_extract_spectrum (gravi_data * raw_data,
 		/* Convert PIX column to DATA# and DATAERR# */
 		cpl_table * spectrum_ft;
         spectrum_ft = gravi_table_ft_format (imaging_data_ft, skystd_table, skyavg_table, n_region, gain_ft);
+        CPLCHECK_NUL ("Cannot format FT data");
 
         /* Set units */
         for (cpl_size reg=0; reg<n_region; reg++) {
