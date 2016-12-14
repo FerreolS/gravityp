@@ -311,7 +311,7 @@ cpl_table * gravi_table_ft_format (cpl_table * pix_table,
   
 
   /* Loop on regions */
-  for (cpl_size region = 0; region < nx; region++) {
+  for (cpl_size region = 0; region < n_region; region++) {
 	
 	/* Loop on polarisation */
 	for (int pol = 0; pol < npol; pol ++) {
@@ -828,7 +828,7 @@ cpl_error_code gravi_interpolate_spectrum_table (cpl_table * spectrum_table,
 	cpl_ensure_code (wave_table,       CPL_ERROR_NULL_INPUT);
 	cpl_ensure_code (oiwave_tables,    CPL_ERROR_NULL_INPUT);
 	cpl_ensure_code (oiwave_tables[0], CPL_ERROR_NULL_INPUT);
-    
+
     /* Sizes */
     cpl_size nb_region = gravi_spectrum_get_nregion (spectrum_table);
     cpl_size nb_pol    = gravi_spectrum_get_npol (spectrum_table);
