@@ -94,7 +94,8 @@
 #define GRAVI_NAN_FLOAT -99.
 #define GRAVI_NAN_INT -99
 
-#define LAMBDA_MET 0.000001908287 /* updated with actual valeur - pkervell - 19aug15 */
+//#define LAMBDA_MET 0.000001908287 /* updated with actual valeur - pkervell - 19aug15 */
+#define LAMBDA_MET 0.000001908254
 
 /* QC WAVE*/
 #define QC_MINWAVE(type) (type==GRAVI_SC?"ESO QC MINWAVE SC":"ESO QC MINWAVE FT")
