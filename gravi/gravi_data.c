@@ -771,6 +771,120 @@ cpl_error_code gravi_data_save_new (gravi_data 		  * self,
 
 /*----------------------------------------------------------------------------*/
 /**
+ * @brief retrun the position of the dark line on top of the region at x position
+ *
+ * @param detector_table    cpl_table containing extension IMAGING_DETECTOR_TABLE
+ * @param reg               region index (start to 0)
+ * @param x                 x position on the detector
+ *
+ * This function return the central position of the dark line on top of the
+ * given region at x position
+ */
+/*----------------------------------------------------------------------------*/
+int gravi_data_get_dark_pos(cpl_table * detector_table, int reg, int x)
+{
+    cpl_ensure_code (detector_table, CPL_ERROR_NULL_INPUT);
+
+
+    /* TODO must use the new LEFT HALFLEFT RIGHT HALFRIGHT column to interpolate the position */
+    int ref0_x = gravi_table_get_value (detector_table, "CENTER", reg, 0);
+    int ref0_y = gravi_table_get_value (detector_table, "CENTER", reg, 1);
+    int ref1_y = gravi_table_get_value (detector_table, "CENTER", reg+1, 1);
+
+
+
+    return (ref0_y+ref1_y)/2;
+}
+
+
+/* TODO
+ * Test function to find a way to compute the bias of the column  without
+ * introducing noise between columns by fitting the bias with polynome
+ *
+ */
+double gravi_bivector_get_med_poly (cpl_bivector * bivector_in)
+{
+    cpl_ensure_code (bivector_in, CPL_ERROR_NULL_INPUT);
+
+    cpl_bivector_sort(bivector_in, bivector_in, CPL_SORT_ASCENDING, CPL_SORT_BY_Y);
+
+    int size = cpl_bivector_get_size(bivector_in);
+    int sizeout = size*(0.5);
+    int start = (size-sizeout)/2;
+    //printf("%d %d %d \n", size, sizeout, start);
+    //cpl_vector * bivector = cpl_bivector_new(sizeout);
+    //cpl_vector * vector = cpl_vector_duplicate(vector_in);
+    cpl_matrix * coord = cpl_matrix_new(1,sizeout);
+    cpl_vector * vector = cpl_vector_new(sizeout);
+
+    for (cpl_size i = 0 ; i < sizeout ; i++){
+        cpl_vector_set(vector, i, cpl_vector_get(cpl_bivector_get_y(bivector_in), i+start));
+        cpl_matrix_set(coord, 0, i, cpl_vector_get(cpl_bivector_get_x(bivector_in), i+start));
+    }
+    CPLCHECK_MSG ("Cannot clip the data");
+
+    cpl_size power = 2;
+    cpl_polynomial * poly = cpl_polynomial_new(1);
+    cpl_polynomial_fit (poly, coord, NULL, vector, NULL,
+                        CPL_FALSE, NULL, &power);
+
+    sizeout=cpl_vector_get (cpl_bivector_get_y (bivector_in), size-1)-cpl_vector_get (cpl_bivector_get_y (bivector_in), 0);
+    cpl_vector * vector_mean = cpl_vector_new (sizeout);
+    CPLCHECK_MSG ("Cannot get median");
+    cpl_vector_fill_polynomial (vector_mean, poly, 0, sizeout);
+    double mean = cpl_vector_get_mean(vector_mean);
+
+    cpl_vector_delete(vector_mean);
+    cpl_vector_delete(vector);
+    cpl_matrix_delete(coord);
+
+    return mean;
+}
+
+
+/* TODO
+ * Test function to find a way to compute the bias of the column  without
+ * introducing noise between columns doing a median on the value inside +-n*rms
+ * and after remooving a percent of the extrem
+ *
+ */
+double gravi_vector_get_med_percent(cpl_vector * vector_in, float percent)
+{
+    cpl_vector_sort(vector_in, CPL_SORT_ASCENDING);
+    int size = cpl_vector_get_size(vector_in);
+    int sizeout = size*(1-percent*2);
+    int start = (size-sizeout)/2;
+    //printf("%d %d %d \n", size, sizeout, start);
+    cpl_vector * vector = cpl_vector_new(sizeout);
+    //cpl_vector * vector = cpl_vector_duplicate(vector_in);
+
+
+    for (cpl_size i = 0 ; i < sizeout ; i++)
+        cpl_vector_set(vector, i, cpl_vector_get(vector_in, i+start));
+
+
+    size = cpl_vector_get_size(vector);
+    sizeout = 0;
+    double med = cpl_vector_get_median(vector);
+    double rms = cpl_vector_get_stdev(vector);
+    int nsig = 3;
+
+    for (cpl_size i = 0 ; i < size ; i++)
+        if ( (cpl_vector_get(vector, i) > med-nsig*rms) && (cpl_vector_get(vector, i) < med+nsig*rms) ) sizeout++;
+
+    //printf("%d %d %g %g \n",size, sizeout, med, rms);
+    int i_out=0;
+    cpl_vector * vector_med = cpl_vector_new(sizeout);
+    for (cpl_size i = 0 ; i < size ; i++)
+        if ( (cpl_vector_get(vector, i) > med-nsig*rms) && (cpl_vector_get(vector, i) < med+nsig*rms) )
+            cpl_vector_set(vector_med, i_out++, cpl_vector_get(vector, i));
+
+    return cpl_vector_get_mean(vector_med);
+}
+
+
+/*----------------------------------------------------------------------------*/
+/**
  * @brief Perform self-bias correction to the SC raw data
  * 
  * @param data     gravi_data to be processed (in-place).
@@ -794,7 +908,8 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
 
   /* Read header and number of regions */
   cpl_propertylist * header = gravi_data_get_header (data);
-  cpl_size nreg = cpl_table_get_nrow (gravi_data_get_table (data, GRAVI_IMAGING_DETECTOR_SC_EXT));
+  cpl_table * detector_table = gravi_data_get_table (data, GRAVI_IMAGING_DETECTOR_SC_EXT);
+  cpl_size nreg = cpl_table_get_nrow (detector_table);
   const char * resolution = gravi_pfits_get_resolution (header);
 
   CPLCHECK_MSG ("Cannot get data");
@@ -813,10 +928,64 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
   /* Some hardcoded information */
   cpl_size nx_bias_hr = 4;
   cpl_size ny_reg_mr = (ny - 1) / nreg;
+  cpl_size n_bias_line = 5;
 
   // cpl_msg_info (cpl_func, "nreg=%lli, nx=%lli, ny=%lli, ny_reg_mr=%lli", nreg, nx, ny, ny_reg_mr);
 
-  if ( !strcmp(resolution, "HIGH") ) {
+  if (  !strcmp(resolution, "HIGH") && !strcmp (gravi_param_get_string_default (parlist,
+                       "gravity.preproc.bias-method","MEDIAN"),
+                       "MEDIAN_PER_COLUMN")) {
+      /* TODO High - the n first lines of Image is bias
+       * Use the median of the bias-pixel
+       * per column !! not correct should do like for MED and LOW */
+
+      gravi_msg_warning ("FIXME","Remove bias per column is experimental (HIGH)");
+
+      cpl_vector * bias = cpl_vector_new (nx);
+      cpl_vector * bias_column = cpl_vector_new (n_bias_line*2);
+
+      /* Loop on frames */
+      for (cpl_size f = 0; f < nframe; f++) {
+        cpl_image * frame = cpl_imagelist_get (imglist, f);
+
+        /* Loop on columns */
+        for (cpl_size x = 0; x < nx; x++)  {
+            cpl_size bias_index=0;
+
+            /* Get the bias pixels of the first lines */
+            for (cpl_size y = 0; y < n_bias_line; y++) {
+                double value = cpl_image_get (frame, x+1, y+1, &nv);
+                cpl_vector_set (bias_column, bias_index++, value);
+                CPLCHECK_MSG ("Cannot get the bias pixels");
+            }
+
+            /* Get the bias pixels of the last lines */
+            for (cpl_size y = 0; y < n_bias_line; y++) {
+                double value = cpl_image_get (frame, x+1, ny-y, &nv);
+                cpl_vector_set (bias_column, bias_index++, value);
+                CPLCHECK_MSG ("Cannot get the bias pixels");
+            }
+
+            /* Compute the bias of this column, and save it */
+            double bias_med = cpl_vector_get_median (bias_column);
+            cpl_vector_set (bias, x, bias_med);
+
+            /* Remove the bias from this column */
+            for (cpl_size y = 0; y < ny; y++) {
+                double value = cpl_image_get (frame, x+1, y+1, &nv);
+                cpl_image_set (frame, x+1, y+1, value - bias_med);
+                CPLCHECK_MSG ("Cannot set the bias corrected pixels");
+            }
+        } /* End loop on columns */
+
+        /* Remove the median of bias pixels to image */
+        double bias_mean = cpl_vector_get_mean (bias);
+        cpl_vector_set (bias_list, f, bias_mean);
+      }
+      FREE (cpl_vector_delete, bias);
+      FREE (cpl_vector_delete, bias_column);
+    }
+    else if ( !strcmp(resolution, "HIGH") ) {
    /* High Resolution - the first 4 columns
     * are for bias. FIXME: make sure this is also true in
     *  in HIGH-COMBINED */
@@ -845,14 +1014,16 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
   else if ( !strcmp (gravi_param_get_string_default (parlist,
                      "gravity.preproc.bias-method","MEDIAN"),
                      "MEDIAN_PER_COLUMN")) {
-    /* Low and Medium - the first line of
+    /* Low and Medium - the n_bias_line between
      * each region is bias. Use the median of the bias-pixel
      * per column !!*/
 
-    gravi_msg_warning ("FIXME","Remove bias per column is experimental");
+    gravi_msg_warning ("FIXME","Remove bias per column is experimental (LOW, MEDIUM)");
 		
 	cpl_vector * bias = cpl_vector_new (nx);
-	cpl_vector * bias_column = cpl_vector_new (nreg);
+//    cpl_vector * bias_column = cpl_vector_new (nreg);
+    cpl_vector * bias_column = cpl_vector_new ((nreg-1)*n_bias_line);
+    cpl_vector * bias_coord = cpl_vector_new ((nreg-1)*n_bias_line);
 
 	/* Loop on frames */
 	for (cpl_size f = 0; f < nframe; f++) {
@@ -860,16 +1031,30 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
 
       /* Loop on columns */
 	  for (cpl_size x = 0; x < nx; x++)  {
-          
+	      cpl_size bias_index=0;
+
           /* Get the bias pixels of this column */
+/* commented to try a new implementation
           for (cpl_size y = 0; y < nreg; y++) {
               double value = cpl_image_get (frame, x+1, (y+1)*ny_reg_mr+1, &nv);
               cpl_vector_set (bias_column, y, value);
               CPLCHECK_MSG ("Cannot get the bias pixels");
           }
+*/
+          for (cpl_size reg = 0; reg < nreg-1; reg++) {
+              int starty=gravi_data_get_dark_pos(detector_table, reg, x)-n_bias_line/2;
+              for (cpl_size y = 0; y < n_bias_line; y++){
+                  double value = cpl_image_get (frame, x+1, starty+y+1, &nv);
+                  cpl_vector_set (bias_column, bias_index, value);
+                  cpl_vector_set (bias_coord, bias_index++, starty+y);
+              }
+              CPLCHECK_MSG ("Cannot get the bias pixels");
+          }
 
           /* Compute the bias of this column, and save it */
-          double bias_med = cpl_vector_get_median (bias_column);
+          //double bias_med = cpl_vector_get_mean (bias_column);
+          //double bias_med = gravi_vector_get_med_percent(bias_column, 0.05);
+          double bias_med = gravi_bivector_get_med_poly(cpl_bivector_wrap_vectors(bias_coord, bias_column));
           cpl_vector_set (bias, x, bias_med);
 
           /* Remove the bias from this column */
