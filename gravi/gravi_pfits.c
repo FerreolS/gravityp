@@ -277,14 +277,27 @@ double gravi_pfits_get_met_wavelength (const cpl_propertylist * plist)
     double power;
     double wavelength;
 
-    if (gravi_pfits_get_double(plist, "ESO INS MLC POWER") != 0) {
+    /*
+     * If cannot read MLC laser power
+     */
+    if (cpl_propertylist_has (plist, "ESO INS MLC POWER") == FALSE){
     	wavelength = gravi_pfits_get_double(plist, "ESO INS MLC POWER");
-    	cpl_msg_info(cpl_func, "Using laser MLC wavelength : %g ", wavelength);
+    	cpl_msg_warning (cpl_func, "Cannot read the laser POWER : use MLC wavelength : %g15 ", wavelength);
     }
+    /*
+     * If MLC laser ON
+     */
+    else if (gravi_pfits_get_double(plist, "ESO INS MLC POWER") != 0) {
+    	wavelength = gravi_pfits_get_double(plist, "ESO INS MLC POWER");
+    	cpl_msg_info(cpl_func, "Using laser MLC wavelength : %g15 ", wavelength);
+    }
+    /*
+     * If MLAS laser ON
+     */
     else if (gravi_pfits_get_double(plist, "ESO INS MLAS LPOW") != 0){
     	power=gravi_pfits_get_double(plist, "ESO INS MLAS LPOW");
     	wavelength = gravi_pfits_get_double(plist, "ESO INS MLAS LWAV");
-    	cpl_msg_info(cpl_func, "Using laser MLAS wavelength : %g ", wavelength);
+    	cpl_msg_info(cpl_func, "Using laser MLAS wavelength : %g15 ", wavelength);
     }
 
     if (!cpl_errorstate_is_equal(prestate)) {

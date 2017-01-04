@@ -1762,7 +1762,6 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
     tacConfiguration = tacData->tacConfiguration;
 
     /* Loop on time sample to run the TAC algorithm */
-    printf("Wavelength %g %g %g \n", met_wavelength[0], met_wavelength[nrow_met/2], met_wavelength[nrow_met-1]);
     for(long sample_number = 1; sample_number <= nrow_met; sample_number++) {
         
 	  /* Run the TAC algorithm */
