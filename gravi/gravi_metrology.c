@@ -265,7 +265,7 @@ structTacConfiguration * metrology_makeDefaultTacConfiguration (void);
 
 structTacData * metrology_makeDefaultTacData (void);
 
-int metrology_algorithm(structTacData *);
+int metrology_algorithm(structTacData *, double met_wavelength);
 
 int metrology_unwrap(double raw_phase, double previous_phase, double max_allowed_phase_diff,
                      double *unwrapped_phase);
@@ -626,7 +626,7 @@ double myAtan(double x, double y, int* flag)
 }
 
 
-int metrology_algorithm(structTacData * tacData)
+int metrology_algorithm(structTacData * tacData, double met_wavelength)
 {
     int err = 0;
     long tel, diode, side;
@@ -1681,7 +1681,17 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
 		volts[row][diode] = cpl_array_get (volts_array[row], diode, NULL);
 	  }
 	}
-    
+
+	/*
+	 * get the laser wavelength data
+	 */
+	double met_ref_wavelength = gravi_pfits_get_met_wavelength(header);
+	double * met_wavelength = cpl_malloc (nrow_met * sizeof(double));
+	float * met_wave_array = cpl_table_get_data_float(metrology_table, "LAMBDA_LASER");
+	for (cpl_size row = 0; row < nrow_met; row ++) {
+		met_wavelength[row]=met_wave_array[row]+met_ref_wavelength;
+	}
+
 	CPLCHECK_MSG ("Cannot load metrology data");
 	
 	/* 
@@ -1752,13 +1762,14 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
     tacConfiguration = tacData->tacConfiguration;
 
     /* Loop on time sample to run the TAC algorithm */
+    printf("Wavelength %g %g %g \n", met_wavelength[0], met_wavelength[nrow_met/2], met_wavelength[nrow_met-1]);
     for(long sample_number = 1; sample_number <= nrow_met; sample_number++) {
         
 	  /* Run the TAC algorithm */
 	  tacData->sample_number = sample_number;
 	  tacData->buffer_idx_avg = ((sample_number - 1) % tacConfiguration->number_to_average);
 	  metrology_read_voltages(tacData, volts[sample_number-1]);
-	  metrology_algorithm(tacData);
+	  metrology_algorithm(tacData, met_wavelength[sample_number-1]);
         
 	  /* Fill the output arrays as D1T1, D2T1, D3T1, D4T1, D1T2, D2T2... */
 	  int idx_ft = 0;
@@ -1855,6 +1866,7 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
 
 	/* Free the pointer to pointer to data */
 	FREELOOP (cpl_free, volts, nrow_met);
+	FREE (cpl_free, met_wavelength);
 	FREE (cpl_free, opd_tel);
 	FREE (cpl_free, flag_tel);
 	FREE (cpl_free, coher_tel_ft);

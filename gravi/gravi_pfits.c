@@ -270,6 +270,32 @@ double gravi_pfits_get_metfc_lockmjd (const cpl_propertylist * plist, int tel)
     return value;
 }
 
+double gravi_pfits_get_met_wavelength (const cpl_propertylist * plist)
+{
+	cpl_errorstate prestate = cpl_errorstate_get();
+
+    double power;
+    double wavelength;
+
+    if (gravi_pfits_get_double(plist, "ESO INS MLC POWER") != 0) {
+    	wavelength = gravi_pfits_get_double(plist, "ESO INS MLC POWER");
+    	cpl_msg_info(cpl_func, "Using laser MLC wavelength : %g ", wavelength);
+    }
+    else if (gravi_pfits_get_double(plist, "ESO INS MLAS LPOW") != 0){
+    	power=gravi_pfits_get_double(plist, "ESO INS MLAS LPOW");
+    	wavelength = gravi_pfits_get_double(plist, "ESO INS MLAS LWAV");
+    	cpl_msg_info(cpl_func, "Using laser MLAS wavelength : %g ", wavelength);
+    }
+
+    if (!cpl_errorstate_is_equal(prestate)) {
+    	cpl_msg_warning (cpl_func, "Cannot read the laser wavelength in the header : %s", cpl_error_get_message());
+    	cpl_errorstate_set (prestate);
+    	wavelength = 0.0;
+    }
+
+    return wavelength;
+}
+
 double gravi_pfits_get_geolat (const cpl_propertylist * plist)
 {
 	cpl_errorstate prestate = cpl_errorstate_get();

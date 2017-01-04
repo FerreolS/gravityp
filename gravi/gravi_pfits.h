@@ -178,6 +178,7 @@
 
 const char * gravi_pfits_get_met_ph(const cpl_propertylist * );
 double gravi_pfits_get_metfc_lockmjd (const cpl_propertylist * plist, int tel);
+double gravi_pfits_get_met_wavelength (const cpl_propertylist * plist);
 
 const char * gravi_pfits_get_start_sc (const cpl_propertylist * plist);
 const char * gravi_pfits_get_start_acqcam (const cpl_propertylist * plist);
