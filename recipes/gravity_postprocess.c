@@ -166,6 +166,7 @@ static int gravity_postprocess_create(cpl_plugin * plugin)
     
     /* Averaging */
     gravi_parameter_add_average_vis (recipe->parameters);
+    gravi_parameter_add_force_uncertainties (recipe->parameters);
     
     /* Force */
     p = cpl_parameter_new_value ("gravity.postprocess.force-merge", CPL_TYPE_BOOL,
@@ -363,7 +364,7 @@ static int gravity_postprocess(cpl_frameset * frameset,
 
 	  /* Load the frame */
 	  frame = cpl_frameset_get_position (frameset, f);
-	  data  = gravi_data_load_frame (frame, used_frameset);
+	  data  = gravi_data_load_frame (frame, used_frameset);      
 
 	  /* Remove some data */
 	  if (gravi_param_get_bool (parlist, "gravity.postprocess.remove-ft")) {
@@ -372,7 +373,6 @@ static int gravity_postprocess(cpl_frameset * frameset,
 		CPLCHECK_CLEAN ("Cannot delete FT");
 	  }
 
-	  /* Remove some data */
 	  if (gravi_param_get_bool (parlist, "gravity.postprocess.remove-sc")) {
 		cpl_msg_info (cpl_func, "Erase SC");
 		gravi_data_erase_type (data, "_SC");
@@ -391,6 +391,11 @@ static int gravity_postprocess(cpl_frameset * frameset,
 		gravi_data_erase_type (data, "VIS_MET");
 		CPLCHECK_CLEAN ("Cannot delete MET");
 	  }
+
+      /* Force uncertainties */
+      gravi_force_uncertainties (data, parlist);
+      CPLCHECK_CLEAN ("Cannot force uncertainties");
+      
 
 	  if (f == 0) {
 		/* Use the first frame for merging */

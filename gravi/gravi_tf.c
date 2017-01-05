@@ -267,7 +267,7 @@ cpl_error_code gravi_apply_tf_amp( gravi_data * science,
   int nrow_sc = cpl_table_get_nrow (sci_table);
   int nwave = cpl_table_get_column_depth (sci_table, ampName);
 
-  CPLCHECK_MSG( "Cannot get data on SCIENCE" );
+  CPLCHECK_MSG ("Cannot get data on SCIENCE");
   
   /* Loop on row of SCIENCE */
   for (row_sc = 0; row_sc < nrow_sc; row_sc ++){

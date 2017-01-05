@@ -50,6 +50,10 @@ cpl_error_code gravi_vis_resamp (gravi_data * oi_merged, cpl_size nsamp);
 cpl_error_code gravi_vis_flag_threshold (cpl_table * oi_table, const char * data, const char *flag, double value);
 cpl_error_code gravi_vis_flag_relative_threshold (cpl_table * oi_table, const char * err, const char * data, const char *flag, double value);
 
+cpl_error_code gravi_force_uncertainties (gravi_data * oi_data,
+                                          const cpl_parameterlist * parlist);
+
+
 cpl_error_code gravi_vis_erase_obs (cpl_table * oi_table, cpl_array *flag_array, cpl_size ntel);
 
 #endif /* GRAVI_VIS_H_ */

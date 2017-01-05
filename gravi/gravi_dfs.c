@@ -395,6 +395,42 @@ cpl_parameter * gravi_parameter_add_average_vis (cpl_parameterlist *self)
     return p;
 }
 
+cpl_parameter * gravi_parameter_add_force_uncertainties (cpl_parameterlist *self)
+{
+    cpl_ensure (self, CPL_ERROR_NULL_INPUT, NULL);
+    
+    cpl_parameter *p;
+	p = cpl_parameter_new_value ("gravity.postprocess.fluxerr-sc", CPL_TYPE_DOUBLE,
+                                 "Force the uncertainty in FLUX of SC",
+                                 "gravity.postprocess", 0.0);
+	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "fluxerr-sc");
+	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	cpl_parameterlist_append (self, p);
+
+	p = cpl_parameter_new_value ("gravity.postprocess.visamperr-sc", CPL_TYPE_DOUBLE,
+                                 "Force the uncertainty in VISAMP of SC",
+                                 "gravity.postprocess", 0.0);
+	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "visamperr-sc");
+	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	cpl_parameterlist_append (self, p);
+
+	p = cpl_parameter_new_value ("gravity.postprocess.visphierr-sc", CPL_TYPE_DOUBLE,
+                                 "Force the uncertainty in VISPHI of SC",
+                                 "gravity.postprocess", 0.0);
+	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "visphierr-sc");
+	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	cpl_parameterlist_append (self, p);
+    
+	p = cpl_parameter_new_value ("gravity.postprocess.vis2err-sc", CPL_TYPE_DOUBLE,
+                                 "Force the uncertainty in VIS2 of SC",
+                                 "gravity.postprocess", 0.0);
+	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "vis2err-sc");
+	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	cpl_parameterlist_append (self, p);
+    
+    return p;
+}
+
 cpl_error_code gravi_parameter_add_compute_snr (cpl_parameterlist *self, int isCalib)
 {
     cpl_ensure_code (self, CPL_ERROR_NULL_INPUT);

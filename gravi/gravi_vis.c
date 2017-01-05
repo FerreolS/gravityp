@@ -1986,6 +1986,93 @@ cpl_error_code gravi_vis_average_value (cpl_table *oi_table, const char *name,  
 
 /*----------------------------------------------------------------------------*/
 /**
+ * @brief Force uncertainties
+ * 
+ * @param oi_data: the OIFITS map to co-add in-place
+ * 
+ * Read the parameter of the recipe and update the uncertainties on
+ * the corresponding quantities.
+ */
+/*----------------------------------------------------------------------------*/
+cpl_error_code gravi_force_uncertainties (gravi_data * oi_data,
+                                          const cpl_parameterlist * parlist)
+{
+  gravi_msg_function_start(1);
+  cpl_ensure_code (oi_data, CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (parlist, CPL_ERROR_NULL_INPUT);
+
+  double err;
+
+  /* Get header */
+  cpl_propertylist * header = gravi_data_get_header (oi_data);
+  
+  /* VISAMPERR SC */
+  err = gravi_param_get_double_default (parlist, "gravity.postprocess.visamperr-sc", -1.0);
+  if ( err > 0) {
+      cpl_msg_info (cpl_func,"Force VISAMPERR to %.e for all observations", err);
+
+      int npol = gravi_pfits_get_pola_num (header, GRAVI_SC);
+      for (int pol = 0; pol < npol; pol++) {
+          cpl_table *  oi_table = gravi_data_get_oi_vis (oi_data, GRAVI_SC, pol, npol);
+          cpl_array ** array = cpl_table_get_data_array (oi_table, "VISAMPERR");
+          for (cpl_size row = 0; row<cpl_table_get_nrow (oi_table); row++) {
+              cpl_array_fill_window (array[row], 0, CPL_SIZE_MAX, err);
+          }
+      }
+  }
+
+  /* VISPHIERR SC */
+  err = gravi_param_get_double_default (parlist, "gravity.postprocess.visphierr-sc", -1.0);
+  if ( err > 0) {
+      cpl_msg_info (cpl_func,"Force VISPHIERR to %.e for all observations", err);
+
+      int npol = gravi_pfits_get_pola_num (header, GRAVI_SC);
+      for (int pol = 0; pol < npol; pol++) {
+          cpl_table *  oi_table = gravi_data_get_oi_vis (oi_data, GRAVI_SC, pol, npol);
+          cpl_array ** array = cpl_table_get_data_array (oi_table, "VISPHIERR");
+          for (cpl_size row = 0; row<cpl_table_get_nrow (oi_table); row++) {
+              cpl_array_fill_window (array[row], 0, CPL_SIZE_MAX, err);
+          }
+      }
+  }
+
+  /* FLUXERR SC */
+  err = gravi_param_get_double_default (parlist, "gravity.postprocess.fluxerr-sc", -1.0);
+  if ( err > 0) {
+      cpl_msg_info (cpl_func,"Force FLUXERR to %.e for all observations", err);
+
+      int npol = gravi_pfits_get_pola_num (header, GRAVI_SC);
+      for (int pol = 0; pol < npol; pol++) {
+          cpl_table *  oi_table = gravi_data_get_oi_flux (oi_data, GRAVI_SC, pol, npol);
+          cpl_array ** array = cpl_table_get_data_array (oi_table, "FLUXERR");
+          for (cpl_size row = 0; row<cpl_table_get_nrow (oi_table); row++) {
+              cpl_array_fill_window (array[row], 0, CPL_SIZE_MAX, err);
+          }
+      }
+  }
+
+  /* VIS2ERR SC */
+  err = gravi_param_get_double_default (parlist, "gravity.postprocess.vis2err-sc", -1.0);
+  if ( err > 0) {
+      cpl_msg_info (cpl_func,"Force VIS2ERR to %.e for all observations", err);
+
+      int npol = gravi_pfits_get_pola_num (header, GRAVI_SC);
+      for (int pol = 0; pol < npol; pol++) {
+          cpl_table *  oi_table = gravi_data_get_oi_vis2 (oi_data, GRAVI_SC, pol, npol);
+          cpl_array ** array = cpl_table_get_data_array (oi_table, "VIS2ERR");
+          for (cpl_size row = 0; row<cpl_table_get_nrow (oi_table); row++) {
+              cpl_array_fill_window (array[row], 0, CPL_SIZE_MAX, err);
+          }
+      }
+  }
+    
+  gravi_msg_function_exit(1);
+  return CPL_ERROR_NONE;
+}
+
+
+/*----------------------------------------------------------------------------*/
+/**
  * @brief Coadd the observations together.
  * 
  * @param oi_data: the OIFITS map to co-add in-place
