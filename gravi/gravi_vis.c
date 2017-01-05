@@ -1976,8 +1976,7 @@ cpl_error_code gravi_vis_average_value (cpl_table *oi_table, const char *name,  
 	}
 	CPLCHECK_MSG("Cannot average value");
 
-	/* Set the variance of the mean */
-	if (err==NULL) weight = 1.0;
+	/* Set the mean */
 	cpl_table_set (oi_table, name, base, value / weight);
   } /* End loop on base */
 
