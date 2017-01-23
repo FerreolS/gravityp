@@ -1053,8 +1053,8 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
 
           /* Compute the bias of this column, and save it */
           //double bias_med = cpl_vector_get_mean (bias_column);
-          //double bias_med = gravi_vector_get_med_percent(bias_column, 0.05);
-          double bias_med = gravi_bivector_get_med_poly(cpl_bivector_wrap_vectors(bias_coord, bias_column));
+          double bias_med = gravi_vector_get_med_percent(bias_column, 0.05);
+          //double bias_med = gravi_bivector_get_med_poly(cpl_bivector_wrap_vectors(bias_coord, bias_column));
           cpl_vector_set (bias, x, bias_med);
 
           /* Remove the bias from this column */

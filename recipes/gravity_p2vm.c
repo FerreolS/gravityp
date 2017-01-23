@@ -181,6 +181,9 @@ static int gravity_p2vm_create(cpl_plugin * plugin)
     gravi_parameter_add_debug_file (recipe->parameters);
     gravi_parameter_add_preproc_file (recipe->parameters);
 
+    /* Bias-method */
+    gravi_parameter_add_biasmethod (recipe->parameters);
+
     /* Badpix and profile */
     gravi_parameter_add_badpix (recipe->parameters);
     gravi_parameter_add_profile (recipe->parameters);
