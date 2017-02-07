@@ -71,6 +71,7 @@ cpl_table * gravi_acqcam_table_create (cpl_imagelist * acqcam_imglist,
 
 cpl_error_code gravi_reduce_acqcam (gravi_data * data)
 {
+    gravi_msg_function_start(1);
     cpl_ensure_code (data, CPL_ERROR_NULL_INPUT);
 
     /* Check if extension exist */
@@ -96,6 +97,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * data)
 	gravi_data_add_table (data, NULL, GRAVI_OI_VIS_ACQ_EXT, acqcam_table);
 	CPLCHECK_MSG ("Cannot add acqcam_table in data");
     
+    gravi_msg_function_exit(1);
     return CPL_ERROR_NONE;   
 }
 
@@ -119,6 +121,8 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * data)
 cpl_table * gravi_acqcam_table_create (cpl_imagelist * acqcam_imglist,
                                        cpl_propertylist * header)
 {
+    gravi_msg_function_start(1);
+    
     cpl_ensure (acqcam_imglist, CPL_ERROR_NULL_INPUT, NULL);
     cpl_ensure (header,         CPL_ERROR_NULL_INPUT, NULL);
 
@@ -157,10 +161,13 @@ cpl_table * gravi_acqcam_table_create (cpl_imagelist * acqcam_imglist,
         /* 
          * FIXME: fill the table with measurments done in imagelist !!
          */
+        if (row == 0)
+            gravi_msg_warning ("FIXME", "ACQ_CAM images not reduced yet!!");
         
 
     } /* End loop on DIT in cube */
 
+    gravi_msg_function_exit(1);
     return output_table;
 }
 
