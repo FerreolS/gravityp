@@ -505,9 +505,9 @@ gravi_data * gravi_data_load_rawframe (cpl_frame * frame,
   CPLCHECK_NUL ("Cannot check data consistency");
 
   /* Delete unused data so far */
-  gravi_data_erase (data, GRAVI_IMAGING_DATA_ACQ_EXT);
-  gravi_data_erase (data, "ACQ_ABS_REF_POSITION");
-  CPLCHECK_NUL ("Cannot erase useless data");
+  // gravi_data_erase (data, GRAVI_IMAGING_DATA_ACQ_EXT);
+  // gravi_data_erase (data, "ACQ_ABS_REF_POSITION");
+  // CPLCHECK_NUL ("Cannot erase useless data");
 
   return data;
 }

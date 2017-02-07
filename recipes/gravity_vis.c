@@ -654,6 +654,7 @@ static int gravity_vis(cpl_frameset * frameset,
         /* Move extensions from raw_data and delete it */
         gravi_data_move_ext (preproc_data, data, GRAVI_ARRAY_GEOMETRY_EXT);
         gravi_data_move_ext (preproc_data, data, GRAVI_OPTICAL_TRAIN_EXT);
+        gravi_data_move_ext (preproc_data, data, GRAVI_IMAGING_DATA_ACQ_EXT);
         gravi_data_move_ext (preproc_data, data, GRAVI_OPDC_EXT);
         gravi_data_move_ext (preproc_data, data, GRAVI_FDDL_EXT);
         gravi_data_move_ext (preproc_data, data, GRAVI_METROLOGY_EXT);
@@ -666,12 +667,17 @@ static int gravity_vis(cpl_frameset * frameset,
 		CPLCHECK_CLEAN ("Cannot apply p2vm to the preproc data");
 
         /* Move extensions and delete preproc */
+        gravi_data_move_ext (p2vmred_data, preproc_data, GRAVI_IMAGING_DATA_ACQ_EXT);
         gravi_data_move_ext (p2vmred_data, preproc_data, GRAVI_METROLOGY_EXT);
         gravi_data_move_ext (p2vmred_data, preproc_data, GRAVI_FDDL_EXT);
         gravi_data_move_ext (p2vmred_data, preproc_data, GRAVI_OPDC_EXT);
 		FREE (gravi_data_delete, preproc_data);
 		CPLCHECK_CLEAN ("Cannot delete preproc");
 
+        /* Reduce the Acquisition Camera and delete data */
+        gravi_reduce_acqcam (p2vmred_data);
+        gravi_data_erase (p2vmred_data, GRAVI_IMAGING_DATA_ACQ_EXT);
+        
         /* Reduce the OPDC table */
         gravi_compute_opdc_state (p2vmred_data);
 		CPLCHECK_CLEAN ("Cannot reduce OPDC");
