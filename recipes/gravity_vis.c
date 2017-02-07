@@ -46,6 +46,7 @@
 
 #include "gravi_calib.h"
 #include "gravi_p2vmred.h"
+#include "gravi_acqcam.h"
 #include "gravi_eop.h"
 #include "gravi_metrology.h"
 
@@ -223,6 +224,13 @@ static int gravity_vis_create(cpl_plugin * plugin)
                                  "over the SKY to reduce each OBJECT with a different SKY",
                                  "gravity.preproc", FALSE);
 	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "average-sky");
+	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	cpl_parameterlist_append (recipe->parameters, p);
+
+    /* Reduce ACQ_CAM */
+	p = cpl_parameter_new_value ("gravity.test.reduce-acq-cam", CPL_TYPE_BOOL,
+                                 "If TRUE, reduced ACQ_CAM images", FALSE);
+	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "reduce-acq-cam");
 	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
 	cpl_parameterlist_append (recipe->parameters, p);
     
@@ -675,7 +683,9 @@ static int gravity_vis(cpl_frameset * frameset,
 		CPLCHECK_CLEAN ("Cannot delete preproc");
 
         /* Reduce the Acquisition Camera and delete data */
-        gravi_reduce_acqcam (p2vmred_data);
+        if (gravi_param_get_bool (parlist,"gravity.test.reduce-acq-cam")) {
+            gravi_reduce_acqcam (p2vmred_data);
+        }
         gravi_data_erase (p2vmred_data, GRAVI_IMAGING_DATA_ACQ_EXT);
         
         /* Reduce the OPDC table */
