@@ -46,12 +46,18 @@
 
 #include "gravi_acqcam.h"
 
+/* ACQ CAM instrument workstation code */
+#include "vltPortGeneral.h"
+#include "gvacqTypes.h"
+#include "gvoProcessImageAC.h"
+
 /*-----------------------------------------------------------------------------
                                Private prototypes
  -----------------------------------------------------------------------------*/
 
 cpl_table * gravi_acqcam_table_create (cpl_imagelist * acqcam_imglist,
                                        cpl_propertylist * header);
+int AcqCamImConvert(cpl_image **DetPointer, cpl_propertylist * header);
 
 /*-----------------------------------------------------------------------------
                              Functions code
@@ -149,27 +155,306 @@ cpl_table * gravi_acqcam_table_create (cpl_imagelist * acqcam_imglist,
     /* Aberation as arrays of 27 coefficients */
     cpl_table_new_column_array (output_table, "ABERATION", CPL_TYPE_DOUBLE, nzernick);
 
+    /* Preparing variable for compatibility with online computation */
+    int blinkOFF=1;
+    cpl_image * DetPointer;
+    double fluxON, fluxOFF;
+    int    llx, lly, urx, ury;
+    cpl_error_code error = 0;
+
+    double FIfieldWindowSizeAndSigma[2] = { 110, 3.0 };
+    setFIfitWindowSizeAndSigma(FIfieldWindowSizeAndSigma);
+
+    int coordinates[8] = { 287, 803, 1257, 1699, 228, 222, 204, 214 };
+    setCoordinates(coordinates);
+
+    double FIminFWHM     = 1.5;
+    setFIminFWHM(FIminFWHM);
+
+    int    FIwindowGauss = 16;
+    setFIwindowGauss(FIwindowGauss);
+
+    /*Allocate memory for preprocessing files */
+    char MasterFlatFits[256]         = "/home/aamorim/gvacq/Fits/gvacq_MasterFlat.fits";
+    char MasterSkyFitsField[256]    = "/home/aamorim/gvacq/Fits/gvacq_MasterSkyField.fits";
+    char MasterSkyFitsPupil[256]    = "/home/aamorim/gvacq/Fits/gvacq_MasterSkyPupil.fits";
+    char DeadPixelMapFits[256]      = "/home/aamorim/gvacq/Fits/gvacq_DeadPixelMap.fits";
+    char CharMasterSkyABS[256]      = "/home/aamorim/gvacq/Fits/gvacq_MasterSkyABS.fits";
+    enable(MasterFlatFits, MasterSkyFitsField, MasterSkyFitsPupil, CharMasterSkyABS, DeadPixelMapFits);
+
+    int    ABSLensletSizeIN       = 10;
+    setABSLensletSize(ABSLensletSizeIN);
+
+    FILE *dbcfg;
+
+    int intABScoordinates[154 * 4];
+    dbcfg = fopen("/home/aamorim/gvacq/dbl/ImageABSCoordinates.dbcfg", "r");
+    int i;
+    char *line;
+    char buffer[100];
+    for (i = 0; i < 2; i++) {
+        line = fgets(buffer, 100, dbcfg);
+    }
+    int nvar;
+    for (i = 0; i < 154 * 4; i++) {
+        nvar = fscanf(dbcfg, "%d\n", intABScoordinates + i);
+    }
+    fclose(dbcfg);
+    double ABScoordinates[154 * 4];
+    for (i = 0; i < 154 * 4; i++) {
+        ABScoordinates[i] = intABScoordinates[i];
+    }
+    int    ABSwindowSize          = 176;
+    int    ABSwindowPos[8];
+    dbcfg = fopen("/home/aamorim/gvacq/dbl/ABSWindowPos.dbcfg", "r");
+    for (i = 0; i < 2; i++) {
+        line = fgets(buffer, 100, dbcfg);
+    }
+    for (i = 0; i < 8; i++) {
+        nvar = fscanf(dbcfg, "%d", ABSwindowPos + i);
+    }
+    fclose(dbcfg);
+    char AB_inv_Z2S_68_136Fits[256] = "/home/aamorim/gvacq/Fits/gvacq_ABS_inv_Z2S_68_136.fits";
+    double DummyDefocusFactory[32] = {
+        16, -16, 0, 0, 0, 0, 16, -16,
+        16, -16, 0, 0, 0, 0, 16, -16,
+        16, -16, 0, 0, 0, 0, 16, -16,
+        16, -16, 0, 0, 0, 0, 16, -16
+    };
+    setABSrefCoordinates(ABSwindowPos, ABScoordinates, ABSwindowSize, AB_inv_Z2S_68_136Fits, DummyDefocusFactory);
+
+    int    RefWindowPosPT[8]      = { 292, 759, 1230, 1698, 1376, 1371, 1375, 1383 };
+    setRefWindowPosPT(RefWindowPosPT);
+
+    int    PTImageWindowSize      = 220; /* pupil tracker image window */
+    setPTImageWindowSize(PTImageWindowSize);
+
+    llx=  RefWindowPosPT[0] - PTImageWindowSize / 2;
+    urx = RefWindowPosPT[3] + PTImageWindowSize / 2;
+    lly = RefWindowPosPT[4] - PTImageWindowSize / 2;
+    ury = RefWindowPosPT[7] + PTImageWindowSize / 2;
+
+    int    PTwindowGaussUT        = 8;   /* Gauss fitting window size PT*/
+    int    PTwindowGaussAT        = 12;  /* Gauss fitting window size PT*/
+    int    PTwindowGauss;
+    PTwindowGauss = PTwindowGaussAT;
+    double lFIPixelScale = 17.78e-3;
+    if (!strcmp(gravi_pfits_get_telescope(header),"ESO-VLTI-U1234")) {
+              PTwindowGauss = PTwindowGaussUT;
+              lFIPixelScale = 4.44*17.78e-3;
+    }
+    setPTwindowGauss(PTwindowGauss);
+
+    double PT_spots_scan_sigma[4] = { 10.0, 9.0, 8.0, 7.0 };
+    setPTspotsScanSigma(PT_spots_scan_sigma);
+
+    /* Setting window coordinates to main function */
+    int    CheckIteration_in = 50;
+    setCheckIteration(CheckIteration_in);
+
+    double lAltitude         = 20.0;                                                          /* degrees */
+    double lTemperature      = 11.5;                                                          /* Centrigrade */
+    double lPressure         = 743.0;                                                         /*milli bars */
+    double lHumidity         = 14.5;                                                          /* percentage */
+    double lParallacticAngle = 30;                                                            /* degrees */
+
+    double         lPupilRotationAngles[4]={0,0,0,0};
+    double         lImageRotationAngles[4]={0,0,0,0};
+    double         lKmirrorRotation[4]={0,0,0,0};
+    double         lkmirrorOffset[4]={0,0,0,0};
+    double         lrotationOffset[4]={0,0,0,0};
+
+    setTelescopeEnvironment(lTemperature,lPressure,lHumidity,lAltitude,lParallacticAngle,lFIPixelScale,lImageRotationAngles,lPupilRotationAngles,lKmirrorRotation,lkmirrorOffset,lrotationOffset);
+
+    double HKmagnitude_in    = 5.0;
+    setHKmagnitude(HKmagnitude_in);
+
+    double PolyACQ[11]       = { 1.37822, 0.77782, 0.730068, 0.928234, 0, 0, 0, 0, 0, 0, 0 }; /* array moved to database */
+    double PolyBC[11]        = { 2.2, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    setHKpolynomial(PolyACQ, PolyBC);
+
+
+    double PT5thSpotcoordinates[32] =
+    {
+        264.6,   264.1,  319.8,  320.8,
+        731.1,   731.0,  787.4,  787.5,
+        1201.6, 1201.1, 1257.5, 1257.9,
+        1670.2, 1670.2, 1726.3, 1726.3,
+        1347.7, 1403.4, 1405.5, 1348.3,
+        1343.3, 1398.8, 1399.0, 1342.9,
+        1346.6, 1403.8, 1403.5, 1346.7,
+        1354.8, 1411.6, 1411.3, 1354.7
+    };
+    setPTrefCoordinates(PT5thSpotcoordinates);
+
+
+    /** Member attributes used to read and write database lists. */
+    gvacqAC_ABS_REF              mAcAbsRef;
+    gvacqAC_ABS_REF_ERR          mAcAbsRefErr;
+    gvacqAC_ABS_ZERNIKE          mAcAbsZernike;
+    gvacqAC_ABS_ZERNIKE          mAcAbsZernikeErr;
+    gvacqAC_PT_REF               mAcPtRef;
+    gvacqAC_PT_REF_ERR           mAcPtRefErr;
+    gvacqAC_PT_POS               mAcPtPos;
+    gvacqAC_PT_POS_ERR           mAcPtPosErr;
+    gvacqAC_PT_REF_SPOT          mAcPtRefSpot;
+    gvacqAC_PT_REF_SPOT_ERR      mAcPtRefSpotErr;
+    gvacqAC_PT_PT_BARY_CEN       mAcPtBaryCenter;
+    gvacqAC_PT_SPOTS_FLUX        mAcPtSpotsFlux;
+    gvacqAC_FI                   mAcFiPos;
+    gvacqAC_FI                   mAcFiPos2;
+    gvacqAC_FI_ERR               mAcFiPosErr;
+    gvacqAC_FI                   mAcFiObj;
+    gvacqAC_FI                   mAcFiObj2;
+    gvacqAC_FI_ERR               mAcFiObjErr;
+    gvacqAC_FI_TR_STS            mAcFiTrSts;
+    gvacqAC_PU_TR_STS            mAcPuTrSts;
+    gvacqAC_AB_TR_STS            mAcAbTrSts;
+    gvacqAC_PT_CAL_STS           mAcPtCalSts;
+    gvacqAC_double               mAcFiAdrAngle;
+    gvacqAC_FI_ADR_CORR          mAcFiAdrCorr;
+    gvacqAC_FI_FWHM              mAcFiFWHM;
+    gvacqAC_FI_Flux              mAcFiFlux;
+    gvacqAC_double               mAcFiAdrHK;
+    gvacqAC_double               mAcFiAdrLambdaACQ;
+    gvacqAC_double               mAcFiAdrLambdaBC;
+    gvacqAC_int                  mAcAbsLensletSize;
+    gvacqAC_ABS_LENS_SZ          mAcAbsLensletSizeArray;
+    gvacqAC_Defocus              mAcAbsDefocus;
+    gvacqAC_Ref_Defocus          mAcAbsRefDefocus;
+    gvacqAC_TargetPos_Defocus    mAcAbsTargetPosDefocus;
+    gvacqAC_ABS_TARGET_POS       mAcAbsTargetPos;
+    gvacqAC_ABS_SPOTS_FLUX       mAcAbsTargetSpotsFlux;
+    gvacqAC_ABS_SPOTS_SLOPES     mAcAbsSlopes;
+    gvacqAC_ABS_Defocus_GaussFit mAcAbsDefocusGaussFit;
+
+    gvacqALL_DATA allDataVars = {
+        &mAcAbsRef,              &mAcAbsRefErr,      &mAcAbsZernike,
+        &mAcAbsZernikeErr,       &mAcAbsLensletSize, &mAcAbsLensletSizeArray,
+        &mAcPtRef,               &mAcPtRefErr,       &mAcPtPos,              &mAcPtPosErr,
+        &mAcPtRefSpot,           &mAcPtRefSpotErr,
+        &mAcFiPos,               &mAcFiPos2,         &mAcFiPosErr,           &mAcFiObj,         &mAcFiObj2,   &mAcFiObjErr,
+        &mAcFiTrSts,             &mAcPuTrSts,        &mAcAbTrSts,            &mAcPtCalSts,
+        &mAcFiAdrAngle,          &mAcFiAdrCorr,      &mAcFiFWHM,             &mAcFiFlux,        &mAcFiAdrHK,
+        &mAcFiAdrLambdaACQ,      &mAcFiAdrLambdaBC,
+        &mAcPtBaryCenter,        &mAcPtSpotsFlux,    &mAcAbsDefocus,         &mAcAbsRefDefocus,
+        &mAcAbsTargetPosDefocus, &mAcAbsTargetPos,
+        &mAcAbsTargetSpotsFlux,  &mAcAbsSlopes,      &mAcAbsDefocusGaussFit
+    };
+    for (i = 0; i < 4; i++) {
+        allDataVars.acPtRefSpot->value[i].arm1 = PT5thSpotcoordinates[i];
+        allDataVars.acPtRefSpot->value[i].arm2 = PT5thSpotcoordinates[i + 4];
+        allDataVars.acPtRefSpot->value[i].arm3 = PT5thSpotcoordinates[i + 8];
+        allDataVars.acPtRefSpot->value[i].arm4 = PT5thSpotcoordinates[i + 12];
+
+        allDataVars.acPtRefSpot->value[i + 4].arm1 = PT5thSpotcoordinates[i + 16];
+        allDataVars.acPtRefSpot->value[i + 4].arm2 = PT5thSpotcoordinates[i + 4 + 16];
+        allDataVars.acPtRefSpot->value[i + 4].arm3 = PT5thSpotcoordinates[i + 8 + 16];
+        allDataVars.acPtRefSpot->value[i + 4].arm4 = PT5thSpotcoordinates[i + 12 + 16];
+    }
+
+
+    /* tell if the first image is blink on or off */
+    if (nrow>1) {
+          DetPointer = cpl_imagelist_get(acqcam_imglist,0);
+          AcqCamImConvert(&DetPointer,header);
+          fluxON     = cpl_image_get_flux_window(DetPointer, llx, lly, urx, ury);
+          DetPointer=cpl_imagelist_get(acqcam_imglist,1);
+          AcqCamImConvert(&DetPointer,header);
+          fluxOFF    = cpl_image_get_flux_window(DetPointer, llx, lly, urx, ury);
+          if (fluxON > fluxOFF) blinkOFF = 0;
+    }
 
     /* Loop on DIT in cube */
     for (cpl_size row = 0; row < nrow; row++) {
 
         /* Fill the TIME column (same value for all beams) */
         double time = gravi_pfits_get_time_acqcam (header, row);
+
         for (int tel = 0; tel < ntel; tel ++)
             cpl_table_set (output_table, "TIME", row*ntel+tel, time);
-        
-        /* 
-         * FIXME: fill the table with measurments done in imagelist !!
-         */
-        if (row == 0)
-            gravi_msg_warning ("FIXME", "ACQ_CAM images not reduced yet!!");
+        DetPointer=cpl_imagelist_get(acqcam_imglist,row);
+        AcqCamImConvert(&DetPointer,header);
+        error = gvoacqProcessImageAC(DetPointer, blinkOFF, ACMODE_FIELD, &allDataVars);
+        //error = gvoacqProcessImageAC(DetPointer, blinkOFF, ACMODE_PUPIL, &allDataVars);
+    
+        int tel=0;
+        cpl_table_set (output_table, "FIELD_X", row*ntel+tel, (allDataVars.acFiPos)->value[0].arm1);
+        cpl_table_set (output_table, "FIELD_Y", row*ntel+tel, (allDataVars.acFiPos)->value[1].arm1);
+        tel=1;
+        cpl_table_set (output_table, "FIELD_X", row*ntel+tel, (allDataVars.acFiPos)->value[0].arm2);
+        cpl_table_set (output_table, "FIELD_Y", row*ntel+tel, (allDataVars.acFiPos)->value[1].arm2);
+        tel=2;
+        cpl_table_set (output_table, "FIELD_X", row*ntel+tel, (allDataVars.acFiPos)->value[0].arm3);
+        cpl_table_set (output_table, "FIELD_Y", row*ntel+tel, (allDataVars.acFiPos)->value[1].arm3);
+        tel=3;
+        cpl_table_set (output_table, "FIELD_X", row*ntel+tel, (allDataVars.acFiPos)->value[0].arm4);
+        cpl_table_set (output_table, "FIELD_Y", row*ntel+tel, (allDataVars.acFiPos)->value[1].arm4);
+    
+        tel=0;
+        cpl_table_set (output_table, "PUPIL_X", row*ntel+tel, (allDataVars.acPtPos)->value[0].arm1);
+        cpl_table_set (output_table, "PUPIL_Y", row*ntel+tel, (allDataVars.acPtPos)->value[1].arm1);
+        cpl_table_set (output_table, "PUPIL_Z", row*ntel+tel, (allDataVars.acPtPos)->value[2].arm1);
+        tel=1;
+        cpl_table_set (output_table, "PUPIL_X", row*ntel+tel, (allDataVars.acPtPos)->value[0].arm2);
+        cpl_table_set (output_table, "PUPIL_Y", row*ntel+tel, (allDataVars.acPtPos)->value[1].arm2);
+        cpl_table_set (output_table, "PUPIL_Z", row*ntel+tel, (allDataVars.acPtPos)->value[2].arm2);
+        tel=2;
+        cpl_table_set (output_table, "PUPIL_X", row*ntel+tel, (allDataVars.acPtPos)->value[0].arm3);
+        cpl_table_set (output_table, "PUPIL_Y", row*ntel+tel, (allDataVars.acPtPos)->value[1].arm3);
+        cpl_table_set (output_table, "PUPIL_Z", row*ntel+tel, (allDataVars.acPtPos)->value[2].arm3);
+        tel=3;
+        cpl_table_set (output_table, "PUPIL_X", row*ntel+tel, (allDataVars.acPtPos)->value[0].arm4);
+        cpl_table_set (output_table, "PUPIL_Y", row*ntel+tel, (allDataVars.acPtPos)->value[1].arm4);
+        cpl_table_set (output_table, "PUPIL_Z", row*ntel+tel, (allDataVars.acPtPos)->value[2].arm4);
+    
+       // gravi_msg_function_exit(1);
         
 
     } /* End loop on DIT in cube */
+    //if (row == 0)
+    //    gravi_msg_warning ("FIXME", "ACQ_CAM images not reduced yet!!");
 
     gravi_msg_function_exit(1);
     return output_table;
 }
 
+int AcqCamImConvert(cpl_image **DetPointer, cpl_propertylist * header){
+    int i,j,nx,ny,frame,framex,framey,strx,stry;
+    cpl_type type;
+    cpl_image *DetPointerNew;
+    int sizex,sizey,x0,y0i,pis_rejected;
+    char name[256];
+    float content;
+
+    nx=cpl_image_get_size_x(*DetPointer);
+    ny=cpl_image_get_size_y(*DetPointer);
+    /* Check if conversion is needed */
+    if ( nx != 2048 || ny != 1536 ){
+       /* if yes create a new image with the full size */
+       type=cpl_image_get_type(*DetPointer);
+       DetPointerNew=cpl_image_new(2048,1536,type); 
+       sizex = cpl_propertylist_get_int(header, "ESO DET1 FRAMES NX");
+       sizey = cpl_propertylist_get_int(header, "ESO DET1 FRAMES NY");
+
+       for (frame=0; frame<16; frame++) {
+           framex=frame-(frame/4)*4;
+           framey=frame/4;
+           sprintf(name,"ESO DET1 FRAM%d STRX",frame+1);
+           strx = cpl_propertylist_get_int(header, name);
+           sprintf(name,"ESO DET1 FRAM%d STRY",frame+1);
+           stry = cpl_propertylist_get_int(header, name);
+           for (i=1; i<=sizex; i++)
+               for (j=1; j<=sizey; j++) {
+                   content=cpl_image_get(*DetPointer,i+framex*sizex,j+framey*sizey,&pis_rejected);
+                   cpl_image_set(DetPointerNew,i+strx,j+stry,content);
+               } 
+       }      
+
+       //cpl_image_delete(*DetPointer);
+       *DetPointer=DetPointerNew;
+    } 
+    return 0;    
+}
 
 /**@}*/

@@ -184,6 +184,8 @@ const char * gravi_pfits_get_start_sc (const cpl_propertylist * plist);
 const char * gravi_pfits_get_start_acqcam (const cpl_propertylist * plist);
 const char * gravi_pfits_get_start_prcacq (const cpl_propertylist * plist);
 
+const char * gravi_pfits_get_telescope (const cpl_propertylist * plist);
+
 double gravi_pfits_get_fddlwindow (const cpl_propertylist * plist);
 
 double gravi_pfits_get_period_sc (const cpl_propertylist * plist);

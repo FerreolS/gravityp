@@ -31,7 +31,7 @@ MAINTAINERCLEANFILES = Makefile.in
 endif
 
 
-AM_CPPFLAGS = -DMIRADIR=\"$(srcdir)/\" $(CPL_INCLUDES) $(GSL_CFLAGS) $(ERFA_CFLAGS)
+AM_CPPFLAGS = -DMIRADIR=\"$(srcdir)/\" -I../acqcam/include $(CPL_INCLUDES) $(GSL_CFLAGS) $(ERFA_CFLAGS)
 
 INCLUDES = $(all_includes)
 
@@ -56,7 +56,7 @@ noinst_HEADERS =    gravi_calib.h \
                     gravi_disp.h \
                     gravi_eop.h
 
-pkginclude_HEADERS =
+pkginclude_HEADERS = 
 
 privatelib_LTLIBRARIES = libgravi.la
 
@@ -81,6 +81,6 @@ libgravi_la_SOURCES =    gravi_calib.c \
                          gravi_disp.c \
                          gravi_eop.c
 
-libgravi_la_LDFLAGS = $(CPL_LDFLAGS) $(GSL_LDFLAGS) -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
+libgravi_la_LDFLAGS = -L../acqcam -lacqcam $(CPL_LDFLAGS) $(GSL_LDFLAGS) -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
 libgravi_la_LIBADD = $(LIBIRPLIB) $(LIBCPLDFS) $(LIBCPLUI) $(LIBCPLDRS) $(LIBCPLCORE) $(GSL_LIBS) $(ERFA_LIBS)
 libgravi_la_DEPENDENCIES = $(LIBIRPLIB)
