@@ -1079,6 +1079,69 @@ void readDeadPixel(char * DeadPixelMapFits, cpl_mask * DeadPixelMap) {
 	}
 }
 
+/* acqcam_map (MasterSkyField=0, MasterSkyPupil=1, MasterSkyABS=2, MasterFlat=3, DeadPixel=4) */
+void enableFromImagelist(cpl_imagelist * acqcam_map){
+
+	  if (MasterSkyField != NULL) {
+	    cpl_image_delete(MasterSkyField);
+	    MasterSkyField = NULL;
+	  }
+	  if (MasterSkyPupil != NULL) {
+	    cpl_image_delete(MasterSkyPupil);
+	    MasterSkyPupil = NULL;
+	  }
+	  if (MasterSkyABS != NULL) {
+	    cpl_image_delete(MasterSkyABS);
+	    MasterSkyABS = NULL;
+	  }
+	  if (acqcam_map == NULL || cpl_imagelist_get_size (acqcam_map)< 4){
+            printf("Error reading the calibration imagelist. At %s:%s:%d\n", __FILE__, __FUNCTION__, __LINE__);
+	  } else {
+          MasterSkyField = cpl_imagelist_get(acqcam_map,0);
+          int Sky_F_size_x=cpl_image_get_size_x (MasterSkyField);
+          int Sky_F_size_y=cpl_image_get_size_y (MasterSkyField);
+          if(Sky_F_size_x != IMAGE_X && Sky_F_size_y != IMAGE_Y) 
+            printf("Error in reading MasterSkyField array size [%d %d]\n", Sky_F_size_x, Sky_F_size_y );
+          MasterSkyPupil = cpl_imagelist_get(acqcam_map,1);
+          int Pupil_F_size_x=cpl_image_get_size_x (MasterSkyField);
+          int Pupil_F_size_y=cpl_image_get_size_y (MasterSkyField);
+          if(Pupil_F_size_x != IMAGE_X && Pupil_F_size_y != IMAGE_Y) 
+            printf("Error read MasterSkyFitsPupil array size [%d %d]\n", Pupil_F_size_x, Pupil_F_size_y );
+          MasterSkyABS = cpl_imagelist_get(acqcam_map,2);
+          int ABS_F_size_x=cpl_image_get_size_x (MasterSkyABS);
+          int ABS_F_size_y=cpl_image_get_size_y (MasterSkyABS);
+          if(ABS_F_size_x != IMAGE_X && ABS_F_size_y != IMAGE_Y) 
+            printf("Error read MasterSkyFitsABS array size [%d %d]\n", ABS_F_size_x, ABS_F_size_y );
+	  if (MasterFlat != NULL) {
+	    cpl_image_delete(MasterFlat);
+	    MasterFlat = NULL;
+	  }
+          MasterFlat = cpl_imagelist_get(acqcam_map,3);
+          int Flat_F_size_x=cpl_image_get_size_x (MasterSkyField);
+          int Flat_F_size_y=cpl_image_get_size_y (MasterSkyField);
+          if(Flat_F_size_x != IMAGE_X && Flat_F_size_y != IMAGE_Y) 
+            printf("Error in reading MasterFlat array size [%d %d]\n",Flat_F_size_x, Flat_F_size_y );
+	  if (DeadPixelMap != NULL) {
+	    cpl_mask_delete(DeadPixelMap);
+	    DeadPixelMap = NULL;
+	  }
+	  DeadPixelMap = cpl_mask_new(IMAGE_X,IMAGE_Y);
+          cpl_image * DeadPixelMapImage =  cpl_imagelist_get(acqcam_map,4);
+          cpl_error_code error = cpl_mask_threshold_image(DeadPixelMap, DeadPixelMapImage, 0, 2, CPL_BINARY_1);
+	  if(error !=0) printf("Error in loading DeadPixelMap:%s:%s:%d\n", __FILE__,__FUNCTION__,__LINE__);
+          cpl_image_delete(DeadPixelMapImage);
+
+          int Msizex =cpl_mask_get_size_x (DeadPixelMap);
+          int Msizey= cpl_mask_get_size_y (DeadPixelMap);
+          if(Msizex !=IMAGE_X && Msizex !=IMAGE_Y){
+            printf("Error in reading DeadPixelMap array size [%d %d] exptected %d %d\n",
+                   Msizex, Msizey, IMAGE_X, IMAGE_Y);
+	  }
+          enabled=1;
+	  cpl_msg_info(cpl_func, "gvacqControl  ENABLED ...\n");
+        } 
+}
+
 /**
  * @internal
  * @brief enabling the image buffers for preprocessing of the detector image,

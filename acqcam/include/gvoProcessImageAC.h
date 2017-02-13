@@ -1,7 +1,7 @@
 /*********************************************************************
  * E.S.O. - VLT project
  *
- * "@(#) $Id: gvoProcessImageAC.h 293322 2017-02-06 14:22:13Z pgarcia $"
+ * "@(#) $Id: gvoProcessImageAC.h 293491 2017-02-08 15:30:31Z pgarcia $"
  *
  * Estimates the wavefront and telescope parametres for guiding 
  *
@@ -23,7 +23,7 @@
 
 #ifndef PROCESS_IMAGE_AC_H
 #define PROCESS_IMAGE_AC_H 
-//#define PACKAGE_BUGREPORT "narsireddy.anugu@fe.up.pt"
+/*#define PACKAGE_BUGREPORT "Antonio.Amorim@sim.ul.pt" */
 
 /************************************************************************
  * gviProcessImageAC.h - brief description
@@ -124,6 +124,8 @@ cpl_error_code ADRCorrPixelsXY(double H_K, double *ACQPolyCoeff, double *BCPolyC
 			       double *ParAng, 
 			       double FIPixelScale, double * EffectiveLambda, 
 			       double *XYoffsetArcSec, double *XYoffsetPX);
+
+void enableFromImagelist(cpl_imagelist * acqcam_map);
 
 void enable(char* MasterFlatFitsI,
 	    char* MasterSkyFitsField,

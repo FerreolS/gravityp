@@ -478,6 +478,15 @@ const char * gravi_pfits_get_telescope (const cpl_propertylist * plist)
     return value;
 }
 
+double gravi_pfits_get_ptfc_acqcam (const cpl_propertylist * plist, int n)
+{
+    static char name[256];
+    sprintf(name,"ESO ACQ PTFC REFPOS%d",n);
+    cpl_errorstate prestate = cpl_errorstate_get();
+    double value = cpl_propertylist_get_double(plist, name);
+    cpl_ensure(cpl_errorstate_is_equal(prestate), cpl_error_get_code(), 0.0);
+    return value;
+}
 //AAMORIM
 
 /*---------------------------------------------------------------------------*/

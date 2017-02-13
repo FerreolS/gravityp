@@ -3,7 +3,7 @@ CPL_INCLUDES = -I/home/aamorim/gvpipeline-9.8/include
 all: libacqcam.a
 
 
-libacqcam.a:
+libacqcam.a: gvacqAberrationTracker.c  gvacqBicubicSpline.c  gvacqFieldTracker.c  gvacqPupilTracker.c  gvoacqPreprocess.c  gvoacqWrite.c  gvoProcessImageAC.c
 	gcc -c -O2 -DCCS_LIGHT -DCCS_LIGHT -fPIC -Wno-format-security -Wno-deprecated-declarations -I. ${CPL_INCLUDES} -Iinclude -Iclipm \
                          gvacqPupilTracker.c \
                          gvacqAberrationTracker.c \

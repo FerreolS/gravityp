@@ -76,6 +76,8 @@
 #define GRAVI_SINGLE_SKY_MAP                "SINGLE_SKY"
 #define GRAVI_DUAL_SKY_MAP                  "DUAL_SKY"
 
+#define GRAVI_ACQCAM_MAP                     "ACQCAM_MAP"
+
 /* PRO.CATG / DO.CATG for Visibility product */
 #define GRAVI_VIS_SINGLE_SCIENCE            "SINGLE_SCI_VIS"
 #define GRAVI_VIS_SINGLE_CALIB              "SINGLE_CAL_VIS"
@@ -152,6 +154,7 @@ cpl_frameset * gravi_frameset_extract_vis_calib (cpl_frameset * );
 cpl_frameset * gravi_frameset_extract_vis_science (cpl_frameset * );
 cpl_frameset * gravi_frameset_extract_sky_data(cpl_frameset * );
 cpl_frameset * gravi_frameset_extract_wavelamp_data(cpl_frameset * );
+cpl_frameset * gravi_frameset_extract_acqcam_map(cpl_frameset * );
 cpl_frameset * gravi_frameset_extract_dispvis_data(cpl_frameset * );
 cpl_frameset * gravi_frameset_extract_wavelamp_map(cpl_frameset * frameset);
 cpl_frameset * gravi_frameset_extract_disp_map (cpl_frameset * frameset);

@@ -39,6 +39,7 @@
 #define GRAVI_PRIMARY_HDR_EXT "PRIMARY_HDR"
 
 #define GRAVI_IMAGING_DATA_ACQ_EXT "IMAGING_DATA_ACQ"
+#define GRAVI_MAP_DATA_ACQ_EXT "ACQ_MAP"
 #define GRAVI_IMAGING_DATA_FT_EXT "IMAGING_DATA_FT"
 #define GRAVI_IMAGING_DATA_SC_EXT "IMAGING_DATA_SC"
 #define GRAVI_IMAGING_ERR_SC_EXT "IMAGING_ERR_SC"
@@ -185,6 +186,7 @@ const char * gravi_pfits_get_start_acqcam (const cpl_propertylist * plist);
 const char * gravi_pfits_get_start_prcacq (const cpl_propertylist * plist);
 
 const char * gravi_pfits_get_telescope (const cpl_propertylist * plist);
+double gravi_pfits_get_ptfc_acqcam (const cpl_propertylist * plist, int n);
 
 double gravi_pfits_get_fddlwindow (const cpl_propertylist * plist);
 

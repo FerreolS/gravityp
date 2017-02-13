@@ -469,7 +469,7 @@ cpl_error_code FIFindPosition(cpl_image *FI_image, double FIfwhm_minthreshold, i
          * profile is not decreasing by more than 30% from the center to two pixels away            */
 
         if (profile[r]>10000 && ( r>1 || (profile[2]-profile[0])/profile[r]>-0.2 ) ) {
-
+printf("saturated star\n");
           if (r>1) {
           /* optimizing a bit px, py  by looking first neigbors for a lower value */
           double pxstore=px;
