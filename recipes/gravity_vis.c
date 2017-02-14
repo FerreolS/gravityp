@@ -348,7 +348,7 @@ static int gravity_vis(cpl_frameset * frameset,
     cpl_frameset * recipe_frameset=NULL, * wavecalib_frameset=NULL, * dark_frameset=NULL,
 	  * darkcalib_frameset=NULL, * sky_frameset=NULL, * flatcalib_frameset=NULL, * p2vmcalib_frameset=NULL,
 	  * badcalib_frameset=NULL, *used_frameset=NULL, * current_frameset=NULL, * dispcalib_frameset=NULL,
-	  * diamcat_frameset = NULL, *eop_frameset = NULL, *acqcam_frameset = NULL;
+	  * diamcat_frameset = NULL, *eop_frameset = NULL;
 	
 	cpl_frame * frame=NULL;
 	
@@ -357,11 +357,8 @@ static int gravity_vis(cpl_frameset * frameset,
 	
 	gravi_data * p2vm_map=NULL, * data=NULL, * wave_map=NULL, * dark_map=NULL,
         * profile_map=NULL, * badpix_map=NULL, * preproc_data=NULL, * p2vmred_data=NULL, * tmpvis_data=NULL,
-        * vis_data=NULL, * disp_map=NULL, * diamcat_data=NULL, *eop_map=NULL, *acqcam_map=NULL;
+        * vis_data=NULL, * disp_map=NULL, * diamcat_data=NULL, *eop_map=NULL;
 	gravi_data ** sky_maps = NULL;
-
-
-        const char *acqcam_map_fits;
 	
 	int nb_frame, nb_sky, isky;
 
@@ -384,7 +381,6 @@ static int gravity_vis(cpl_frameset * frameset,
 	dispcalib_frameset = gravi_frameset_extract_disp_map (frameset);
 	diamcat_frameset = gravi_frameset_extract_diamcat_map (frameset);
 	eop_frameset = gravi_frameset_extract_eop_map (frameset);
-	acqcam_frameset = gravi_frameset_extract_acqcam_map (frameset);
 	
     recipe_frameset = gravi_frameset_extract_fringe_data (frameset);
     sky_frameset = gravi_frameset_extract_sky_data (frameset);
@@ -473,15 +469,6 @@ static int gravity_vis(cpl_frameset * frameset,
 	}
 	else
 	  cpl_msg_info (cpl_func, "There is no EOP_PARAM in the frameset");
-
-	/* Load the ACQCAM_MAP  */
-	if ( !cpl_frameset_is_empty (acqcam_frameset) ) {
-		frame = cpl_frameset_get_position (acqcam_frameset, 0);
-		acqcam_map = gravi_data_load_frame (frame, used_frameset);
-                acqcam_map_fits = cpl_frame_get_filename(frame);
-	}
-	else
-	  cpl_msg_info (cpl_func, "There is no ACQCAM_MAP in the frameset");
 	
 	/* Load the DIAMETER_CAT */
 	if ( !cpl_frameset_is_empty (diamcat_frameset) ) {
@@ -697,7 +684,7 @@ static int gravity_vis(cpl_frameset * frameset,
 
         /* Reduce the Acquisition Camera and delete data */
         if (gravi_param_get_bool (parlist,"gravity.test.reduce-acq-cam")) {
-            gravi_reduce_acqcam (p2vmred_data,acqcam_map,acqcam_map_fits);
+            gravi_reduce_acqcam (p2vmred_data);
         }
         gravi_data_erase (p2vmred_data, GRAVI_IMAGING_DATA_ACQ_EXT);
         
@@ -852,7 +839,6 @@ cleanup:
 	FREE (cpl_frameset_delete,sky_frameset);
 	FREE (cpl_frameset_delete,dispcalib_frameset);
 	FREE (cpl_frameset_delete,eop_frameset);
-	FREE (cpl_frameset_delete,acqcam_frameset);
 	FREE (cpl_frameset_delete,recipe_frameset);
 	FREE (cpl_frameset_delete,current_frameset);
 	FREE (cpl_frameset_delete,used_frameset);

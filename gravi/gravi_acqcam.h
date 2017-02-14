@@ -33,6 +33,6 @@
                                Public prototypes
  -----------------------------------------------------------------------------*/
 
-cpl_error_code gravi_reduce_acqcam (gravi_data * data, gravi_data * acqcam_map, char * acqcam_map_fits);
+cpl_error_code gravi_reduce_acqcam (gravi_data * data);
 
 #endif 	/* !GRAVI_ACQCAM_H */

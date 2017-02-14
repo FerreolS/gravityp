@@ -649,10 +649,6 @@ cpl_frameset * gravi_frameset_extract_wavelamp_map (cpl_frameset * frameset) {
   const char *tags[] = {GRAVI_WAVELAMP_MAP};
   return gravi_frameset_extract (frameset, tags, 1);
 }
-cpl_frameset * gravi_frameset_extract_acqcam_map (cpl_frameset * frameset) {
-  const char *tags[] = {GRAVI_ACQCAM_MAP};
-  return gravi_frameset_extract (frameset, tags, 1);
-}
 cpl_frameset * gravi_frameset_extract_wavelamp_data (cpl_frameset * frameset) {
   const char *tags[] = {GRAVI_WAVELAMP_RAW};
   return gravi_frameset_extract (frameset, tags, 1);
