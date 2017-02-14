@@ -33,6 +33,6 @@
                                Public prototypes
  -----------------------------------------------------------------------------*/
 
-cpl_error_code gravi_reduce_acqcam (gravi_data * data);
+cpl_error_code gravi_reduce_acqcam (gravi_data * data, cpl_frameset * frameset);
 
 #endif 	/* !GRAVI_ACQCAM_H */

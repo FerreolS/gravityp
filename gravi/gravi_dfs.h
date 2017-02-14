@@ -72,9 +72,11 @@
 #define GRAVI_WAVELAMP_MAP                  "WAVELAMP"
 #define GRAVI_PIEZOTF_MAP                   "PIEZOTF"
 
-
 #define GRAVI_SINGLE_SKY_MAP                "SINGLE_SKY"
 #define GRAVI_DUAL_SKY_MAP                  "DUAL_SKY"
+
+#define GRAVI_FLAT_ACQ_MAP                  "FLAT_ACQ"
+#define GRAVI_BAD_ACQ_MAP                   "BAD_ACQ"
 
 /* PRO.CATG / DO.CATG for Visibility product */
 #define GRAVI_VIS_SINGLE_SCIENCE            "SINGLE_SCI_VIS"
@@ -160,6 +162,7 @@ cpl_frameset * gravi_frameset_extract_p2vmred_data (cpl_frameset * frameset);
 cpl_frameset * gravi_frameset_extract_piezotf_data (cpl_frameset * frameset);
 cpl_frameset * gravi_frameset_extract_diamcat_map (cpl_frameset * frameset);
 cpl_frameset * gravi_frameset_extract_eop_map (cpl_frameset * frameset);
+
 
 const char * gravi_param_get_string (const cpl_parameterlist * parlist, const char * name);
 double gravi_param_get_double (const cpl_parameterlist *, const char *);
