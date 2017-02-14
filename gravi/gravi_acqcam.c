@@ -157,8 +157,10 @@ cpl_table * gravi_acqcam_table_create (cpl_imagelist * acqcam_imglist,
     cpl_table_set_column_unit (output_table, "TIME", "us");
 
     /* Field positions (or we use array of 2) */
-    cpl_table_new_column (output_table, "FIELD_X", CPL_TYPE_DOUBLE);
-    cpl_table_new_column (output_table, "FIELD_Y", CPL_TYPE_DOUBLE);
+    cpl_table_new_column (output_table, "FIELD_SC_X", CPL_TYPE_DOUBLE);
+    cpl_table_new_column (output_table, "FIELD_SC_Y", CPL_TYPE_DOUBLE);
+    cpl_table_new_column (output_table, "FIELD_FT_X", CPL_TYPE_DOUBLE);
+    cpl_table_new_column (output_table, "FIELD_FT_Y", CPL_TYPE_DOUBLE);
 
     /* Pupil positions (or we use array of 3)  */
     cpl_table_new_column (output_table, "PUPIL_X", CPL_TYPE_DOUBLE);
@@ -178,15 +180,57 @@ cpl_table * gravi_acqcam_table_create (cpl_imagelist * acqcam_imglist,
         double time = gravi_pfits_get_time_acqcam (header, row);
         for (int tel = 0; tel < ntel; tel ++)
             cpl_table_set (output_table, "TIME", row*ntel+tel, time);
-        
-        
-        /* 
-         * FIXME: fill the table with measurments done in imagelist !!
-         */
-        if (row == 0)
-            gravi_msg_warning ("FIXME", "ACQ_CAM images not reduced yet!!");
-        
 
+        /* Compute the FIELD, PUPIL and ABERR for this image */
+        cpl_image * img = cpl_imagelist_get (acqcam_imglist,row);
+        // gvoacqProcessImageAC (img, blinkOFF, ACMODE_FIELD, &allDataVars);
+        // gvoacqProcessImageAC (img, blinkOFF, ACMODE_PUPIL, &allDataVars);
+        // gvoacqProcessImageAC (img, blinkOFF, ACMODE_ABERR, &allDataVars);
+
+        /* Use the blinking to update the pupil sky */
+        // storeSky (img, STORSKY_PUPIL);
+  
+        /* Fill the columns */
+        // int tel=0;
+        // cpl_table_set (output_table, "FIELD_SC_X", row*ntel+tel, (allDataVars.acFiPos)->value[0].arm1);
+        // cpl_table_set (output_table, "FIELD_SC_Y", row*ntel+tel, (allDataVars.acFiPos)->value[1].arm1);
+        // cpl_table_set (output_table, "FIELD_FT_X", row*ntel+tel, (allDataVars.acFiPos2)->value[0].arm1);
+        // cpl_table_set (output_table, "FIELD_FT_Y", row*ntel+tel, (allDataVars.acFiPos2)->value[1].arm1);
+        // cpl_table_set (output_table, "PUPIL_X", row*ntel+tel, (allDataVars.acPtPos)->value[0].arm1);
+        // cpl_table_set (output_table, "PUPIL_Y", row*ntel+tel, (allDataVars.acPtPos)->value[1].arm1);
+        // cpl_table_set (output_table, "PUPIL_Z", row*ntel+tel, (allDataVars.acPtPos)->value[2].arm1);
+        // 
+        // tel=1;
+        // cpl_table_set (output_table, "FIELD_SC_X", row*ntel+tel, (allDataVars.acFiPos)->value[0].arm2);
+        // cpl_table_set (output_table, "FIELD_SC_Y", row*ntel+tel, (allDataVars.acFiPos)->value[1].arm2);
+        // cpl_table_set (output_table, "FIELD_FT_X", row*ntel+tel, (allDataVars.acFiPos2)->value[0].arm2);
+        // cpl_table_set (output_table, "FIELD_FT_Y", row*ntel+tel, (allDataVars.acFiPos2)->value[1].arm2);
+        // cpl_table_set (output_table, "PUPIL_X", row*ntel+tel, (allDataVars.acPtPos)->value[0].arm2);
+        // cpl_table_set (output_table, "PUPIL_Y", row*ntel+tel, (allDataVars.acPtPos)->value[1].arm2);
+        // cpl_table_set (output_table, "PUPIL_Z", row*ntel+tel, (allDataVars.acPtPos)->value[2].arm2);
+        // 
+        // tel=2;
+        // cpl_table_set (output_table, "FIELD_SC_X", row*ntel+tel, (allDataVars.acFiPos)->value[0].arm3);
+        // cpl_table_set (output_table, "FIELD_SC_Y", row*ntel+tel, (allDataVars.acFiPos)->value[1].arm3);
+        // cpl_table_set (output_table, "FIELD_FT_X", row*ntel+tel, (allDataVars.acFiPos2)->value[0].arm3);
+        // cpl_table_set (output_table, "FIELD_FT_Y", row*ntel+tel, (allDataVars.acFiPos2)->value[1].arm3);
+        // cpl_table_set (output_table, "PUPIL_X", row*ntel+tel, (allDataVars.acPtPos)->value[0].arm3);
+        // cpl_table_set (output_table, "PUPIL_Y", row*ntel+tel, (allDataVars.acPtPos)->value[1].arm3);
+        // cpl_table_set (output_table, "PUPIL_Z", row*ntel+tel, (allDataVars.acPtPos)->value[2].arm3);
+        // 
+        // tel=3;
+        // cpl_table_set (output_table, "FIELD_SC_X", row*ntel+tel, (allDataVars.acFiPos)->value[0].arm4);
+        // cpl_table_set (output_table, "FIELD_SC_Y", row*ntel+tel, (allDataVars.acFiPos)->value[1].arm4);
+        // cpl_table_set (output_table, "FIELD_FT_X", row*ntel+tel, (allDataVars.acFiPos2)->value[0].arm4);
+        // cpl_table_set (output_table, "FIELD_FT_Y", row*ntel+tel, (allDataVars.acFiPos2)->value[1].arm4);
+        // cpl_table_set (output_table, "PUPIL_X", row*ntel+tel, (allDataVars.acPtPos)->value[0].arm4);
+        // cpl_table_set (output_table, "PUPIL_Y", row*ntel+tel, (allDataVars.acPtPos)->value[1].arm4);
+        // cpl_table_set (output_table, "PUPIL_Z", row*ntel+tel, (allDataVars.acPtPos)->value[2].arm4);
+
+        /* Blink */
+        if (blinkOFF) blinkOFF = 0;
+        else blinkOFF = 1;
+        
     } /* End loop on DIT in cube */
 
     gravi_msg_function_exit(1);
@@ -296,7 +340,8 @@ cpl_imagelist * gravi_acqcam_convert (cpl_imagelist * input_imglist, cpl_propert
     cpl_ensure (input_imglist, CPL_ERROR_NULL_INPUT, NULL);
     int nv = 0;
 
-    cpl_image * output_imglist = NULL;
+    cpl_imagelist * output_imglist = NULL;
+    
     cpl_image * output_img = NULL;
     cpl_image * input_img = cpl_imagelist_get (input_imglist, 0);
     
@@ -316,6 +361,8 @@ cpl_imagelist * gravi_acqcam_convert (cpl_imagelist * input_imglist, cpl_propert
         /* Get size of each sub-window */
         cpl_size sizex = cpl_propertylist_get_int (header, "ESO DET1 FRAMES NX");
         cpl_size sizey = cpl_propertylist_get_int (header, "ESO DET1 FRAMES NY");
+        cpl_ensure (sizex > 1, CPL_ERROR_ILLEGAL_INPUT, NULL);
+        cpl_ensure (sizey > 1, CPL_ERROR_ILLEGAL_INPUT, NULL);
         
         /* Loop on images */
         cpl_size nimg = cpl_imagelist_get_size (input_imglist);
@@ -333,9 +380,11 @@ cpl_imagelist * gravi_acqcam_convert (cpl_imagelist * input_imglist, cpl_propert
                 /* Read the start of this frame */
                 char name[90];
                 sprintf (name,"ESO DET1 FRAM%d STRX",frame+1);
-                cpl_size strx = cpl_propertylist_get_int(header, name);
+                cpl_size strx = cpl_propertylist_get_int (header, name);
+                cpl_ensure (strx > 1, CPL_ERROR_ILLEGAL_INPUT, NULL);
                 sprintf (name,"ESO DET1 FRAM%d STRY",frame+1);
-                cpl_size stry = cpl_propertylist_get_int(header, name);
+                cpl_size stry = cpl_propertylist_get_int (header, name);
+                cpl_ensure (stry > 1, CPL_ERROR_ILLEGAL_INPUT, NULL);
            
                 for (cpl_size i=1; i<=sizex; i++)
                     for (cpl_size j=1; j<=sizey; j++) {
@@ -349,7 +398,7 @@ cpl_imagelist * gravi_acqcam_convert (cpl_imagelist * input_imglist, cpl_propert
         } /* End loop on images */
         
     } /* End case image is split in 16 */
-        
+
     gravi_msg_function_exit(1);
     return output_imglist;
 }
