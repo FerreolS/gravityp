@@ -54,8 +54,8 @@
 cpl_table * gravi_acqcam_table_create (cpl_imagelist * acqcam_imglist,
                                        cpl_propertylist * header);
 
-cpl_error_code gravi_acqcam_set_parameters (cpl_propertylist * header);
 cpl_imagelist * gravi_acqcam_convert (cpl_imagelist * input_imglist, cpl_propertylist * header);
+
 int gravi_acqcam_isblink (cpl_imagelist * imglist, cpl_size pos);
 
 
@@ -123,6 +123,7 @@ cpl_error_code gravi_preproc_acqcam (gravi_data *output_data,
     /* 
      * Remove the pupil background by the mean of blinking
      */
+    
     int blink = gravi_acqcam_isblink (imglist, 0) == 1 ? 0 : 1;
     cpl_size nblink = 0;
 
@@ -178,14 +179,12 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         return CPL_ERROR_NONE;
     }
 
+    /* Get the header */
     cpl_propertylist * data_header;
     data_header = gravi_data_get_header (input_data);
     CPLCHECK_MSG ("Cannot get data or header");
 
-//    /* Load parameters */
-//    gravi_acqcam_set_parameters (data_header);
-
-    /* Get the data and header. (descramble the 16 sub-windows)  */
+    /* Get the data and header */
     cpl_imagelist * acqcam_imglist;
     acqcam_imglist = gravi_data_get_cube (input_data, GRAVI_IMAGING_DATA_ACQ_EXT);
 
@@ -234,130 +233,94 @@ cpl_table * gravi_acqcam_table_create (cpl_imagelist * acqcam_imglist,
     cpl_table * output_table;
     output_table = cpl_table_new (nrow * ntel);
 
+    /* 
+     * Compute TIME column
+     */
+
     /* Time column shall contain the time from PCR.ACQ.START in [us] */
     cpl_table_new_column (output_table, "TIME", CPL_TYPE_INT);
     cpl_table_set_column_unit (output_table, "TIME", "us");
 
-    /* Field positions (or we use array of 2) */
-    cpl_table_new_column (output_table, "FIELD_SC_X", CPL_TYPE_DOUBLE);
-    cpl_table_new_column (output_table, "FIELD_SC_Y", CPL_TYPE_DOUBLE);
-    cpl_table_new_column (output_table, "FIELD_FT_X", CPL_TYPE_DOUBLE);
-    cpl_table_new_column (output_table, "FIELD_FT_Y", CPL_TYPE_DOUBLE);
-
-    /* Pupil positions (or we use array of 3)  */
-    cpl_table_new_column (output_table, "PUPIL_X", CPL_TYPE_DOUBLE);
-    cpl_table_new_column (output_table, "PUPIL_Y", CPL_TYPE_DOUBLE);
-    cpl_table_new_column (output_table, "PUPIL_Z", CPL_TYPE_DOUBLE);
-
-    /* Aberation as arrays of 27 coefficients */
-    cpl_table_new_column_array (output_table, "ABERATION", CPL_TYPE_DOUBLE, nzernick);
-
-    /* Get if the first is blinked */
-    int blinkOFF = gravi_acqcam_isblink (acqcam_imglist, 0);
-
     /* Loop on DIT in cube */
     for (cpl_size row = 0; row < nrow; row++) {
-
+        
         /* Fill the TIME column (same value for all beams) */
         double time = gravi_pfits_get_time_acqcam (header, row);
         for (int tel = 0; tel < ntel; tel ++)
             cpl_table_set (output_table, "TIME", row*ntel+tel, time);
+    }
+    
 
-        /* Compute the FIELD, PUPIL and ABERR for this image */
-        cpl_image * img = cpl_imagelist_get (acqcam_imglist,row);
-        // gvoacqProcessImageAC (img, blinkOFF, ACMODE_FIELD, &allDataVars);
-        // gvoacqProcessImageAC (img, blinkOFF, ACMODE_PUPIL, &allDataVars);
-        // gvoacqProcessImageAC (img, blinkOFF, ACMODE_ABERR, &allDataVars);
+//    /* 
+//     * Compute PUPIL column position
+//     */
+//
+//    /* Read the references for pupil sensor */
+//    double Spot5RefData[32];
+//    for (int i=0; i< 4; i++ ) {
+//        for (int j=0; j<4 ; j++ ) {
+//            Spot5RefData[j+4*i] = gravi_pfits_get_ptfc_acqcam (header, i+4*j + 1);
+//            Spot5RefData[j+4*i+16] = gravi_pfits_get_ptfc_acqcam (header, i+4*j+16 + 1);
+//        }
+//    }
+//    
+//    /* Define parameters for pupil sensor */
+//    double FIfwhm_minthreshold = 1.99; /* pixels */
+//    double PTFitStateErrorThreshold = 10;
+//
+//    /* Allocate memory for pupil sensor outputs */
+//    double PupilPosition[12];      // 4 tel x XYZ
+//    double PupilPositionError[12]; // 4 tel x XYZ
+//    double barycentre[32];         // 4 tel x 4 sub x XY
+//    double barycentreError[32];    // 4 tel x 4 sub x XY
+//    double PTRefPosition[128];     // 4 tel x 16 spots x XY
+//    double PTRefPositionError[128];// 4 tel x 16 spots x XY
+//    double SpotsFlux[64];          // 4 tel x 16 spots
+//    int    PTErrorStatus[4];       // 4 tel
+//
+//    /* Pupil positions (or we use array of 3)  */
+//    cpl_table_new_column (output_table, "PUPIL_X", CPL_TYPE_DOUBLE);
+//    cpl_table_new_column (output_table, "PUPIL_Y", CPL_TYPE_DOUBLE);
+//    cpl_table_new_column (output_table, "PUPIL_Z", CPL_TYPE_DOUBLE);
+//    
+//    /* Loop on DIT in cube */
+//    for (cpl_size row = 0; row < nrow; row++) {
+//
+//        /* Call the PUPIL algorithm */
+//        cpl_image * img = cpl_imagelist_get (acqcam_imglist,row);
+//        gvacqPupilTracker (img, Spot5RefData,
+//                           FIfwhm_minthreshold, PTFitStateErrorThreshold,
+//                           PupilPosition, PupilPositionError,
+//                           barycentre, barycentreError,
+//                           PTRefPosition, PTRefPositionError,
+//                           SpotsFlux, PTErrorStatus);
+//
+//        /* Fill the columns */
+//        for (int tel=0; tel<4; tel++) {
+//            cpl_table_set (output_table, "PUPIL_X", row*ntel+tel, PupilPosition[tel*3+0]);
+//            cpl_table_set (output_table, "PUPIL_Y", row*ntel+tel, PupilPosition[tel*3+1]);
+//            cpl_table_set (output_table, "PUPIL_Z", row*ntel+tel, PupilPosition[tel*3+2]);
+//        }
+//
+//    } /* End loop on DIT in cube */
+//
+    
+    /* 
+     * Other column
+     */
+    
+    /* Field positions (or we use array of 2) */
+    // cpl_table_new_column (output_table, "FIELD_SC_X", CPL_TYPE_DOUBLE);
+    // cpl_table_new_column (output_table, "FIELD_SC_Y", CPL_TYPE_DOUBLE);
+    // cpl_table_new_column (output_table, "FIELD_FT_X", CPL_TYPE_DOUBLE);
+    // cpl_table_new_column (output_table, "FIELD_FT_Y", CPL_TYPE_DOUBLE);
 
-        /* Use the blinking to update the pupil sky */
-        // storeSky (img, STORSKY_PUPIL);
-  
-        /* Fill the columns */
-        // int tel=0;
-        // cpl_table_set (output_table, "FIELD_SC_X", row*ntel+tel, (allDataVars.acFiPos)->value[0].arm1);
-        // cpl_table_set (output_table, "FIELD_SC_Y", row*ntel+tel, (allDataVars.acFiPos)->value[1].arm1);
-        // cpl_table_set (output_table, "FIELD_FT_X", row*ntel+tel, (allDataVars.acFiPos2)->value[0].arm1);
-        // cpl_table_set (output_table, "FIELD_FT_Y", row*ntel+tel, (allDataVars.acFiPos2)->value[1].arm1);
-        // cpl_table_set (output_table, "PUPIL_X", row*ntel+tel, (allDataVars.acPtPos)->value[0].arm1);
-        // cpl_table_set (output_table, "PUPIL_Y", row*ntel+tel, (allDataVars.acPtPos)->value[1].arm1);
-        // cpl_table_set (output_table, "PUPIL_Z", row*ntel+tel, (allDataVars.acPtPos)->value[2].arm1);
-        // 
-        // tel=1;
-        // cpl_table_set (output_table, "FIELD_SC_X", row*ntel+tel, (allDataVars.acFiPos)->value[0].arm2);
-        // cpl_table_set (output_table, "FIELD_SC_Y", row*ntel+tel, (allDataVars.acFiPos)->value[1].arm2);
-        // cpl_table_set (output_table, "FIELD_FT_X", row*ntel+tel, (allDataVars.acFiPos2)->value[0].arm2);
-        // cpl_table_set (output_table, "FIELD_FT_Y", row*ntel+tel, (allDataVars.acFiPos2)->value[1].arm2);
-        // cpl_table_set (output_table, "PUPIL_X", row*ntel+tel, (allDataVars.acPtPos)->value[0].arm2);
-        // cpl_table_set (output_table, "PUPIL_Y", row*ntel+tel, (allDataVars.acPtPos)->value[1].arm2);
-        // cpl_table_set (output_table, "PUPIL_Z", row*ntel+tel, (allDataVars.acPtPos)->value[2].arm2);
-        // 
-        // tel=2;
-        // cpl_table_set (output_table, "FIELD_SC_X", row*ntel+tel, (allDataVars.acFiPos)->value[0].arm3);
-        // cpl_table_set (output_table, "FIELD_SC_Y", row*ntel+tel, (allDataVars.acFiPos)->value[1].arm3);
-        // cpl_table_set (output_table, "FIELD_FT_X", row*ntel+tel, (allDataVars.acFiPos2)->value[0].arm3);
-        // cpl_table_set (output_table, "FIELD_FT_Y", row*ntel+tel, (allDataVars.acFiPos2)->value[1].arm3);
-        // cpl_table_set (output_table, "PUPIL_X", row*ntel+tel, (allDataVars.acPtPos)->value[0].arm3);
-        // cpl_table_set (output_table, "PUPIL_Y", row*ntel+tel, (allDataVars.acPtPos)->value[1].arm3);
-        // cpl_table_set (output_table, "PUPIL_Z", row*ntel+tel, (allDataVars.acPtPos)->value[2].arm3);
-        // 
-        // tel=3;
-        // cpl_table_set (output_table, "FIELD_SC_X", row*ntel+tel, (allDataVars.acFiPos)->value[0].arm4);
-        // cpl_table_set (output_table, "FIELD_SC_Y", row*ntel+tel, (allDataVars.acFiPos)->value[1].arm4);
-        // cpl_table_set (output_table, "FIELD_FT_X", row*ntel+tel, (allDataVars.acFiPos2)->value[0].arm4);
-        // cpl_table_set (output_table, "FIELD_FT_Y", row*ntel+tel, (allDataVars.acFiPos2)->value[1].arm4);
-        // cpl_table_set (output_table, "PUPIL_X", row*ntel+tel, (allDataVars.acPtPos)->value[0].arm4);
-        // cpl_table_set (output_table, "PUPIL_Y", row*ntel+tel, (allDataVars.acPtPos)->value[1].arm4);
-        // cpl_table_set (output_table, "PUPIL_Z", row*ntel+tel, (allDataVars.acPtPos)->value[2].arm4);
-
-        /* Blink */
-        if (blinkOFF) blinkOFF = 0;
-        else blinkOFF = 1;
-        
-    } /* End loop on DIT in cube */
+    /* Aberation as arrays of 27 coefficients */
+    // cpl_table_new_column_array (output_table, "ABERATION", CPL_TYPE_DOUBLE, nzernick);
+    
 
     gravi_msg_function_exit(1);
     return output_table;
-}
-
-/*----------------------------------------------------------------------------*/
-/**
- * @brief Load the parameters for the ACQ_CAM reduction
- * 
- * @param header:
- * 
- */
-/*----------------------------------------------------------------------------*/
-
-cpl_error_code gravi_acqcam_set_parameters (cpl_propertylist * header)
-{
-    gravi_msg_function_start(1);
-    
-    double FIfieldWindowSizeAndSigma[2] = { 110, 3.0 };
-    // setFIfitWindowSizeAndSigma(FIfieldWindowSizeAndSigma);
-
-    int coordinates[8] = { 287, 803, 1257, 1699, 228, 222, 204, 214 };
-    // setCoordinates(coordinates);
-
-    double FIminFWHM     = 1.5;
-    // setFIminFWHM(FIminFWHM);
-
-    int    FIwindowGauss = 16;
-    // setFIwindowGauss(FIwindowGauss);
-
-    int    ABSLensletSizeIN       = 10;
-    // setABSLensletSize(ABSLensletSizeIN);
-
-    int    RefWindowPosPT[8]      = { 292, 759, 1230, 1698, 1376, 1371, 1375, 1383 };
-    // setRefWindowPosPT(RefWindowPosPT);
-
-    int    PTImageWindowSize      = 220; /* pupil tracker image window */
-    // setPTImageWindowSize(PTImageWindowSize);
-    
-
-    // ...
-
-    gravi_msg_function_exit(1);
-    return CPL_ERROR_NONE;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -472,3 +435,4 @@ int gravi_acqcam_isblink (cpl_imagelist * imglist, cpl_size pos)
 
 
 /**@}*/
+
