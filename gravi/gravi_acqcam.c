@@ -54,7 +54,6 @@
 cpl_table * gravi_acqcam_table_create (cpl_imagelist * acqcam_imglist,
                                        cpl_propertylist * header);
 
-cpl_error_code gravi_acqcam_set_calibration (cpl_frameset * frameset);
 cpl_error_code gravi_acqcam_set_parameters (cpl_propertylist * header);
 cpl_imagelist * gravi_acqcam_convert (cpl_imagelist * input_imglist, cpl_propertylist * header);
 int gravi_acqcam_isblink (cpl_imagelist * imglist, cpl_size pos);
@@ -63,6 +62,96 @@ int gravi_acqcam_isblink (cpl_imagelist * imglist, cpl_size pos);
 /*-----------------------------------------------------------------------------
                              Functions code
  -----------------------------------------------------------------------------*/
+
+cpl_error_code gravi_preproc_acqcam (gravi_data *output_data,
+                                     gravi_data *input_data,
+                                     gravi_data *bad_map)
+{
+    gravi_msg_function_start(1);
+    cpl_ensure_code (output_data, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (input_data,  CPL_ERROR_NULL_INPUT);
+
+    /* Check if extension exist */
+    if (!gravi_data_has_extension (input_data, GRAVI_IMAGING_DATA_ACQ_EXT)) {
+        cpl_msg_warning (cpl_func, "Cannot preproc the ACQCAM, not data");
+        return CPL_ERROR_NONE;
+    }
+
+    cpl_propertylist * data_header;
+    data_header = gravi_data_get_header (input_data);
+    CPLCHECK_MSG ("Cannot get data or header");
+
+    /* Construct a mask of badpixels */
+    cpl_image * badpix_img = gravi_data_get_img (bad_map, GRAVI_IMAGING_DATA_ACQ_EXT);
+    cpl_mask * badpix_mask = cpl_mask_threshold_image_create (badpix_img, 0.5, 10000);
+    CPLCHECK_MSG ("Cannot get BAD map for ACQ");
+
+    /* Get the imagelist */
+    cpl_imagelist * imglist;
+    imglist = gravi_data_get_cube (input_data, GRAVI_IMAGING_DATA_ACQ_EXT);
+    CPLCHECK_MSG ("Cannot get image for ACQ");
+    
+    /* 
+     * Loop on images to cleanup-badpixels 
+     */
+    cpl_size nrow = cpl_imagelist_get_size (imglist);
+    for (cpl_size row = 0; row < nrow; row++) {
+
+        /* Get image */
+        cpl_image * img = cpl_imagelist_get (imglist, row);
+
+        /* Cleanup-badpixel */
+        cpl_image_reject_from_mask (img, badpix_mask);
+        cpl_detector_interpolate_rejected (img);
+        CPLCHECK_MSG ("Cannot clean-up badpixel");
+    }
+    
+    FREE (cpl_mask_delete, badpix_mask);
+
+    /* 
+     * Convert to old format
+     */
+
+    /* Allocate new memory */
+    imglist = gravi_acqcam_convert (imglist, data_header);
+        
+    /* Get the size */
+    cpl_image * img = cpl_imagelist_get (imglist, 0);
+    cpl_size nx = cpl_image_get_size_x (img);
+    cpl_size ny = cpl_image_get_size_y (img);
+
+    /* 
+     * Remove the pupil background by the mean of blinking
+     */
+    int blink = gravi_acqcam_isblink (imglist, 0) == 1 ? 0 : 1;
+    cpl_size nblink = 0;
+
+    /* Coadd the blinked image */
+    cpl_image * blink_img = cpl_image_new (nx,ny, CPL_TYPE_DOUBLE);
+    for (cpl_size row = blink; row < nrow; row +=2) {
+        cpl_image_add (blink_img, cpl_imagelist_get (imglist, row));
+        nblink ++;
+    }
+    cpl_image_divide_scalar (blink_img, nblink);
+    cpl_image_fill_window (blink_img, 1, 1, nx, 1200, 0.0);
+
+    gravi_msg_warning ("FIXME","Coadd the pupil blink so far.");
+    gravi_msg_warning ("FIXME","Can use a vertical median to remove background");
+
+    /* Remove the blink only for pupil */
+    for (cpl_size row = 0; row < nrow; row ++) {
+        cpl_image_subtract (cpl_imagelist_get (imglist, row), blink_img);
+        CPLCHECK_MSG ("Cannot remove blinked pupil");
+    }
+    
+    FREE (cpl_image_delete, blink_img);
+
+    /* Set in output */
+    gravi_data_add_cube (output_data, NULL, GRAVI_IMAGING_DATA_ACQ_EXT, imglist);
+    
+    gravi_msg_function_exit(1);
+    return CPL_ERROR_NONE;   
+}
 
 /*----------------------------------------------------------------------------*/
 /**
@@ -76,44 +165,37 @@ int gravi_acqcam_isblink (cpl_imagelist * imglist, cpl_size pos);
  */
 /*----------------------------------------------------------------------------*/
 
-cpl_error_code gravi_reduce_acqcam (gravi_data * data, cpl_frameset * frameset)
+cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
+                                    gravi_data * input_data)
 {
     gravi_msg_function_start(1);
-    cpl_ensure_code (data,     CPL_ERROR_NULL_INPUT);
-    cpl_ensure_code (frameset, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (output_data, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (input_data,  CPL_ERROR_NULL_INPUT);
 
     /* Check if extension exist */
-    if (!gravi_data_has_extension (data, GRAVI_IMAGING_DATA_ACQ_EXT)) {
+    if (!gravi_data_has_extension (input_data, GRAVI_IMAGING_DATA_ACQ_EXT)) {
         cpl_msg_warning (cpl_func, "Cannot reduce the ACQCAM, not data");
         return CPL_ERROR_NONE;
     }
 
-
     cpl_propertylist * data_header;
-    data_header = gravi_data_get_header (data);
+    data_header = gravi_data_get_header (input_data);
     CPLCHECK_MSG ("Cannot get data or header");
 
-    /* Load calibrations from input frameset */
-    gravi_acqcam_set_calibration (frameset);
-
-    /* Load calibrations from input frameset */
-    gravi_acqcam_set_parameters (data_header);
+//    /* Load parameters */
+//    gravi_acqcam_set_parameters (data_header);
 
     /* Get the data and header. (descramble the 16 sub-windows)  */
     cpl_imagelist * acqcam_imglist;
-    acqcam_imglist = gravi_data_get_cube (data, GRAVI_IMAGING_DATA_ACQ_EXT);
-    acqcam_imglist = gravi_acqcam_convert (acqcam_imglist, data_header);
+    acqcam_imglist = gravi_data_get_cube (input_data, GRAVI_IMAGING_DATA_ACQ_EXT);
 
     /* Create the output table */
     cpl_table * acqcam_table;
     acqcam_table = gravi_acqcam_table_create (acqcam_imglist, data_header);
 	CPLCHECK_MSG ("Cannot compute acqcam_table");
 
-    /* Delete data */
-    FREE (cpl_imagelist_delete, acqcam_imglist);
-
     /* Add this output table in the gravi_data */
-	gravi_data_add_table (data, NULL, GRAVI_OI_VIS_ACQ_EXT, acqcam_table);
+	gravi_data_add_table (output_data, NULL, GRAVI_OI_VIS_ACQ_EXT, acqcam_table);
 	CPLCHECK_MSG ("Cannot add acqcam_table in data");
     
     gravi_msg_function_exit(1);
@@ -239,54 +321,6 @@ cpl_table * gravi_acqcam_table_create (cpl_imagelist * acqcam_imglist,
 
 /*----------------------------------------------------------------------------*/
 /**
- * @brief Load the calibration for the ACQ_CAM camera
- * 
- * @param frameset : shall include FLAT_AQC and BAD_ACQ
- * 
- */
-/*----------------------------------------------------------------------------*/
-
-cpl_error_code gravi_acqcam_set_calibration (cpl_frameset * frameset)
-{
-    gravi_msg_function_start(1);
-    cpl_ensure_code (frameset, CPL_ERROR_NULL_INPUT);
-    
-    cpl_frame * frame = NULL;
-
-    /* FLAT_ACQ */
-    frame = cpl_frameset_find (frameset, GRAVI_FLAT_ACQ_MAP);
-    cpl_ensure_code (frame, CPL_ERROR_ILLEGAL_INPUT);
-
-	cpl_msg_info (cpl_func, "FLAT_ACQ file as  %s\n",
-                  cpl_frame_get_filename (frame));
-
-    /* Set in global variable */
-    // MasterFlat = cpl_image_load (cpl_frame_get_filename (frame), CPL_TYPE_DOUBLE, 0, 0);
-    // cpl_ensure_code (MasterFlat, CPL_ERROR_ILLEGAL_INPUT);
-    
-    
-    /* BAD_ACQ */
-    frame = cpl_frameset_find (frameset, GRAVI_BAD_ACQ_MAP);
-    cpl_ensure_code (frame, CPL_ERROR_ILLEGAL_INPUT);
-
-	cpl_msg_info (cpl_func, "BAD_ACQ file as  %s\n",
-                  cpl_frame_get_filename (frame));
-    
-    /* Set in global variable */
-    cpl_image * bad_img = cpl_image_load (cpl_frame_get_filename (frame), CPL_TYPE_DOUBLE, 0, 0);
-    // DeadPixelMap = cpl_mask_threshold_image_create (bad_img, 0, 2);
-    // cpl_mask_not (DeadPixelMap);
-    // cpl_ensure_code (DeadPixelMap, CPL_ERROR_ILLEGAL_INPUT);
-    FREE (cpl_image_delete, bad_img);
-
-    // ...
-
-    gravi_msg_function_exit(1);
-    return CPL_ERROR_NONE;
-}
-
-/*----------------------------------------------------------------------------*/
-/**
  * @brief Load the parameters for the ACQ_CAM reduction
  * 
  * @param header:
@@ -405,7 +439,7 @@ cpl_imagelist * gravi_acqcam_convert (cpl_imagelist * input_imglist, cpl_propert
 
 /*----------------------------------------------------------------------------*/
 /**
- * @brief Return 0 if flux(pos) > flux(pos+1)
+ * @brief Return 1 if flux(pos) < flux(pos+1)
  * 
  */
 /*----------------------------------------------------------------------------*/
@@ -421,10 +455,10 @@ int gravi_acqcam_isblink (cpl_imagelist * imglist, cpl_size pos)
     if (nrow == 1) return blinkOFF;
 
     /* Part of the image to analyse */
-    cpl_size llx =  0; //RefWindowPosPT[0] - PTImageWindowSize / 2;
-    cpl_size urx =  0; //RefWindowPosPT[3] + PTImageWindowSize / 2;
-    cpl_size lly =  0; //RefWindowPosPT[4] - PTImageWindowSize / 2;
-    cpl_size ury =  0; //RefWindowPosPT[7] + PTImageWindowSize / 2;
+    cpl_size llx =  1;
+    cpl_size urx =  2048;
+    cpl_size lly =  1200;
+    cpl_size ury =  1536;
 
     /* tell if the first image is blink on or off */
     double flux0 = cpl_image_get_flux_window (cpl_imagelist_get (imglist,pos), llx, lly, urx, ury);

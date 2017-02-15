@@ -258,6 +258,37 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
         
     } /* End case FT */
 
+    /*
+     * Compute the ACQ DARK
+     */
+    if (!gravi_data_has_extension (raw_data, GRAVI_IMAGING_DATA_ACQ_EXT)) {
+        cpl_msg_warning (cpl_func,"The DARK data has no IMAGING_DATA_ACQ");
+    }
+    else
+    {
+	    cpl_msg_info (cpl_func, "Computing the %s of ACQ",isSky?"SKY":"DARK");
+        
+		/* Load the IMAGING_DATA table or image list */
+		cpl_imagelist * imglist = gravi_data_get_cube (raw_data, GRAVI_IMAGING_DATA_ACQ_EXT);
+
+		/* Compute the median image of the imagelist */
+		cpl_image * median_img = cpl_imagelist_collapse_median_create (imglist);
+		CPLCHECK_NUL ("Cannot compute the median dark");
+
+		/* Compute the QC parameters RMS and MEDIAN */
+		cpl_msg_info (cpl_func, "Compute QC parameters");
+		double mean_qc = cpl_image_get_median (median_img);
+
+		/* Verbose */
+	    cpl_msg_info (cpl_func, "QC_MEDIAN%s_ACQ = %e",isSky?"SKY":"DARK", mean_qc);
+
+		/* Put the data in the output table : dark_map */
+		cpl_propertylist * img_plist = gravi_data_get_plist (raw_data, GRAVI_IMAGING_DATA_ACQ_EXT);
+		img_plist = cpl_propertylist_duplicate (img_plist);
+		gravi_data_add_img (dark_map, img_plist, GRAVI_IMAGING_DATA_ACQ_EXT, median_img);
+		CPLCHECK_NUL("Cannot save median in gravi_data");
+    } 
+
     gravi_msg_function_exit(1);
     return dark_map;
 }
@@ -1835,6 +1866,60 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
 		FREE (cpl_image_delete, flat_img);
         FREE (cpl_image_delete, flatmed_img);
 	} /* End SC case*/
+
+    /* 
+     * Compute bad pixels of ACQ
+     */
+    
+    if (!gravi_data_has_extension (dark_map, GRAVI_IMAGING_DATA_ACQ_EXT)) {
+        cpl_msg_warning (cpl_func,"The DARK map has no IMAGING_DATA_ACQ");
+    }
+    else
+    {
+	    cpl_msg_info (cpl_func,"Compute BADPIXEL of ACQ");
+                
+	    /* This is the SC */
+		cpl_image * dark_img = gravi_data_get_img (dark_map, GRAVI_IMAGING_DATA_ACQ_EXT);
+        CPLCHECK_NUL ("Cannot get dark");
+
+		/* Compute an image with only the high-frequency of dark */
+		cpl_image * darkhf_img = cpl_image_cast (dark_img, CPL_TYPE_DOUBLE);
+		cpl_mask * kernel = cpl_mask_new (21, 21);
+		cpl_mask_not (kernel);
+		cpl_image_filter_mask (darkhf_img, dark_img, kernel, CPL_FILTER_MEDIAN, CPL_BORDER_FILTER);
+        FREE (cpl_mask_delete, kernel);
+        
+		cpl_image_subtract (darkhf_img, dark_img);
+        cpl_image_multiply_scalar (darkhf_img, -1.0);
+        cpl_image_abs (darkhf_img);
+        CPLCHECK_NUL ("Cannot create darkhf");
+
+        /* Get the STD of the dark_hf */
+        double dark_std = cpl_image_get_median (darkhf_img);
+        cpl_msg_info (cpl_func, "DARK_ACQ_STD = %e", dark_std);
+
+        /* Detect bad pixel as >5 STD */
+        double threshold = 20 * dark_std + 1e-10;
+        cpl_image_threshold (darkhf_img, threshold, threshold, 0, 1);
+        cpl_image * bad_img = cpl_image_cast (darkhf_img, CPL_TYPE_INT);
+
+        /* Remove pixel in the middle of a square pattern */
+        for (cpl_size x=2; x<cpl_image_get_size_x (bad_img);x++) {
+            for (cpl_size y=2; y<cpl_image_get_size_y (bad_img);y++) {
+                int nv = 0;
+                if (cpl_image_get (bad_img,x,y-1,&nv) &&
+                    cpl_image_get (bad_img,x,y+1,&nv) &&
+                    cpl_image_get (bad_img,x-1,y,&nv) &&
+                    cpl_image_get (bad_img,x+1,y,&nv))
+                    cpl_image_set (bad_img,x,y, 1);
+            }
+        }
+        
+        /* Set the badpixel map of ACQ in IMAGING_DATA_ACQ */
+		gravi_data_add_img (bad_map, NULL, GRAVI_IMAGING_DATA_ACQ_EXT, bad_img);
+
+		FREE (cpl_image_delete, darkhf_img);
+    }
     
 	/* Verbose */
  	gravi_msg_function_exit(1);
