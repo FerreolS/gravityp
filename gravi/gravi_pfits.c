@@ -538,6 +538,16 @@ double gravi_pfits_get_time_acqcam (const cpl_propertylist * header, cpl_size ro
     return time;
 }
 
+double gravi_pfits_get_ptfc_acqcam (const cpl_propertylist * plist, int spot)
+{
+    cpl_errorstate prestate = cpl_errorstate_get();
+    char name[90];
+    sprintf (name, "ESO ACQ PTFC REFPOS%i", spot+1);
+    double value = cpl_propertylist_get_double (plist, name);
+    cpl_ensure (cpl_errorstate_is_equal(prestate), cpl_error_get_code(), 0.0);
+    return value;
+}
+
 const char * gravi_pfits_get_insname (const cpl_propertylist * plist)
 {
     const char * value = cpl_propertylist_get_string(plist, "INSNAME");
