@@ -114,6 +114,7 @@ cpl_error_code gravi_preproc_acqcam (gravi_data *output_data,
 
     /* Allocate new memory */
     imglist = gravi_acqcam_convert (imglist, data_header);
+    CPLCHECK_MSG ("Cannot convert ACQ");
         
     /* Get the size */
     cpl_image * img = cpl_imagelist_get (imglist, 0);
@@ -123,29 +124,35 @@ cpl_error_code gravi_preproc_acqcam (gravi_data *output_data,
     /* 
      * Remove the pupil background by the mean of blinking
      */
+
+    if (nrow == 1) {
+        gravi_msg_warning ("FIXME","Cannot remove blinked pupil (no blink)");
+        
+    } else {
     
-    int blink = gravi_acqcam_isblink (imglist, 0) == 1 ? 0 : 1;
-    cpl_size nblink = 0;
-
-    /* Coadd the blinked image */
-    cpl_image * blink_img = cpl_image_new (nx,ny, CPL_TYPE_DOUBLE);
-    for (cpl_size row = blink; row < nrow; row +=2) {
-        cpl_image_add (blink_img, cpl_imagelist_get (imglist, row));
-        nblink ++;
-    }
-    cpl_image_divide_scalar (blink_img, nblink);
-    cpl_image_fill_window (blink_img, 1, 1, nx, 1200, 0.0);
-
-    gravi_msg_warning ("FIXME","Coadd the pupil blink so far.");
-    gravi_msg_warning ("FIXME","Can use a vertical median to remove background");
-
-    /* Remove the blink only for pupil */
-    for (cpl_size row = 0; row < nrow; row ++) {
-        cpl_image_subtract (cpl_imagelist_get (imglist, row), blink_img);
-        CPLCHECK_MSG ("Cannot remove blinked pupil");
-    }
+        int blink = gravi_acqcam_isblink (imglist, 0) == 1 ? 0 : 1;
+        cpl_size nblink = 0;
+        
+        /* Coadd the blinked image */
+        cpl_image * blink_img = cpl_image_new (nx,ny, CPL_TYPE_DOUBLE);
+        for (cpl_size row = blink; row < nrow; row +=2) {
+            cpl_image_add (blink_img, cpl_imagelist_get (imglist, row));
+            nblink ++;
+        }
+        cpl_image_divide_scalar (blink_img, nblink);
+        cpl_image_fill_window (blink_img, 1, 1, nx, 1200, 0.0);
+        
+        gravi_msg_warning ("FIXME","Coadd the pupil blink so far.");
+        gravi_msg_warning ("FIXME","Can use a vertical median to remove background");
+        
+        /* Remove the blink only for pupil */
+        for (cpl_size row = 0; row < nrow; row ++) {
+            cpl_image_subtract (cpl_imagelist_get (imglist, row), blink_img);
+            CPLCHECK_MSG ("Cannot remove blinked pupil");
+        }
     
-    FREE (cpl_image_delete, blink_img);
+        FREE (cpl_image_delete, blink_img);
+    }
 
     /* Set in output */
     gravi_data_add_cube (output_data, NULL, GRAVI_IMAGING_DATA_ACQ_EXT, imglist);
@@ -354,6 +361,7 @@ cpl_imagelist * gravi_acqcam_convert (cpl_imagelist * input_imglist, cpl_propert
         output_imglist = cpl_imagelist_duplicate (input_imglist);
         
     } else {
+        output_imglist = cpl_imagelist_new ();
         
         /* Get size of each sub-window */
         cpl_size sizex = cpl_propertylist_get_int (header, "ESO DET1 FRAMES NX");
@@ -392,6 +400,7 @@ cpl_imagelist * gravi_acqcam_convert (cpl_imagelist * input_imglist, cpl_propert
             } /* End loop on sub-windows */
 
             cpl_imagelist_set (output_imglist, output_img, img);
+            CPLCHECK_NUL ("Error when convert ACQ");
         } /* End loop on images */
         
     } /* End case image is split in 16 */
