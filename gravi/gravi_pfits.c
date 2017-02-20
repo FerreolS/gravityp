@@ -542,7 +542,7 @@ double gravi_pfits_get_ptfc_acqcam (const cpl_propertylist * plist, int spot)
 {
     cpl_errorstate prestate = cpl_errorstate_get();
     char name[90];
-    sprintf (name, "ESO ACQ PTFC REFPOS%i", spot+1);
+    sprintf (name, "ESO ACQ PTFC REFPOS%i", spot);
     double value = cpl_propertylist_get_double (plist, name);
     cpl_ensure (cpl_errorstate_is_equal(prestate), cpl_error_get_code(), 0.0);
     return value;
