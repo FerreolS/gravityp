@@ -1582,6 +1582,36 @@ cpl_imagelist * gravi_imagelist_wrap_column (cpl_table * table_data, const char 
 	return imglist;
 }
 
+cpl_error_code gravi_image_subtract_window (cpl_image * img1, const cpl_image * img2,
+                                            cpl_size llx, cpl_size lly,
+                                            cpl_size urx, cpl_size ury,
+                                            cpl_size llx2, cpl_size lly2)
+{
+	gravi_msg_function_start(0);
+    cpl_ensure_code (img1, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (img2, CPL_ERROR_NULL_INPUT);
+
+    /* Ensure size */
+    cpl_size nx = cpl_image_get_size_x (img1);
+    cpl_size ny = cpl_image_get_size_y (img1);
+    urx = CPL_MIN (urx, nx);
+    ury = CPL_MIN (ury, ny);
+    llx2 -= llx;
+    lly2 -= lly;
+
+    int nv;
+    for (cpl_size x=llx; x<=urx; x++) {
+        for (cpl_size y=lly; y<=ury; y++) {
+            cpl_image_set (img1, x, y,
+                           cpl_image_get (img1,x,y,&nv) -
+                           cpl_image_get (img2,x+llx2,y+lly2,&nv));
+        }
+    }
+    
+	gravi_msg_function_exit(0);
+	return CPL_ERROR_NONE;
+}
+
 /*---------------------------------------------------------------------------*/
 /**
  * @brief Create an image from a column array in table
