@@ -93,7 +93,11 @@ cpl_error_code gravi_preproc_acqcam (gravi_data *output_data,
 
     /* Check if extension exist */
     if (!gravi_data_has_extension (input_data, GRAVI_IMAGING_DATA_ACQ_EXT)) {
-        cpl_msg_warning (cpl_func, "Cannot preproc the ACQCAM, not data");
+        gravi_msg_warning (cpl_func,"Cannot preproc the ACQCAM, not data in file");
+        return CPL_ERROR_NONE;
+    }
+    if (!gravi_data_has_extension (bad_map, GRAVI_IMAGING_DATA_ACQ_EXT)) {
+        gravi_msg_warning (cpl_func,"Cannot preproc the ACQCAM, no badpixel in BAD");
         return CPL_ERROR_NONE;
     }
 
@@ -396,8 +400,7 @@ cpl_error_code gravi_acqcam_get_pup_ref (cpl_propertylist * header, cpl_size tel
     cpl_size ntel = 4;
     cpl_size nsub = 4;
 
-    cpl_vector * xsub = cpl_vector_new (nsub);
-    cpl_vector * ysub = cpl_vector_new (nsub);
+    double xsub[4], ysub[4];
 
     /* Read sub-windows size */
     cpl_size nsx = cpl_propertylist_get_int (header, "ESO DET1 FRAMES NX");
@@ -418,45 +421,24 @@ cpl_error_code gravi_acqcam_get_pup_ref (cpl_propertylist * header, cpl_size tel
     for (int sub = 0; sub < nsub ; sub++) {
         double xv = gravi_pfits_get_ptfc_acqcam (header, sub*ntel + tel + 1);
         double yv = gravi_pfits_get_ptfc_acqcam (header, sub*ntel + tel + 17);
-        cpl_vector_set (xsub, sub, xv - (sx - tel*nsx) - 1);
-        cpl_vector_set (ysub, sub, yv - (sy - 3*nsy) - 1);
-        cpl_msg_debug (cpl_func,"pupil %lli subC %i = %10.4f,%10.4f", tel, sub,
-                       cpl_vector_get (xsub, sub),cpl_vector_get (ysub, sub));
+        xsub[sub] = xv - (sx - tel*nsx) - 1;
+        ysub[sub] = yv - (sy - 3*nsy) - 1;
+        cpl_msg_debug (cpl_func,"pupil %lli subC %i = %10.4f,%10.4f",
+                       tel, sub, xsub[sub], ysub[sub]);
         CPLCHECK_MSG ("Cannot get pupil reference position");
     }
 
-    /* All linear combination of sub-appertures - X */
-    cpl_vector_set (pupref, 0, 0.25 * 
-                    (cpl_vector_get (xsub,0) + cpl_vector_get (xsub,1) +
-                     cpl_vector_get (xsub,2) + cpl_vector_get (xsub,3)));
-    cpl_vector_set (pupref, 1, 0.25 * 
-                    (cpl_vector_get (xsub,0) - cpl_vector_get (xsub,1) +
-                     cpl_vector_get (xsub,2) - cpl_vector_get (xsub,3)));
-    cpl_vector_set (pupref, 2, 0.25 * 
-                    (cpl_vector_get (xsub,0) - cpl_vector_get (xsub,2) +
-                     cpl_vector_get (xsub,1) - cpl_vector_get (xsub,3)));
-    cpl_vector_set (pupref, 3, 0.25 * 
-                    (cpl_vector_get (xsub,0) - cpl_vector_get (xsub,1) +
-                     cpl_vector_get (xsub,3) - cpl_vector_get (xsub,2)));
+    /* All linear combination of sub-appertures center */
+    cpl_vector_set (pupref, 0, 0.25 * (xsub[0] + xsub[1] + xsub[2] + xsub[3]));
+    cpl_vector_set (pupref, 1, 0.25 * (xsub[0] - xsub[1] + xsub[2] - xsub[3]));
+    cpl_vector_set (pupref, 2, 0.25 * (xsub[0] + xsub[1] - xsub[2] - xsub[3]));
+    cpl_vector_set (pupref, 3, 0.25 * (xsub[0] - xsub[1] - xsub[2] + xsub[3]));
     
-    /* All linear combination of sub-appertures - Y */
-    cpl_vector_set (pupref, 4, 0.25 * 
-                    (cpl_vector_get (ysub,0) + cpl_vector_get (ysub,1) +
-                     cpl_vector_get (ysub,2) + cpl_vector_get (ysub,3)));
-    cpl_vector_set (pupref, 5, 0.25 * 
-                    (cpl_vector_get (ysub,0) - cpl_vector_get (ysub,1) +
-                     cpl_vector_get (ysub,2) - cpl_vector_get (ysub,3)));
-    cpl_vector_set (pupref, 6, 0.25 * 
-                    (cpl_vector_get (ysub,0) - cpl_vector_get (ysub,2) +
-                     cpl_vector_get (ysub,1) - cpl_vector_get (ysub,3)));
-    cpl_vector_set (pupref, 7, 0.25 * 
-                    (cpl_vector_get (ysub,0) - cpl_vector_get (ysub,1) +
-                     cpl_vector_get (ysub,3) - cpl_vector_get (ysub,2)));
+    cpl_vector_set (pupref, 4, 0.25 * (ysub[0] + ysub[1] + ysub[2] + ysub[3]));
+    cpl_vector_set (pupref, 5, 0.25 * (ysub[0] - ysub[1] + ysub[2] - ysub[3]));
+    cpl_vector_set (pupref, 6, 0.25 * (ysub[0] + ysub[1] - ysub[2] - ysub[3]));
+    cpl_vector_set (pupref, 7, 0.25 * (ysub[0] - ysub[1] - ysub[2] + ysub[3]));
     
-    /* Delete */
-    FREE (cpl_vector_delete, xsub);
-    FREE (cpl_vector_delete, ysub);
-
     gravi_msg_function_exit(0);
     return CPL_ERROR_NONE;
 }
@@ -650,7 +632,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
 
     /* Check if extension exist */
     if (!gravi_data_has_extension (input_data, GRAVI_IMAGING_DATA_ACQ_EXT)) {
-        cpl_msg_warning (cpl_func, "Cannot reduce the ACQCAM, not data");
+        gravi_msg_warning (cpl_func, "Cannot reduce the ACQCAM, not data");
         return CPL_ERROR_NONE;
     }
 
@@ -709,6 +691,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
     for (int tel = 0; tel < ntel; tel++) {
         cpl_msg_info (cpl_func, "Compute pupil position for beam %i", tel+1);
 
+
         /* Allocate memory */
         cpl_vector * a_start = cpl_vector_new (11);
         
@@ -725,7 +708,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         
         cpl_vector * a_final = cpl_vector_duplicate (a_start);
         CPLCHECK_MSG ("Cannot prepare parameters");
-        
+                
         /* First fit: global center and rotation only */
         const int ia_global[] = {1,0,0,0, 1,0,0,0, 1,0,0};
         gravi_acqcam_fit_spot (mean_img, 30, a_final, ia_global, &nspot);
