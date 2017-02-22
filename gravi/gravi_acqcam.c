@@ -70,6 +70,19 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img, cpl_size nrand,
                              Functions code
  -----------------------------------------------------------------------------*/
 
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Preprocess the ACQ images: correct bad pixels, clean from
+ *        pupil background via blinking, filter median bias.
+ * 
+ * @param output_data:    the output gravi_data where the cleaned imagelist
+ *                        will be saved as IMAGING_DATA_ACQ.
+ * @param input_data:     the input gravi_data with the raw imagelist
+ * @param bad_map:        the gravi_data containing the bad pixel map
+ *                        for ACQ (in extension IMAGING_DATA_ACQ).
+ */
+/*----------------------------------------------------------------------------*/
+
 cpl_error_code gravi_preproc_acqcam (gravi_data *output_data,
                                      gravi_data *input_data,
                                      gravi_data *bad_map)
@@ -211,12 +224,10 @@ inline double exp1 (double x) {
 }
 
 /* Compute the 4 diode positions */
-inline int gravi_acqcam_sub_diode (const double v[], double *xd, double *yd)
+inline int gravi_acqcam_xy_diode (const double v[], double *xd, double *yd)
 {
     /* Angle */
     double ang = v[8] * CPL_MATH_RAD_DEG;
-    // double sang = sin (ang) * 0.5;
-    // double cang = cos (ang) * 0.5;
     double sang = sin1 (ang) * 0.5;
     double cang = sin1 (ang + CPL_MATH_PI_2) * 0.5;
 
@@ -235,7 +246,7 @@ inline int gravi_acqcam_sub_diode (const double v[], double *xd, double *yd)
 }
 
 /* Compute the 4 sub-aperture positions */
-inline int gravi_acqcam_sub_pos (const double v[], double *xsub, double *ysub)
+inline int gravi_acqcam_xy_sub (const double v[], double *xsub, double *ysub)
 {
     /* Sub-apperture arrangement */
     xsub[0] = v[0] + v[1] + v[2] + v[3];
@@ -260,8 +271,8 @@ static int gravi_acqcam_spot (const double x_in[], const double v[], double *res
 
     /* Static parameters */
     double xd[4], yd[4], xsub[4], ysub[4];
-    gravi_acqcam_sub_diode (v, xd, yd);
-    gravi_acqcam_sub_pos (v, xsub, ysub);
+    gravi_acqcam_xy_diode (v, xd, yd);
+    gravi_acqcam_xy_sub (v, xsub, ysub);
 
     /* Loop on diode and appertures.
      * The capture range is 2.FWHM */
@@ -314,8 +325,8 @@ int gravi_acqcam_spot_count (cpl_image * img, cpl_vector * a, double threshold)
     /* Static parameters */
     double xd[4], yd[4], xsub[4], ysub[4];
     double * v = cpl_vector_get_data (a);
-    gravi_acqcam_sub_diode (v, xd, yd);
-    gravi_acqcam_sub_pos (v, xsub, ysub);
+    gravi_acqcam_xy_diode (v, xd, yd);
+    gravi_acqcam_xy_sub (v, xsub, ysub);
     
     /* Loop on diode and appertures */
     int nspot = 0, nv = 0;
@@ -331,6 +342,8 @@ int gravi_acqcam_spot_count (cpl_image * img, cpl_vector * a, double threshold)
     return nspot;
 }
 
+/*----------------------------------------------------------------------------*/
+
 cpl_error_code gravi_acqcam_spot_imprint (cpl_image * img, cpl_vector * a)
 {
     gravi_msg_function_start(0);
@@ -340,8 +353,8 @@ cpl_error_code gravi_acqcam_spot_imprint (cpl_image * img, cpl_vector * a)
     /* Static parameters */
     double xd[4], yd[4], xsub[4], ysub[4];
     double * v = cpl_vector_get_data (a);
-    gravi_acqcam_sub_diode (v, xd, yd);
-    gravi_acqcam_sub_pos (v, xsub, ysub);
+    gravi_acqcam_xy_diode (v, xd, yd);
+    gravi_acqcam_xy_sub (v, xsub, ysub);
     
     /* Loop on diode and appertures */
     for (int diode = 0; diode < 4 ; diode++) {
@@ -612,11 +625,15 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
 /**
  * @brief Reduce the ACQ camera images
  *  
- * @param data        The gravi_data input/output
+ * @param output_data:  The output gravi_data where the OI_VIS_ACQ table
+ *                      will be created, with ndit * ntel rows.
+ * @param input_data:   The input gravi_data here the ACQ imagelist is
+ *                      read.
  * 
- * The routine read the images from the ACQ camera, reduce these images
- * with the XXXXX algorithm. The resulting tables is append into
- * data.
+ * The routine only process the PUPIL sensor so far. It creates a table with
+ * the columns PUPIL_NSPOT (number of detected spots), PUPIL_R (rotation angle)
+ * of telescope diode, PUPIL_X (shift in pixel), PUPIL_Y (shift in pixel),
+ * and PUPIL_Z (focus shift, in pixel). The TIME in [us] is also stored.
  */
 /*----------------------------------------------------------------------------*/
 
