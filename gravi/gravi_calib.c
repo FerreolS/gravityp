@@ -130,7 +130,7 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
 	    cpl_msg_info (cpl_func, "Computing the %s of SC",isSky?"SKY":"DARK");
         
         /* Copy IMAGING_DETECTOR into product */
-        gravi_data_copy_ext (dark_map, raw_data, GRAVI_IMAGING_DETECTOR_FT_EXT);
+        gravi_data_copy_ext (dark_map, raw_data, GRAVI_IMAGING_DETECTOR_SC_EXT);
 
 		/* Load the IMAGING_DATA table or image list */
 		cpl_imagelist * imglist = gravi_data_get_cube (raw_data, GRAVI_IMAGING_DATA_SC_EXT);
@@ -188,7 +188,7 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
 	    cpl_msg_info(cpl_func, "Computing the %s of FT",isSky?"SKY":"DARK");
 
         /* Copy IMAGING_DETECTOR into product */
-        gravi_data_copy_ext (dark_map, raw_data, GRAVI_IMAGING_DETECTOR_SC_EXT);
+        gravi_data_copy_ext (dark_map, raw_data, GRAVI_IMAGING_DETECTOR_FT_EXT);
         
 		/* Load the IMAGING_DATA table as DOUBLE */
         cpl_msg_info (cpl_func,"Load data");
