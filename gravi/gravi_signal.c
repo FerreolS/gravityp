@@ -85,7 +85,10 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
 cpl_error_code gravi_flux_create_fddlpos_sc (cpl_table * flux_SC, cpl_table * fddl_table);
 cpl_error_code gravi_flux_create_totalflux_sc (cpl_table * flux_SC, cpl_table * flux_FT);
 cpl_error_code gravi_flux_create_met_sc (cpl_table * flux_SC, cpl_table * vis_MET);
-    
+
+cpl_error_code gravi_vis_create_acq_sc (cpl_table * vis_SC,
+                                        cpl_table * vis_ACQ);
+
 cpl_error_code gravi_vis_create_vfactor_sc (cpl_table * vis_SC,
 											cpl_table * wave_table_sc,
 											cpl_table * vis_FT,
@@ -1022,6 +1025,85 @@ cpl_error_code gravi_vis_create_phaseref_ft (cpl_table * vis_FT)
 
 /* -------------------------------------------------------------------------- */
 /**
+ * @brief Compute the averaged ACQ signal for each SC DIT per base
+ * 
+ * @param vis_SC:   input/output OI_VIS table of the SC
+ * @param vis_ACQ:  input OI_VIS_ACQ table
+ *
+ * The averaged quantities are stored in new columns in the vis_SC table. The
+ * ACQ_CAM signals are averaged with flat weighting inside each SC DIT. The
+ * synchronisation info shall already be computed.
+ */
+/* -------------------------------------------------------------------------- */
+
+cpl_error_code gravi_vis_create_acq_sc (cpl_table * vis_SC,
+                                        cpl_table * vis_ACQ)
+{
+  gravi_msg_function_start(1);
+  cpl_ensure_code (vis_SC,  CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (vis_ACQ, CPL_ERROR_NULL_INPUT);
+  
+  cpl_size nbase = 6, ntel = 4;
+  cpl_size nrow_sc  = cpl_table_get_nrow (vis_SC) / nbase;
+
+  /* Get SC data */
+  int * first = cpl_table_get_data_int (vis_SC, "FIRST_ACQ");
+  int * last  = cpl_table_get_data_int (vis_SC, "LAST_ACQ");
+  CPLCHECK_MSG("Cannot get data");
+
+  /* Get ACQ data */
+  int * pup_n = cpl_table_get_data_int (vis_ACQ, "PUPIL_NSPOT");
+  double * pup_x = cpl_table_get_data_double (vis_ACQ, "PUPIL_X");
+  double * pup_y = cpl_table_get_data_double (vis_ACQ, "PUPIL_Y");
+  double * pup_z = cpl_table_get_data_double (vis_ACQ, "PUPIL_Z");
+  CPLCHECK_MSG("Cannot get direct pointer to data");
+
+  /* New columns */
+  gravi_table_new_column (vis_SC, "PUPIL_X", "pix", CPL_TYPE_DOUBLE);
+  double * pup_x_sc = cpl_table_get_data_double (vis_SC, "PUPIL_X");
+  gravi_table_new_column (vis_SC, "PUPIL_Y", "pix", CPL_TYPE_DOUBLE);
+  double * pup_y_sc = cpl_table_get_data_double (vis_SC, "PUPIL_Y");
+  gravi_table_new_column (vis_SC, "PUPIL_Z", "pix", CPL_TYPE_DOUBLE);
+  double * pup_z_sc = cpl_table_get_data_double (vis_SC, "PUPIL_Z");
+
+  /* Loop on base and rows */
+  for (cpl_size base = 0; base < nbase; base++) {
+	for (cpl_size row_sc = 0; row_sc < nrow_sc; row_sc ++) {
+	  cpl_size nsc = row_sc * nbase + base;
+  
+	  /* Sum over synch ACQ frames, only valid frames */
+      cpl_size nframe = 0;
+	  for (cpl_size row = first[nsc] ; row < last[nsc]; row++) {
+          cpl_size row0 = row * ntel + GRAVI_BASE_TEL[base][0];
+          cpl_size row1 = row * ntel + GRAVI_BASE_TEL[base][1];
+
+          if (pup_n[row0] != 0 && pup_n[row1] !=0 ) {
+              pup_x_sc[nsc] += pup_x[row0] - pup_x[row1];
+              pup_y_sc[nsc] += pup_y[row0] - pup_y[row1];
+              pup_z_sc[nsc] += pup_z[row0] - pup_z[row1];
+              nframe ++;
+          }
+          
+          CPLCHECK_MSG ("Fail to integrate the ACQ frames");
+      }
+      
+	  /* Normalize the means  (if nframe == 0, values are zero) */
+	  if (nframe != 0 ){
+          pup_x_sc[nsc] /= (double)nframe;
+          pup_y_sc[nsc] /= (double)nframe;
+          pup_z_sc[nsc] /= (double)nframe;
+      }
+      
+	} /* End loop on SC frames */
+  }/* End loop on bases */
+
+  gravi_msg_function_exit(1);
+  return CPL_ERROR_NONE;
+}
+
+
+/* -------------------------------------------------------------------------- */
+/**
  * @brief Compute the averaged MET signal for each SC DIT per base
  * 
  * @param vis_SC:   input/output OI_VIS table of the SC
@@ -1255,6 +1337,7 @@ cpl_error_code gravi_vis_create_met_ft (cpl_table * vis_FT, cpl_table * vis_MET)
   gravi_msg_function_exit(1);
   return CPL_ERROR_NONE;
 }
+
 
 /* -------------------------------------------------------------------------- */
 /**
@@ -2332,6 +2415,17 @@ cpl_error_code gravi_compute_signals (gravi_data * p2vmred_data,
 								 vis_FT, oi_wavelengthft);
 	
 	CPLCHECK_MSG ("Cannot create signals for VIS_SC");
+
+    /* 
+     * If available, create the signal from ACQ camera
+     */
+    if (gravi_data_has_extension (p2vmred_data, GRAVI_OI_VIS_ACQ_EXT)) {
+        
+        cpl_table * vis_ACQ = gravi_data_get_table (p2vmred_data, GRAVI_OI_VIS_ACQ_EXT);
+        gravi_signal_create_sync (vis_SC, 6, dit_sc, vis_ACQ, 4, "ACQ");
+
+        gravi_vis_create_acq_sc (vis_SC, vis_ACQ);
+    }
 
 	/* 
      * Compute FDDL = (FDDL_SC + FDDL_FT)/2 in [m]
