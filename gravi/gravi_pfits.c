@@ -527,7 +527,7 @@ double gravi_pfits_get_time_acqcam (const cpl_propertylist * header, cpl_size ro
     
     double time = 86400 * 1e6 *
         (gravi_convert_to_mjd (gravi_pfits_get_start_acqcam (header)) -
-         gravi_convert_to_mjd (gravi_pfits_get_start_acqcam (header)) ) + 
+         gravi_convert_to_mjd (gravi_pfits_get_start_prcacq (header)) ) + 
         period/2. * 1e6 +
         row * period * 1e6;
 
