@@ -62,7 +62,7 @@ int gravi_acqcam_spot_count (cpl_image * img, cpl_vector * a, double threshold);
 
 static int gravi_acqcam_spot_dfda (const double x_in[], const double v[], double result[]);
 
-cpl_error_code gravi_acqcam_fit_spot (cpl_image * img, cpl_size nrand,
+cpl_error_code gravi_acqcam_fit_spot (cpl_image * img, cpl_size ntry,
                                       cpl_vector * a, const int ia[],
                                       int * nspot);
 
@@ -463,10 +463,12 @@ cpl_error_code gravi_acqcam_get_pup_ref (cpl_propertylist * header, cpl_size tel
 
 /*----------------------------------------------------------------------------*/
 /**
- * @brief Fit a pupil spot pattern into an image
+ * @brief Fit a pupil spot pattern into an image. Actually the fit is more a 
+ *        correlation because the model is by-design lower than all points
+ *        to be fitted.
  *
  * @param img:    input image
- * @param nrand:  number of random starting point (around specified parameters)
+ * @param ntry:   number of random starting point (around specified parameters)
  * @param a:      vector of parameter, modified in-place, in the form:
  *                (x0+x1+x2+x3, x0-x1+x2-x3, x0+x1-x2-x3, x0-x1-x2+x3, 
  *                 y0+y1+y2+y3, y0-y1+y2-y3, y0+y1-y2-y3, y0-y1-y2+y3, 
@@ -478,7 +480,7 @@ cpl_error_code gravi_acqcam_get_pup_ref (cpl_propertylist * header, cpl_size tel
 /*----------------------------------------------------------------------------*/
 
 cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
-                                      cpl_size nrand,
+                                      cpl_size ntry,
                                       cpl_vector * a,
                                       const int ia[],
                                       int * nspot)
@@ -486,7 +488,7 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
     gravi_msg_function_start(0);
     cpl_ensure_code (img, CPL_ERROR_NULL_INPUT);
     cpl_ensure_code (a,   CPL_ERROR_NULL_INPUT);
-    cpl_ensure_code (nrand>0, CPL_ERROR_ILLEGAL_INPUT);
+    cpl_ensure_code (ntry>0, CPL_ERROR_ILLEGAL_INPUT);
     cpl_ensure_code (nspot, CPL_ERROR_NULL_INPUT);
 
     *nspot = 0;
@@ -576,7 +578,7 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
     srand(1);
 
     /* Loop on various starting points */
-    for (cpl_size try = 0; try < nrand; try++) {
+    for (cpl_size try = 0; try < ntry; try++) {
 
         /* Move starting point in position (+-10pix) and angle (entire circle) */
         cpl_vector_copy (a_tmp, a_start);
@@ -782,13 +784,16 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
             double z_shift = -0.5 * ( cpl_vector_get (a_row, 2) +
                                       cpl_vector_get (a_row, 5));
 
-            /* Fill table */
-            cpl_table_set (acqcam_table, "PUPIL_NSPOT", row*ntel+tel, nspot);
-            if (nspot > 4) {
+            /* Fill table. Force NSPOT to 0.0 to allow an easy
+             * removal of this point further in the processing */
+            if (nspot > 8) {
+                cpl_table_set (acqcam_table, "PUPIL_NSPOT", row*ntel+tel, nspot);
                 cpl_table_set (acqcam_table, "PUPIL_X", row*ntel+tel, x_shift);
                 cpl_table_set (acqcam_table, "PUPIL_Y", row*ntel+tel, y_shift);
                 cpl_table_set (acqcam_table, "PUPIL_Z", row*ntel+tel, z_shift);
                 cpl_table_set (acqcam_table, "PUPIL_R", row*ntel+tel, r_shift);
+            } else {
+                cpl_table_set (acqcam_table, "PUPIL_NSPOT", row*ntel+tel, 0);
             }
 
             FREE (cpl_vector_delete, a_row);
