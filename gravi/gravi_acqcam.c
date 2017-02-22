@@ -187,8 +187,8 @@ cpl_error_code gravi_preproc_acqcam (gravi_data *output_data,
 
 /*----------------------------------------------------------------------------*/
 
-inline
-double sin1 (double x)
+/* Fast sin function */
+inline double sin1 (double x)
 {
     /* Within -pi +pi*/
     while (x >=  CPL_MATH_PI) x -= CPL_MATH_2PI;
@@ -202,16 +202,16 @@ double sin1 (double x)
     return 0.9996949 * x - 0.1656700 * x3 + 0.0075134 * x5;
 }
 
-inline
-double exp1 (double x) {
+/* Fast exp function */
+inline double exp1 (double x) {
   x = 1.0 + x / 256.0;
   x *= x; x *= x; x *= x; x *= x;
   x *= x; x *= x; x *= x; x *= x;
   return x;
 }
 
-inline
-int gravi_acqcam_sub_diode (const double v[], double *xd, double *yd)
+/* Compute the 4 diode positions */
+inline int gravi_acqcam_sub_diode (const double v[], double *xd, double *yd)
 {
     /* Angle */
     double ang = v[8] * CPL_MATH_RAD_DEG;
@@ -234,8 +234,8 @@ int gravi_acqcam_sub_diode (const double v[], double *xd, double *yd)
     return 0;
 }
 
-inline
-int gravi_acqcam_sub_pos (const double v[], double *xsub, double *ysub)
+/* Compute the 4 sub-aperture positions */
+inline int gravi_acqcam_sub_pos (const double v[], double *xsub, double *ysub)
 {
     /* Sub-apperture arrangement */
     xsub[0] = v[0] + v[1] + v[2] + v[3];
@@ -282,7 +282,7 @@ static int gravi_acqcam_spot (const double x_in[], const double v[], double *res
 static int gravi_acqcam_spot_dfda (const double x_in[], const double v[], double result[])
 {
     cpl_size na = 11;
-    double next = 0.0, here = 0.0, epsilon = 1e-6;
+    double next = 0.0, here = 0.0, epsilon = 1e-8;
 
     double vlocal[na];
     memcpy (vlocal, v, sizeof(double)*na);
@@ -293,10 +293,11 @@ static int gravi_acqcam_spot_dfda (const double x_in[], const double v[], double
         vlocal[a] += epsilon;
         gravi_acqcam_spot (x_in, vlocal, &next);
         
-        vlocal[a] -= epsilon;
+        vlocal[a] -= 2.*epsilon;
         gravi_acqcam_spot (x_in, vlocal, &here);
         
-        result[a] = (next - here) / epsilon;
+        result[a] = (next - here) / (2.*epsilon);
+        vlocal[a] += epsilon;
     }
 
     return 0;
@@ -309,8 +310,6 @@ int gravi_acqcam_spot_count (cpl_image * img, cpl_vector * a, double threshold)
     gravi_msg_function_start(0);
     cpl_ensure (img, CPL_ERROR_NULL_INPUT, -1);
     cpl_ensure (a,   CPL_ERROR_NULL_INPUT, -1);
-
-    int nspot = 0, nv = 0;
     
     /* Static parameters */
     double xd[4], yd[4], xsub[4], ysub[4];
@@ -319,6 +318,7 @@ int gravi_acqcam_spot_count (cpl_image * img, cpl_vector * a, double threshold)
     gravi_acqcam_sub_pos (v, xsub, ysub);
     
     /* Loop on diode and appertures */
+    int nspot = 0, nv = 0;
     for (int diode = 0; diode < 4 ; diode++) {
         for (int sub = 0; sub < 4 ; sub++) {
             cpl_size xf = roundl(xsub[sub] + xd[diode]) + 1;

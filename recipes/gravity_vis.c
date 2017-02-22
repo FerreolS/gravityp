@@ -686,7 +686,6 @@ static int gravity_vis(cpl_frameset * frameset,
         }
         
         /* Move extensions and delete preproc */
-        gravi_data_move_ext (p2vmred_data, preproc_data, GRAVI_IMAGING_DATA_ACQ_EXT);
         gravi_data_move_ext (p2vmred_data, preproc_data, GRAVI_METROLOGY_EXT);
         gravi_data_move_ext (p2vmred_data, preproc_data, GRAVI_FDDL_EXT);
         gravi_data_move_ext (p2vmred_data, preproc_data, GRAVI_OPDC_EXT);
