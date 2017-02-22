@@ -282,7 +282,7 @@ static int gravi_acqcam_spot (const double x_in[], const double v[], double *res
 static int gravi_acqcam_spot_dfda (const double x_in[], const double v[], double result[])
 {
     cpl_size na = 11;
-    double next = 0.0, here = 0.0, epsilon = 1e-9;
+    double next = 0.0, here = 0.0, epsilon = 1e-6;
 
     double vlocal[na];
     memcpy (vlocal, v, sizeof(double)*na);
@@ -485,8 +485,6 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
     cpl_size ysub = cpl_vector_get (a, 4);
     CPLCHECK_MSG ("Cannot get values valid");
 
-    cpl_msg_debug (cpl_func, "center = %lld %lld", xsub, ysub);
-
     /* Get only pixels around the center,
      * to estimate the noise */
     cpl_size ns = 50;
@@ -567,12 +565,12 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
     /* Loop on various starting points */
     for (cpl_size try = 0; try < nrand; try++) {
 
-        /* Move starting point in position and angle */
+        /* Move starting point in position (+-10pix) and angle (entire circle) */
         cpl_vector_copy (a_tmp, a_start);
         if (try > 0) {
             if (ia[0]) cpl_vector_set (a_tmp, 0, cpl_vector_get (a_tmp, 0) + (rand()%20) - 10);
             if (ia[4]) cpl_vector_set (a_tmp, 4, cpl_vector_get (a_tmp, 4) + (rand()%20) - 10);
-            if (ia[8]) cpl_vector_set (a_tmp, 8, cpl_vector_get (a_tmp, 8) + (rand()%90));
+            if (ia[8]) cpl_vector_set (a_tmp, 8, cpl_vector_get (a_tmp, 8) + (rand()%180));
         }
         
         /* Fit from this starting point */
@@ -697,7 +695,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
          * Converted to accound for sub-windowing 
          * In vector convention (start at 0,0) */
         gravi_acqcam_get_pup_ref (header, tel, a_start);
-        CPLCHECK_MSG ("Cannot read ACQ data in header");
+        CPLCHECK_MSG ("Cannot read ACQ data for pupil in header");
 
         /* Diode rotation [deg], and spacing in x and y [pix] */
         cpl_vector_set (a_start, 8,  0.0); // deg
