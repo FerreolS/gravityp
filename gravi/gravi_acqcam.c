@@ -503,7 +503,7 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
     double RMS = sqrt (cpl_vector_get_median (flux));
     FREE (cpl_vector_delete, flux);
 
-    double threshold = 10 * RMS;
+    double threshold = 5 * RMS;
 
     /* Get only valid pixels for this beam */
     cpl_size nw = 200;
@@ -752,7 +752,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
 
             /* Fill table */
             cpl_table_set (acqcam_table, "PUPIL_NSPOT", row*ntel+tel, nspot);
-            if (nspot > 8) {
+            if (nspot > 4) {
                 cpl_table_set (acqcam_table, "PUPIL_X", row*ntel+tel, x_shift);
                 cpl_table_set (acqcam_table, "PUPIL_Y", row*ntel+tel, y_shift);
                 cpl_table_set (acqcam_table, "PUPIL_Z", row*ntel+tel, z_shift);
