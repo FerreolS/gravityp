@@ -626,6 +626,8 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
     gravi_msg_function_start(1);
     cpl_ensure_code (output_data, CPL_ERROR_NULL_INPUT);
     cpl_ensure_code (input_data,  CPL_ERROR_NULL_INPUT);
+    
+    char qc_name[100];
 
     /* Check if extension exist */
     if (!gravi_data_has_extension (input_data, GRAVI_IMAGING_DATA_ACQ_EXT)) {
@@ -633,14 +635,14 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         return CPL_ERROR_NONE;
     }
 
-    /* Get the header */
-    cpl_propertylist * header;
-    header = gravi_data_get_header (input_data);
-    CPLCHECK_MSG ("Cannot get data or header");
-
     /* Get the data and header */
+    cpl_propertylist * header, * o_header;
+    header = gravi_data_get_header (input_data);
+    o_header = gravi_data_get_header (output_data);
+    
     cpl_imagelist * acqcam_imglist;
     acqcam_imglist = gravi_data_get_cube (input_data, GRAVI_IMAGING_DATA_ACQ_EXT);
+    CPLCHECK_MSG ("Cannot get data or header");
 
     /* Build the table */
     cpl_size ntel = 4;
@@ -710,7 +712,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         gravi_acqcam_fit_spot (mean_img, 30, a_final, ia_global, &nspot);
         CPLCHECK_MSG ("Cannot fit rotation and center");
 
-        /* Second fit: independ sub-appertures
+        /* Second fit: independend sub-appertures
          * and free diode spacing */
         const int ia_all[] = {1,1,1,1, 1,1,1,1, 1,1,1};
         gravi_acqcam_fit_spot (mean_img, 1, a_final, ia_all, &nspot);
@@ -721,6 +723,19 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         /* Add best position as a cross in image */
         gravi_acqcam_spot_imprint (mean_img, a_final);
 
+        /* Add QC parameters */
+        sprintf (qc_name, "ESO QC ACQ PUP%i NSPOT", tel+1);
+        cpl_propertylist_update_int (o_header, qc_name, nspot);
+        cpl_propertylist_set_comment (o_header, qc_name, "nb. of pupil spot");
+        
+        sprintf (qc_name, "ESO QC ACQ PUP%i DX", tel+1);
+        cpl_propertylist_update_double (o_header, qc_name, cpl_vector_get (a_final,9));
+        cpl_propertylist_set_comment (o_header, qc_name, "[pix] dx diode spacing");
+
+        sprintf (qc_name, "ESO QC ACQ PUP%i DY", tel+1);
+        cpl_propertylist_update_double (o_header, qc_name, cpl_vector_get (a_final,10));
+        cpl_propertylist_set_comment (o_header, qc_name, "[pix] dy diode spacing");
+        
         /* Loop on all images */
         for (cpl_size row = 0; row < nrow; row++) {
             if (row %10 == 0)
