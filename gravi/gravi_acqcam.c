@@ -311,18 +311,27 @@ static int gravi_acqcam_spot_dfda (const double x_in[], const double v[], double
     double vlocal[GRAVI_SPOT_NA];
     memcpy (vlocal, v, sizeof(double)*GRAVI_SPOT_NA);
 
-    /* Loop on parameters to compute finite differences */
-    for (int a = 0; a < GRAVI_SPOT_NA; a++) {
+    /* Compute value in-place */
+    gravi_acqcam_spot (x_in, vlocal, &here);
+    
+    /* Loop on parameters to compute finite differences 
+     * FIXME: The derivative is analytic, and thus this
+     * can be made much faster and without global variable */
+    for (int a = 0; a < 12; a++) {
         if (GRAVI_LVMQ_FREE[a] != 0) {
 
             vlocal[a] += epsilon;
             gravi_acqcam_spot (x_in, vlocal, &next);
-        
-            vlocal[a] -= 2.*epsilon;
-            gravi_acqcam_spot (x_in, vlocal, &here);
-        
-            result[a] = (next - here) / (2.*epsilon);
-            vlocal[a] += epsilon;
+            vlocal[a] -= epsilon;
+            
+            result[a] = (next - here) / epsilon;
+        }
+    }
+
+    /* The intensities are trivial analytic derivative */
+    for (int a = 12; a < GRAVI_SPOT_NA; a++) {
+        if (GRAVI_LVMQ_FREE[a] != 0) {
+            result[a] = here / v[a];
         }
     }
 
@@ -611,7 +620,7 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
     FREE (cpl_matrix_delete, x_matrix);
     FREE (cpl_vector_delete, y_vector);
     FREE (cpl_vector_delete, sy_vector);
-   
+
     /* Get the image value at the position of spots, and
      * count the number of spots */
     *nspot = gravi_acqcam_spot_count (img, a, threshold);
