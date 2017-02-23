@@ -407,28 +407,31 @@ cpl_error_code gravi_acqcam_get_pup_ref (cpl_propertylist * header, cpl_size tel
     cpl_ensure_code (tel>=0 && tel<4, CPL_ERROR_ILLEGAL_INPUT);
     cpl_ensure_code (pupref,          CPL_ERROR_ILLEGAL_INPUT);
 
-    char name[90];
-    cpl_size ntel = 4;
-    cpl_size nsub = 4;
+    cpl_size ntel = 4, nsub = 4;
+    cpl_size nsx = 0, nsy = 0, sx = 0, sy = 0;
 
-    double xsub[4], ysub[4];
-
-    /* Read sub-windows size */
-    cpl_size nsx = cpl_propertylist_get_int (header, "ESO DET1 FRAMES NX");
-    cpl_size nsy = cpl_propertylist_get_int (header, "ESO DET1 FRAMES NY");
+    /* If sub-windowing, we read the sub-window size and
+     * the sub-window start for pupil */
+    if ( cpl_propertylist_has (header, "ESO DET1 FRAMES NX") ) {
+        char name[90];
         
-    /* Read sub-windows start for pupil */
-    sprintf (name, "ESO DET1 FRAM%lld STRX", 3*ntel + tel + 1);
-    cpl_size sx = cpl_propertylist_get_int (header, name);
+        nsx = cpl_propertylist_get_int (header, "ESO DET1 FRAMES NX");
+        sprintf (name, "ESO DET1 FRAM%lld STRX", 3*ntel + tel + 1);
+        sx = cpl_propertylist_get_int (header, name);
+        
+        nsy = cpl_propertylist_get_int (header, "ESO DET1 FRAMES NY");
+        sprintf (name, "ESO DET1 FRAM%lld STRY", 3*ntel + tel + 1);
+        sy = cpl_propertylist_get_int (header, name);
+        
+        CPLCHECK_MSG ("Cannot get sub-windowing parameters");
+    }
     
-    sprintf (name, "ESO DET1 FRAM%lld STRY", 3*ntel + tel + 1);
-    cpl_size sy = cpl_propertylist_get_int (header, name);
-    
-    cpl_msg_debug (cpl_func,"pupil %lli sx= %lld sy = %lld", tel, sx, sy);
+    cpl_msg_debug (cpl_func,"sub-window pupil %lli sx= %lld sy = %lld", tel, sx, sy);
         
     /* Read the sub-apperture reference positions 
      * Converted to accound for sub-windowing 
      * In vector convention (start at 0,0) */
+    double xsub[4], ysub[4];
     for (int sub = 0; sub < nsub ; sub++) {
         double xv = gravi_pfits_get_ptfc_acqcam (header, sub*ntel + tel + 1);
         double yv = gravi_pfits_get_ptfc_acqcam (header, sub*ntel + tel + 17);
