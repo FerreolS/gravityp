@@ -508,7 +508,7 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
 
     /* Compute RMS in the central region */
     double RMS = cpl_acqcam_get_noise (img, x0, y0, 50);
-    double threshold = 10 * RMS;
+    double threshold = 5 * RMS;
 
     /*
      * Coarse : correlation with brightest pixels
