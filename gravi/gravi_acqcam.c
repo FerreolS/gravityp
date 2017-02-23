@@ -66,6 +66,15 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img, cpl_size ntry,
                                       cpl_vector * a, const int ia[],
                                       int * nspot);
 
+/* This global variable optimises the computation
+ * of partial derivative on fitted parameters */
+const extern int * GRAVI_LVMQ_FREE;
+const int * GRAVI_LVMQ_FREE = NULL;
+
+/* Number of parameters in the model 'gravi_acqcam_spot' */
+extern int GRAVI_SPOT_NA;
+int GRAVI_SPOT_NA = 28;
+
 /*-----------------------------------------------------------------------------
                              Functions code
  -----------------------------------------------------------------------------*/
@@ -270,7 +279,6 @@ inline int gravi_acqcam_xy_sub (const double v[], double *xsub, double *ysub)
 
 static int gravi_acqcam_spot (const double x_in[], const double v[], double *result)
 {
-    double fwhm2 = 6.0*6.0;
     *result = 0.0;
 
     /* Static parameters */
@@ -278,6 +286,8 @@ static int gravi_acqcam_spot (const double x_in[], const double v[], double *res
     gravi_acqcam_xy_diode (v, xd, yd);
     gravi_acqcam_xy_sub (v, xsub, ysub);
 
+    double fwhm2 = v[11];
+    
     /* Loop on diode and appertures.
      * The capture range is 2.FWHM */
     for (int diode = 0; diode < 4 ; diode++) {
@@ -285,7 +295,7 @@ static int gravi_acqcam_spot (const double x_in[], const double v[], double *res
             double xf = (x_in[0] - xsub[sub] - xd[diode]);
             double yf = (x_in[1] - ysub[sub] - yd[diode]);
             double dist = (xf*xf + yf*yf) / fwhm2;
-            if (dist < 4.0) *result += exp1 (-dist);
+            if (dist < 4.0) *result += v[12+sub*4+diode] * exp1 (-dist);
         }
     }
 
@@ -296,23 +306,24 @@ static int gravi_acqcam_spot (const double x_in[], const double v[], double *res
 
 static int gravi_acqcam_spot_dfda (const double x_in[], const double v[], double result[])
 {
-    cpl_size na = 11;
     double next = 0.0, here = 0.0, epsilon = 1e-8;
 
-    double vlocal[na];
-    memcpy (vlocal, v, sizeof(double)*na);
+    double vlocal[GRAVI_SPOT_NA];
+    memcpy (vlocal, v, sizeof(double)*GRAVI_SPOT_NA);
 
     /* Loop on parameters to compute finite differences */
-    for (int a = 0; a < na; a++) {
+    for (int a = 0; a < GRAVI_SPOT_NA; a++) {
+        if (GRAVI_LVMQ_FREE[a] != 0) {
 
-        vlocal[a] += epsilon;
-        gravi_acqcam_spot (x_in, vlocal, &next);
+            vlocal[a] += epsilon;
+            gravi_acqcam_spot (x_in, vlocal, &next);
         
-        vlocal[a] -= 2.*epsilon;
-        gravi_acqcam_spot (x_in, vlocal, &here);
+            vlocal[a] -= 2.*epsilon;
+            gravi_acqcam_spot (x_in, vlocal, &here);
         
-        result[a] = (next - here) / (2.*epsilon);
-        vlocal[a] += epsilon;
+            result[a] = (next - here) / (2.*epsilon);
+            vlocal[a] += epsilon;
+        }
     }
 
     return 0;
@@ -559,6 +570,9 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
     double chisq_final = 1e10;
     srand(1);
 
+    /* Global variable to speed up computation of the derivatives */
+    GRAVI_LVMQ_FREE = ia;
+
     /* Loop on various starting points */
     for (cpl_size try = 0; try < ntry; try++) {
 
@@ -591,15 +605,16 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
 
     } /* End loop on try starting points */
 
+    FREE (cpl_matrix_delete, x_matrix);
+    FREE (cpl_vector_delete, y_vector);
+    FREE (cpl_vector_delete, sy_vector);
+   
     /* Get the image value at the position of spots, and
      * count the number of spots */
     *nspot = gravi_acqcam_spot_count (img, a, threshold);
 
     FREE (cpl_vector_delete, a_tmp);
     FREE (cpl_vector_delete, a_start);
-    FREE (cpl_matrix_delete, x_matrix);
-    FREE (cpl_vector_delete, y_vector);
-    FREE (cpl_vector_delete, sy_vector);
 
     gravi_msg_function_exit(0);
     return CPL_ERROR_NONE;
@@ -693,7 +708,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
 
 
         /* Allocate memory */
-        cpl_vector * a_start = cpl_vector_new (11);
+        cpl_vector * a_start = cpl_vector_new (GRAVI_SPOT_NA);
         
         /* Read the sub-apperture reference positions 
          * Converted to accound for sub-windowing 
@@ -702,21 +717,25 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         CPLCHECK_MSG ("Cannot read ACQ data for pupil in header");
 
         /* Diode rotation [deg], and spacing in x and y [pix] */
-        cpl_vector_set (a_start, 8,  0.0); // deg
-        cpl_vector_set (a_start, 9, 18.0); // pix
-        cpl_vector_set (a_start,10, 24.0); // pix
+        cpl_vector_set (a_start, 8,  0.0);  // deg
+        cpl_vector_set (a_start, 9, 18.0);  // dx [pix]
+        cpl_vector_set (a_start,10, 24.0);  // dy [pix]
+
+        /* Diode fwhm and intensity */
+        cpl_vector_set (a_start,11, 6.*6.); // fwhm2 [pix2]
+        for (int d=0;d<16;d++) cpl_vector_set (a_start, 12+d, 1.0); // I
         
         cpl_vector * a_final = cpl_vector_duplicate (a_start);
         CPLCHECK_MSG ("Cannot prepare parameters");
                 
         /* First fit: global center and rotation only */
-        const int ia_global[] = {1,0,0,0, 1,0,0,0, 1,0,0};
+        const int ia_global[] = {1,0,0,0, 1,0,0,0, 1,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
         gravi_acqcam_fit_spot (mean_img, 30, a_final, ia_global, &nspot);
         CPLCHECK_MSG ("Cannot fit rotation and center");
 
         /* Second fit: independend sub-appertures
          * and free diode spacing */
-        const int ia_all[] = {1,1,1,1, 1,1,1,1, 1,1,1};
+        const int ia_all[] = {1,1,1,1, 1,1,1,1, 1,1,1,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
         gravi_acqcam_fit_spot (mean_img, 1, a_final, ia_all, &nspot);
         CPLCHECK_MSG ("Cannot fit sub-appertures");
 
@@ -747,8 +766,8 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
             cpl_image * img = cpl_imagelist_get (acqcam_imglist, row);
             cpl_vector * a_row = cpl_vector_duplicate (a_final);
 
-            /* Fit all */
-            const int ia_row[] = {1,1,1,1, 1,1,1,1, 1,0,0};
+            /* Fit positions and rotation only */
+            const int ia_row[] = {1,1,1,1, 1,1,1,1, 1,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
             gravi_acqcam_fit_spot (img, 1, a_row, ia_row, &nspot);
             CPLCHECK_MSG ("Cannot fit sub-appertures of image");
 
