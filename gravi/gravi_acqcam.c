@@ -55,16 +55,15 @@ int gravi_acqcam_isblink (cpl_imagelist * imglist, cpl_size pos);
 
 cpl_error_code gravi_acqcam_get_pup_ref (cpl_propertylist * header, cpl_size tel,
                                          cpl_vector * pupref);
+double cpl_acqcam_get_noise (cpl_image *img, cpl_size x0, cpl_size y0, cpl_size ns);
 
 static int gravi_acqcam_spot (const double x_in[], const double v[], double *result);
 cpl_error_code gravi_acqcam_spot_imprint (cpl_image * img, cpl_vector * a);
-int gravi_acqcam_spot_count (cpl_image * img, cpl_vector * a, double threshold);
 
 static int gravi_acqcam_spot_dfda (const double x_in[], const double v[], double result[]);
 
 cpl_error_code gravi_acqcam_fit_spot (cpl_image * img, cpl_size ntry,
-                                      cpl_vector * a, const int ia[],
-                                      int * nspot);
+                                      cpl_vector * a, int * nspot);
 
 /* This global variable optimises the computation
  * of partial derivative on fitted parameters */
@@ -340,34 +339,6 @@ static int gravi_acqcam_spot_dfda (const double x_in[], const double v[], double
 
 /*----------------------------------------------------------------------------*/
 
-int gravi_acqcam_spot_count (cpl_image * img, cpl_vector * a, double threshold)
-{
-    gravi_msg_function_start(0);
-    cpl_ensure (img, CPL_ERROR_NULL_INPUT, -1);
-    cpl_ensure (a,   CPL_ERROR_NULL_INPUT, -1);
-    
-    /* Static parameters */
-    double xd[4], yd[4], xsub[4], ysub[4];
-    double * v = cpl_vector_get_data (a);
-    gravi_acqcam_xy_diode (v, xd, yd);
-    gravi_acqcam_xy_sub (v, xsub, ysub);
-    
-    /* Loop on diode and appertures */
-    int nspot = 0, nv = 0;
-    for (int diode = 0; diode < 4 ; diode++) {
-        for (int sub = 0; sub < 4 ; sub++) {
-            cpl_size xf = roundl(xsub[sub] + xd[diode]) + 1;
-            cpl_size yf = roundl(ysub[sub] + yd[diode]) + 1;
-            if (cpl_image_get (img, xf, yf, &nv) > threshold) nspot ++;
-        }
-    }
-    
-    gravi_msg_function_exit(0);
-    return nspot;
-}
-
-/*----------------------------------------------------------------------------*/
-
 cpl_error_code gravi_acqcam_spot_imprint (cpl_image * img, cpl_vector * a)
 {
     gravi_msg_function_start(0);
@@ -467,50 +438,18 @@ cpl_error_code gravi_acqcam_get_pup_ref (cpl_propertylist * header, cpl_size tel
 }
 
 /*----------------------------------------------------------------------------*/
-/**
- * @brief Fit a pupil spot pattern into an image. Actually the fit is more a 
- *        correlation because the model is by-design lower than all points
- *        to be fitted.
- *
- * @param img:    input image
- * @param ntry:   number of random starting point (around specified parameters)
- * @param a:      vector of parameter, modified in-place, in the form:
- *                (x0+x1+x2+x3, x0-x1+x2-x3, x0+x1-x2-x3, x0-x1-x2+x3, 
- *                 y0+y1+y2+y3, y0-y1+y2-y3, y0+y1-y2-y3, y0-y1-y2+y3, 
- *                 diode_angle, delta_diode_x, delta_diode_y)
- * @param ia:     specifies which parameter is to be fitted, and which is to 
- *                be kept unmodified.
- * @param nspot:  is filled with the number of detected spots.
- */
-/*----------------------------------------------------------------------------*/
 
-cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
-                                      cpl_size ntry,
-                                      cpl_vector * a,
-                                      const int ia[],
-                                      int * nspot)
+double cpl_acqcam_get_noise (cpl_image *img, cpl_size x0, cpl_size y0, cpl_size ns)
 {
     gravi_msg_function_start(0);
-    cpl_ensure_code (img, CPL_ERROR_NULL_INPUT);
-    cpl_ensure_code (a,   CPL_ERROR_NULL_INPUT);
-    cpl_ensure_code (ntry>0, CPL_ERROR_ILLEGAL_INPUT);
-    cpl_ensure_code (nspot, CPL_ERROR_NULL_INPUT);
-
-    *nspot = 0;
-    int nv = 0;
-    cpl_size nx = cpl_image_get_size_x (img);
-    cpl_size ny = cpl_image_get_size_y (img);
-
-    cpl_size xsub = cpl_vector_get (a, 0);
-    cpl_size ysub = cpl_vector_get (a, 4);
-    CPLCHECK_MSG ("Cannot get values valid");
+    cpl_ensure (img, CPL_ERROR_NULL_INPUT, -1);
+    int nv;
 
     /* Get only pixels around the center,
      * to estimate the noise */
-    cpl_size ns = 50;
     cpl_vector * flux = cpl_vector_new (ns*ns);
-    for (cpl_size v = 0, x = xsub-ns/2; x < xsub+ns/2; x++) {
-        for (cpl_size y = ysub-ns/2; y < ysub+ns/2; y++) {
+    for (cpl_size v = 0, x = x0-ns/2; x < x0+ns/2; x++) {
+        for (cpl_size y = y0-ns/2; y < y0+ns/2; y++) {
             cpl_vector_set (flux, v, cpl_image_get (img, x+1, y+1, &nv));
             v++;
             CPLCHECK_MSG ("Cannot fill vector");
@@ -520,25 +459,70 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
     /* Compute typical error as the
      * median of spatial variation */
     cpl_vector_multiply (flux, flux);
+    
     double RMS = sqrt (cpl_vector_get_median (flux));
     FREE (cpl_vector_delete, flux);
+    
+    gravi_msg_function_exit(0);
+    return RMS;
+}
 
-    double threshold = 5 * RMS;
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Fit a pupil spot pattern into an image. The global minimum is found
+ *        first with a fit which is, by-design, a correlation with the brightest
+ *        pixels of the image. The number of random starting point is given by
+ *        the ntry parameter. If ntry==1, the starting is kept unmodified.
+ *        Then 10x10 pixels around each expected spot are extracted and fit
+ *        with true Gaussian (free FWHM and amplitude).
+ * 
+ * @param img:    input image
+ * @param ntry:   number of random starting point (around specified parameters)
+ * @param a:      vector of parameter, modified in-place, in the form:
+ *                (x0+x1+x2+x3, x0-x1+x2-x3, x0+x1-x2-x3, x0-x1-x2+x3, 
+ *                 y0+y1+y2+y3, y0-y1+y2-y3, y0+y1-y2-y3, y0-y1-y2+y3, 
+ *                 diode_angle, delta_diode_x, delta_diode_y)
+ * @param nspot:  is filled with the number of detected spots.
+ */
+/*----------------------------------------------------------------------------*/
 
-    /* Get only valid pixels for this beam */
-    cpl_size nw = 200;
-    cpl_size nvalid = 0;
+cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
+                                      cpl_size ntry,
+                                      cpl_vector * a,
+                                      int * nspot)
+{
+    gravi_msg_function_start(0);
+    cpl_ensure_code (img, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (a,   CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (ntry>0, CPL_ERROR_ILLEGAL_INPUT);
+    cpl_ensure_code (nspot, CPL_ERROR_NULL_INPUT);
+
+    int nv = 0;
+    cpl_size nx = cpl_image_get_size_x (img);
+    cpl_size ny = cpl_image_get_size_y (img);
+
+    cpl_size x0 = cpl_vector_get (a, 0);
+    cpl_size y0 = cpl_vector_get (a, 4);
+    CPLCHECK_MSG ("Cannot get values valid");
+
+    /* Compute RMS in the central region */
+    double RMS = cpl_acqcam_get_noise (img, x0, y0, 50);
+    double threshold = 10 * RMS;
+
+    /*
+     * Coarse : correlation with brightest pixels
+     */
+    
+    cpl_size nw = 200, nvalid = 0;
     cpl_vector * is_valid = cpl_vector_new (nx * ny);
-    for (cpl_size x = xsub-nw/2; x < xsub+nw/2; x++) {
-        for (cpl_size y = ysub-nw/2; y < ysub+nw/2; y++) {
+    
+    for (cpl_size x = x0-nw/2; x < x0+nw/2; x++) {
+        for (cpl_size y = y0-nw/2; y < y0+nw/2; y++) {
             if (cpl_image_get (img, x+1, y+1, &nv) > threshold) {
                 cpl_vector_set (is_valid, x*ny + y, 1.0);
                 nvalid ++;
-            } else {
+            } else
                 cpl_vector_set (is_valid, x*ny + y, 0.0);
-                cpl_image_set (img, x+1, y+1, 0);
-            }
-                
             CPLCHECK_MSG ("Cannot compute valid");
         }
     }
@@ -556,8 +540,8 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
     cpl_matrix * x_matrix  = cpl_matrix_new (nvalid, 2);
     cpl_vector * y_vector  = cpl_vector_new (nvalid);
     cpl_vector * sy_vector = cpl_vector_new (nvalid);
-    for (cpl_size v = 0, x = xsub-nw/2; x < xsub+nw/2; x++) {
-        for (cpl_size y = ysub-nw/2; y < ysub+nw/2; y++) {
+    for (cpl_size v = 0, x = x0-nw/2; x < x0+nw/2; x++) {
+        for (cpl_size y = y0-nw/2; y < y0+nw/2; y++) {
             if (cpl_vector_get (is_valid, x*ny + y)) {
                 cpl_matrix_set (x_matrix, v, 0, x);
                 cpl_matrix_set (x_matrix, v, 1, y);
@@ -583,7 +567,8 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
     srand(1);
 
     /* Global variable to speed up computation of the derivatives */
-    GRAVI_LVMQ_FREE = ia;
+    const int ia_global[] = {1,0,0,0, 1,0,0,0, 1,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    GRAVI_LVMQ_FREE = ia_global;
 
     /* Loop on various starting points */
     for (cpl_size try = 0; try < ntry; try++) {
@@ -591,15 +576,20 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
         /* Move starting point in position (+-10pix) and angle (entire circle) */
         cpl_vector_copy (a_tmp, a_start);
         if (try > 0) {
-            if (ia[0]) cpl_vector_set (a_tmp, 0, cpl_vector_get (a_tmp, 0) + (rand()%20) - 10);
-            if (ia[4]) cpl_vector_set (a_tmp, 4, cpl_vector_get (a_tmp, 4) + (rand()%20) - 10);
-            if (ia[8]) cpl_vector_set (a_tmp, 8, cpl_vector_get (a_tmp, 8) + (rand()%180));
+            cpl_vector_set (a_tmp, 0, cpl_vector_get (a_tmp, 0) + (rand()%20) - 10);
+            cpl_vector_set (a_tmp, 4, cpl_vector_get (a_tmp, 4) + (rand()%20) - 10);
+            cpl_vector_set (a_tmp, 8, cpl_vector_get (a_tmp, 8) + (rand()%180));
         }
-        
+
+        /* Set the fwhm to 6 and amplitude to 1.0, to force
+         * a pseudo-correlation with large capture range */
+        cpl_vector_set (a_tmp, 11, 6.*6.);
+        for (int d=0;d<16;d++) cpl_vector_set (a_tmp, 12+d, 1.0);
+
         /* Fit from this starting point */
         double chisq;
         cpl_fit_lvmq (x_matrix, NULL, y_vector, sy_vector,
-                      a_tmp, ia,
+                      a_tmp, ia_global,
                       gravi_acqcam_spot,
                       gravi_acqcam_spot_dfda,
                       CPL_FIT_LVMQ_TOLERANCE,
@@ -620,13 +610,80 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
     FREE (cpl_matrix_delete, x_matrix);
     FREE (cpl_vector_delete, y_vector);
     FREE (cpl_vector_delete, sy_vector);
-
-    /* Get the image value at the position of spots, and
-     * count the number of spots */
-    *nspot = gravi_acqcam_spot_count (img, a, threshold);
-
     FREE (cpl_vector_delete, a_tmp);
     FREE (cpl_vector_delete, a_start);
+
+    
+    /* 
+     * Fine: fit 10 pixel around each spot with true Gaussian
+     */
+    
+    cpl_size nf = 10, ndiode = 4, nsub = 4;
+    x_matrix  = cpl_matrix_new (nf*nf*ndiode*nsub, 2);
+    y_vector  = cpl_vector_new (nf*nf*ndiode*nsub);
+    sy_vector = cpl_vector_new (nf*nf*ndiode*nsub);
+    
+    double xd[4], yd[4], xsub[4], ysub[4];
+    gravi_acqcam_xy_diode (cpl_vector_get_data (a), xd, yd);
+    gravi_acqcam_xy_sub (cpl_vector_get_data (a), xsub, ysub);
+    
+    /* Loop on diode and appertures to fill the matrix and
+     * vector for the fine fit */
+    for (cpl_size v = 0, diode = 0; diode < ndiode ; diode++) {
+        for (int sub = 0; sub < nsub ; sub++) {
+            cpl_size xf = roundl(xsub[sub] + xd[diode]);
+            cpl_size yf = roundl(ysub[sub] + yd[diode]);
+            
+            /* Extract 10 pixels around each spot */
+            double mf = 0.0;
+            for (cpl_size x = xf-nf/2; x < xf+nf/2; x++) {
+                for (cpl_size y = yf-nf/2; y < yf+nf/2; y++) {
+                    double value = cpl_image_get (img, x+1, y+1, &nv);
+                    if (value > mf) mf = value;
+                    cpl_matrix_set (x_matrix, v, 0, x);
+                    cpl_matrix_set (x_matrix, v, 1, y);
+                    cpl_vector_set (y_vector, v, value);
+                    cpl_vector_set (sy_vector, v, RMS);
+                    v++;
+                    CPLCHECK_MSG ("Cannot fill matrix");
+                }
+            }
+            
+            /* Save the local maximum of this spot as
+             * the starting point for its amplitude */
+            cpl_vector_set (a, 12+sub*4+diode, mf);
+        }
+    }
+
+    /* Set FWHM */
+    cpl_vector_set (a, 11, 2.5*2.5); // fwhm2 [pix2]
+
+    /* Global variable to speed up computation of the derivatives */
+    const int ia_fine[] = {1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
+    GRAVI_LVMQ_FREE = ia_fine;
+
+    /* Fit from this starting point */
+    double chisq_fine = 0.0;
+    cpl_fit_lvmq (x_matrix, NULL, y_vector, sy_vector,
+                  a, ia_fine,
+                  gravi_acqcam_spot,
+                  gravi_acqcam_spot_dfda,
+                  CPL_FIT_LVMQ_TOLERANCE,
+                  CPL_FIT_LVMQ_COUNT,
+                  CPL_FIT_LVMQ_MAXITER,
+                  NULL, &chisq_fine, NULL);
+    CPLCHECK_MSG ("Cannot fit");
+
+    cpl_msg_debug (cpl_func, "chisq_final = %.2f -> fine = %.2f, ",
+                   chisq_final, chisq_fine);
+    
+    FREE (cpl_matrix_delete, x_matrix);
+    FREE (cpl_vector_delete, y_vector);
+    FREE (cpl_vector_delete, sy_vector);
+
+    /* Count the number of valid spots based on their amplitude */
+    *nspot = 0;
+    for (int d=0; d<16; d++) if (cpl_vector_get (a, 12+d) > 3.*RMS) (*nspot)++;
 
     gravi_msg_function_exit(0);
     return CPL_ERROR_NONE;
@@ -713,11 +770,10 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
     /* Compute mean image */
     cpl_image * mean_img = cpl_imagelist_collapse_create (acqcam_imglist);
     int nspot = 0;
-
+    
     /* Loop on tel */
     for (int tel = 0; tel < ntel; tel++) {
         cpl_msg_info (cpl_func, "Compute pupil position for beam %i", tel+1);
-
 
         /* Allocate memory */
         cpl_vector * a_start = cpl_vector_new (GRAVI_SPOT_NA);
@@ -732,24 +788,13 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         cpl_vector_set (a_start, 8,  0.0);  // deg
         cpl_vector_set (a_start, 9, 18.0);  // dx [pix]
         cpl_vector_set (a_start,10, 24.0);  // dy [pix]
-
-        /* Diode fwhm and intensity */
-        cpl_vector_set (a_start,11, 6.*6.); // fwhm2 [pix2]
-        for (int d=0;d<16;d++) cpl_vector_set (a_start, 12+d, 1.0); // I
         
         cpl_vector * a_final = cpl_vector_duplicate (a_start);
         CPLCHECK_MSG ("Cannot prepare parameters");
                 
-        /* First fit: global center and rotation only */
-        const int ia_global[] = {1,0,0,0, 1,0,0,0, 1,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-        gravi_acqcam_fit_spot (mean_img, 30, a_final, ia_global, &nspot);
+        /* Fit diode, with various starting point and angles */
+        gravi_acqcam_fit_spot (mean_img, 30, a_final, &nspot);
         CPLCHECK_MSG ("Cannot fit rotation and center");
-
-        /* Second fit: independend sub-appertures
-         * and free diode spacing */
-        const int ia_all[] = {1,1,1,1, 1,1,1,1, 1,1,1,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-        gravi_acqcam_fit_spot (mean_img, 1, a_final, ia_all, &nspot);
-        CPLCHECK_MSG ("Cannot fit sub-appertures");
 
         cpl_msg_info (cpl_func, "Found %i spots in mean img of tel %i", nspot, tel+1);
         
@@ -778,13 +823,12 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
             cpl_image * img = cpl_imagelist_get (acqcam_imglist, row);
             cpl_vector * a_row = cpl_vector_duplicate (a_final);
 
-            /* Fit positions and rotation only */
-            const int ia_row[] = {1,1,1,1, 1,1,1,1, 1,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-            gravi_acqcam_fit_spot (img, 1, a_row, ia_row, &nspot);
+            /* Fit diodes */
+            gravi_acqcam_fit_spot (img, 1, a_row, &nspot);
             CPLCHECK_MSG ("Cannot fit sub-appertures of image");
-
+            
             /* Add best position as a cross in image */
-            gravi_acqcam_spot_imprint (img, a_row);
+            gravi_acqcam_spot_imprint (img, a_row);            
 
             /* Remove reference */
             cpl_vector_subtract (a_row, a_start);
@@ -798,7 +842,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
             double z_shift = -0.5 * ( cpl_vector_get (a_row, 2) +
                                       cpl_vector_get (a_row, 5));
 
-            /* Fill table. Force NSPOT to 0.0 to allow an easy
+            /* Fill table. Force NSPOT to 0 to allow an easy
              * removal of this point further in the processing */
             if (nspot > 8) {
                 cpl_table_set (acqcam_table, "PUPIL_NSPOT", row*ntel+tel, nspot);
