@@ -81,6 +81,10 @@ char GRAVI_DATAERR[50][10] =
    "DATAERR31","DATAERR32","DATAERR33","DATAERR34","DATAERR35","DATAERR36","DATAERR37","DATAERR38","DATAERR39","DATAERR40",
    "DATAERR41","DATAERR42","DATAERR43","DATAERR44","DATAERR45","DATAERR46","DATAERR47","DATAERR48","DATAERR49","DATAERR50"};
 
+
+/* IP of GRAVITY beams */
+int GRAVI_LABINPUT[4] = {7,5,3,1};
+
 /*-----------------------------------------------------------------------------
                                    Function code
  -----------------------------------------------------------------------------*/
@@ -1159,7 +1163,49 @@ cpl_error_code gravi_lkdt_get_sequence (cpl_table * oi_table,
     return CPL_ERROR_NONE;
 }
 
-                                                                                                    
+int gravi_conf_get_iss (int gravi_beam, cpl_propertylist * header)
+{
+    cpl_ensure (gravi_beam >=0 && gravi_beam < 4, CPL_ERROR_ILLEGAL_INPUT, 0);
+    cpl_ensure (header, CPL_ERROR_NULL_INPUT, 0);
+
+    int iss = 0;
+    char name[100];
+
+    for (iss = 1; iss<=4; iss++) {
+        sprintf (name, "ESO ISS CONF INPUT%i", iss);
+        if ( cpl_propertylist_get_int (header, name) ==
+             GRAVI_LABINPUT[gravi_beam]) return iss;
+    }
+    
+    cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
+                          "Could not find CONF INPUT for beam %i",
+                          gravi_beam);
+
+    return 0;
+}
+
+const char * gravi_conf_get_telname (int gravi_beam, cpl_propertylist * header)
+{
+    cpl_ensure (gravi_beam >=0 && gravi_beam < 4, CPL_ERROR_ILLEGAL_INPUT, NULL);
+    cpl_ensure (header, CPL_ERROR_NULL_INPUT, NULL);
+    char name[100];
+
+    for (int iss = 1; iss<=4; iss++) {
+        sprintf (name, "ESO ISS CONF INPUT%i", iss);
+        if ( cpl_propertylist_get_int (header, name) ==
+             GRAVI_LABINPUT[gravi_beam]) {
+            sprintf (name, "ESO ISS CONF T%iNAME", iss);
+            return cpl_propertylist_get_string (header, name);
+        }
+    }
+    
+    cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
+                          "Could not find CONF INPUT for beam %i",
+                          gravi_beam);
+    return NULL;
+}
+
+                                                                                               
 cpl_error_code gravi_dump_the_boss (double ra, double dec)
 {
     /* GC coordinates in [rad] */

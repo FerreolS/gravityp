@@ -119,6 +119,8 @@ extern char GRAVI_DATAERR[50][10];
 #define GRAVI_LABINPUT_2 5
 #define GRAVI_LABINPUT_3 3
 #define GRAVI_LABINPUT_4 1
+extern int GRAVI_LABINPUT[4];
+
 
 #define SHUTTER_KEY "IPAG INS SHUT" //"GRAVITY SHUT"
 #define SHUTTER_KEY1 "IPAG INS SHUT1 ST" //"GRAVITY SHUT 1"
@@ -188,6 +190,9 @@ cpl_error_code gravi_lkdt_get_sequence (cpl_table * oi_table,
                                         cpl_size *nobs);
 
 cpl_vector * gravi_compute_envelope (const cpl_vector * opd, int wave, int n_wave);
+
+int gravi_conf_get_iss (int gravi_beam, cpl_propertylist * header);
+const char * gravi_conf_get_telname (int gravi_beam, cpl_propertylist * header);
 
 
 #endif
