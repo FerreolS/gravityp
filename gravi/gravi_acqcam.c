@@ -312,17 +312,18 @@ static int gravi_acqcam_spot_dfda (const double x_in[], const double v[], double
 
     /* Compute value in-place */
     gravi_acqcam_spot (x_in, vlocal, &here);
-    
+
+    /* Fill with zeros */
+    for (int a = 0; a < GRAVI_SPOT_NA; a++) result[a] = 0.0;
+        
     /* Loop on parameters to compute finite differences 
      * FIXME: The derivative is analytic, and thus this
-     * can be made much faster and without global variable */
+     * may be made faster and without global variable */
     for (int a = 0; a < 12; a++) {
         if (GRAVI_LVMQ_FREE[a] != 0) {
-
             vlocal[a] += epsilon;
             gravi_acqcam_spot (x_in, vlocal, &next);
             vlocal[a] -= epsilon;
-            
             result[a] = (next - here) / epsilon;
         }
     }
@@ -674,7 +675,7 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
                   NULL, &chisq_fine, NULL);
     CPLCHECK_MSG ("Cannot fit");
 
-    cpl_msg_debug (cpl_func, "chisq_final = %.2f -> fine = %.2f, ",
+    cpl_msg_debug (cpl_func, "chisq_final = %.2f -> fine = %.2f",
                    chisq_final, chisq_fine);
     
     FREE (cpl_matrix_delete, x_matrix);
@@ -826,34 +827,34 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
             /* Fit diodes */
             gravi_acqcam_fit_spot (img, 1, a_row, &nspot);
             CPLCHECK_MSG ("Cannot fit sub-appertures of image");
-            
-            /* Add best position as a cross in image */
-            gravi_acqcam_spot_imprint (img, a_row);            
 
-            /* Remove reference */
-            cpl_vector_subtract (a_row, a_start);
-
-            /* Compute latteral shift */
-            double x_shift = cpl_vector_get (a_row, 0);
-            double y_shift = cpl_vector_get (a_row, 4);
-            double r_shift = cpl_vector_get (a_row, 8);
-            
-            /* Compute longitudinal shift */
-            double z_shift = -0.5 * ( cpl_vector_get (a_row, 2) +
-                                      cpl_vector_get (a_row, 5));
-
-            /* Fill table. Force NSPOT to 0 to allow an easy
-             * removal of this point further in the processing */
-            if (nspot > 8) {
+            /* If spot detected */
+            if (nspot <= 8) {
+                cpl_table_set (acqcam_table, "PUPIL_NSPOT", row*ntel+tel, 0);
+            }
+            else {
+                /* Add best position as a cross in image */
+                gravi_acqcam_spot_imprint (img, a_row);
+                
+                /* Remove reference */
+                cpl_vector_subtract (a_row, a_start);
+                
+                /* Compute latteral shift */
+                double x_shift = cpl_vector_get (a_row, 0);
+                double y_shift = cpl_vector_get (a_row, 4);
+                double r_shift = cpl_vector_get (a_row, 8);
+                
+                /* Compute longitudinal shift */
+                double z_shift = -0.5 * ( cpl_vector_get (a_row, 2) +
+                                          cpl_vector_get (a_row, 5));
+                
                 cpl_table_set (acqcam_table, "PUPIL_NSPOT", row*ntel+tel, nspot);
                 cpl_table_set (acqcam_table, "PUPIL_X", row*ntel+tel, x_shift);
                 cpl_table_set (acqcam_table, "PUPIL_Y", row*ntel+tel, y_shift);
                 cpl_table_set (acqcam_table, "PUPIL_Z", row*ntel+tel, z_shift);
                 cpl_table_set (acqcam_table, "PUPIL_R", row*ntel+tel, r_shift);
-            } else {
-                cpl_table_set (acqcam_table, "PUPIL_NSPOT", row*ntel+tel, 0);
             }
-
+            
             FREE (cpl_vector_delete, a_row);
         }
 
