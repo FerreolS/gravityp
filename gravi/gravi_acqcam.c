@@ -72,6 +72,8 @@ static int gravi_acqcam_spot_dfda (const double x_in[], const double v[], double
 cpl_error_code gravi_acqcam_fit_spot (cpl_image * img, cpl_size ntry,
                                       cpl_vector * a, int * nspot);
 
+double gravi_acqcam_z2meter (double PositionPixels);
+
 /* This global variable optimises the computation
  * of partial derivative on fitted parameters */
 const extern int * GRAVI_LVMQ_FREE;
@@ -666,7 +668,7 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
         /* Fit from this starting point */
         double chisq;
         cpl_fit_lvmq (x_matrix, NULL, y_vector, sy_vector,
-                      a_tmp, ia_global,
+                      a_tmp, GRAVI_LVMQ_FREE,
                       gravi_acqcam_spot,
                       gravi_acqcam_spot_dfda,
                       CPL_FIT_LVMQ_TOLERANCE,
@@ -732,10 +734,11 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
         }
     }
 
-    /* Set FWHM */
-    cpl_vector_set (a, GRAVI_SPOT_FWHM, 2.5*2.5); // fwhm2 [pix2]
+    /* Set FWHM to a realist value in [pix**2] */
+    cpl_vector_set (a, GRAVI_SPOT_FWHM, 2.5*2.5);
 
-    /* Fit all parameters, including FWHM and intensities */
+    /* Fit all sub-aperture position; rotation and scaling of diodes;
+     * a single FWHM; and individual intensities of spots */
     const int ia_fine[] = {1,1,1,1, 1,1,1,1, 1,1,0,0, 1,
                            1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
     GRAVI_LVMQ_FREE = ia_fine;
@@ -743,7 +746,7 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
     /* Fit from this starting point */
     double chisq_fine = 0.0;
     cpl_fit_lvmq (x_matrix, NULL, y_vector, sy_vector,
-                  a, ia_fine,
+                  a, GRAVI_LVMQ_FREE,
                   gravi_acqcam_spot,
                   gravi_acqcam_spot_dfda,
                   CPL_FIT_LVMQ_TOLERANCE,
@@ -840,9 +843,9 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
     cpl_table_new_column (acqcam_table, "PUPIL_Y", CPL_TYPE_DOUBLE);
     cpl_table_new_column (acqcam_table, "PUPIL_Z", CPL_TYPE_DOUBLE);
     cpl_table_new_column (acqcam_table, "PUPIL_R", CPL_TYPE_DOUBLE);
-    cpl_table_set_column_unit (acqcam_table, "PUPIL_X", "pix");
-    cpl_table_set_column_unit (acqcam_table, "PUPIL_Y", "pix");
-    cpl_table_set_column_unit (acqcam_table, "PUPIL_Z", "pix");
+    cpl_table_set_column_unit (acqcam_table, "PUPIL_X", "m");
+    cpl_table_set_column_unit (acqcam_table, "PUPIL_Y", "m");
+    cpl_table_set_column_unit (acqcam_table, "PUPIL_Z", "m");
     cpl_table_set_column_unit (acqcam_table, "PUPIL_R", "deg");
     
     /* Compute mean image */
@@ -872,30 +875,36 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         gravi_acqcam_fit_spot (mean_img, 30, a_final, &nspot);
         CPLCHECK_MSG ("Cannot fit rotation and center");
                 
+        /* If not enough spots, just continue to next tel */
+        if (nspot < 8) continue;
+
         /* Add best position as a cross in image */
         gravi_acqcam_spot_imprint (mean_img, a_final);
-
+        
+        /* Get scaling in [pix/m] */
+        double scale = cpl_vector_get (a_final,GRAVI_SPOT_SCALE);
+        
         /* Add QC parameters */
         sprintf (qc_name, "ESO QC ACQ PUP%i NSPOT", tel+1);
         cpl_msg_info (cpl_func, "%s = %i", qc_name, nspot);
         cpl_propertylist_update_int (o_header, qc_name, nspot);
         cpl_propertylist_set_comment (o_header, qc_name, "nb. of pupil spot in ACQ");
-        
+
         sprintf (qc_name, "ESO QC ACQ PUP%i ANGLE", tel+1);
         cpl_msg_info (cpl_func, "%s = %f", qc_name, cpl_vector_get (a_final,GRAVI_SPOT_ANGLE));
         cpl_propertylist_update_double (o_header, qc_name, cpl_vector_get (a_final,GRAVI_SPOT_ANGLE));
         cpl_propertylist_set_comment (o_header, qc_name, "[deg] diode angle on ACQ");
 
         sprintf (qc_name, "ESO QC ACQ PUP%i SCALE", tel+1);
-        cpl_msg_info (cpl_func, "%s = %f", qc_name, cpl_vector_get (a_final,GRAVI_SPOT_SCALE));
-        cpl_propertylist_update_double (o_header, qc_name, cpl_vector_get (a_final,GRAVI_SPOT_SCALE));
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, scale);
+        cpl_propertylist_update_double (o_header, qc_name, scale);
         cpl_propertylist_set_comment (o_header, qc_name, "[pix/m] diode scale on ACQ");
 
         sprintf (qc_name, "ESO QC ACQ PUP%i FWHM", tel+1);
         cpl_msg_info (cpl_func, "%s = %f", qc_name, sqrt (cpl_vector_get (a_final,GRAVI_SPOT_FWHM)));
         cpl_propertylist_update_double (o_header, qc_name, sqrt (cpl_vector_get (a_final,GRAVI_SPOT_FWHM)));
         cpl_propertylist_set_comment (o_header, qc_name, "[pix] spot fwhm in ACQ");
-        
+
         /* Loop on all images */
         for (cpl_size row = 0; row < nrow; row++) {
             if (row %10 == 0 || row == (nrow-1))
@@ -910,24 +919,25 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
             CPLCHECK_MSG ("Cannot fit sub-appertures of image");
 
             /* If spot detected */
-            if (nspot <= 8) {
+            if (nspot < 8) {
                 cpl_table_set (acqcam_table, "PUPIL_NSPOT", row*ntel+tel, 0);
             }
             else {
                 /* Add best position as a cross in image */
                 gravi_acqcam_spot_imprint (img, a_row);
-                
+
                 /* Remove reference */
                 cpl_vector_subtract (a_row, a_start);
                 
-                /* Compute latteral shift */
-                double x_shift = cpl_vector_get (a_row, GRAVI_SPOT_SUB+0);
-                double y_shift = cpl_vector_get (a_row, GRAVI_SPOT_SUB+4);
+                /* Compute latteral shift [m] and rotation [deg] */
+                double x_shift = cpl_vector_get (a_row, GRAVI_SPOT_SUB+0) / scale;
+                double y_shift = cpl_vector_get (a_row, GRAVI_SPOT_SUB+4) / scale;
                 double r_shift = cpl_vector_get (a_row, GRAVI_SPOT_ANGLE);
                 
-                /* Compute longitudinal shift */
+                /* Compute longitudinal shift [m] */
                 double z_shift = -0.5 * ( cpl_vector_get (a_row, GRAVI_SPOT_SUB+2) +
                                           cpl_vector_get (a_row, GRAVI_SPOT_SUB+5));
+                z_shift = gravi_acqcam_z2meter (z_shift);
                 
                 cpl_table_set (acqcam_table, "PUPIL_NSPOT", row*ntel+tel, nspot);
                 cpl_table_set (acqcam_table, "PUPIL_X", row*ntel+tel, x_shift);
@@ -958,8 +968,30 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
 
 /*----------------------------------------------------------------------------*/
 /**
- * @brief Return 1 if flux(pos) < flux(pos+1)
- * 
+ * @brief Convert z_shift from [pixel] to [meters]
+ *        Formula extracted from gvacqPupilTracker.c
+ */
+/*----------------------------------------------------------------------------*/
+
+double gravi_acqcam_z2meter (double PositionPixels)
+{
+    double f_PT      = 14e-3;    /* pupil tracker lenslet FL*/
+    double f_lens    = 467e-3;   /* folding optics lens FL */
+    double Llambda   = 1.2e-6;   /* laser diode wavelength */
+    double D_beam    = 18e-3;    /* meter */
+    double D_pixel   = 18e-6;
+    double D_AT      = 1.8;      /* m */
+    double D_lenslet = 2 * 1.015e-3;
+    
+    double LongitudinalDefocusShift = 8 * (f_PT / D_lenslet) * (f_PT / D_lenslet) * 3.5 * D_pixel *
+                                      D_beam / (f_PT * D_lenslet) * Llambda / CPL_MATH_2PI * PositionPixels;
+    
+    return f_lens * f_lens * LongitudinalDefocusShift / (f_PT + LongitudinalDefocusShift) / f_PT * (D_AT / D_lenslet);
+}
+
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Return 1 if flux(pos) < flux(pos+1) * 
  */
 /*----------------------------------------------------------------------------*/
 
