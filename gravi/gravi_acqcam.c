@@ -855,6 +855,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
 
         /* Allocate memory */
         cpl_vector * a_start = cpl_vector_new (GRAVI_SPOT_NA);
+        cpl_vector_fill (a_start, 0.0);
         
         /* Read the sub-apperture reference positions 
          * Converted to accound for sub-windowing 
@@ -869,9 +870,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         /* Fit diode, with various starting point and angles */
         gravi_acqcam_fit_spot (mean_img, 30, a_final, &nspot);
         CPLCHECK_MSG ("Cannot fit rotation and center");
-        
-        cpl_msg_info (cpl_func, "Found %i spots in mean img of tel %i", nspot, tel+1);
-        
+                
         /* Add best position as a cross in image */
         gravi_acqcam_spot_imprint (mean_img, a_final);
 
@@ -887,8 +886,8 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         cpl_propertylist_set_comment (o_header, qc_name, "[deg] diode angle on ACQ");
 
         sprintf (qc_name, "ESO QC ACQ PUP%i SCALE", tel+1);
-        cpl_msg_info (cpl_func, "%s = %f", qc_name, cpl_vector_get (a_final,GRAVI_SPOT_SCALE));
-        cpl_propertylist_update_double (o_header, qc_name, cpl_vector_get (a_final,GRAVI_SPOT_SCALE));
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, sqrt (cpl_vector_get (a_final,GRAVI_SPOT_SCALE)));
+        cpl_propertylist_update_double (o_header, qc_name, sqrt (cpl_vector_get (a_final,GRAVI_SPOT_SCALE)));
         cpl_propertylist_set_comment (o_header, qc_name, "[pix/m] diode scale on ACQ");
 
         sprintf (qc_name, "ESO QC ACQ PUP%i FWHM", tel+1);
