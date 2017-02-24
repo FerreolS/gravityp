@@ -867,7 +867,8 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         cpl_vector * a_final = cpl_vector_duplicate (a_start);
         CPLCHECK_MSG ("Cannot prepare parameters");
                 
-        /* Fit diode, with various starting point and angles */
+        /* Fit pupil sensor spots in this image, with various
+         * starting points to converge to the global minimum */
         gravi_acqcam_fit_spot (mean_img, 30, a_final, &nspot);
         CPLCHECK_MSG ("Cannot fit rotation and center");
                 
@@ -886,25 +887,25 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         cpl_propertylist_set_comment (o_header, qc_name, "[deg] diode angle on ACQ");
 
         sprintf (qc_name, "ESO QC ACQ PUP%i SCALE", tel+1);
-        cpl_msg_info (cpl_func, "%s = %f", qc_name, sqrt (cpl_vector_get (a_final,GRAVI_SPOT_SCALE)));
-        cpl_propertylist_update_double (o_header, qc_name, sqrt (cpl_vector_get (a_final,GRAVI_SPOT_SCALE)));
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, cpl_vector_get (a_final,GRAVI_SPOT_SCALE));
+        cpl_propertylist_update_double (o_header, qc_name, cpl_vector_get (a_final,GRAVI_SPOT_SCALE));
         cpl_propertylist_set_comment (o_header, qc_name, "[pix/m] diode scale on ACQ");
 
         sprintf (qc_name, "ESO QC ACQ PUP%i FWHM", tel+1);
-        cpl_msg_info (cpl_func, "%s = %f", qc_name, cpl_vector_get (a_final,GRAVI_SPOT_FWHM));
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, sqrt (cpl_vector_get (a_final,GRAVI_SPOT_FWHM)));
         cpl_propertylist_update_double (o_header, qc_name, sqrt (cpl_vector_get (a_final,GRAVI_SPOT_FWHM)));
         cpl_propertylist_set_comment (o_header, qc_name, "[pix] spot fwhm in ACQ");
         
         /* Loop on all images */
         for (cpl_size row = 0; row < nrow; row++) {
-            if (row %10 == 0)
+            if (row %10 == 0 || row == (nrow-1))
                 cpl_msg_info_overwritable (cpl_func, "Fit image %lld over %lld", row+1, nrow);
             
             /* Get data and first guess */
             cpl_image * img = cpl_imagelist_get (acqcam_imglist, row);
             cpl_vector * a_row = cpl_vector_duplicate (a_final);
 
-            /* Fit diodes */
+            /* Fit pupil sensor spots in this image. */
             gravi_acqcam_fit_spot (img, 1, a_row, &nspot);
             CPLCHECK_MSG ("Cannot fit sub-appertures of image");
 
