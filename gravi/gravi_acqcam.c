@@ -877,18 +877,22 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
 
         /* Add QC parameters */
         sprintf (qc_name, "ESO QC ACQ PUP%i NSPOT", tel+1);
+        cpl_msg_info (cpl_func, "%s = %i", qc_name, nspot);
         cpl_propertylist_update_int (o_header, qc_name, nspot);
         cpl_propertylist_set_comment (o_header, qc_name, "nb. of pupil spot in ACQ");
         
         sprintf (qc_name, "ESO QC ACQ PUP%i ANGLE", tel+1);
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, cpl_vector_get (a_final,GRAVI_SPOT_ANGLE));
         cpl_propertylist_update_double (o_header, qc_name, cpl_vector_get (a_final,GRAVI_SPOT_ANGLE));
         cpl_propertylist_set_comment (o_header, qc_name, "[deg] diode angle on ACQ");
 
         sprintf (qc_name, "ESO QC ACQ PUP%i SCALE", tel+1);
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, cpl_vector_get (a_final,GRAVI_SPOT_SCALE));
         cpl_propertylist_update_double (o_header, qc_name, cpl_vector_get (a_final,GRAVI_SPOT_SCALE));
         cpl_propertylist_set_comment (o_header, qc_name, "[pix/m] diode scale on ACQ");
 
         sprintf (qc_name, "ESO QC ACQ PUP%i FWHM", tel+1);
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, cpl_vector_get (a_final,GRAVI_SPOT_FWHM));
         cpl_propertylist_update_double (o_header, qc_name, sqrt (cpl_vector_get (a_final,GRAVI_SPOT_FWHM)));
         cpl_propertylist_set_comment (o_header, qc_name, "[pix] spot fwhm in ACQ");
         
