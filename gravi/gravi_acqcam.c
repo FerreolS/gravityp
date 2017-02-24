@@ -551,9 +551,6 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
     cpl_ensure_code (nspot, CPL_ERROR_NULL_INPUT);
 
     int nv = 0;
-    cpl_size nx = cpl_image_get_size_x (img);
-    cpl_size ny = cpl_image_get_size_y (img);
-
     cpl_size x0 = cpl_vector_get (a, GRAVI_SPOT_SUB+0);
     cpl_size y0 = cpl_vector_get (a, GRAVI_SPOT_SUB+4);
     CPLCHECK_MSG ("Cannot get values valid");
@@ -568,9 +565,9 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
      * Coarse: fit with a re-bin image
      */
 
-    /* To lower the number of point, we extract a window of 100x100
-     * around the center of sub-apertures, rebin with 3x3 pixels */
-    cpl_size nw = 100, n_mean = 3;
+    /* To lower the number of point, we extract a window of 175x175
+     * around the center of sub-apertures, rebin with 5x5 pixels */
+    cpl_size nw = 175, n_mean = 5;
     cpl_size nc = nw/n_mean, nint = n_mean*n_mean;
     
     /* Allocate vector and matrix for the fit */
@@ -583,8 +580,8 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
       for (cpl_size y = 0; y < nc; y++) {
 	/* Average 3x3 pixels */
 	double z_mean = 0.0, x_mean = 0.0, y_mean = 0.0;
-	for (int i=-1; i<=1; i++) {
-	  for (int j=-1; j<=1; j++) {
+	for (int i=-2; i<=2; i++) {
+	  for (int j=-2; j<=2; j++) {
 	    cpl_size x1 = x*n_mean+i+x0-(n_mean*nc)/2;
 	    cpl_size y1 = y*n_mean+j+y0-(n_mean*nc)/2;
 	    z_mean += cpl_image_get (img, x1+1, y1+1, &nv);
