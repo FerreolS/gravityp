@@ -561,63 +561,47 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
     /* Compute RMS in the central region */
     double RMS = gravi_image_get_noise_window (img, x0-25, y0-25, x0+25, y0+25);
 
+    /* The image is surely empty */
+    if (RMS == 0) { *nspot = 0; return CPL_ERROR_NONE;}
+
     /*
-     * Coarse : correlation with brightest pixels
+     * Coarse: correlation with a re-bin image
      */
-    cpl_vector * is_valid = cpl_vector_new (nx * ny);
-    double threshold;
-    cpl_size nw = 200, nvalid = 0;
-      
 
-    for (int coeff = 4; coeff >= 2; coeff--) {
-      nvalid = 0;
-      threshold = coeff * RMS;
-      for (cpl_size x = x0-nw/2; x < x0+nw/2; x++) {
-        for (cpl_size y = y0-nw/2; y < y0+nw/2; y++) {
-	  if (cpl_image_get (img, x+1, y+1, &nv) > threshold) {
-	    cpl_vector_set (is_valid, x*ny + y, 1.0);
-	    nvalid ++;
-	  } else
-	    cpl_vector_set (is_valid, x*ny + y, 0.0);
-	  CPLCHECK_MSG ("Cannot compute valid");
-        }
+    /* To lower the number of point, we extract a window of 100x100
+     * around the center of sub-apertures, rebin with 3x3 pixels */
+    cpl_size nw = 100, n_mean = 3;
+    cpl_size nc = nw/n_mean, nint = n_mean*n_mean;
+    
+    /* Allocate vector and matrix for the fit */
+    cpl_matrix * x_matrix  = cpl_matrix_new (nc*nc, 2);
+    cpl_vector * y_vector  = cpl_vector_new (nc*nc);
+    cpl_vector * sy_vector = cpl_vector_new (nc*nc);
+
+    /* Loop on pixel in the considered window */
+    for (cpl_size x = 0; x < nc; x++) {
+      for (cpl_size y = 0; y < nc; y++) {
+	/* Average 3x3 pixels */
+	double z_mean = 0.0, x_mean = 0.0, y_mean = 0.0;
+	for (int i=-1; i<=1; i++) {
+	  for (int j=-1; j<=1; j++) {
+	    cpl_size x1 = x*n_mean+i+x0-(n_mean*nc)/2;
+	    cpl_size y1 = y*n_mean+j+y0-(n_mean*nc)/2;
+	    z_mean += cpl_image_get (img, x1+1, y1+1, &nv);
+	    x_mean += x1; y_mean += y1;
+	  }
+	}
+	/* Set in matrix and vectors */
+	cpl_matrix_set (x_matrix, x*nc+y, 0, x_mean/nint);
+	cpl_matrix_set (x_matrix, x*nc+y, 1, y_mean/nint);
+	cpl_vector_set (y_vector, x*nc+y, z_mean/nint);
+	cpl_vector_set (sy_vector, x*nc+y, 1.0);
+	CPLCHECK_MSG ("Cannot fill matrix/vector");
       }
-      if (nvalid > 1000) break;
-    }
+    } /* End loop on re-sampled pixels*/
 
-    cpl_msg_debug (cpl_func, "nvalid = %lld with >%.2f (RMS = %.2f)",
-		   nvalid, threshold, RMS);
-      
-    /* Verify enough pixel, otherwise return */
-    if (nvalid < 100) {
-        *nspot = 0;
-        FREE (cpl_vector_delete, is_valid);
-        return CPL_ERROR_NONE;
-    }
-
-    /* Fill matrix */
-    cpl_matrix * x_matrix  = cpl_matrix_new (nvalid, 2);
-    cpl_vector * y_vector  = cpl_vector_new (nvalid);
-    cpl_vector * sy_vector = cpl_vector_new (nvalid);
-    for (cpl_size v = 0, x = x0-nw/2; x < x0+nw/2; x++) {
-        for (cpl_size y = y0-nw/2; y < y0+nw/2; y++) {
-            if (cpl_vector_get (is_valid, x*ny + y)) {
-                cpl_matrix_set (x_matrix, v, 0, x);
-                cpl_matrix_set (x_matrix, v, 1, y);
-                cpl_vector_set (y_vector, v, cpl_image_get (img, x+1, y+1, &nv));
-                cpl_vector_set (sy_vector, v, 1.0);
-                v ++;
-                CPLCHECK_MSG ("Cannot fill matrix/vector");
-            }
-        }
-    }
-    FREE (cpl_vector_delete, is_valid);
-
-    /* Normalize y so that the minimum of y is 1.0, which is the maximum
-     * of the model function. So that the fit ressemble a correlation.
-     * The sqrt is to avoid putting too much weight on bright spots */
-    cpl_vector_divide_scalar (y_vector, cpl_vector_get_min (y_vector));
-    cpl_vector_sqrt (y_vector);
+    /* Normalize for numerical stability. */
+    cpl_vector_divide_scalar (y_vector, RMS);
 
     /* Output for global minimisation */
     cpl_vector * a_start = cpl_vector_duplicate (a);
