@@ -524,24 +524,30 @@ cpl_error_code gravi_acqcam_get_pup_ref (cpl_propertylist * header,
 
 /*----------------------------------------------------------------------------*/
 /**
- * @brief Fit a pupil spot pattern into an image. The global minimum is found
- *        first with a fit which is, by-design, a correlation with the brightest
- *        pixels of the image. The number of random starting point is given by
- *        the ntry parameter. If ntry==1, the starting is kept unmodified.
- *        Then 10x10 pixels around each expected spot are extracted and fit
- *        with true Gaussian (free FWHM and amplitude).
+ * @brief Fit a pupil spot pattern into an image.
  * 
  * @param img:    input image
  * @param ntry:   number of random starting point
  * @param a:      vector of parameter, modified in-place
+ * @param fitAll: if set to 1, the high order of sub-aperture position (more
+ *                than center and focus), the diode scaling, and the diode
+ *                intensities are let free.
  * @param nspot:  is filled with the number of detected spots.
+ * 
+ * Fit a pupil spot pattern into an image. The global minimum is found
+ * first with a fit with a large capture range in the whole image (after
+ * a 5x5 binning to minimize the computation time).
+ * The number of random starting point is given by
+ * the ntry parameter. If ntry==1, the starting is kept unmodified.
+ * Then 10x10 pixels around each expected spot are extracted and fit
+ * with true Gaussian (free FWHM and amplitude).
  */
 /*----------------------------------------------------------------------------*/
 
 cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
                                       cpl_size ntry,
                                       cpl_vector * a,
-				      int fitAll,
+                                      int fitAll,
                                       int * nspot)
 {
     gravi_msg_function_start(0);
@@ -694,11 +700,12 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
         }
     }
 
-    /* Impose FWHM to a realist value in [pix**2] */
+    /* Set FWHM to a realist value in [pix**2] */
     cpl_vector_set (a, GRAVI_SPOT_FWHM, 2.3*2.3);
 
     /* Fit all sub-aperture position; rotation and scaling of diodes;
-     * and individual intensities of spots */
+     * and individual intensities of spots. (high order and scaling
+     * are only fitted if fitAll != 0) */
     int F = fitAll;
     const int ia_fine[] = {1,F,1,F, 1,1,F,F, 1,F,0,0, 0,
                            1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
@@ -869,11 +876,6 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         cpl_msg_info (cpl_func, "%s = %f", qc_name, scale);
         cpl_propertylist_update_double (o_header, qc_name, scale);
         cpl_propertylist_set_comment (o_header, qc_name, "[pix/m] diode scale on ACQ");
-
-        sprintf (qc_name, "ESO QC ACQ PUP%i FWHM", tel+1);
-        cpl_msg_info (cpl_func, "%s = %f", qc_name, sqrt (cpl_vector_get (a_final,GRAVI_SPOT_FWHM)));
-        cpl_propertylist_update_double (o_header, qc_name, sqrt (cpl_vector_get (a_final,GRAVI_SPOT_FWHM)));
-        cpl_propertylist_set_comment (o_header, qc_name, "[pix] spot fwhm in ACQ");
 
         sprintf (qc_name, "ESO QC ACQ PUP%i XPOS", tel+1);
         cpl_msg_info (cpl_func, "%s = %f", qc_name, xpos);
