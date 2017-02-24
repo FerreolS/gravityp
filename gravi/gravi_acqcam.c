@@ -565,7 +565,7 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
     if (RMS == 0) { *nspot = 0; return CPL_ERROR_NONE;}
 
     /*
-     * Coarse: correlation with a re-bin image
+     * Coarse: fit with a re-bin image
      */
 
     /* To lower the number of point, we extract a window of 100x100
@@ -595,19 +595,22 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
 	cpl_matrix_set (x_matrix, x*nc+y, 0, x_mean/nint);
 	cpl_matrix_set (x_matrix, x*nc+y, 1, y_mean/nint);
 	cpl_vector_set (y_vector, x*nc+y, z_mean/nint);
-	cpl_vector_set (sy_vector, x*nc+y, 1.0);
+	cpl_vector_set (sy_vector, x*nc+y, RMS);
 	CPLCHECK_MSG ("Cannot fill matrix/vector");
       }
     } /* End loop on re-sampled pixels*/
-
-    /* Normalize for numerical stability. */
-    cpl_vector_divide_scalar (y_vector, RMS);
 
     /* Output for global minimisation */
     cpl_vector * a_start = cpl_vector_duplicate (a);
     cpl_vector * a_tmp = cpl_vector_duplicate (a);
     double chisq_final = 1e10;
     srand(1);
+
+    /* Set the fwhm to 6 to force a large capture range */
+    cpl_vector_set (a_start, GRAVI_SPOT_FWHM, 6.*6.);
+
+    /* If needed, define a realistic value for the amplitude (for numerical stability) */
+    if (fitAll) for (int d=0;d<16;d++) cpl_vector_set (a_start, GRAVI_SPOT_FLUX+d, RMS);
 
     /* Fit sub-aperture mean position; and diode rotation */
     const int ia_global[] = {1,0,0,0, 1,0,0,0, 1,0,0,0, 0,
@@ -624,11 +627,6 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
             cpl_vector_set (a_tmp, GRAVI_SPOT_SUB+4, cpl_vector_get (a_tmp, GRAVI_SPOT_SUB+4) + (rand()%20) - 10);
             cpl_vector_set (a_tmp, GRAVI_SPOT_ANGLE, cpl_vector_get (a_tmp, GRAVI_SPOT_ANGLE) + (rand()%180));
         }
-
-        /* Set the fwhm to 6 and amplitude to 1.0, to force
-         * a pseudo-correlation with large capture range */
-        cpl_vector_set (a_tmp, GRAVI_SPOT_FWHM, 6.*6.);
-        for (int d=0;d<16;d++) cpl_vector_set (a_tmp, GRAVI_SPOT_FLUX+d, 1.0);
 
         /* Fit from this starting point */
         double chisq;
