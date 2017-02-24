@@ -1582,6 +1582,47 @@ cpl_imagelist * gravi_imagelist_wrap_column (cpl_table * table_data, const char 
 	return imglist;
 }
 
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Estimate the median noise in a window. This noise is estimated
+ *        as the median{img**2}**0.5, so that it is a robust estimate.
+ */
+/*----------------------------------------------------------------------------*/
+
+double gravi_image_get_noise_window (cpl_image *img,
+                                     cpl_size llx, cpl_size lly,
+                                     cpl_size urx, cpl_size ury)
+{
+    gravi_msg_function_start(0);
+    cpl_ensure (img, CPL_ERROR_NULL_INPUT, -1);
+    int nv;
+
+    /* Extract values in vector */
+    cpl_vector * flux = cpl_vector_new ((urx-llx+1)*(ury-lly+1));
+
+    for (cpl_size v = 0, x = llx; x <= urx; x++) {
+        for (cpl_size y = lly; y <= ury; y++) {
+            cpl_vector_set (flux, v, cpl_image_get (img, x, y, &nv));
+            v++;
+            CPLCHECK_MSG ("Cannot fill vector");
+        }
+    }
+
+    /* FIXME: remove the median before square */
+
+    /* Compute typical error as the
+     * median of spatial variation */
+    cpl_vector_multiply (flux, flux);
+    
+    double RMS = sqrt (cpl_vector_get_median (flux));
+    FREE (cpl_vector_delete, flux);
+    
+    gravi_msg_function_exit(0);
+    return RMS;
+}
+
+/*----------------------------------------------------------------------------*/
+
 cpl_error_code gravi_image_subtract_window (cpl_image * img1, const cpl_image * img2,
                                             cpl_size llx, cpl_size lly,
                                             cpl_size urx, cpl_size ury,

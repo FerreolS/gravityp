@@ -116,7 +116,10 @@ cpl_matrix * get_matrix_from_vector (cpl_vector * , cpl_vector * );
 cpl_imagelist * gravi_imagelist_from_column (cpl_table * table_data, const char * data_x);
 cpl_imagelist * gravi_imagelist_wrap_column (cpl_table * table_data, const char * data_x);
 cpl_error_code gravi_imagelist_unwrap_images (cpl_imagelist * imglist);
-    
+double gravi_image_get_noise_window (cpl_image *img,
+                                     cpl_size llx, cpl_size lly,
+                                     cpl_size urx, cpl_size ury);
+
 cpl_vector * gravi_table_get_vector (cpl_table * , cpl_size , const char * );
 cpl_vector * gravi_table_get_vector_scalar (cpl_table * table,
                                             const char * name,
