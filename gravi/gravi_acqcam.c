@@ -53,11 +53,18 @@
 
 int gravi_acqcam_isblink (cpl_imagelist * imglist, cpl_size pos);
 
-cpl_error_code gravi_acqcam_get_pup_ref (cpl_propertylist * header, cpl_size tel,
+cpl_error_code gravi_acqcam_get_pup_ref (cpl_propertylist * header,
+                                         cpl_size tel,
                                          cpl_vector * pupref);
+
+cpl_error_code gravi_acqcam_get_diode_ref (cpl_propertylist * header,
+                                           cpl_size tel,
+                                           cpl_vector * output);
+
 double cpl_acqcam_get_noise (cpl_image *img, cpl_size x0, cpl_size y0, cpl_size ns);
 
 static int gravi_acqcam_spot (const double x_in[], const double v[], double *result);
+
 cpl_error_code gravi_acqcam_spot_imprint (cpl_image * img, cpl_vector * a);
 
 static int gravi_acqcam_spot_dfda (const double x_in[], const double v[], double result[]);
@@ -72,12 +79,13 @@ const int * GRAVI_LVMQ_FREE = NULL;
 
 /* Number of parameters in the model 'gravi_acqcam_spot' 
  * And position of parameters */
-#define GRAVI_SPOT_NA    28
+#define GRAVI_SPOT_NA    29
 #define GRAVI_SPOT_SUB   0
 #define GRAVI_SPOT_ANGLE 8
-#define GRAVI_SPOT_DIODE 9
-#define GRAVI_SPOT_FWHM  11
-#define GRAVI_SPOT_FLUX  12
+#define GRAVI_SPOT_SCALE 9
+#define GRAVI_SPOT_DIODE 10
+#define GRAVI_SPOT_FWHM  12
+#define GRAVI_SPOT_FLUX  13
 
 /*-----------------------------------------------------------------------------
                              Functions code
@@ -245,8 +253,8 @@ inline int gravi_acqcam_xy_diode (const double v[], double *xd, double *yd)
 {
     /* Angle */
     double ang = v[GRAVI_SPOT_ANGLE] * CPL_MATH_RAD_DEG;
-    double sang = sin1 (ang) * 0.5;
-    double cang = sin1 (ang + CPL_MATH_PI_2) * 0.5;
+    double sang = sin1 (ang) * v[GRAVI_SPOT_SCALE];
+    double cang = sin1 (ang + CPL_MATH_PI_2) * v[GRAVI_SPOT_SCALE];
 
     double dx = v[GRAVI_SPOT_DIODE+0];
     double dy = v[GRAVI_SPOT_DIODE+1];
@@ -381,6 +389,56 @@ cpl_error_code gravi_acqcam_spot_imprint (cpl_image * img, cpl_vector * a)
 
 /*----------------------------------------------------------------------------*/
 /**
+ * @brief Read the diode position from header into the vector output
+ * 
+ *        output[8]   = rotation  [deg], set to 0.0
+ *        output[9]   = scale  [pix/m]
+ *        output[10]  = dx [m]
+ *        output[11]  = dy [m]
+ * 
+ * @param header:   input header
+ * @param tel:      requested beam (0..3)
+ * @param output:   output vector, shall be already allocated
+ */
+/*----------------------------------------------------------------------------*/
+
+cpl_error_code gravi_acqcam_get_diode_ref (cpl_propertylist * header,
+                                           cpl_size tel,
+                                           cpl_vector * output)
+{
+    gravi_msg_function_start(0);
+    cpl_ensure_code (header,          CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (tel>=0 && tel<4, CPL_ERROR_ILLEGAL_INPUT);
+    cpl_ensure_code (output,          CPL_ERROR_ILLEGAL_INPUT);
+
+    /* Get the telescope name and ID */
+    const char * telname = gravi_conf_get_telname (tel, header);
+    // int telid = atoi (telname+2) - 1;
+    CPLCHECK ("Cannot get telescope name");
+
+    /* Hardcoded theoretical positions in mm */
+
+    /* If UTs or ATs, select scaling and position */
+    if (telname[0] == 'U') {
+        cpl_vector_set (output, GRAVI_SPOT_ANGLE,  0.0);
+        cpl_vector_set (output, GRAVI_SPOT_SCALE, 16.225);
+        cpl_vector_set (output, GRAVI_SPOT_DIODE+0, 0.363);
+        cpl_vector_set (output, GRAVI_SPOT_DIODE+1, 0.823);
+    } else if (telname[0] == 'A') {
+        cpl_vector_set (output, GRAVI_SPOT_ANGLE,  0.0);
+        cpl_vector_set (output, GRAVI_SPOT_SCALE, 73.0154);
+        cpl_vector_set (output, GRAVI_SPOT_DIODE+0, 0.122);
+        cpl_vector_set (output, GRAVI_SPOT_DIODE+1, 0.158);
+    } else 
+        return cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
+                                      "Cannot get telescope name");
+        
+    gravi_msg_function_exit(0);
+    return CPL_ERROR_NONE;
+}
+
+/*----------------------------------------------------------------------------*/
+/**
  * @brief Read the sub-aperture position for the pupil sensor,
  *        and re-arrange them into the output vector
  *
@@ -396,7 +454,8 @@ cpl_error_code gravi_acqcam_spot_imprint (cpl_image * img, cpl_vector * a)
  */
 /*----------------------------------------------------------------------------*/
 
-cpl_error_code gravi_acqcam_get_pup_ref (cpl_propertylist * header, cpl_size tel,
+cpl_error_code gravi_acqcam_get_pup_ref (cpl_propertylist * header,
+                                         cpl_size tel,
                                          cpl_vector * output)
 {
     gravi_msg_function_start(0);
@@ -584,7 +643,7 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
     srand(1);
 
     /* Fit sub-aperture mean position; and diode rotation */
-    const int ia_global[] = {1,0,0,0, 1,0,0,0, 1,0,0, 0,
+    const int ia_global[] = {1,0,0,0, 1,0,0,0, 1,0,0,0, 0,
                              0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     GRAVI_LVMQ_FREE = ia_global;
 
@@ -677,7 +736,7 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
     cpl_vector_set (a, GRAVI_SPOT_FWHM, 2.5*2.5); // fwhm2 [pix2]
 
     /* Fit all parameters, including FWHM and intensities */
-    const int ia_fine[] = {1,1,1,1, 1,1,1,1, 1,1,1, 1,
+    const int ia_fine[] = {1,1,1,1, 1,1,1,1, 1,1,0,0, 1,
                            1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
     GRAVI_LVMQ_FREE = ia_fine;
 
@@ -801,20 +860,16 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
          * Converted to accound for sub-windowing 
          * In vector convention (start at 0,0) */
         gravi_acqcam_get_pup_ref (header, tel, a_start);
+        gravi_acqcam_get_diode_ref (header, tel, a_start);
         CPLCHECK_MSG ("Cannot read ACQ data for pupil in header");
 
-        /* Diode rotation [deg], and spacing in x and y [pix] */
-        cpl_vector_set (a_start, GRAVI_SPOT_ANGLE,  0.0);    // deg
-        cpl_vector_set (a_start, GRAVI_SPOT_DIODE+0, 18.0);  // dx [pix]
-        cpl_vector_set (a_start, GRAVI_SPOT_DIODE+1, 24.0);  // dy [pix]
-        
         cpl_vector * a_final = cpl_vector_duplicate (a_start);
         CPLCHECK_MSG ("Cannot prepare parameters");
                 
         /* Fit diode, with various starting point and angles */
         gravi_acqcam_fit_spot (mean_img, 30, a_final, &nspot);
         CPLCHECK_MSG ("Cannot fit rotation and center");
-
+        
         cpl_msg_info (cpl_func, "Found %i spots in mean img of tel %i", nspot, tel+1);
         
         /* Add best position as a cross in image */
@@ -823,18 +878,18 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         /* Add QC parameters */
         sprintf (qc_name, "ESO QC ACQ PUP%i NSPOT", tel+1);
         cpl_propertylist_update_int (o_header, qc_name, nspot);
-        cpl_propertylist_set_comment (o_header, qc_name, "nb. of pupil spot");
+        cpl_propertylist_set_comment (o_header, qc_name, "nb. of pupil spot in ACQ");
         
-        sprintf (qc_name, "ESO QC ACQ PUP%i DX", tel+1);
-        cpl_propertylist_update_double (o_header, qc_name, cpl_vector_get (a_final,GRAVI_SPOT_DIODE+0));
-        cpl_propertylist_set_comment (o_header, qc_name, "[pix] dx diode spacing");
+        sprintf (qc_name, "ESO QC ACQ PUP%i ANGLE", tel+1);
+        cpl_propertylist_update_double (o_header, qc_name, cpl_vector_get (a_final,GRAVI_SPOT_ANGLE));
+        cpl_propertylist_set_comment (o_header, qc_name, "[deg] diode angle on ACQ");
 
-        sprintf (qc_name, "ESO QC ACQ PUP%i DY", tel+1);
-        cpl_propertylist_update_double (o_header, qc_name, cpl_vector_get (a_final,GRAVI_SPOT_DIODE+1));
-        cpl_propertylist_set_comment (o_header, qc_name, "[pix] dy diode spacing");
+        sprintf (qc_name, "ESO QC ACQ PUP%i SCALE", tel+1);
+        cpl_propertylist_update_double (o_header, qc_name, cpl_vector_get (a_final,GRAVI_SPOT_SCALE));
+        cpl_propertylist_set_comment (o_header, qc_name, "[pix/m] diode scale on ACQ");
 
         sprintf (qc_name, "ESO QC ACQ PUP%i FWHM", tel+1);
-        cpl_propertylist_update_double (o_header, qc_name, cpl_vector_get (a_final,GRAVI_SPOT_FWHM));
+        cpl_propertylist_update_double (o_header, qc_name, sqrt (cpl_vector_get (a_final,GRAVI_SPOT_FWHM)));
         cpl_propertylist_set_comment (o_header, qc_name, "[pix] spot fwhm in ACQ");
         
         /* Loop on all images */
