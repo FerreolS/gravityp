@@ -881,9 +881,6 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         /* Add best position as a cross in image */
         gravi_acqcam_spot_imprint (mean_img, a_final);
         
-        /* Get scaling in [pix/m] */
-        double scale = cpl_vector_get (a_final,GRAVI_SPOT_SCALE);
-        
         /* Add QC parameters */
         sprintf (qc_name, "ESO QC ACQ PUP%i NSPOT", tel+1);
         cpl_msg_info (cpl_func, "%s = %i", qc_name, nspot);
@@ -895,6 +892,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         cpl_propertylist_update_double (o_header, qc_name, cpl_vector_get (a_final,GRAVI_SPOT_ANGLE));
         cpl_propertylist_set_comment (o_header, qc_name, "[deg] diode angle on ACQ");
 
+        double scale = cpl_vector_get (a_final,GRAVI_SPOT_SCALE);
         sprintf (qc_name, "ESO QC ACQ PUP%i SCALE", tel+1);
         cpl_msg_info (cpl_func, "%s = %f", qc_name, scale);
         cpl_propertylist_update_double (o_header, qc_name, scale);
@@ -905,6 +903,20 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         cpl_propertylist_update_double (o_header, qc_name, sqrt (cpl_vector_get (a_final,GRAVI_SPOT_FWHM)));
         cpl_propertylist_set_comment (o_header, qc_name, "[pix] spot fwhm in ACQ");
 
+        double xpos = cpl_vector_get (a_final,GRAVI_SPOT_SUB+0) -
+                      cpl_vector_get (a_start,GRAVI_SPOT_SUB+0);
+        sprintf (qc_name, "ESO QC ACQ PUP%i XPOS", tel+1);
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, xpos);
+        cpl_propertylist_update_double (o_header, qc_name, xpos);
+        cpl_propertylist_set_comment (o_header, qc_name, "[pix] pupil x-shift in ACQ");
+        
+        double ypos = cpl_vector_get (a_final,GRAVI_SPOT_SUB+4) -
+                      cpl_vector_get (a_start,GRAVI_SPOT_SUB+4);
+        sprintf (qc_name, "ESO QC ACQ PUP%i YPOS", tel+1);
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, ypos);
+        cpl_propertylist_update_double (o_header, qc_name, ypos);
+        cpl_propertylist_set_comment (o_header, qc_name, "[pix] pupil y-shift in ACQ");
+        
         /* Loop on all images */
         for (cpl_size row = 0; row < nrow; row++) {
             if (row %10 == 0 || row == (nrow-1))
