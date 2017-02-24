@@ -61,8 +61,6 @@ cpl_error_code gravi_acqcam_get_diode_ref (cpl_propertylist * header,
                                            cpl_size tel,
                                            cpl_vector * output);
 
-double cpl_acqcam_get_noise (cpl_image *img, cpl_size x0, cpl_size y0, cpl_size ns);
-
 static int gravi_acqcam_spot (const double x_in[], const double v[], double *result);
 
 cpl_error_code gravi_acqcam_spot_imprint (cpl_image * img, cpl_vector * a);
@@ -250,7 +248,9 @@ inline double exp1 (double x) {
   return x;
 }
 
-/* Compute the 4 diode positions */
+/* Compute the 4 diode positions from {angle, scaling, dx, dy} 
+ * The model assume the 4 diodes form a rectangle centered on
+ * the pupil. Hence this model has a 180deg degeneracy */
 inline int gravi_acqcam_xy_diode (const double v[], double *xd, double *yd)
 {
     /* Angle */
@@ -275,7 +275,7 @@ inline int gravi_acqcam_xy_diode (const double v[], double *xd, double *yd)
     return 0;
 }
 
-/* Compute the 4 sub-aperture positions */
+/* Compute the 4 sub-aperture positions from the sub-aperture modes */
 inline int gravi_acqcam_xy_sub (const double v[], double *xsub, double *ysub)
 {
     /* Sub-apperture arrangement */
@@ -336,8 +336,8 @@ static int gravi_acqcam_spot_dfda (const double x_in[], const double v[], double
     for (int a = 0; a < GRAVI_SPOT_NA; a++) result[a] = 0.0;
         
     /* Loop on parameters to compute finite differences 
-     * FIXME: The derivative is analytic, and thus this
-     * may be made faster and without global variable */
+     * FIXME: The analytical derivative may be faster, but
+     * wasn't true in first tests, thus keep these. */
     for (int a = 0; a < GRAVI_SPOT_FLUX; a++) {
         if (GRAVI_LVMQ_FREE[a] != 0) {
             vlocal[a] += epsilon;
@@ -391,7 +391,8 @@ cpl_error_code gravi_acqcam_spot_imprint (cpl_image * img, cpl_vector * a)
 
 /*----------------------------------------------------------------------------*/
 /**
- * @brief Read the diode position from header into the vector output
+ * @brief Read the diode position from header into the vector output. Assume
+ *        the four diodes form a rectangle centered on the pupil center.
  * 
  *        output[8]   = rotation  [deg], set to 0.0
  *        output[9]   = scale  [pix/m]
@@ -516,36 +517,6 @@ cpl_error_code gravi_acqcam_get_pup_ref (cpl_propertylist * header,
 }
 
 /*----------------------------------------------------------------------------*/
-
-double cpl_acqcam_get_noise (cpl_image *img, cpl_size x0, cpl_size y0, cpl_size ns)
-{
-    gravi_msg_function_start(0);
-    cpl_ensure (img, CPL_ERROR_NULL_INPUT, -1);
-    int nv;
-
-    /* Get only pixels around the center,
-     * to estimate the noise */
-    cpl_vector * flux = cpl_vector_new (ns*ns);
-    for (cpl_size v = 0, x = x0-ns/2; x < x0+ns/2; x++) {
-        for (cpl_size y = y0-ns/2; y < y0+ns/2; y++) {
-            cpl_vector_set (flux, v, cpl_image_get (img, x+1, y+1, &nv));
-            v++;
-            CPLCHECK_MSG ("Cannot fill vector");
-        }
-    }
-
-    /* Compute typical error as the
-     * median of spatial variation */
-    cpl_vector_multiply (flux, flux);
-    
-    double RMS = sqrt (cpl_vector_get_median (flux));
-    FREE (cpl_vector_delete, flux);
-    
-    gravi_msg_function_exit(0);
-    return RMS;
-}
-
-/*----------------------------------------------------------------------------*/
 /**
  * @brief Fit a pupil spot pattern into an image. The global minimum is found
  *        first with a fit which is, by-design, a correlation with the brightest
@@ -555,11 +526,8 @@ double cpl_acqcam_get_noise (cpl_image *img, cpl_size x0, cpl_size y0, cpl_size 
  *        with true Gaussian (free FWHM and amplitude).
  * 
  * @param img:    input image
- * @param ntry:   number of random starting point (around specified parameters)
- * @param a:      vector of parameter, modified in-place, in the form:
- *                (x0+x1+x2+x3, x0-x1+x2-x3, x0+x1-x2-x3, x0-x1-x2+x3, 
- *                 y0+y1+y2+y3, y0-y1+y2-y3, y0+y1-y2-y3, y0-y1-y2+y3, 
- *                 diode_angle, delta_diode_x, delta_diode_y)
+ * @param ntry:   number of random starting point
+ * @param a:      vector of parameter, modified in-place
  * @param nspot:  is filled with the number of detected spots.
  */
 /*----------------------------------------------------------------------------*/
@@ -584,8 +552,8 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
     CPLCHECK_MSG ("Cannot get values valid");
 
     /* Compute RMS in the central region */
-    double RMS = cpl_acqcam_get_noise (img, x0, y0, 50);
-    double threshold = 5 * RMS;
+    double RMS = gravi_image_get_noise_window (img, x0-25, y0-25, x0+25, y0+25);
+    double threshold = 3 * RMS;
 
     /*
      * Coarse : correlation with brightest pixels
@@ -781,8 +749,8 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
  * 
  * The routine only process the PUPIL sensor so far. It creates a table with
  * the columns PUPIL_NSPOT (number of detected spots), PUPIL_R (rotation angle)
- * of telescope diode, PUPIL_X (shift in pixel), PUPIL_Y (shift in pixel),
- * and PUPIL_Z (focus shift, in pixel). The TIME in [us] is also stored.
+ * of telescope diode, PUPIL_X, PUPIL_Y, PUPIL_Z (shifts in [m]).
+ * The TIME in [us] is also stored.
  */
 /*----------------------------------------------------------------------------*/
 
