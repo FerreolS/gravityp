@@ -70,9 +70,14 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img, cpl_size ntry,
 const extern int * GRAVI_LVMQ_FREE;
 const int * GRAVI_LVMQ_FREE = NULL;
 
-/* Number of parameters in the model 'gravi_acqcam_spot' */
-extern int GRAVI_SPOT_NA;
-int GRAVI_SPOT_NA = 28;
+/* Number of parameters in the model 'gravi_acqcam_spot' 
+ * And position of parameters */
+#define GRAVI_SPOT_NA    28
+#define GRAVI_SPOT_SUB   0
+#define GRAVI_SPOT_ANGLE 8
+#define GRAVI_SPOT_DIODE 9
+#define GRAVI_SPOT_FWHM  11
+#define GRAVI_SPOT_FLUX  12
 
 /*-----------------------------------------------------------------------------
                              Functions code
@@ -239,20 +244,23 @@ inline double exp1 (double x) {
 inline int gravi_acqcam_xy_diode (const double v[], double *xd, double *yd)
 {
     /* Angle */
-    double ang = v[8] * CPL_MATH_RAD_DEG;
+    double ang = v[GRAVI_SPOT_ANGLE] * CPL_MATH_RAD_DEG;
     double sang = sin1 (ang) * 0.5;
     double cang = sin1 (ang + CPL_MATH_PI_2) * 0.5;
 
-    /* Diode arrangement */
-    xd[0] = -cang * v[9] + sang * v[10];
-    xd[1] = -cang * v[9] - sang * v[10];
-    xd[2] =  cang * v[9] - sang * v[10];
-    xd[3] =  cang * v[9] + sang * v[10];
+    double dx = v[GRAVI_SPOT_DIODE+0];
+    double dy = v[GRAVI_SPOT_DIODE+1];
     
-    yd[0] =  cang * v[10] + sang * v[9];
-    yd[1] = -cang * v[10] + sang * v[9];
-    yd[2] = -cang * v[10] - sang * v[9];
-    yd[3] =  cang * v[10] - sang * v[9];
+    /* Diode arrangement */
+    xd[0] = -cang * dx + sang * dy;
+    xd[1] = -cang * dx - sang * dy;
+    xd[2] =  cang * dx - sang * dy;
+    xd[3] =  cang * dx + sang * dy;
+    
+    yd[0] =  cang * dy + sang * dx;
+    yd[1] = -cang * dy + sang * dx;
+    yd[2] = -cang * dy - sang * dx;
+    yd[3] =  cang * dy - sang * dx;
     
     return 0;
 }
@@ -261,15 +269,16 @@ inline int gravi_acqcam_xy_diode (const double v[], double *xd, double *yd)
 inline int gravi_acqcam_xy_sub (const double v[], double *xsub, double *ysub)
 {
     /* Sub-apperture arrangement */
-    xsub[0] = v[0] + v[1] + v[2] + v[3];
-    xsub[1] = v[0] - v[1] + v[2] - v[3];
-    xsub[2] = v[0] + v[1] - v[2] - v[3];
-    xsub[3] = v[0] - v[1] - v[2] + v[3];
+    const double * vd = v + GRAVI_SPOT_SUB;
+    xsub[0] = vd[0] + vd[1] + vd[2] + vd[3];
+    xsub[1] = vd[0] - vd[1] + vd[2] - vd[3];
+    xsub[2] = vd[0] + vd[1] - vd[2] - vd[3];
+    xsub[3] = vd[0] - vd[1] - vd[2] + vd[3];
     
-    ysub[0] = v[4] + v[5] + v[6] + v[7];
-    ysub[1] = v[4] - v[5] + v[6] - v[7];
-    ysub[2] = v[4] + v[5] - v[6] - v[7];
-    ysub[3] = v[4] - v[5] - v[6] + v[7];
+    ysub[0] = vd[4] + vd[5] + vd[6] + vd[7];
+    ysub[1] = vd[4] - vd[5] + vd[6] - vd[7];
+    ysub[2] = vd[4] + vd[5] - vd[6] - vd[7];
+    ysub[3] = vd[4] - vd[5] - vd[6] + vd[7];
 
     return 0;
 }
@@ -285,7 +294,7 @@ static int gravi_acqcam_spot (const double x_in[], const double v[], double *res
     gravi_acqcam_xy_diode (v, xd, yd);
     gravi_acqcam_xy_sub (v, xsub, ysub);
 
-    double fwhm2 = v[11];
+    double fwhm2 = v[GRAVI_SPOT_FWHM];
     
     /* Loop on diode and appertures.
      * The capture range is 2.FWHM */
@@ -294,7 +303,7 @@ static int gravi_acqcam_spot (const double x_in[], const double v[], double *res
             double xf = (x_in[0] - xsub[sub] - xd[diode]);
             double yf = (x_in[1] - ysub[sub] - yd[diode]);
             double dist = (xf*xf + yf*yf) / fwhm2;
-            if (dist < 4.0) *result += v[12+sub*4+diode] * exp1 (-dist);
+            if (dist < 4.0) *result += v[GRAVI_SPOT_FLUX+sub*4+diode] * exp1 (-dist);
         }
     }
 
@@ -319,7 +328,7 @@ static int gravi_acqcam_spot_dfda (const double x_in[], const double v[], double
     /* Loop on parameters to compute finite differences 
      * FIXME: The derivative is analytic, and thus this
      * may be made faster and without global variable */
-    for (int a = 0; a < 12; a++) {
+    for (int a = 0; a < GRAVI_SPOT_FLUX; a++) {
         if (GRAVI_LVMQ_FREE[a] != 0) {
             vlocal[a] += epsilon;
             gravi_acqcam_spot (x_in, vlocal, &next);
@@ -329,7 +338,7 @@ static int gravi_acqcam_spot_dfda (const double x_in[], const double v[], double
     }
 
     /* The intensities are trivial analytic derivative */
-    for (int a = 12; a < GRAVI_SPOT_NA; a++) {
+    for (int a = GRAVI_SPOT_FLUX; a < GRAVI_SPOT_NA; a++) {
         if (GRAVI_LVMQ_FREE[a] != 0) {
             result[a] = here / v[a];
         }
@@ -362,6 +371,7 @@ cpl_error_code gravi_acqcam_spot_imprint (cpl_image * img, cpl_vector * a)
             cpl_image_set (img, xf+1, yf, 0);
             cpl_image_set (img, xf, yf+1, 0);
             cpl_image_set (img, xf, yf-1, 0);
+            CPLCHECK ("Cannot imprint cross in image");
         }
     }
 
@@ -371,22 +381,28 @@ cpl_error_code gravi_acqcam_spot_imprint (cpl_image * img, cpl_vector * a)
 
 /*----------------------------------------------------------------------------*/
 /**
- * @brief Read the reference position for the pupil sensor, and re-arrange them
+ * @brief Read the sub-aperture position for the pupil sensor,
+ *        and re-arrange them into the output vector
+ *
+ *        output[0] = x0+x1+x2+x3   (center of sub-apertures)
+ *        output[1] = x0-x1+x2-x3
+ *        output[2] = x0+x1-x2-x3
+ *        output[3] = x0-x1-x2+x3
+ *        output[4..7] = same for y
  *
  * @param header:   input header
  * @param tel:      requested beam (0..3)
- * @param pupref:   output vector, shall be already allocated. Output are 
- *                  set in the first 8 elements: 4 sub-appertures x {X,Y}
+ * @param output:   output vector, shall be already allocated
  */
 /*----------------------------------------------------------------------------*/
 
 cpl_error_code gravi_acqcam_get_pup_ref (cpl_propertylist * header, cpl_size tel,
-                                         cpl_vector * pupref)
+                                         cpl_vector * output)
 {
     gravi_msg_function_start(0);
     cpl_ensure_code (header,          CPL_ERROR_NULL_INPUT);
     cpl_ensure_code (tel>=0 && tel<4, CPL_ERROR_ILLEGAL_INPUT);
-    cpl_ensure_code (pupref,          CPL_ERROR_ILLEGAL_INPUT);
+    cpl_ensure_code (output,          CPL_ERROR_ILLEGAL_INPUT);
 
     cpl_size ntel = 4, nsub = 4;
     cpl_size nsx = 0, nsy = 0, sx = 0, sy = 0;
@@ -424,15 +440,15 @@ cpl_error_code gravi_acqcam_get_pup_ref (cpl_propertylist * header, cpl_size tel
     }
 
     /* All linear combination of sub-appertures center */
-    cpl_vector_set (pupref, 0, 0.25 * (xsub[0] + xsub[1] + xsub[2] + xsub[3]));
-    cpl_vector_set (pupref, 1, 0.25 * (xsub[0] - xsub[1] + xsub[2] - xsub[3]));
-    cpl_vector_set (pupref, 2, 0.25 * (xsub[0] + xsub[1] - xsub[2] - xsub[3]));
-    cpl_vector_set (pupref, 3, 0.25 * (xsub[0] - xsub[1] - xsub[2] + xsub[3]));
+    cpl_vector_set (output, GRAVI_SPOT_SUB+0, 0.25 * (xsub[0] + xsub[1] + xsub[2] + xsub[3]));
+    cpl_vector_set (output, GRAVI_SPOT_SUB+1, 0.25 * (xsub[0] - xsub[1] + xsub[2] - xsub[3]));
+    cpl_vector_set (output, GRAVI_SPOT_SUB+2, 0.25 * (xsub[0] + xsub[1] - xsub[2] - xsub[3]));
+    cpl_vector_set (output, GRAVI_SPOT_SUB+3, 0.25 * (xsub[0] - xsub[1] - xsub[2] + xsub[3]));
     
-    cpl_vector_set (pupref, 4, 0.25 * (ysub[0] + ysub[1] + ysub[2] + ysub[3]));
-    cpl_vector_set (pupref, 5, 0.25 * (ysub[0] - ysub[1] + ysub[2] - ysub[3]));
-    cpl_vector_set (pupref, 6, 0.25 * (ysub[0] + ysub[1] - ysub[2] - ysub[3]));
-    cpl_vector_set (pupref, 7, 0.25 * (ysub[0] - ysub[1] - ysub[2] + ysub[3]));
+    cpl_vector_set (output, GRAVI_SPOT_SUB+4, 0.25 * (ysub[0] + ysub[1] + ysub[2] + ysub[3]));
+    cpl_vector_set (output, GRAVI_SPOT_SUB+5, 0.25 * (ysub[0] - ysub[1] + ysub[2] - ysub[3]));
+    cpl_vector_set (output, GRAVI_SPOT_SUB+6, 0.25 * (ysub[0] + ysub[1] - ysub[2] - ysub[3]));
+    cpl_vector_set (output, GRAVI_SPOT_SUB+7, 0.25 * (ysub[0] - ysub[1] - ysub[2] + ysub[3]));
     
     gravi_msg_function_exit(0);
     return CPL_ERROR_NONE;
@@ -502,8 +518,8 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
     cpl_size nx = cpl_image_get_size_x (img);
     cpl_size ny = cpl_image_get_size_y (img);
 
-    cpl_size x0 = cpl_vector_get (a, 0);
-    cpl_size y0 = cpl_vector_get (a, 4);
+    cpl_size x0 = cpl_vector_get (a, GRAVI_SPOT_SUB+0);
+    cpl_size y0 = cpl_vector_get (a, GRAVI_SPOT_SUB+4);
     CPLCHECK_MSG ("Cannot get values valid");
 
     /* Compute RMS in the central region */
@@ -567,8 +583,9 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
     double chisq_final = 1e10;
     srand(1);
 
-    /* Global variable to speed up computation of the derivatives */
-    const int ia_global[] = {1,0,0,0, 1,0,0,0, 1,0,0,0, 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+    /* Fit sub-aperture mean position; and diode rotation */
+    const int ia_global[] = {1,0,0,0, 1,0,0,0, 1,0,0, 0,
+                             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     GRAVI_LVMQ_FREE = ia_global;
 
     /* Loop on various starting points */
@@ -577,15 +594,15 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
         /* Move starting point in position (+-10pix) and angle (entire circle) */
         cpl_vector_copy (a_tmp, a_start);
         if (try > 0) {
-            cpl_vector_set (a_tmp, 0, cpl_vector_get (a_tmp, 0) + (rand()%20) - 10);
-            cpl_vector_set (a_tmp, 4, cpl_vector_get (a_tmp, 4) + (rand()%20) - 10);
-            cpl_vector_set (a_tmp, 8, cpl_vector_get (a_tmp, 8) + (rand()%180));
+            cpl_vector_set (a_tmp, GRAVI_SPOT_SUB+0, cpl_vector_get (a_tmp, GRAVI_SPOT_SUB+0) + (rand()%20) - 10);
+            cpl_vector_set (a_tmp, GRAVI_SPOT_SUB+4, cpl_vector_get (a_tmp, GRAVI_SPOT_SUB+4) + (rand()%20) - 10);
+            cpl_vector_set (a_tmp, GRAVI_SPOT_ANGLE, cpl_vector_get (a_tmp, GRAVI_SPOT_ANGLE) + (rand()%180));
         }
 
         /* Set the fwhm to 6 and amplitude to 1.0, to force
          * a pseudo-correlation with large capture range */
-        cpl_vector_set (a_tmp, 11, 6.*6.);
-        for (int d=0;d<16;d++) cpl_vector_set (a_tmp, 12+d, 1.0);
+        cpl_vector_set (a_tmp, GRAVI_SPOT_FWHM, 6.*6.);
+        for (int d=0;d<16;d++) cpl_vector_set (a_tmp, GRAVI_SPOT_FLUX+d, 1.0);
 
         /* Fit from this starting point */
         double chisq;
@@ -597,7 +614,7 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
                       CPL_FIT_LVMQ_COUNT,
                       CPL_FIT_LVMQ_MAXITER,
                       NULL, &chisq, NULL);
-        CPLCHECK_MSG ("Cannot fit");
+        CPLCHECK_MSG ("Cannot fit global minimum");
 
         /* Check chi2 and keep if lowest so far */
         if (chisq < chisq_final) {
@@ -652,15 +669,16 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
             
             /* Save the local maximum of this spot as
              * the starting point for its amplitude */
-            cpl_vector_set (a, 12+sub*4+diode, mf);
+            cpl_vector_set (a, GRAVI_SPOT_FLUX+sub*4+diode, mf);
         }
     }
 
     /* Set FWHM */
-    cpl_vector_set (a, 11, 2.5*2.5); // fwhm2 [pix2]
+    cpl_vector_set (a, GRAVI_SPOT_FWHM, 2.5*2.5); // fwhm2 [pix2]
 
-    /* Global variable to speed up computation of the derivatives */
-    const int ia_fine[] = {1,1,1,1, 1,1,1,1, 1,1,1,1, 1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
+    /* Fit all parameters, including FWHM and intensities */
+    const int ia_fine[] = {1,1,1,1, 1,1,1,1, 1,1,1, 1,
+                           1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
     GRAVI_LVMQ_FREE = ia_fine;
 
     /* Fit from this starting point */
@@ -673,7 +691,7 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
                   CPL_FIT_LVMQ_COUNT,
                   CPL_FIT_LVMQ_MAXITER,
                   NULL, &chisq_fine, NULL);
-    CPLCHECK_MSG ("Cannot fit");
+    CPLCHECK_MSG ("Cannot fit fine");
 
     cpl_msg_debug (cpl_func, "chisq_final = %.2f -> fine = %.2f",
                    chisq_final, chisq_fine);
@@ -684,7 +702,7 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
 
     /* Count the number of valid spots based on their amplitude */
     *nspot = 0;
-    for (int d=0; d<16; d++) if (cpl_vector_get (a, 12+d) > 3.*RMS) (*nspot)++;
+    for (int d=0; d<16; d++) if (cpl_vector_get (a, GRAVI_SPOT_FLUX+d) > 3.*RMS) (*nspot)++;
 
     gravi_msg_function_exit(0);
     return CPL_ERROR_NONE;
@@ -786,9 +804,9 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         CPLCHECK_MSG ("Cannot read ACQ data for pupil in header");
 
         /* Diode rotation [deg], and spacing in x and y [pix] */
-        cpl_vector_set (a_start, 8,  0.0);  // deg
-        cpl_vector_set (a_start, 9, 18.0);  // dx [pix]
-        cpl_vector_set (a_start,10, 24.0);  // dy [pix]
+        cpl_vector_set (a_start, GRAVI_SPOT_ANGLE,  0.0);    // deg
+        cpl_vector_set (a_start, GRAVI_SPOT_DIODE+0, 18.0);  // dx [pix]
+        cpl_vector_set (a_start, GRAVI_SPOT_DIODE+1, 24.0);  // dy [pix]
         
         cpl_vector * a_final = cpl_vector_duplicate (a_start);
         CPLCHECK_MSG ("Cannot prepare parameters");
@@ -808,12 +826,16 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         cpl_propertylist_set_comment (o_header, qc_name, "nb. of pupil spot");
         
         sprintf (qc_name, "ESO QC ACQ PUP%i DX", tel+1);
-        cpl_propertylist_update_double (o_header, qc_name, cpl_vector_get (a_final,9));
+        cpl_propertylist_update_double (o_header, qc_name, cpl_vector_get (a_final,GRAVI_SPOT_DIODE+0));
         cpl_propertylist_set_comment (o_header, qc_name, "[pix] dx diode spacing");
 
         sprintf (qc_name, "ESO QC ACQ PUP%i DY", tel+1);
-        cpl_propertylist_update_double (o_header, qc_name, cpl_vector_get (a_final,10));
+        cpl_propertylist_update_double (o_header, qc_name, cpl_vector_get (a_final,GRAVI_SPOT_DIODE+1));
         cpl_propertylist_set_comment (o_header, qc_name, "[pix] dy diode spacing");
+
+        sprintf (qc_name, "ESO QC ACQ PUP%i FWHM", tel+1);
+        cpl_propertylist_update_double (o_header, qc_name, cpl_vector_get (a_final,GRAVI_SPOT_FWHM));
+        cpl_propertylist_set_comment (o_header, qc_name, "[pix] spot fwhm in ACQ");
         
         /* Loop on all images */
         for (cpl_size row = 0; row < nrow; row++) {
@@ -840,13 +862,13 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
                 cpl_vector_subtract (a_row, a_start);
                 
                 /* Compute latteral shift */
-                double x_shift = cpl_vector_get (a_row, 0);
-                double y_shift = cpl_vector_get (a_row, 4);
-                double r_shift = cpl_vector_get (a_row, 8);
+                double x_shift = cpl_vector_get (a_row, GRAVI_SPOT_SUB+0);
+                double y_shift = cpl_vector_get (a_row, GRAVI_SPOT_SUB+4);
+                double r_shift = cpl_vector_get (a_row, GRAVI_SPOT_ANGLE);
                 
                 /* Compute longitudinal shift */
-                double z_shift = -0.5 * ( cpl_vector_get (a_row, 2) +
-                                          cpl_vector_get (a_row, 5));
+                double z_shift = -0.5 * ( cpl_vector_get (a_row, GRAVI_SPOT_SUB+2) +
+                                          cpl_vector_get (a_row, GRAVI_SPOT_SUB+5));
                 
                 cpl_table_set (acqcam_table, "PUPIL_NSPOT", row*ntel+tel, nspot);
                 cpl_table_set (acqcam_table, "PUPIL_X", row*ntel+tel, x_shift);
