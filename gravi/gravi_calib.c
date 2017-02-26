@@ -278,9 +278,10 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
 		/* Compute the QC parameters RMS and MEDIAN */
 		cpl_msg_info (cpl_func, "Compute QC parameters");
 		double mean_qc = cpl_image_get_median (median_img);
-
+        
 		/* Verbose */
 	    cpl_msg_info (cpl_func, "QC_MEDIAN%s_ACQ = %e",isSky?"SKY":"DARK", mean_qc);
+		cpl_propertylist_update_double (dark_header, isSky?"ESO QC ACQ SKY AVG":"ESO QC ACQ DARK AVG", mean_qc);
 
 		/* Put the data in the output table : dark_map */
 		cpl_propertylist * img_plist = gravi_data_get_plist (raw_data, GRAVI_IMAGING_DATA_ACQ_EXT);
@@ -1910,10 +1911,20 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
                 if (cpl_image_get (bad_img,x,y-1,&nv) &&
                     cpl_image_get (bad_img,x,y+1,&nv) &&
                     cpl_image_get (bad_img,x-1,y,&nv) &&
-                    cpl_image_get (bad_img,x+1,y,&nv))
+                    cpl_image_get (bad_img,x+1,y,&nv)) {
                     cpl_image_set (bad_img,x,y, 1);
+                }
             }
         }
+
+        /* Set QC parameter */
+        cpl_size count_bp = 0;
+        int nv = 0;
+        for (cpl_size x=0; x<cpl_image_get_size_x (bad_img);x++) 
+            for (cpl_size y=0; y<cpl_image_get_size_y (bad_img);y++) 
+                if (cpl_image_get (bad_img,x+1,y+1,&nv)) count_bp++;
+        
+		cpl_propertylist_append_int (bad_header, "ESO QC ACQ BADPIX", count_bp);
         
         /* Set the badpixel map of ACQ in IMAGING_DATA_ACQ */
 		gravi_data_add_img (bad_map, NULL, GRAVI_IMAGING_DATA_ACQ_EXT, bad_img);
