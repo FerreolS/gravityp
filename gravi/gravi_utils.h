@@ -170,7 +170,7 @@ int gravi_region_get_phaseid (cpl_table *imaging_detector, int region);
 char gravi_region_get_phase (cpl_table *imaging_detector, int region);
 int gravi_region_get_base_sign (cpl_table *imaging_detector, int base);
 
-int gravi_wave_get_nlambda(cpl_table *wave_data, double lambda_min, double lambda_max);
+int gravi_wave_get_nlambda (cpl_table *wave_data, double lambda_min, double lambda_max);
 
 cpl_table * gravi_table_oi_create (int , int , const char * );
 
