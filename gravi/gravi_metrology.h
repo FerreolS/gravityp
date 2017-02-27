@@ -37,6 +37,6 @@ cpl_error_code gravi_metrology_reduce (gravi_data *);
 
 cpl_table * gravi_metrology_create (cpl_table * metrology_table, cpl_propertylist * header);
 
-cpl_table * gravi_metrology_compute_p2vm (cpl_table * metrology_table);
+cpl_table * gravi_metrology_compute_p2vm (cpl_table * metrology_table, double wave_met);
 
 #endif 	/* !METREDLIB_H */

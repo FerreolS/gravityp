@@ -261,11 +261,11 @@ typedef struct {
 double metrology_sq(double x);
 double myAtan(double x, double y, int* flag);
 
-structTacConfiguration * metrology_makeDefaultTacConfiguration (void);
+structTacConfiguration * metrology_makeDefaultTacConfiguration (double lambda_met);
 
-structTacData * metrology_makeDefaultTacData (void);
+structTacData * metrology_makeDefaultTacData (double lambda_met);
 
-int metrology_algorithm(structTacData *, double met_wavelength);
+int metrology_algorithm(structTacData * tacData);
 
 int metrology_unwrap(double raw_phase, double previous_phase, double max_allowed_phase_diff,
                      double *unwrapped_phase);
@@ -277,7 +277,7 @@ int metrology_read_voltages(structTacData * tacData, double * volt);
                                TAC function code
  -----------------------------------------------------------------------------*/
 
-structTacConfiguration * metrology_makeDefaultTacConfiguration()
+structTacConfiguration * metrology_makeDefaultTacConfiguration(double lambda_met)
 {
     structTacConfiguration *defaultTacConfiguration;
     
@@ -317,7 +317,7 @@ structTacConfiguration * metrology_makeDefaultTacConfiguration()
     defaultTacConfiguration->max_allowed_phase_difference = TWOPI/3;
     defaultTacConfiguration->max_allowed_phase_speed = TWOPI/4;
 
-    defaultTacConfiguration->nominal_wavelength = LAMBDA_MET * 1e9;
+    defaultTacConfiguration->nominal_wavelength = lambda_met * 1e9;
     defaultTacConfiguration->opl_base = defaultTacConfiguration->nominal_wavelength / 1e9 / TWOPI;
     
     defaultTacConfiguration->number_to_smooth_for_telescope = 50;
@@ -338,14 +338,14 @@ structTacConfiguration * metrology_makeDefaultTacConfiguration()
     return defaultTacConfiguration;
 }
 
-structTacData * metrology_makeDefaultTacData()
+structTacData * metrology_makeDefaultTacData(double lambda_met)
 {
     long tel, diode, idx, side, comp;
     structTacData *defaultTacData;
     
     defaultTacData = cpl_malloc((size_t) sizeof(structTacData));
     
-    defaultTacData->tacConfiguration = metrology_makeDefaultTacConfiguration();
+    defaultTacData->tacConfiguration = metrology_makeDefaultTacConfiguration(lambda_met);
     
     defaultTacData->sample_number = 0;
     
@@ -626,7 +626,7 @@ double myAtan(double x, double y, int* flag)
 }
 
 
-int metrology_algorithm(structTacData * tacData, double met_wavelength)
+int metrology_algorithm(structTacData * tacData)
 {
     int err = 0;
     long tel, diode, side;
@@ -1682,16 +1682,6 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
 	  }
 	}
 
-	/*
-	 * get the laser wavelength data
-	 */
-	double met_ref_wavelength = gravi_pfits_get_met_wavelength(header);
-	double * met_wavelength = cpl_malloc (nrow_met * sizeof(double));
-	float * met_wave_array = cpl_table_get_data_float(metrology_table, "LAMBDA_LASER");
-	for (cpl_size row = 0; row < nrow_met; row ++) {
-		met_wavelength[row]=met_wave_array[row]+met_ref_wavelength;
-	}
-
 	CPLCHECK_MSG ("Cannot load metrology data");
 	
 	/* 
@@ -1758,7 +1748,11 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
     structTacData * tacData;
     structTacConfiguration * tacConfiguration;
 
-    tacData = metrology_makeDefaultTacData();
+	/* get the laser wavelength data */
+	double lambda_met_mean =  gravi_pfits_get_met_wavelength_mean(header, metrology_table);
+	cpl_msg_info (cpl_func,"Lambda met mean :%f nm",  lambda_met_mean*1e9);
+
+    tacData = metrology_makeDefaultTacData(lambda_met_mean);
     tacConfiguration = tacData->tacConfiguration;
 
     /* Loop on time sample to run the TAC algorithm */
@@ -1768,7 +1762,7 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
 	  tacData->sample_number = sample_number;
 	  tacData->buffer_idx_avg = ((sample_number - 1) % tacConfiguration->number_to_average);
 	  metrology_read_voltages(tacData, volts[sample_number-1]);
-	  metrology_algorithm(tacData, met_wavelength[sample_number-1]);
+	  metrology_algorithm(tacData);
         
 	  /* Fill the output arrays as D1T1, D2T1, D3T1, D4T1, D1T2, D2T2... */
 	  int idx_ft = 0;
@@ -1836,10 +1830,10 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
 	for (int tel = 0; tel < ntel; tel++) {
         sprintf (card_ft, "ESO OCS MET PH_FC%d_FT", tel+1);
         sprintf (card_sc, "ESO OCS MET PH_FC%d_SC", tel+1);
-        double opd_ref =  LAMBDA_MET / CPL_MATH_2PI * 
+        double opd_ref =  lambda_met_mean / CPL_MATH_2PI *
             (cpl_propertylist_get_double (header, card_sc) - cpl_propertylist_get_double (header, card_ft)) - 
             opd_fc[row_ref*ntel+tel];
-        double opd_ref_int = gravi_round (opd_ref / LAMBDA_MET) * LAMBDA_MET;
+        double opd_ref_int = gravi_round (opd_ref / lambda_met_mean) * lambda_met_mean;
         for (cpl_size row = 0; row < nrow_met; row++) {
             opd_fc[row*ntel+tel] += opd_ref_int;
         }
@@ -1851,10 +1845,10 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
         for (int diode = 0; diode < ndiode; diode++) {
             sprintf (card_ft,"ESO OCS MET PH_T%d_D%d_FT", tel+1, diode+1);
             sprintf (card_sc,"ESO OCS MET PH_T%d_D%d_SC", tel+1, diode+1);
-            double opd_ref = LAMBDA_MET / CPL_MATH_2PI * 
+            double opd_ref = lambda_met_mean / CPL_MATH_2PI *
                 (cpl_propertylist_get_double (header, card_sc) - cpl_propertylist_get_double (header, card_ft)) - 
                 opd_tel[row_ref*ntel+tel][diode];
-            double opd_ref_int = gravi_round (opd_ref / LAMBDA_MET) * LAMBDA_MET;
+            double opd_ref_int = gravi_round (opd_ref / lambda_met_mean) * lambda_met_mean;
             for (cpl_size row = 0; row < nrow_met; row++) {
                 opd_tel[row*ntel+tel][diode] += opd_ref_int;
             }
@@ -1865,7 +1859,6 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
 
 	/* Free the pointer to pointer to data */
 	FREELOOP (cpl_free, volts, nrow_met);
-	FREE (cpl_free, met_wavelength);
 	FREE (cpl_free, opd_tel);
 	FREE (cpl_free, flag_tel);
 	FREE (cpl_free, coher_tel_ft);
@@ -1908,7 +1901,7 @@ static int dfda_sin(const double x[], const double a[], double result[]){
 	return (0);
 }
 
-cpl_table * gravi_metrology_compute_p2vm (cpl_table * metrology_table)
+cpl_table * gravi_metrology_compute_p2vm (cpl_table * metrology_table, double wave_met)
 {
 	gravi_msg_function_start(1);
 	cpl_ensure (metrology_table, CPL_ERROR_NULL_INPUT, NULL);
@@ -1958,7 +1951,7 @@ cpl_table * gravi_metrology_compute_p2vm (cpl_table * metrology_table)
 
 			/* Compute phase from vectA and vectB*/
 			opl_vect = gravi_ellipse_phase_create (vectA, vectB, NULL);
-			cpl_vector_multiply_scalar (opl_vect, LAMBDA_MET/(2.0*M_PI));
+			cpl_vector_multiply_scalar (opl_vect, wave_met/(2.0*M_PI));
 			CPLCHECK_NUL("Compute OPD");
 
 			/* put OPD into opd_matrix for P2VM_MET calib */
@@ -1991,7 +1984,7 @@ cpl_table * gravi_metrology_compute_p2vm (cpl_table * metrology_table)
 				cpl_vector_set(init_val, 0, 1);
 				cpl_vector_set(init_val, 1, 1);
 				cpl_vector_set(init_val, 2, 1);
-				cpl_vector_set(init_val, 3, LAMBDA_MET);
+				cpl_vector_set(init_val, 3, wave_met);
 
 				cpl_errorstate prestate = cpl_errorstate_get();
 				cpl_fit_lvmq(opd_matrix, NULL, vect[i],
