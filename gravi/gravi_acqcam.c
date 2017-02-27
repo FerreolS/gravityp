@@ -833,7 +833,9 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         cpl_msg_info (cpl_func, "Compute pupil position for beam %i", tel+1);
 
         /* Get the conversion angle xy to uv in [rad] */
-        double fangle = gravi_pfits_get_fangle_acqcam (header, tel) * CPL_MATH_RAD_DEG;
+        double fangle = gravi_pfits_get_fangle_acqcam (header, tel);
+        double cfangle = cos(fangle * CPL_MATH_RAD_DEG);
+        double sfangle = sin(fangle * CPL_MATH_RAD_DEG);
         CPLCHECK_MSG ("Cannot read ESO INS DROTOFF#");
 
         /* Allocate memory */
@@ -869,16 +871,16 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         cpl_vector_set (a_final,GRAVI_SPOT_ANGLE,angle);
 
         /* In UV [m] */
-        double upos = (cos(fangle) * xpos - sin(fangle) * ypos) / scale;
-        double vpos = (sin(fangle) * xpos + cos(fangle) * ypos) / scale;
+        double upos = (cfangle * xpos - sfangle * ypos) / scale;
+        double vpos = (sfangle * xpos + cfangle * ypos) / scale;
         
         /* Add best position as a cross in image */
         gravi_acqcam_spot_imprint (mean_img, a_final);
         
         /* Add QC parameters */
         sprintf (qc_name, "ESO QC ACQ PUP%i NORTH_ANGLE", tel+1);
-        cpl_msg_info (cpl_func, "%s = %f", qc_name, fangle * CPL_MATH_DEG_RAD);
-        cpl_propertylist_update_double (o_header, qc_name, fangle * CPL_MATH_DEG_RAD);
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, fangle);
+        cpl_propertylist_update_double (o_header, qc_name, fangle);
         cpl_propertylist_set_comment (o_header, qc_name, "[deg] predicted North angle on ACQ");
 
         sprintf (qc_name, "ESO QC ACQ PUP%i NSPOT", tel+1);
@@ -948,8 +950,8 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
                                           cpl_vector_get (a_row, GRAVI_SPOT_SUB+5));
                 
                 /* In UV [m] */
-                double u_shift = (cos(fangle) * x_shift - sin(fangle) * y_shift) / scale;
-                double v_shift = (sin(fangle) * x_shift + cos(fangle) * y_shift) / scale;               
+                double u_shift = (cfangle * x_shift - sfangle * y_shift) / scale;
+                double v_shift = (sfangle * x_shift + cfangle * y_shift) / scale;               
                 double w_shift = gravi_acqcam_z2meter (z_shift);
                 
                 cpl_table_set (acqcam_table, "PUPIL_NSPOT", row*ntel+tel, nspot);
