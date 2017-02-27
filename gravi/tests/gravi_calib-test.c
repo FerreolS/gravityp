@@ -375,7 +375,9 @@ int gravi_calib_test(void){
     opl_table = cpl_table_new (cpl_table_get_nrow(metrology_table));
     mjd_obs = gravi_pfits_get_mjd (gravi_data_get_plist(data,
 			GRAVI_PRIMARY_HDR_EXT));
-	cpl_table * p2vm_met = gravi_metrology_compute_p2vm (metrology_table);
+    double wave_met = gravi_pfits_get_met_wavelength_mean(
+    		gravi_data_get_plist(data, GRAVI_PRIMARY_HDR_EXT), metrology_table);
+	cpl_table * p2vm_met = gravi_metrology_compute_p2vm (metrology_table, wave_met);
 
     cpl_msg_info (cpl_func, "Extract SPECTRUM for WAVE_RAW");
     gravi_data * spectrum_data = gravi_extract_spectrum (data, profile_map, dark_map,
