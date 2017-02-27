@@ -1053,18 +1053,18 @@ cpl_error_code gravi_vis_create_acq_sc (cpl_table * vis_SC,
 
   /* Get ACQ data */
   int * pup_n = cpl_table_get_data_int (vis_ACQ, "PUPIL_NSPOT");
-  double * pup_x = cpl_table_get_data_double (vis_ACQ, "PUPIL_X");
-  double * pup_y = cpl_table_get_data_double (vis_ACQ, "PUPIL_Y");
-  double * pup_z = cpl_table_get_data_double (vis_ACQ, "PUPIL_Z");
+  double * pup_x = cpl_table_get_data_double (vis_ACQ, "PUPIL_U");
+  double * pup_y = cpl_table_get_data_double (vis_ACQ, "PUPIL_V");
+  double * pup_z = cpl_table_get_data_double (vis_ACQ, "PUPIL_W");
   CPLCHECK_MSG("Cannot get direct pointer to data");
 
   /* New columns */
-  gravi_table_new_column (vis_SC, "PUPIL_X", "pix", CPL_TYPE_DOUBLE);
-  double * pup_x_sc = cpl_table_get_data_double (vis_SC, "PUPIL_X");
-  gravi_table_new_column (vis_SC, "PUPIL_Y", "pix", CPL_TYPE_DOUBLE);
-  double * pup_y_sc = cpl_table_get_data_double (vis_SC, "PUPIL_Y");
-  gravi_table_new_column (vis_SC, "PUPIL_Z", "pix", CPL_TYPE_DOUBLE);
-  double * pup_z_sc = cpl_table_get_data_double (vis_SC, "PUPIL_Z");
+  gravi_table_new_column (vis_SC, "PUPIL_U", "m", CPL_TYPE_DOUBLE);
+  double * pup_x_sc = cpl_table_get_data_double (vis_SC, "PUPIL_U");
+  gravi_table_new_column (vis_SC, "PUPIL_V", "m", CPL_TYPE_DOUBLE);
+  double * pup_y_sc = cpl_table_get_data_double (vis_SC, "PUPIL_V");
+  gravi_table_new_column (vis_SC, "PUPIL_W", "n", CPL_TYPE_DOUBLE);
+  double * pup_z_sc = cpl_table_get_data_double (vis_SC, "PUPIL_W");
 
   /* Loop on base and rows */
   for (cpl_size base = 0; base < nbase; base++) {
