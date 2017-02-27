@@ -876,6 +876,11 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         gravi_acqcam_spot_imprint (mean_img, a_final);
         
         /* Add QC parameters */
+        sprintf (qc_name, "ESO QC ACQ PUP%i NORTH_ANGLE", tel+1);
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, fangle);
+        cpl_propertylist_update_double (o_header, qc_name, fangle);
+        cpl_propertylist_set_comment (o_header, qc_name, "[deg] predicted North angle on ACQ");
+
         sprintf (qc_name, "ESO QC ACQ PUP%i NSPOT", tel+1);
         cpl_msg_info (cpl_func, "%s = %i", qc_name, nspot);
         cpl_propertylist_update_int (o_header, qc_name, nspot);
