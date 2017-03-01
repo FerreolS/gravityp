@@ -859,17 +859,40 @@ cpl_error_code gravi_compute_opdc_state (gravi_data * p2vmred_data)
 	/* Create the OPDC state for each baseline in the OI_VIS table */
 	cpl_table_new_column (oi_vis,  "STATE", CPL_TYPE_INT);
 	cpl_table_fill_column_window (oi_vis,  "STATE", 0, nrow_ft * nbase, -1);
-	
+
+    /* Create the Global OPDC state in the OI_VIS table */
+	cpl_table_new_column (oi_vis, "OPDC_STATE", CPL_TYPE_INT);
+	cpl_table_fill_column_window (oi_vis, "OPDC_STATE", 0, nrow_ft * nbase, -1);
+    
 	if (nrow_opdc < nrow_ft) 
 	  cpl_msg_warning (cpl_func,"Missing FT or OPDC data:  nrow_ft - nrow_opdc = %lli", nrow_ft-nrow_opdc);
+
+
+    /* Set the global OPDC state */
+    int * time_opdc  = cpl_table_get_data_int (opdc, "TIME");
+    double * time_ft = cpl_table_get_data_double (oi_vis, "TIME");
+    int * global_state_opdc = cpl_table_get_data_int (opdc, "STATE");
+    int * global_state = cpl_table_get_data_int (oi_vis, "OPDC_STATE");
+    CPLCHECK_MSG ("Cannot get data");
+    
+    /* Loop on FT rows */
+    for (cpl_size row_opdc=0, row_ft=0 ; row_ft<nrow_ft ; row_ft++) {
+
+		/* Check bounds or find the OPDC sample just following the current FT 
+		 * FIXME: We should use the closesd OPDC sample in the past, not future */
+		if ( (time_ft[row_ft*nbase] < time_opdc[0]) || (time_ft[row_ft*nbase] > time_opdc[nrow_opdc-1]) ) continue;
+		while ( time_ft[row_ft*nbase] > time_opdc[row_opdc] ) row_opdc ++;
+        
+        /* Set the global OPDC state */
+        for (int base = 0; base < nbase; base++)
+            global_state[row_ft*nbase+base] = global_state_opdc[row_opdc];
+    }
 
     /* BASELINE_STATE was not in the original data of the instrument */
 	if ( cpl_table_has_column (opdc,"BASELINE_STATE") ) {
 	  
 	  int * steps_opdc = cpl_table_get_data_int (opdc, "STEPS");
 	  int * state_opdc = cpl_table_get_data_int (opdc, "BASELINE_STATE");
-	  int * time_opdc  = cpl_table_get_data_int (opdc, "TIME");
-	  double * time_ft = cpl_table_get_data_double (oi_vis, "TIME");
 	  int * base_state = cpl_table_get_data_int (oi_vis, "STATE");
 	  int * tel_state  = cpl_table_get_data_int (oi_flux, "STATE");
 	  double * base_steps = cpl_table_get_data_double (oi_vis, "TARGET_PHASE");
@@ -940,6 +963,7 @@ cpl_error_code gravi_compute_opdc_state (gravi_data * p2vmred_data)
       tmp = gravi_data_get_oi_vis (p2vmred_data, GRAVI_FT, 1, npol_ft);
 	  cpl_table_duplicate_column (tmp, "TARGET_PHASE", oi_vis, "TARGET_PHASE");
 	  cpl_table_duplicate_column (tmp, "STATE", oi_vis, "STATE");
+	  cpl_table_duplicate_column (tmp, "OPDC_STATE", oi_vis, "OPDC_STATE");
       
       tmp = gravi_data_get_oi_flux (p2vmred_data, GRAVI_FT, 1, npol_ft);
 	  cpl_table_duplicate_column (tmp, "STATE", oi_flux, "STATE");
