@@ -482,10 +482,27 @@ cpl_error_code gravi_parameter_add_rejection (cpl_parameterlist *self, int isCal
 	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
 	cpl_parameterlist_append (self, p);
 
-	/* STATE threshold for fringe DET in FT */
-	p = cpl_parameter_new_value ("gravity.signal.state-min-ft", CPL_TYPE_DOUBLE,
+	/* OPDC_STATE threshold for fringe DET in FT */
+	p = cpl_parameter_new_value ("gravity.signal.global-state-min-ft", CPL_TYPE_DOUBLE,
                                  "Minimum OPDC state to accept FT frames (>=0) It rizes the second bit\n "
                                  "(<<1) of column REJECTION_FLAG of FT.",
+                                 "gravity.signal", 3.0);
+	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "global-state-min-ft");
+	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	cpl_parameterlist_append (self, p);
+    
+	p = cpl_parameter_new_value ("gravity.signal.global-state-max-ft", CPL_TYPE_DOUBLE,
+                                 "Maximum OPDC state to accept FT frames (>=0) It rizes the second bit\n "
+                                 "(<<1) of column REJECTION_FLAG of FT.",
+                                 "gravity.signal", 3.0);
+	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "global-state-max-ft");
+	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	cpl_parameterlist_append (self, p);
+
+	/* STATE threshold for fringe DET in FT */
+	p = cpl_parameter_new_value ("gravity.signal.state-min-ft", CPL_TYPE_DOUBLE,
+                                 "Minimum OPDC state per baseline to accept FT frames (>=0) It rizes\n "
+                                 "the second bit (<<1) of column REJECTION_FLAG of FT.",
                                  "gravity.signal", 1.0);
 	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "state-min-ft");
 	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);

@@ -2523,9 +2523,12 @@ cpl_error_code gravi_compute_rejection (gravi_data * p2vmred_data,
       /* Get the SNR thresholds from parameter */
       double threshold_SNR_ft = gravi_param_get_double (parlist, "gravity.signal.snr-min-ft");
       double threshold_STATE_ft = gravi_param_get_double (parlist, "gravity.signal.state-min-ft");
+      double min_GSTATE_ft = gravi_param_get_double (parlist, "gravity.signal.global-state-min-ft");
+      double max_GSTATE_ft = gravi_param_get_double (parlist, "gravity.signal.global-state-max-ft");
 
       cpl_msg_info (cpl_func,"SNR threshold to define fringe-detection in FT: %g", threshold_SNR_ft);
       cpl_msg_info (cpl_func,"STATE threshold for FT: %g", threshold_STATE_ft);
+      cpl_msg_info (cpl_func,"GLOBAL_STATE threshold for FT: %g - %g", min_GSTATE_ft, max_GSTATE_ft);
 
       /* Loop on polarisations */
       int npol_ft = gravi_pfits_get_pola_num (p2vmred_header, GRAVI_FT);
@@ -2534,7 +2537,8 @@ cpl_error_code gravi_compute_rejection (gravi_data * p2vmred_data,
           /* Get the pointer to data */
           cpl_table * vis_FT = gravi_data_get_oi_vis (p2vmred_data, GRAVI_FT, pol, npol_ft);
           double * snr = cpl_table_get_data_double (vis_FT, "SNR_BOOT");
-          int  * state = cpl_table_get_data_int (vis_FT, "STATE");
+          int  * state  = cpl_table_get_data_int (vis_FT, "STATE");
+          int  * gstate = cpl_table_get_data_int (vis_FT, "OPDC_STATE");
           
           gravi_table_new_column (vis_FT, "REJECTION_FLAG", NULL, CPL_TYPE_INT);
           int * reject_flag_ft = cpl_table_get_data_int (vis_FT, "REJECTION_FLAG");
@@ -2554,7 +2558,9 @@ cpl_error_code gravi_compute_rejection (gravi_data * p2vmred_data,
               
               /* Rejection based on STATE (2sd bit) */
               int state_bit = 1;
-              if ( state[row] < threshold_STATE_ft )
+              if ( state[row] < threshold_STATE_ft ||
+                   gstate[row] < min_GSTATE_ft ||
+                   gstate[row] > max_GSTATE_ft )
                   gravi_bit_set (reject_flag_ft[row], state_bit);
               else
                   gravi_bit_clear (reject_flag_ft[row], state_bit);
