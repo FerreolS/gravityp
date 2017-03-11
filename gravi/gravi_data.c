@@ -70,6 +70,7 @@ struct _gravi_data_{
 
 int gravi_data_is_oi_ext (cpl_propertylist * hdr);
 cpl_error_code gravi_data_check_savetypes(cpl_propertylist * hdr, cpl_table * oi_table);
+int gravi_data_get_dark_pos(cpl_table * detector_table, int reg, int x);
 
 /*-----------------------------------------------------------------------------
                              Functions code
@@ -785,102 +786,15 @@ int gravi_data_get_dark_pos(cpl_table * detector_table, int reg, int x)
 {
     cpl_ensure_code (detector_table, CPL_ERROR_NULL_INPUT);
 
-
-    /* TODO must use the new LEFT HALFLEFT RIGHT HALFRIGHT column to interpolate the position */
-    int ref0_x = gravi_table_get_value (detector_table, "CENTER", reg, 0);
+    /* TODO, FIXME must use the new LEFT HALFLEFT
+     * RIGHT HALFRIGHT column to interpolate the position */
+    // int ref0_x = gravi_table_get_value (detector_table, "CENTER", reg, 0);
     int ref0_y = gravi_table_get_value (detector_table, "CENTER", reg, 1);
     int ref1_y = gravi_table_get_value (detector_table, "CENTER", reg+1, 1);
-
-
 
     return (ref0_y+ref1_y)/2;
 }
 
-
-/* TODO
- * Test function to find a way to compute the bias of the column  without
- * introducing noise between columns by fitting the bias with polynome
- *
- */
-double gravi_bivector_get_med_poly (cpl_bivector * bivector_in)
-{
-    cpl_ensure_code (bivector_in, CPL_ERROR_NULL_INPUT);
-
-    cpl_bivector_sort(bivector_in, bivector_in, CPL_SORT_ASCENDING, CPL_SORT_BY_Y);
-
-    int size = cpl_bivector_get_size(bivector_in);
-    int sizeout = size*(0.5);
-    int start = (size-sizeout)/2;
-    //printf("%d %d %d \n", size, sizeout, start);
-    //cpl_vector * bivector = cpl_bivector_new(sizeout);
-    //cpl_vector * vector = cpl_vector_duplicate(vector_in);
-    cpl_matrix * coord = cpl_matrix_new(1,sizeout);
-    cpl_vector * vector = cpl_vector_new(sizeout);
-
-    for (cpl_size i = 0 ; i < sizeout ; i++){
-        cpl_vector_set(vector, i, cpl_vector_get(cpl_bivector_get_y(bivector_in), i+start));
-        cpl_matrix_set(coord, 0, i, cpl_vector_get(cpl_bivector_get_x(bivector_in), i+start));
-    }
-    CPLCHECK_MSG ("Cannot clip the data");
-
-    cpl_size power = 2;
-    cpl_polynomial * poly = cpl_polynomial_new(1);
-    cpl_polynomial_fit (poly, coord, NULL, vector, NULL,
-                        CPL_FALSE, NULL, &power);
-
-    sizeout=cpl_vector_get (cpl_bivector_get_y (bivector_in), size-1)-cpl_vector_get (cpl_bivector_get_y (bivector_in), 0);
-    cpl_vector * vector_mean = cpl_vector_new (sizeout);
-    CPLCHECK_MSG ("Cannot get median");
-    cpl_vector_fill_polynomial (vector_mean, poly, 0, sizeout);
-    double mean = cpl_vector_get_mean(vector_mean);
-
-    cpl_vector_delete(vector_mean);
-    cpl_vector_delete(vector);
-    cpl_matrix_delete(coord);
-
-    return mean;
-}
-
-
-/* TODO
- * Test function to find a way to compute the bias of the column  without
- * introducing noise between columns doing a median on the value inside +-n*rms
- * and after remooving a percent of the extrem
- *
- */
-double gravi_vector_get_med_percent(cpl_vector * vector_in, float percent)
-{
-    cpl_vector_sort(vector_in, CPL_SORT_ASCENDING);
-    int size = cpl_vector_get_size(vector_in);
-    int sizeout = size*(1-percent*2);
-    int start = (size-sizeout)/2;
-    //printf("%d %d %d \n", size, sizeout, start);
-    cpl_vector * vector = cpl_vector_new(sizeout);
-    //cpl_vector * vector = cpl_vector_duplicate(vector_in);
-
-
-    for (cpl_size i = 0 ; i < sizeout ; i++)
-        cpl_vector_set(vector, i, cpl_vector_get(vector_in, i+start));
-
-
-    size = cpl_vector_get_size(vector);
-    sizeout = 0;
-    double med = cpl_vector_get_median(vector);
-    double rms = cpl_vector_get_stdev(vector);
-    int nsig = 3;
-
-    for (cpl_size i = 0 ; i < size ; i++)
-        if ( (cpl_vector_get(vector, i) > med-nsig*rms) && (cpl_vector_get(vector, i) < med+nsig*rms) ) sizeout++;
-
-    //printf("%d %d %g %g \n",size, sizeout, med, rms);
-    int i_out=0;
-    cpl_vector * vector_med = cpl_vector_new(sizeout);
-    for (cpl_size i = 0 ; i < size ; i++)
-        if ( (cpl_vector_get(vector, i) > med-nsig*rms) && (cpl_vector_get(vector, i) < med+nsig*rms) )
-            cpl_vector_set(vector_med, i_out++, cpl_vector_get(vector, i));
-
-    return cpl_vector_get_mean(vector_med);
-}
 
 
 /*----------------------------------------------------------------------------*/
@@ -1052,9 +966,7 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
           }
 
           /* Compute the bias of this column, and save it */
-          //double bias_med = cpl_vector_get_mean (bias_column);
-          double bias_med = gravi_vector_get_med_percent(bias_column, 0.05);
-          //double bias_med = gravi_bivector_get_med_poly(cpl_bivector_wrap_vectors(bias_coord, bias_column));
+          double bias_med = gravi_vector_get_mean_clip (bias_column, 0.05, 3.0);
           cpl_vector_set (bias, x, bias_med);
 
           /* Remove the bias from this column */

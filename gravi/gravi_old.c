@@ -4927,3 +4927,80 @@ double gravi_array_get_group_delay_iota (cpl_array * input, cpl_array * wavenumb
 //    return CPL_ERROR_NONE;
 //}
 
+
+
+
+/* TODO, FIXME
+ * Test function to find a way to compute the bias of the column  without
+ * introducing noise between columns by fitting the bias with polynome */
+double gravi_bivector_get_med_poly (cpl_bivector * bivector_in)
+{
+    cpl_ensure_code (bivector_in, CPL_ERROR_NULL_INPUT);
+
+    cpl_bivector_sort(bivector_in, bivector_in, CPL_SORT_ASCENDING, CPL_SORT_BY_Y);
+
+    int size = cpl_bivector_get_size(bivector_in);
+    int sizeout = size*(0.5);
+    int start = (size-sizeout)/2;
+    cpl_matrix * coord = cpl_matrix_new(1,sizeout);
+    cpl_vector * vector = cpl_vector_new(sizeout);
+
+    for (cpl_size i = 0 ; i < sizeout ; i++){
+        cpl_vector_set(vector, i, cpl_vector_get(cpl_bivector_get_y(bivector_in), i+start));
+        cpl_matrix_set(coord, 0, i, cpl_vector_get(cpl_bivector_get_x(bivector_in), i+start));
+    }
+    CPLCHECK_MSG ("Cannot clip the data");
+
+    cpl_size power = 2;
+    cpl_polynomial * poly = cpl_polynomial_new(1);
+    cpl_polynomial_fit (poly, coord, NULL, vector, NULL,
+                        CPL_FALSE, NULL, &power);
+
+    sizeout=cpl_vector_get (cpl_bivector_get_y (bivector_in), size-1)-cpl_vector_get (cpl_bivector_get_y (bivector_in), 0);
+    cpl_vector * vector_mean = cpl_vector_new (sizeout);
+    CPLCHECK_MSG ("Cannot get median");
+    cpl_vector_fill_polynomial (vector_mean, poly, 0, sizeout);
+    double mean = cpl_vector_get_mean(vector_mean);
+
+    cpl_vector_delete(vector_mean);
+    cpl_vector_delete(vector);
+    cpl_matrix_delete(coord);
+
+    return mean;
+}
+
+
+/* TODO
+ * Test function to find a way to compute the bias of the column  without
+ * introducing noise between columns doing a median on the value inside +-n*rms
+ * and after remooving a percent of the extrem
+ */
+double gravi_vector_get_med_percent(cpl_vector * vector_in, float percent)
+{
+    cpl_vector_sort(vector_in, CPL_SORT_ASCENDING);
+    int size = cpl_vector_get_size(vector_in);
+    int sizeout = size*(1-percent*2);
+    int start = (size-sizeout)/2;
+    cpl_vector * vector = cpl_vector_new(sizeout);
+
+    for (cpl_size i = 0 ; i < sizeout ; i++)
+        cpl_vector_set(vector, i, cpl_vector_get(vector_in, i+start));
+
+
+    size = cpl_vector_get_size(vector);
+    sizeout = 0;
+    double med = cpl_vector_get_median(vector);
+    double rms = cpl_vector_get_stdev(vector);
+    int nsig = 3;
+
+    for (cpl_size i = 0 ; i < size ; i++)
+        if ( (cpl_vector_get(vector, i) > med-nsig*rms) && (cpl_vector_get(vector, i) < med+nsig*rms) ) sizeout++;
+
+    int i_out=0;
+    cpl_vector * vector_med = cpl_vector_new(sizeout);
+    for (cpl_size i = 0 ; i < size ; i++)
+        if ( (cpl_vector_get(vector, i) > med-nsig*rms) && (cpl_vector_get(vector, i) < med+nsig*rms) )
+            cpl_vector_set(vector_med, i_out++, cpl_vector_get(vector, i));
+
+    return cpl_vector_get_mean(vector_med);
+}
