@@ -150,6 +150,8 @@ cpl_size gravi_vector_get_maxpos (cpl_vector * vector);
 cpl_vector * gravi_vector_extract (const cpl_vector * vector, int start, int step);
 cpl_error_code gravi_vector_unwrap_with_guess (cpl_vector * vector, cpl_vector * ref, double ref_to_phase);
 
+double gravi_vector_get_mean_clip (cpl_vector * vector_in,
+                                   double percent, double nsigma);
 
 cpl_array * gravi_table_get_column_dimension (const cpl_table * table, const char * name);
 

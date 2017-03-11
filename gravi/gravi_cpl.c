@@ -2179,6 +2179,57 @@ cpl_size gravi_vector_get_maxpos (cpl_vector * vector)
 
 /*---------------------------------------------------------------------------*/
 /**
+ * @brief Test function to find a way to compute the bias of the column  without
+ * introducing noise between columns doing a median on the value inside +-n*rms
+ * and after remooving a percent of the extrem
+ */
+/*---------------------------------------------------------------------------*/
+double gravi_vector_get_mean_clip (cpl_vector * vector_in,
+                                   double percent,
+                                   double nsigma)
+{
+    cpl_ensure (vector_in,     CPL_ERROR_NULL_INPUT, 0.0);
+    cpl_ensure (percent > 0,   CPL_ERROR_ILLEGAL_INPUT, 0.0);
+    cpl_ensure (percent < 0.5, CPL_ERROR_ILLEGAL_INPUT, 0.0);
+    cpl_ensure (nsigma > 0,    CPL_ERROR_ILLEGAL_INPUT, 0.0);
+
+    /* Sort */
+    cpl_vector * sort_vector = cpl_vector_duplicate (vector_in);
+    cpl_vector_sort (sort_vector, CPL_SORT_ASCENDING);
+
+    /* Clip extrems values */
+    cpl_size size = cpl_vector_get_size (vector_in);
+    cpl_size sizeout = size*(1-percent*2);
+    cpl_size start = (size-sizeout)/2;
+
+    cpl_vector * vector = cpl_vector_new (sizeout);
+    for (cpl_size i = 0 ; i < sizeout ; i++)
+        cpl_vector_set (vector, i, cpl_vector_get (sort_vector, i+start));
+
+    /* Clip above several sigmas */
+    cpl_vector * vector_med = cpl_vector_new (sizeout);
+    double med = cpl_vector_get_median (vector);
+    double rms = nsigma * cpl_vector_get_stdev (vector);
+    
+    cpl_size size_med = 0;
+    for (cpl_size i = 0 ; i < cpl_vector_get_size (vector) ; i++)
+        if ( (cpl_vector_get (vector, i) > med-rms) &&
+             (cpl_vector_get (vector, i) < med+rms) ) {
+            cpl_vector_set (vector_med, size_med, cpl_vector_get (vector, i));
+            size_med++;
+        }
+    cpl_vector_set_size (vector_med, size_med);
+        
+    /* Compute mean of accepted values */
+    double output = cpl_vector_get_mean (vector_med);
+
+    FREE (cpl_vector_delete, vector_med);
+    FREE (cpl_vector_delete, sort_vector);
+    return output;
+}
+
+/*---------------------------------------------------------------------------*/
+/**
  * @brief Extract part of a vector
  * @param vector     Input vector (size)
  * @param start      Starting index (0...size-1)
