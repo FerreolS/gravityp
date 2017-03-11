@@ -176,7 +176,14 @@ cpl_parameter * gravi_parameter_add_profile (cpl_parameterlist *self)
     
     /* Method for profile */
     p = cpl_parameter_new_enum ("gravity.calib.profile-mode", CPL_TYPE_STRING,
-                                "Methode to compute the profile",
+                                "Methode to compute the profile."
+                                "PROFILE corresponds to the pixel intensities measured in the "
+                                "FLAT files (Gaussian like with FWHM of approx 1.5 pixel). "
+                                "This is the AUTO for the Low and Med spectral resolution. "
+                                "GAUSS corresponds to a Gaussian fit of the pixel intensities measured "
+                                "in the FLAT files. BOX corresponds to a box-card of 6 pixels centered "
+                                "on the spectra measured in the FLAT files. This is the AUTO for High "
+                                "spectral resolution",
                                 "gravity.calib", "AUTO",
                                 4, "AUTO", "PROFILE", "GAUSS", "BOX");
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "profile-mode");
@@ -193,7 +200,9 @@ cpl_parameter * gravi_parameter_add_profile (cpl_parameterlist *self)
 
 	/* The width of the profile element */
     p = cpl_parameter_new_value ("gravity.calib.profile-width", CPL_TYPE_INT,
-                                 "Width of profile in pixel",
+                                 "Width the detector window extracted around the default "
+                                 "position of each spectra, and on which the profile "
+                                 "will be applied to perform the extraction.",
                                  "gravity.calib", 6);
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "profile-width");
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
