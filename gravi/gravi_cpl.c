@@ -2179,9 +2179,13 @@ cpl_size gravi_vector_get_maxpos (cpl_vector * vector)
 
 /*---------------------------------------------------------------------------*/
 /**
- * @brief Test function to find a way to compute the bias of the column  without
- * introducing noise between columns doing a median on the value inside +-n*rms
- * and after remooving a percent of the extrem
+ * @brief Return the mean of a vector after extrema and RMS clipping
+ * 
+ * @param vector_in    input vector
+ * @param percent      0-1, fraction of extremes values rejected
+ * @param nsigma       sigma clipping
+ * 
+ * @return The mean of accepted values after
  */
 /*---------------------------------------------------------------------------*/
 double gravi_vector_get_mean_clip (cpl_vector * vector_in,
@@ -2295,7 +2299,7 @@ cpl_error_code gravi_vector_unwrap_with_guess (cpl_vector * vector, cpl_vector *
 
 /*---------------------------------------------------------------------------*/
 /**
- * @brief Multply scalar or array column by scalar
+ * @brief Multiply scalar or array column by scalar
  *
  * @param table       The table to modify in-place
  * @param name        The name of the column to modify
@@ -2519,7 +2523,8 @@ cpl_matrix * gravi_matrix_invertSV_create (cpl_matrix *a_in)
 }
 
 /*
- * pythag fonction from numerical recipe in C
+ * pythag fonction from numerical recipe in C,
+ * necessary for gravi_matrix_invertSV_create
  */
 double pythag(double a, double b)
 {
@@ -2533,7 +2538,8 @@ double pythag(double a, double b)
 
 /*
  * svdcmp fonction from numerical recipe in C
- * w and v are pre-allocated results
+ * w and v are pre-allocated results,
+ * necessary for gravi_matrix_invertSV_create
  */
 cpl_matrix * svdcmp (cpl_matrix * a_in, cpl_vector * w, cpl_matrix * v)
 {
