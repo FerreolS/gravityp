@@ -115,34 +115,34 @@ cpl_image * gravi_image(const cpl_frame * input_frame,
 
     /* --pixelsize */
     param = cpl_parameterlist_find_const(input_param,
-                          "gravi.gravi_image_reconstruct.pixelsize");
+                          "gravi.gravity_image.pixelsize");
     pixelsize_option=cpl_sprintf("-pixelsize=%g",
 									cpl_parameter_get_double(param));
     yorick_argv[argv_i++]=pixelsize_option;
 
     /* --dim */
 	param = cpl_parameterlist_find_const(input_param,
-						  "gravi.gravi_image_reconstruct.dim");
+						  "gravi.gravity_image.dim");
 	dim=cpl_parameter_get_int(param);
 	dim_option=cpl_sprintf("-dim=%d", dim);
 	yorick_argv[argv_i++]=dim_option;
 
 	/* --regul */
 	param = cpl_parameterlist_find_const(input_param,
-						  "gravi.gravi_image_reconstruct.regul");
+						  "gravi.gravity_image.regul");
 	regul_option=cpl_sprintf("--regul=%s", cpl_parameter_get_string(param));
 	yorick_argv[argv_i++]=regul_option;
 
 	/* --regul_mu */
     param = cpl_parameterlist_find_const(input_param,
-                          "gravi.gravi_image_reconstruct.regul_mu");
+                          "gravi.gravity_image.regul_mu");
     regul_mu_option=cpl_sprintf("--regul_mu=%g",
 									cpl_parameter_get_double(param));
     yorick_argv[argv_i++]=regul_mu_option;
 
     /* --maxeval */
 	param = cpl_parameterlist_find_const(input_param,
-						  "gravi.gravi_image_reconstruct.maxeval");
+						  "gravi.gravity_image.maxeval");
 	maxeval_option=cpl_sprintf("-maxeval=%d", cpl_parameter_get_int(param));
 	yorick_argv[argv_i++]=maxeval_option;
 
@@ -167,7 +167,7 @@ cpl_image * gravi_image(const cpl_frame * input_frame,
 
 	/* Get the timeout parameter */
 	param = cpl_parameterlist_find_const(input_param,
-                          "gravi.gravi_image_reconstruct.timeout");
+                          "gravi.gravity_image.timeout");
     timeout=cpl_parameter_get_double(param);
 
 	/*  Create the pipe */
