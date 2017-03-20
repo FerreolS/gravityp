@@ -271,18 +271,21 @@ cpl_table * gravi_table_ft_format (cpl_table * pix_table,
   
   /* Get the dimensions for the descramling */
   cpl_size npix = cpl_table_get_column_depth (pix_table, "PIX");
-  cpl_size sizex=cpl_table_get_column_dimension(pix_table, "PIX", 0);
-  cpl_size sizey=cpl_table_get_column_dimension(pix_table, "PIX", 1);
-  int npol, ny, ny_out, n_output;
-	
-  if (n_region > 24) {npol = 2;}
-  else { npol = 1; }
-  n_output=24;
-  ny = sizey/npol;
+  cpl_size sizex = cpl_table_get_column_dimension(pix_table, "PIX", 0);
+  cpl_size sizey = cpl_table_get_column_dimension(pix_table, "PIX", 1);
 
-  /* keep the ny_out to 5 for now to keep the same size.
+  int npol = n_region > 24 ? 2 : 1;
+  cpl_size ny = sizey / npol;
+
+  /* Keep the ny_out to 5 for now to keep the same size.
    * could be ny if the pipeline accept 6 pixels spectra */
-  ny_out = 5;
+  cpl_size ny_out = 5;
+
+  /* Number of RAW pixels */
+  cpl_size n_output = 24;
+  cpl_size nx = sizex / n_output;
+  cpl_msg_info (cpl_func, "Descramble %lld x %lld as %lld outputs x %lld pixels x %lld channels x %lld pol",
+                sizex, sizey, n_output, nx, ny, npol);
 
   /* Copy the column TIME */
   if (cpl_table_has_column (pix_table, "TIME")) {
@@ -291,7 +294,6 @@ cpl_table * gravi_table_ft_format (cpl_table * pix_table,
   }
 
   /* Get pointer to the sky mean [e] out of the loop */
-//  double * pSky = cpl_calloc (nx * ny * npol, sizeof(double));
   double * pSky = cpl_calloc (sizex * sizey, sizeof(double));
   if (skyavg_table) {
       for (cpl_size pix = 0; pix < npix; pix++) {
@@ -301,7 +303,6 @@ cpl_table * gravi_table_ft_format (cpl_table * pix_table,
   CPLCHECK_NUL ("Cannot get the sky data");
 
   /* Get pointer to the sky variance [e^2] out of the loop */
-//  double * pSkyVar = cpl_calloc (nx * ny * npol, sizeof(double));
   double * pSkyVar = cpl_calloc (sizex * sizey, sizeof(double));
   if (skystd_table) {
       for (cpl_size pix = 0; pix < npix; pix++) {
@@ -321,7 +322,7 @@ cpl_table * gravi_table_ft_format (cpl_table * pix_table,
 	  /* Verbose every 6 regions */
 	  if ( !(region+pol) || !((region*npol+pol+1)%6) )
 		cpl_msg_info_overwritable (cpl_func,
-								   "Extract region of FT %lld over %d (fast-no-cpl)",
+								   "Extract region of FT %lld over %lld (fast-no-cpl)",
 								   (region*npol+pol+1), n_output*npol);
 
 	  /* Create DATA column */
@@ -350,14 +351,12 @@ cpl_table * gravi_table_ft_format (cpl_table * pix_table,
 		double *pData    = cpl_malloc (ny_out * sizeof(double));
 		double *pDataErr = cpl_malloc (ny_out * sizeof(double));
 		for (cpl_size j = 0; j < ny_out; j++) {
-		  long idx = sizex * (j + ny*pol) + region*sizex/n_output;
+		  long idx = sizex * (j + ny*pol) + region*nx;
 		  double value = cpl_array_get (arr_data[row], idx, NULL) / gain - pSky[idx];
-		  /* add the second pixel if given */
-		  if (sizex == 48) value += cpl_array_get (arr_data[row], idx+1, NULL) / gain - pSky[idx+1];
-		  pData[j]    = value;
+		  if (nx>1) value += cpl_array_get (arr_data[row], idx+1, NULL) / gain - pSky[idx+1];
+		  pData[j]   = value;
 		  double var = pSkyVar[idx];
-          /* add the second pixel if given */
-		  if (sizex == 48) var += pSkyVar[idx+1];
+		  if (nx>1) var += pSkyVar[idx+1];
 		  pDataErr[j] = sqrt (CPL_MAX (value,0.0) + var);
 		}
 		tData[row]    = cpl_array_wrap_double (pData, ny_out);
