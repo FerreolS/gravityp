@@ -250,7 +250,7 @@ cpl_table * gravi_create_oiwave_table_ft (cpl_table * wave_table,
     cpl_ensure (pol == 0 || pol == 1, CPL_ERROR_ILLEGAL_INPUT, NULL);
     
     /* Get the nwave */
-    cpl_size nwave = 5;
+    cpl_size nwave = gravi_spectrum_get_nwave (wave_table);
     cpl_size nreg = cpl_table_get_nrow (detector_table);
 
     /* Create the OI_WAVELENGTH table */
