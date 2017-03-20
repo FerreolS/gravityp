@@ -66,6 +66,10 @@ static char gravity_wavelamp_short[] = "Measure the position of the Argon lines 
 static char gravity_wavelamp_description[] =
 "This recipe is associated to the template gravity_wavelamp.\n"
 "It reduce the raw argon file (WAVELAMP) and process it.\n"
+    GRAVI_RECIPE_FLOW"\n"
+    "* Extract the profile of the Argon exposure\n"
+    "* Measure the waveelngth position of known Argon lines\n"
+    "* Write the product\n"
     GRAVI_RECIPE_INPUT"\n"    
     GRAVI_FLAT_MAP"               : flat calibration (PRO.CATG="GRAVI_FLAT_MAP")\n"
     GRAVI_BAD_MAP"                : badpixel calibration (PRO.CATG="GRAVI_BAD_MAP") \n"

@@ -72,6 +72,10 @@ static int gravity_disp(cpl_frameset *, const cpl_parameterlist *);
 static char gravity_disp_short[] = "Calibrate the linearity and the dispersion of the differential delay lines.";
 static char gravity_disp_description[] =
     "This recipe is associated to the template GRAVI_all_disp. It measure the phases obtained on the internal source at the position of the Argon lines and various stretch of the FDDL. It deduces the linearity model and the dispersion model of the differential delay lines. These models are stored as polynomials versus wavelength.\n"
+    GRAVI_RECIPE_FLOW"\n"
+    "* Reduce all the input DISP files\n"
+    "* Compute the dispersion parameters\n"
+    "* Write product\n"
     GRAVI_RECIPE_INPUT"\n"    
     GRAVI_FLAT_MAP"               : flat calibration (PRO.CATG="GRAVI_FLAT_MAP")\n"
     GRAVI_BAD_MAP"                : badpixel calibration (PRO.CATG="GRAVI_BAD_MAP") \n"

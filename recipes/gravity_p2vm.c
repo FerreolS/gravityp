@@ -69,6 +69,11 @@ static int gravity_p2vm(cpl_frameset *, const cpl_parameterlist *);
 static char gravity_p2vm_short[] = "Calibrate the instrument bad pixels, wavelength table, interferometric contrast and phase.";
 static char gravity_p2vm_description[] =
 "This recipe reduces the internal calibrations. As a special sequence of shutter opening is required, it is advised to always build the SOF with a complete sequence of files obtained within a single execution of the p2vm calibration template. However it is still possible to input a SOF with DARK_RAW only, or DARK_RAW and FLAT_RAW only. It is also possible to input a SOF with some already processed calibration (e.g WAVE).\n"
+    GRAVI_RECIPE_FLOW"\n"
+    "* Compute the dark, write product\n"
+    "* Compute the flat, write product\n"
+    "* Compute the badpixels, write product\n"
+    "* Compute the p2vm, write product\n"
     GRAVI_RECIPE_INPUT"\n"    
     GRAVI_DARK_RAW"      : raw dark, all shutters closed (DPR.TYPE=DARK)\n"
     GRAVI_FLAT_RAW"  x4  : raw flats, one sutter open (DPR.TYPE=FLAT)\n"

@@ -55,6 +55,10 @@ static int gravity_biasmask(cpl_frameset *, const cpl_parameterlist *);
 
 static char gravity_biasmask_short[] = GRAVI_UNOFFERED"Determine which pixels can be used to measure the bias of SC detector.";
 static char gravity_biasmask_description[] = GRAVI_UNOFFERED"The recipe creates a binary mask (BIASPIX) indentifying which pixels of the SC detector are not illuminated, and thus could be used as bias-pixels in further processing. The idea would be to input such a mask, as static calibration, in all reductions. However this is not yet implemented, nor demonstrated as necessary.\n"
+    GRAVI_RECIPE_FLOW"\n"
+    "* Load the input files\n"
+    "* Indentify the mask\n"
+    "* Write product\n"
     GRAVI_RECIPE_INPUT"\n"    
     GRAVI_DARK_RAW"      : raw dark, all shutters closed (DPR.TYPE=DARK)\n"
     GRAVI_FLAT_RAW"  x4  : raw flats, one sutter open (DPR.TYPE=FLAT)\n"

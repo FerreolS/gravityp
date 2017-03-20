@@ -54,6 +54,10 @@ static int gravity_badpix(cpl_frameset *, const cpl_parameterlist *);
  -----------------------------------------------------------------------------*/
 static char gravity_badpix_short[] = "Calibrate the badpixels from the detectors.";
 static char gravity_badpix_description[] = "The recipe creates a BAD calibration map from raw DARKs and raw FLATs observations. Since it is not associated with the calibration of the instrumental transmission, more specific darks or flats can be used. Such as very long darks, fore better statistic; and/or defocused flats to illuminate more pixels. The create BAD map can then be used as an input for further calibration (P2VM) and observations.\n"
+    GRAVI_RECIPE_FLOW"\n"
+    "* Load input files\n"
+    "* Compute badpixel from dark rms, dark median, and flat value\n"
+    "* Save the product)\n"
     GRAVI_RECIPE_INPUT"\n"    
     GRAVI_DARK_RAW"      : raw dark, all shutters closed (DPR.TYPE=DARK)\n"
     GRAVI_FLAT_RAW"  x4  : raw flats, one sutter open (DPR.TYPE=FLAT)\n"
