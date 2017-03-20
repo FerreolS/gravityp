@@ -750,16 +750,14 @@ int * gravi_image_extract_dimension (cpl_image * img_profile)
 //    dim[0] = imin;
 //    dim[1] = imax - imin + 1;
 //        
-	double max, sum;
-	int i, nx, ny, i_1 = -1, i_2 = -1,
-			* dim = cpl_malloc (2 * sizeof (int));
 	double sig;
 	cpl_vector * vector, * vect, * vect_mean;
 
-	nx = cpl_image_get_size_x (img_profile);
-	ny = cpl_image_get_size_y (img_profile);
+	cpl_size nx = cpl_image_get_size_x (img_profile);
+	cpl_size ny = cpl_image_get_size_y (img_profile);
+    
 	vect_mean = cpl_vector_new_from_image_row (img_profile, 1);
-	for (i = 2; i <= ny; i++) {
+	for (cpl_size i = 2; i <= ny; i++) {
 		vect = cpl_vector_new_from_image_row (img_profile, i);
 		cpl_vector_add (vect_mean, vect);
 		cpl_vector_delete (vect);
@@ -773,14 +771,12 @@ int * gravi_image_extract_dimension (cpl_image * img_profile)
 		vector = cpl_vector_filter_median_create (vect_mean, 5);
 	}
 
-	max = cpl_vector_get_max  (vector);
-
-
+	double max = cpl_vector_get_max  (vector);
 	sig = max * 0.10; // cut the edge to 10 % of the flux
-	sum = 0;
-	i_2=nx;
-	i_1=0;
-	for (i = 1; i < nx - 1; i++){
+    
+	double sum = 0;
+	int i_2 = nx, i_1 = 0;
+	for (cpl_size i = 1; i < nx - 1; i++){
 		if (cpl_vector_get (vector, i) > sig){
 			sum ++;
 			if ((cpl_vector_get (vector, i - 1) > sig) && (cpl_vector_get (vector, i + 1) < sig))
@@ -788,7 +784,7 @@ int * gravi_image_extract_dimension (cpl_image * img_profile)
 		}
 	}
 
-	for (i = 1; i < nx - 1; i++){
+	for (cpl_size i = 1; i < nx - 1; i++){
 		if (cpl_vector_get (vector, nx - i) > sig){
 			sum ++;
 			if ((cpl_vector_get (vector, nx - i - 1) < sig) && (cpl_vector_get (vector, nx - i + 1) > sig))
@@ -796,12 +792,14 @@ int * gravi_image_extract_dimension (cpl_image * img_profile)
 		}
 	}
 
-	// increase by 1 pixels
-	i_1-=1;
-	i_2+=2;
+	/* increase by 1 pixels */
+	i_1 -= 1;
+	i_2 += 2;
 	if (i_1 < 0) i_1 = 0;
 	if (i_2 >= nx) i_2 = nx-1;
 
+    /* Fill output */
+	int * dim = cpl_malloc (2 * sizeof (int));
 	dim [0] = i_1 + 1;
 	dim [1] = i_2 - i_1;
 
