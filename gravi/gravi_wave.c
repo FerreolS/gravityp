@@ -1152,7 +1152,7 @@ cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
     /* Odd index, for SC only */
     cpl_vector * odd_index = cpl_vector_new (nwave);
     for (int i = fullstartx; i < fullstartx + nwave; i++)  {
-        if (nwave > 5) cpl_vector_set (odd_index, i - fullstartx, ((i/64)%2 == 0) ? 0 : 1);
+        if (nwave > GRAVI_LBD_FTSC) cpl_vector_set (odd_index, i - fullstartx, ((i/64)%2 == 0) ? 0 : 1);
         else cpl_vector_set (odd_index, i - fullstartx, 0);
     }
     
@@ -1211,7 +1211,7 @@ cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
                          wave_value > 2.43e-6))
                         cpl_vector_set (all_valid, pos, 0);
                 }
-                else if (nwave > 5) {
+                else if (nwave > GRAVI_LBD_FTSC) {
                     /* SC LOW */
                     if ((chi2_value > M_PI_4 ||
                          wave_value < 2.01e-6 ||

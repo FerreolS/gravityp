@@ -112,6 +112,8 @@ extern char GRAVI_CLO_NAME[4][4];
 extern char GRAVI_DATA[50][7];
 extern char GRAVI_DATAERR[50][10];
 
+#define GRAVI_LBD_FTSC 6
+
 /*
  * Lab input connected to each GRAVITY input window
  */
