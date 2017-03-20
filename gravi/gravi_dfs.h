@@ -27,6 +27,7 @@
 
 /* Flag for recipe helps */
 #define GRAVI_UNOFFERED      "*UNOFFERED* "
+#define GRAVI_RECIPE_FLOW    "\nReduction steps:\n---------------------"
 #define GRAVI_RECIPE_INPUT   "\nDO.CATG in input SoF:\n---------------------"
 #define GRAVI_RECIPE_OUTPUT  "\nPRO.CATG of products:\n---------------------"
 
