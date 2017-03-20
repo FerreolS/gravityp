@@ -73,6 +73,7 @@ static char gravity_p2vm_description[] =
     "* Compute the dark, write product\n"
     "* Compute the flat, write product\n"
     "* Compute the badpixels, write product\n"
+    "* Compute the spectral calibration, write product\n"
     "* Compute the p2vm, write product\n"
     GRAVI_RECIPE_INPUT"\n"    
     GRAVI_DARK_RAW"      : raw dark, all shutters closed (DPR.TYPE=DARK)\n"
