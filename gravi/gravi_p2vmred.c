@@ -805,10 +805,12 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
 	/*
 	 * Add QC for lambda met wavelength
 	 */
-	double lambda_met = gravi_pfits_get_met_wavelength_mean(preproc_header, gravi_data_get_table(preproc_data, GRAVI_METROLOGY_EXT));
-	sprintf (qc_name, "ESO QC MET LAMBDA MEAN");
-	cpl_propertylist_update_double (p2vmred_header, qc_name, lambda_met);
-	cpl_propertylist_set_comment (p2vmred_header, qc_name, "[m] Effective mean metrology wavelength");
+	if (gravi_data_has_extension(preproc_data, GRAVI_METROLOGY_EXT)){
+		double lambda_met = gravi_pfits_get_met_wavelength_mean(preproc_header, gravi_data_get_table(preproc_data, GRAVI_METROLOGY_EXT));
+		sprintf (qc_name, "ESO QC MET LAMBDA MEAN");
+		cpl_propertylist_update_double (p2vmred_header, qc_name, lambda_met);
+		cpl_propertylist_set_comment (p2vmred_header, qc_name, "[m] Effective mean metrology wavelength");
+	}
 
 
 	/*
