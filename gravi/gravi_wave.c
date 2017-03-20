@@ -68,9 +68,10 @@
  -----------------------------------------------------------------------------*/
 
 cpl_table * gravi_opds_compute_guess (cpl_table * spectrumsc_table,
-                                          cpl_table * opdft_table,
-                                          cpl_table * met_table,
-                                          double dit_sc);
+                                      cpl_table * opdft_table,
+                                      cpl_table * met_table,
+                                      double dit_sc,
+                                      double lbd_met);
 
 cpl_table * gravi_opds_calibration (cpl_table * spectrum_table,
                                     cpl_table * detector_table,
@@ -79,7 +80,7 @@ cpl_table * gravi_opds_calibration (cpl_table * spectrum_table,
 cpl_error_code gravi_opds_correct_closures (cpl_table * opd_sc,
                                             const char *name);
 
-cpl_vector * gravi_opds_fit_opdmet (cpl_table *opd_ft);
+cpl_vector * gravi_opds_fit_opdmet (cpl_table *opd_ft, double lbd_met);
 
 cpl_table * gravi_wave_fibre (cpl_table * spectrum_table,
                               cpl_table * detector_table,
@@ -409,7 +410,7 @@ cpl_error_code gravi_opds_correct_closures (cpl_table * phase_table,
  * The routine determine the absolute scaling of SC (a) and FT (b) OPDs by
  * solving the linear system:
  *
- *    OPD_MET_ijt = a.OPD_SC_ijt - b.OPD_FT_ijt + c_ij
+ *    2pi./LBD_MET * PHASE_MET_ijt = a.OPD_SC_ijt - b.OPD_FT_ijt + c_ij
  *
  * The routine discards samples that are ouside the SC DITs (defined with 
  * OPD_SC==0). Then it solves the systems and compute residuals.
@@ -425,7 +426,7 @@ cpl_error_code gravi_opds_correct_closures (cpl_table * phase_table,
  */
 /*----------------------------------------------------------------------------*/
 
-cpl_vector * gravi_opds_fit_opdmet (cpl_table * ft_table)
+cpl_vector * gravi_opds_fit_opdmet (cpl_table * ft_table, double lbd_met)
 {
     gravi_msg_function_start(1);
 	cpl_ensure (ft_table, CPL_ERROR_NULL_INPUT, NULL);
@@ -463,7 +464,7 @@ cpl_vector * gravi_opds_fit_opdmet (cpl_table * ft_table)
             int id  = row * nbase + base;
 
             /* Fill the OPD metrology */
-            cpl_matrix_set (rhs_matrix, idv, 0, phase_met[id] * LAMBDA_MET / CPL_MATH_2PI);
+            cpl_matrix_set (rhs_matrix, idv, 0, phase_met[id] * lbd_met / CPL_MATH_2PI);
             CPLCHECK_NUL ("Cannot set OPD");
 
             /* Fill the model b and c */
@@ -518,7 +519,7 @@ cpl_vector * gravi_opds_fit_opdmet (cpl_table * ft_table)
  *
  * For each baseline and each row of spectrum, the routine compute 
  *
- *    guess = OPD_FT  -  LBDMET * PHASE_MET / 2pi [m]
+ *    guess = OPD_FT  -  LBD_MET * PHASE_MET / 2pi [m]
  *
  * The result is saved in the column OPD of the output table, which has
  * NDIT_SC * NBASE rows. Note that the FT and FT are averaged over each SC DIT.
@@ -535,7 +536,8 @@ cpl_vector * gravi_opds_fit_opdmet (cpl_table * ft_table)
 cpl_table * gravi_opds_compute_guess (cpl_table * spectrumsc_table,
                                       cpl_table * ft_table,
                                       cpl_table * vismet_table,
-                                      double dit_sc)
+                                      double dit_sc,
+                                      double lbd_met)
 {
     gravi_msg_function_start(1);
     cpl_ensure (spectrumsc_table, CPL_ERROR_NULL_INPUT, NULL);
@@ -594,7 +596,7 @@ cpl_table * gravi_opds_compute_guess (cpl_table * spectrumsc_table,
             }
             /* End sum the MET over the current SC DIT */
                     
-            opd_met = opd_met * LAMBDA_MET / CPL_MATH_2PI / counter_met; // [m]
+            opd_met = opd_met * lbd_met / CPL_MATH_2PI / counter_met; // [m]
                     
             /*
              * Average the FT
@@ -805,6 +807,7 @@ cpl_error_code gravi_wave_compute_opds (gravi_data * spectrum_data,
     cpl_table * spectrumsc_table = gravi_data_get_spectrum_data (spectrum_data, GRAVI_SC);
     cpl_table * detectorsc_table = gravi_data_get_imaging_detector (spectrum_data, GRAVI_SC);
     CPLCHECK_MSG ("Cannot get data");
+
     
 	/*
 	 * Reduce the raw METROLOGY into VIS_MET
@@ -812,6 +815,9 @@ cpl_error_code gravi_wave_compute_opds (gravi_data * spectrum_data,
 	cpl_msg_info (cpl_func, "Compute the phase of MET_FC");
     
     cpl_table * vismet_table = gravi_metrology_create (met_table, spectrum_header);
+    
+    /* Compute the mean LBD_MET for this file */
+    double lbd_met = gravi_pfits_get_met_wavelength_mean (spectrum_header, met_table);
 
 	/*
 	 * Compute the phase of SC and FT. For the SC, we use a guess 
@@ -826,7 +832,7 @@ cpl_error_code gravi_wave_compute_opds (gravi_data * spectrum_data,
 	cpl_msg_info (cpl_func, "Compute OPD of SC from ellipse");
     
 	cpl_table * guess_table;
-    guess_table = gravi_opds_compute_guess (spectrumsc_table, ft_table, vismet_table, dit_sc);
+    guess_table = gravi_opds_compute_guess (spectrumsc_table, ft_table, vismet_table, dit_sc, lbd_met);
     
 	cpl_table * sc_table;
 	sc_table  = gravi_opds_calibration (spectrumsc_table, detectorsc_table, guess_table);
@@ -850,7 +856,7 @@ cpl_error_code gravi_wave_compute_opds (gravi_data * spectrum_data,
      * Compute the scaling coefficients of OPDs by fitting:
      * OPD_MET_ijt = a.OPD_SC_ijt - b.OPD_FT_ijt + c_ij
      */
-    cpl_vector * coeff_vector = gravi_opds_fit_opdmet (ft_table);
+    cpl_vector * coeff_vector = gravi_opds_fit_opdmet (ft_table, lbd_met);
     
 	CPLCHECK_MSG ("Cannot fit opdmet");
     

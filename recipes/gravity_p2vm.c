@@ -546,8 +546,8 @@ static int gravity_p2vm(cpl_frameset            * frameset,
         /* Compute the P2VM of the MET from the WAVE_RAW */
         cpl_msg_info (cpl_func, "Compute the P2VM_MET from WAVE_RAW");
         cpl_table * met_table = gravi_data_get_table (data, GRAVI_METROLOGY_EXT);
-        double wave_met = gravi_pfits_get_met_wavelength_mean(gravi_data_get_header(data), met_table);
-        cpl_table * p2vm_met = gravi_metrology_compute_p2vm (met_table, wave_met);
+        double lbd_met = gravi_pfits_get_met_wavelength_mean (gravi_data_get_header(data), met_table);
+        cpl_table * p2vm_met = gravi_metrology_compute_p2vm (met_table, lbd_met);
 
         /* Set the P2VM_MET in WAVE */
         gravi_data_add_table (wave_map, NULL, GRAVI_P2VM_MET_EXT, p2vm_met);
