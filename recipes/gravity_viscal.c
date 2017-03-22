@@ -186,6 +186,15 @@ static int gravity_viscal_create(cpl_plugin * plugin)
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "force-calib");
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
     cpl_parameterlist_append (recipe->parameters, p);
+
+    /* force-calib */
+    p = cpl_parameter_new_value ("gravity.viscal.nsmooth-lambda-tfsc", CPL_TYPE_INT,
+                                 "Smooth the TF spectrally by this number of"
+                                 "spectral bin, to enhance SNR if needed.",
+                                 "gravity.viscal", 0);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "nsmooth-lambda-tfsc");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (recipe->parameters, p);
     
     return 0;
 }
@@ -456,6 +465,17 @@ static int gravity_viscal(cpl_frameset            * frameset,
 	  FREE (gravi_data_delete,zero_data);
 	  cpl_errorstate_set (errorstate);
 	}
+
+	/* 
+	 * Smooth the TF if required
+	 */
+    cpl_size resmooth_sc = gravi_param_get_int (parlist, "gravity.viscal.nsmooth-lambda-tfsc");
+    if (resmooth_sc > 0) {
+		cpl_msg_info (cpl_func, "*** Smooth TF files as requested ***");
+        for (cpl_size tf = 0; tf < nb_calib; tf ++)
+            gravi_vis_smooth (vis_calibs[tf], resmooth_sc);
+    }
+    
 	
 	/* 
 	 * Apply the TF to the SCIENCE files of the frameset

@@ -46,6 +46,7 @@ cpl_error_code gravi_normalize_sc_to_ft (gravi_data * visdata);
 
 cpl_error_code gravi_average_vis (gravi_data * oi_merged);
 cpl_error_code gravi_vis_resamp (gravi_data * oi_merged, cpl_size nsamp);
+cpl_error_code gravi_vis_smooth (gravi_data * oi_data, cpl_size nsamp);
 
 cpl_error_code gravi_vis_flag_threshold (cpl_table * oi_table, const char * data, const char *flag, double value);
 cpl_error_code gravi_vis_flag_relative_threshold (cpl_table * oi_table, const char * err, const char * data, const char *flag, double value);

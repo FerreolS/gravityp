@@ -86,6 +86,10 @@ cpl_error_code gravi_vis_resamp_amp (cpl_table * oi_table, const char * name, co
 									 cpl_size nsamp, cpl_size nwave_new);
 cpl_error_code gravi_vis_resamp_phi (cpl_table * oi_table, const char * name, const char * err,
 									 cpl_size nsamp, cpl_size nwave_new);
+cpl_error_code gravi_vis_smooth_amp (cpl_table * oi_table, const char * name, const char * err,
+									 cpl_size nsamp);
+cpl_error_code gravi_vis_smooth_phi (cpl_table * oi_table, const char * name, const char * err,
+									 cpl_size nsamp);
 
 cpl_error_code gravi_vis_compute_column_mean (cpl_table * out_table,
                                               cpl_table * in_table,
@@ -2176,6 +2180,192 @@ cpl_error_code gravi_average_vis (gravi_data * oi_data)
   gravi_msg_function_exit(1);
   return CPL_ERROR_NONE;
 }
+
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Smooth amplitude column of OIFITS table.
+ * 
+ * @param oi_table:   the table to update (column depth will be modified)
+ * @param name:       name of column to rebin
+ * @param err:        corresponding error column
+ * @param nsamp:      number of consecutive samples to bin into single bin
+ */
+/*----------------------------------------------------------------------------*/
+
+cpl_error_code gravi_vis_smooth_amp (cpl_table * oi_table, const char * name, const char * err,
+									 cpl_size nsamp)
+{
+  gravi_msg_function_start(1);
+  cpl_ensure_code (oi_table, CPL_ERROR_NULL_INPUT);
+
+  /* Get values */
+  cpl_size nwave = cpl_table_get_column_depth (oi_table, name);
+  cpl_size nrow = cpl_table_get_nrow (oi_table);
+  cpl_ensure_code (nrow > 0, CPL_ERROR_ILLEGAL_INPUT);
+
+  /* Allocate output */
+  cpl_array * smo_array = cpl_array_duplicate (cpl_table_get_array (oi_table,name,0));
+  cpl_array * err_array = cpl_array_duplicate (cpl_table_get_array (oi_table,err,0));
+  
+  /* Loop on rows */
+  for (cpl_size row = 0 ; row < nrow ; row ++) {
+
+	/* Loop on  waves */
+	for (cpl_size wave = 0 ; wave < nwave ; wave ++) {
+        double sum = 0.0, weight = 0.0;
+
+        /* Loop on samples to average */
+		for (cpl_size samp = CPL_MAX(0,wave-nsamp) ; samp < CPL_MIN(nwave,wave+nsamp) ; samp ++) {
+            double w = pow (gravi_table_get_value (oi_table,err,row,samp), -2.0);
+            if (gravi_table_get_value (oi_table,"FLAG",row,samp)) w = 10e-20;
+            sum    += gravi_table_get_value (oi_table,name,row,samp) * w;
+            weight += w;
+		}
+
+        cpl_array_set_double (smo_array, wave, sum / weight);
+        cpl_array_set_double (err_array, wave, pow (weight, -0.5));
+    }
+
+    /* Set back */
+    cpl_table_set_array (oi_table, name, row, smo_array);
+    cpl_table_set_array (oi_table, err,  row, err_array);
+    CPLCHECK_MSG ("Cannot smooth amp");
+	
+  } /* End loop on rows */
+
+  FREE (cpl_array_delete, smo_array);
+  FREE (cpl_array_delete, err_array);
+
+  gravi_msg_function_exit(1);
+  return CPL_ERROR_NONE;
+}
+
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Smooth phase column of OIFITS table.
+ * 
+ * @param oi_table:   the table to update (column depth will be modified)
+ * @param name:       name of column to rebin
+ * @param err:        corresponding error column
+ * @param nsamp:      number of consecutive samples to bin into single bin
+ */
+/*----------------------------------------------------------------------------*/
+
+cpl_error_code gravi_vis_smooth_phi (cpl_table * oi_table, const char * name, const char * err,
+									 cpl_size nsamp)
+{
+  gravi_msg_function_start(1);
+  cpl_ensure_code (oi_table, CPL_ERROR_NULL_INPUT);
+
+  /* Get values */
+  cpl_size nwave = cpl_table_get_column_depth (oi_table, name);
+  cpl_size nrow = cpl_table_get_nrow (oi_table);
+  cpl_ensure_code (nrow > 0, CPL_ERROR_ILLEGAL_INPUT);
+
+  /* Allocate output */
+  cpl_array * smo_array = cpl_array_duplicate (cpl_table_get_array (oi_table,name,0));
+  cpl_array * err_array = cpl_array_duplicate (cpl_table_get_array (oi_table,err,0));
+  
+  /* Loop on rows */
+  for (cpl_size row = 0 ; row < nrow ; row ++) {
+
+	/* Loop on  waves */
+	for (cpl_size wave = 0 ; wave < nwave ; wave ++) {
+        double complex sum = 0.0;
+        double weight = 0.0;
+
+        /* Loop on samples to average */
+		for (cpl_size samp = CPL_MAX(0,wave-nsamp) ; samp < CPL_MIN(nwave,wave+nsamp) ; samp ++) {
+            double w = pow (gravi_table_get_value (oi_table,err,row,samp), -2.0);
+            if (gravi_table_get_value (oi_table,"FLAG",row,samp)) w = 10e-20;
+            sum    += cexp (1.*I* gravi_table_get_value (oi_table,name,row,samp) * CPL_MATH_RAD_DEG) * w;
+            weight += w;
+		}
+        
+        cpl_array_set_double (smo_array, wave, carg (sum) * CPL_MATH_DEG_RAD);
+        cpl_array_set_double (err_array, wave, pow (weight, -0.5));
+    }
+
+    /* Set back */
+    cpl_table_set_array (oi_table, name, row, smo_array);
+    cpl_table_set_array (oi_table, err,  row, err_array);
+    CPLCHECK_MSG ("Cannot smooth amp");
+	
+  } /* End loop on rows */
+
+  FREE (cpl_array_delete, smo_array);
+  FREE (cpl_array_delete, err_array);
+
+  gravi_msg_function_exit(1);
+  return CPL_ERROR_NONE;
+}
+
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Smooth the SC table by nsamp consecutive spectral bins.
+ * 
+ * @param oi_data    VIS data to process, in-place
+ * @param nsamp:     integer, the number of consecutive bin to smooth
+ * 
+ * The OI_VIS, OI_VIS2, OI_FLUX, OI_T3 and OI_WAVELENGTHs
+ * tables are updated accordingly. Note that this operation is not
+ * flux conservative (FIXME: understand how to better averaged flux).
+ */
+/*----------------------------------------------------------------------------*/
+
+cpl_error_code gravi_vis_smooth (gravi_data * oi_data, cpl_size nsamp)
+{
+  gravi_msg_function_start(1);
+  cpl_ensure_code (oi_data, CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (nsamp>1,   CPL_ERROR_ILLEGAL_INPUT);
+  
+  cpl_table * oi_table;
+
+  /* Create output data */
+  cpl_propertylist * header = gravi_data_get_header (oi_data);
+
+  int type_data = GRAVI_SC;
+  int npol = gravi_pfits_get_pola_num (header, type_data);
+  for (int pol = 0 ; pol < npol ; pol++ ) {
+
+
+	/* OI_FLUX */
+	oi_table = gravi_data_get_oi_flux (oi_data, type_data, pol, npol);
+	gravi_vis_smooth_amp (oi_table, "FLUX", "FLUXERR", nsamp);
+	gravi_vis_flag_relative_threshold (oi_table, "FLUXERR", "FLUX", "FLAG", 1.0);
+	CPLCHECK_MSG ("Cannot resamp OI_FLUX");
+
+	/* OI_VIS2 */
+	oi_table = gravi_data_get_oi_vis2 (oi_data, type_data, pol, npol);
+	gravi_vis_smooth_amp (oi_table, "VIS2DATA", "VIS2ERR", nsamp);
+	gravi_vis_flag_threshold (oi_table, "VIS2ERR", "FLAG", 1.);
+	CPLCHECK_MSG ("Cannot resamp OI_VIS2");
+
+	/* OI_VIS */
+	oi_table = gravi_data_get_oi_vis (oi_data, type_data, pol, npol);
+	gravi_vis_smooth_amp (oi_table, "VISAMP", "VISAMPERR", nsamp);
+	gravi_vis_smooth_amp (oi_table, "VISPHI", "VISPHIERR", nsamp);
+	gravi_vis_smooth_amp (oi_table, "RVIS", "RVISERR", nsamp);
+	gravi_vis_smooth_amp (oi_table, "IVIS", "IVISERR", nsamp);
+	gravi_vis_flag_threshold (oi_table, "VISAMPERR", "FLAG", 1.);
+    
+    gravi_msg_warning ("FIXME", "VISDATA is not properly smooth !!");
+	CPLCHECK_MSG ("Cannot resamp OI_VIS");
+	
+	/* OI_T3 */
+	oi_table = gravi_data_get_oi_t3 (oi_data, type_data, pol, npol);
+	gravi_vis_smooth_amp (oi_table, "T3AMP", "T3AMPERR", nsamp);
+	gravi_vis_smooth_amp (oi_table, "T3PHI", "T3PHIERR", nsamp);
+	gravi_vis_flag_threshold (oi_table, "T3AMPERR", "FLAG", 1.0);
+	CPLCHECK_MSG ("Cannot resamp OI_T3");
+	  
+  } /* End loop on polarisation */
+
+  gravi_msg_function_exit(1);
+  return CPL_ERROR_NONE;
+}
+
+
 
 /*----------------------------------------------------------------------------*/
 /**
