@@ -190,7 +190,7 @@ static int gravity_viscal_create(cpl_plugin * plugin)
     /* smooth */
     p = cpl_parameter_new_value ("gravity.viscal.nsmooth-tfvis-sc", CPL_TYPE_INT,
                                  "Smooth the TF spectrally by this number of "
-                                 "spectral bin, to enhance SNR if needed (only "
+                                 "spectral bin, to enhance SNR (only "
                                  "apply to VIS2, VISPHI, VISAMP, T3PHI, T3AMP).",
                                  "gravity.viscal", 0);
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "nsmooth-tfvis-sc");
@@ -199,7 +199,7 @@ static int gravity_viscal_create(cpl_plugin * plugin)
 
     p = cpl_parameter_new_value ("gravity.viscal.nsmooth-tfflux-sc", CPL_TYPE_INT,
                                  "Smooth the TF spectrally by this number of "
-                                 "spectral bin, to enhance SNR if needed (only "
+                                 "spectral bin, to enhance SNR (only "
                                  "apply to FLUX, RVIS, IVIS).",
                                  "gravity.viscal", 0);
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "nsmooth-tfflux-sc");
@@ -209,7 +209,7 @@ static int gravity_viscal_create(cpl_plugin * plugin)
     p = cpl_parameter_new_value ("gravity.viscal.maxdeg-tfvis-sc", CPL_TYPE_INT,
                                  "Fit the TF spectrally by a polynomial to enhance SNR "
                                  "(only apply to VIS2, VISPHI, VISAMP, T3PHI, T3AMP).",
-                                 "gravity.viscal", -1);
+                                 "gravity.viscal", 5);
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "maxdeg-tfvis-sc");
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
     cpl_parameterlist_append (recipe->parameters, p);
