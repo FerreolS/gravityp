@@ -187,12 +187,28 @@ static int gravity_viscal_create(cpl_plugin * plugin)
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
     cpl_parameterlist_append (recipe->parameters, p);
 
-    /* force-calib */
-    p = cpl_parameter_new_value ("gravity.viscal.nsmooth-lambda-tfsc", CPL_TYPE_INT,
+    /* smooth */
+    p = cpl_parameter_new_value ("gravity.viscal.nsmooth-tfvis-sc", CPL_TYPE_INT,
                                  "Smooth the TF spectrally by this number of"
                                  "spectral bin, to enhance SNR if needed.",
                                  "gravity.viscal", 0);
-    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "nsmooth-lambda-tfsc");
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "nsmooth-tfvis-sc");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (recipe->parameters, p);
+
+    p = cpl_parameter_new_value ("gravity.viscal.nsmooth-tfflux-sc", CPL_TYPE_INT,
+                                 "Smooth the TF spectrally by this number of"
+                                 "spectral bin, to enhance SNR if needed.",
+                                 "gravity.viscal", 0);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "nsmooth-tfflux-sc");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (recipe->parameters, p);
+
+    p = cpl_parameter_new_value ("gravity.viscal.maxdeg-tfvis-sc", CPL_TYPE_INT,
+                                 "Fit the interferometric quantities of the TF"
+                                 "by a polynomial to enhance SNR",
+                                 "gravity.viscal", -1);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "maxdeg-tfvis-sc");
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
     cpl_parameterlist_append (recipe->parameters, p);
     
@@ -381,10 +397,10 @@ static int gravity_viscal(cpl_frameset            * frameset,
 		vis_calib = gravi_compute_tf (vis_data, diamcat_data);
 
         /* Smooth the TF if required */
-        cpl_size resmooth_sc = gravi_param_get_int (parlist, "gravity.viscal.nsmooth-lambda-tfsc");
-        if (resmooth_sc > 0) {
-            gravi_vis_smooth (vis_calib, resmooth_sc);
-        }
+        cpl_size smooth_vis_sc = gravi_param_get_int (parlist, "gravity.viscal.nsmooth-tfvis-sc");
+        cpl_size smooth_flx_sc = gravi_param_get_int (parlist, "gravity.viscal.nsmooth-tfflux-sc");
+        cpl_size maxdeg_sc = gravi_param_get_int (parlist, "gravity.viscal.maxdeg-tfvis-sc");
+        gravi_vis_smooth (vis_calib, smooth_vis_sc, smooth_flx_sc, maxdeg_sc);
 
 		/* Check the TF has been computed */
 		if (vis_calib == NULL) {

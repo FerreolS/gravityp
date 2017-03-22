@@ -91,9 +91,14 @@ cpl_error_code gravi_vis_smooth_amp (cpl_table * oi_table, const char * name, co
 cpl_error_code gravi_vis_smooth_phi (cpl_table * oi_table, const char * name, const char * err,
 									 cpl_size nsamp);
 
+cpl_error_code gravi_vis_fit_amp (cpl_table * oi_table, const char * name,
+                                  const char * err, cpl_size maxdeg);
+
 cpl_error_code gravi_vis_compute_column_mean (cpl_table * out_table,
                                               cpl_table * in_table,
                                               const char * name, int ntel);
+
+cpl_error_code gravi_vis_flag_median (cpl_table * oi_table, const char * data, const char *flag, double value);
 
 /*-----------------------------------------------------------------------------
                                   Function code
@@ -713,6 +718,7 @@ cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
   /* Flag the data with >100% error or >60deg error */
   gravi_vis_flag_threshold (oi_t3_avg, "T3PHIERR", "FLAG", 60.0);
   gravi_vis_flag_threshold (oi_t3_avg, "T3AMPERR", "FLAG", 1.0);
+  gravi_vis_flag_median (oi_t3_avg, "T3PHIERR", "FLAG", 5.0);
   CPLCHECK_MSG("cannot flag baddata data");
   
   /* Compute the total integration time and MJD */
@@ -1063,7 +1069,9 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
   
   /* Flag the data with >100% error or >60deg error */
   gravi_vis_flag_threshold (oi_vis2_avg, "VIS2ERR", "FLAG", 1.0);
+  gravi_vis_flag_median (oi_vis2_avg, "VIS2ERR", "FLAG", 5.0);
   gravi_vis_flag_threshold (oi_vis_avg,  "VISAMPERR", "FLAG", 1.0);
+  gravi_vis_flag_median (oi_vis_avg, "VISPHIERR", "FLAG", 5.0);
   CPLCHECK_MSG("cannot flag baddata data");
   
   /* Compute the total integration time */
@@ -2197,20 +2205,34 @@ cpl_error_code gravi_vis_smooth_amp (cpl_table * oi_table, const char * name, co
 {
   gravi_msg_function_start(1);
   cpl_ensure_code (oi_table, CPL_ERROR_NULL_INPUT);
+  if (nsamp < 1) return CPL_ERROR_NONE;
+  int nv;
 
   /* Get values */
   cpl_size nwave = cpl_table_get_column_depth (oi_table, name);
   cpl_size nrow = cpl_table_get_nrow (oi_table);
   cpl_ensure_code (nrow > 0, CPL_ERROR_ILLEGAL_INPUT);
 
+  /* Get arrays */
+  cpl_array ** v_array = cpl_table_get_data_array (oi_table, name);
+  cpl_array ** e_array = cpl_table_get_data_array (oi_table, err);
+  cpl_array ** f_array = cpl_table_get_data_array (oi_table, "FLAG");
+
+
   /* Allocate output */
-  cpl_array * smo_array = cpl_array_duplicate (cpl_table_get_array (oi_table,name,0));
-  cpl_array * err_array = cpl_array_duplicate (cpl_table_get_array (oi_table,err,0));
+  cpl_array * smo_array = cpl_array_duplicate (v_array[0]);
+  cpl_array * err_array = cpl_array_duplicate (e_array[0]);
   
   /* Loop on rows */
   for (cpl_size row = 0 ; row < nrow ; row ++) {
 
-    /* */
+    /* Median filter the uncertainties, to avoid
+     * putting all on some sample */
+    cpl_vector * i_vector = cpl_vector_new (nwave);
+    for (cpl_size wave = 0; wave < nwave; wave++) 
+        cpl_vector_set (i_vector, wave, cpl_array_get (e_array[row],wave,&nv));
+    cpl_vector * o_vector;
+    o_vector = cpl_vector_filter_median_create (i_vector, nsamp);
 
 	/* Loop on  waves */
 	for (cpl_size wave = 0 ; wave < nwave ; wave ++) {
@@ -2218,12 +2240,12 @@ cpl_error_code gravi_vis_smooth_amp (cpl_table * oi_table, const char * name, co
 
         /* Loop on samples to average */
 		for (cpl_size samp = CPL_MAX(0,wave-nsamp) ; samp < CPL_MIN(nwave,wave+nsamp) ; samp ++) {
-            if (gravi_table_get_value (oi_table,"FLAG",row,samp)) {
+            if (cpl_array_get (f_array[row],samp,&nv)) {
                 weight += 10e-20;
                 sum += 0.0;
             } else {
-                double w = pow (gravi_table_get_value (oi_table,err,row,samp), -2.0);
-                sum    += gravi_table_get_value (oi_table,name,row,samp) * w;
+                double w = pow (cpl_vector_get (o_vector,samp), -2);
+                sum    += cpl_array_get (v_array[row],samp,&nv) * w;
                 weight += w;
             }
 		}
@@ -2237,6 +2259,8 @@ cpl_error_code gravi_vis_smooth_amp (cpl_table * oi_table, const char * name, co
     cpl_table_set_array (oi_table, err,  row, err_array);
     CPLCHECK_MSG ("Cannot smooth amp");
 	
+    FREE (cpl_vector_delete, i_vector);
+    FREE (cpl_vector_delete, o_vector);
   } /* End loop on rows */
 
   FREE (cpl_array_delete, smo_array);
@@ -2262,32 +2286,47 @@ cpl_error_code gravi_vis_smooth_phi (cpl_table * oi_table, const char * name, co
 {
   gravi_msg_function_start(1);
   cpl_ensure_code (oi_table, CPL_ERROR_NULL_INPUT);
+  if (nsamp < 1) return CPL_ERROR_NONE;
 
   /* Get values */
   cpl_size nwave = cpl_table_get_column_depth (oi_table, name);
   cpl_size nrow = cpl_table_get_nrow (oi_table);
   cpl_ensure_code (nrow > 0, CPL_ERROR_ILLEGAL_INPUT);
+  int nv;
 
-  /* Allocate output */
-  cpl_array * smo_array = cpl_array_duplicate (cpl_table_get_array (oi_table,name,0));
-  cpl_array * err_array = cpl_array_duplicate (cpl_table_get_array (oi_table,err,0));
+  /* Get arrays */
+  cpl_array ** v_array = cpl_table_get_data_array (oi_table, name);
+  cpl_array ** e_array = cpl_table_get_data_array (oi_table, err);
+  cpl_array ** f_array = cpl_table_get_data_array (oi_table, "FLAG");
   
+  /* Allocate output */
+  cpl_array * smo_array = cpl_array_duplicate (v_array[0]);
+  cpl_array * err_array = cpl_array_duplicate (e_array[0]);
+
   /* Loop on rows */
   for (cpl_size row = 0 ; row < nrow ; row ++) {
 
+    /* Median filter the uncertainties, to avoid
+     * putting all on some sample */
+    cpl_vector * i_vector = cpl_vector_new (nwave);
+    for (cpl_size wave = 0; wave < nwave; wave++) 
+        cpl_vector_set (i_vector, wave, cpl_array_get (e_array[row],wave,&nv));
+    cpl_vector * o_vector;
+    o_vector = cpl_vector_filter_median_create (i_vector, nsamp);
+
 	/* Loop on  waves */
 	for (cpl_size wave = 0 ; wave < nwave ; wave ++) {
-        double complex sum = 0.0;
+        double complex sum = 0.0 + I*0.0;
         double weight = 0.0;
 
         /* Loop on samples to average */
 		for (cpl_size samp = CPL_MAX(0,wave-nsamp) ; samp < CPL_MIN(nwave,wave+nsamp) ; samp ++) {
-            if (gravi_table_get_value (oi_table,"FLAG",row,samp)) {
+            if (cpl_array_get (f_array[row],samp,&nv)) {
                 weight += 10e-20;
                 sum += 0.0;
             } else {
-                double w = pow (gravi_table_get_value (oi_table,err,row,samp), -2.0);
-                sum    += cexp (1.*I* gravi_table_get_value (oi_table,name,row,samp) * CPL_MATH_RAD_DEG) * w;
+                double w = pow (cpl_vector_get (o_vector,samp), -2);
+                sum    += cexp (1.*I* cpl_array_get (v_array[row],samp,&nv) * CPL_MATH_RAD_DEG) * w;
                 weight += w;
             }
 		}
@@ -2301,10 +2340,101 @@ cpl_error_code gravi_vis_smooth_phi (cpl_table * oi_table, const char * name, co
     cpl_table_set_array (oi_table, err,  row, err_array);
     CPLCHECK_MSG ("Cannot smooth amp");
 	
+    FREE (cpl_vector_delete, i_vector);
+    FREE (cpl_vector_delete, o_vector);
   } /* End loop on rows */
 
   FREE (cpl_array_delete, smo_array);
   FREE (cpl_array_delete, err_array);
+
+  gravi_msg_function_exit(1);
+  return CPL_ERROR_NONE;
+
+}
+
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Smooth phase column of OIFITS table.
+ * 
+ * @param oi_table:   the table to update (column depth will be modified)
+ * @param name:       name of column to rebin
+ * @param err:        corresponding error column
+ * @param nsamp:      number of consecutive samples to bin into single bin
+ */
+/*----------------------------------------------------------------------------*/
+
+cpl_error_code gravi_vis_fit_amp (cpl_table * oi_table, const char * name,
+                                  const char * err, cpl_size maxdeg)
+{
+  gravi_msg_function_start(1);
+  cpl_ensure_code (oi_table, CPL_ERROR_NULL_INPUT);
+  if (maxdeg < 0) return CPL_ERROR_NONE;
+  cpl_size mindeg = 0;
+
+  /* Get values */
+  cpl_size nwave = cpl_table_get_column_depth (oi_table, name);
+  cpl_size nrow = cpl_table_get_nrow (oi_table);
+  cpl_ensure_code (nrow > 0, CPL_ERROR_ILLEGAL_INPUT);
+  int nv;
+
+  /* Get arrays */
+  cpl_array ** v_array = cpl_table_get_data_array (oi_table, name);
+  cpl_array ** e_array = cpl_table_get_data_array (oi_table, err);
+  cpl_array ** f_array = cpl_table_get_data_array (oi_table, "FLAG");
+  
+  
+  /* Loop on rows */
+  for (cpl_size row = 0 ; row < nrow ; row ++) {
+
+      /* Valid points -- FIXME: to be replaced by a valid fitsig
+       * when this developement will become available */
+      cpl_size nvalid = 0;
+      cpl_vector * is_valid = cpl_vector_new (nwave);
+      for (cpl_size wave = 0 ; wave < nwave ; wave ++) {
+          if (cpl_array_get (f_array[row],wave,&nv))
+              cpl_vector_set (is_valid, wave, 0);
+          else {
+              cpl_vector_set (is_valid, wave, 1);
+              nvalid ++;
+          }
+      }
+      
+      /* Create the vectors and matrix */
+      cpl_matrix * matrix = cpl_matrix_new (1,nvalid);
+      cpl_vector * vector = cpl_vector_new (nvalid);
+      cpl_vector * fitsig = cpl_vector_new (nvalid);
+      cpl_polynomial * fit = cpl_polynomial_new (1);
+
+      /* Fill */
+      for (cpl_size valid = 0, wave = 0 ; wave < nwave ; wave ++) {
+          if (!cpl_vector_get (is_valid, wave)) continue;
+		  double sigma = cpl_array_get (f_array[row],wave,&nv) ? 1e20 : 
+                         cpl_array_get (e_array[row],wave,&nv);
+		  double value = cpl_array_get (f_array[row],wave,&nv) ? 0.0 : 
+                         cpl_array_get (v_array[row],wave,&nv);
+          cpl_matrix_set (matrix, 0, valid, wave);
+          cpl_vector_set (vector, valid, value);
+          cpl_vector_set (fitsig, valid, sigma);
+          valid++;
+          CPLCHECK_MSG ("Cannot fill");
+      }
+
+      /* Fit */
+      cpl_polynomial_fit (fit, matrix, NULL, vector, NULL, CPL_FALSE, &mindeg, &maxdeg);
+      CPLCHECK_MSG ("Cannot fit");
+
+      /* Evaluate */
+      for (cpl_size wave = 0 ; wave < nwave ; wave ++) {
+          double value = cpl_polynomial_eval_1d (fit, wave, NULL);
+          cpl_array_set (v_array[row],wave,value);
+          CPLCHECK_MSG ("Cannot evaluate");
+      }
+      
+      FREE (cpl_matrix_delete, matrix);
+      FREE (cpl_vector_delete, vector);
+      FREE (cpl_vector_delete, fitsig);
+      FREE (cpl_polynomial_delete, fit);
+  }
 
   gravi_msg_function_exit(1);
   return CPL_ERROR_NONE;
@@ -2314,20 +2444,25 @@ cpl_error_code gravi_vis_smooth_phi (cpl_table * oi_table, const char * name, co
 /**
  * @brief Smooth the SC table by nsamp consecutive spectral bins.
  * 
- * @param oi_data    VIS data to process, in-place
- * @param nsamp:     integer, the number of consecutive bin to smooth
+ * @param oi_data      VIS data to process, in-place
+ * @param nsamp_vis    integer, the number of consecutive bin to smooth
+ * @param nsamp_phi    integer, the number of consecutive bin to smooth
+ * @param maxdeg       integer, fit order
+ * @param mindeg       integer, fit order    
  * 
- * The OI_VIS, OI_VIS2, OI_FLUX, OI_T3 and OI_WAVELENGTHs
+ * The OI_VIS, OI_VIS2, OI_FLUX, OI_T3
  * tables are updated accordingly. Note that this operation is not
  * flux conservative (FIXME: understand how to better averaged flux).
  */
 /*----------------------------------------------------------------------------*/
 
-cpl_error_code gravi_vis_smooth (gravi_data * oi_data, cpl_size nsamp)
+cpl_error_code gravi_vis_smooth (gravi_data * oi_data,
+                                 cpl_size nsamp_vis,
+                                 cpl_size nsamp_flx,
+                                 cpl_size maxdeg)
 {
   gravi_msg_function_start(1);
   cpl_ensure_code (oi_data, CPL_ERROR_NULL_INPUT);
-  cpl_ensure_code (nsamp>1,   CPL_ERROR_ILLEGAL_INPUT);
   
   cpl_table * oi_table;
 
@@ -2336,27 +2471,32 @@ cpl_error_code gravi_vis_smooth (gravi_data * oi_data, cpl_size nsamp)
 
   int type_data = GRAVI_SC;
   int npol = gravi_pfits_get_pola_num (header, type_data);
+  
   for (int pol = 0 ; pol < npol ; pol++ ) {
-
 
 	/* OI_FLUX */
 	oi_table = gravi_data_get_oi_flux (oi_data, type_data, pol, npol);
-	gravi_vis_smooth_amp (oi_table, "FLUX", "FLUXERR", nsamp);
+	gravi_vis_smooth_amp (oi_table, "FLUX", "FLUXERR", nsamp_flx);
 	gravi_vis_flag_relative_threshold (oi_table, "FLUXERR", "FLUX", "FLAG", 1.0);
 	CPLCHECK_MSG ("Cannot resamp OI_FLUX");
 
 	/* OI_VIS2 */
 	oi_table = gravi_data_get_oi_vis2 (oi_data, type_data, pol, npol);
-	gravi_vis_smooth_amp (oi_table, "VIS2DATA", "VIS2ERR", nsamp);
+    gravi_vis_flag_median (oi_table, "VIS2ERR", "FLAG", 5.0);    
+	gravi_vis_smooth_amp (oi_table, "VIS2DATA", "VIS2ERR", nsamp_vis);
+    gravi_vis_fit_amp (oi_table, "VIS2DATA", "VIS2ERR", maxdeg);
 	gravi_vis_flag_threshold (oi_table, "VIS2ERR", "FLAG", 1.);
 	CPLCHECK_MSG ("Cannot resamp OI_VIS2");
 
 	/* OI_VIS */
 	oi_table = gravi_data_get_oi_vis (oi_data, type_data, pol, npol);
-	gravi_vis_smooth_amp (oi_table, "VISAMP", "VISAMPERR", nsamp);
-	gravi_vis_smooth_amp (oi_table, "VISPHI", "VISPHIERR", nsamp);
-	gravi_vis_smooth_amp (oi_table, "RVIS", "RVISERR", nsamp);
-	gravi_vis_smooth_amp (oi_table, "IVIS", "IVISERR", nsamp);
+    gravi_vis_flag_median (oi_table, "VISPHIERR", "FLAG", 5.0);
+	gravi_vis_smooth_amp (oi_table, "VISAMP", "VISAMPERR", nsamp_vis);
+	gravi_vis_smooth_phi (oi_table, "VISPHI", "VISPHIERR", nsamp_vis);
+    gravi_vis_fit_amp (oi_table, "VISAMP", "VISAMPERR", maxdeg);
+    gravi_vis_fit_amp (oi_table, "VISPHI", "VISPHIERR", maxdeg);
+	gravi_vis_smooth_amp (oi_table, "RVIS", "RVISERR", nsamp_flx);
+	gravi_vis_smooth_amp (oi_table, "IVIS", "IVISERR", nsamp_flx);
 	gravi_vis_flag_threshold (oi_table, "VISAMPERR", "FLAG", 1.);
     
     gravi_msg_warning ("FIXME", "VISDATA is not properly smooth !!");
@@ -2364,8 +2504,11 @@ cpl_error_code gravi_vis_smooth (gravi_data * oi_data, cpl_size nsamp)
 	
 	/* OI_T3 */
 	oi_table = gravi_data_get_oi_t3 (oi_data, type_data, pol, npol);
-	gravi_vis_smooth_amp (oi_table, "T3AMP", "T3AMPERR", nsamp);
-	gravi_vis_smooth_amp (oi_table, "T3PHI", "T3PHIERR", nsamp);
+    gravi_vis_flag_median (oi_table, "T3PHIERR", "FLAG", 5.0);
+	gravi_vis_smooth_amp (oi_table, "T3AMP", "T3AMPERR", nsamp_vis);
+	gravi_vis_smooth_phi (oi_table, "T3PHI", "T3PHIERR", nsamp_vis);
+	gravi_vis_fit_amp (oi_table, "T3AMP", "T3AMPERR", maxdeg);
+	gravi_vis_fit_amp (oi_table, "T3PHI", "T3PHIERR", maxdeg);
 	gravi_vis_flag_threshold (oi_table, "T3AMPERR", "FLAG", 1.0);
 	CPLCHECK_MSG ("Cannot resamp OI_T3");
 	  
@@ -2374,8 +2517,6 @@ cpl_error_code gravi_vis_smooth (gravi_data * oi_data, cpl_size nsamp)
   gravi_msg_function_exit(1);
   return CPL_ERROR_NONE;
 }
-
-
 
 /*----------------------------------------------------------------------------*/
 /**
@@ -2592,18 +2733,19 @@ cpl_error_code gravi_vis_flag_threshold (cpl_table * oi_table, const char * data
   
   /* Get pointer to speed up */
   int nv = 0;
-  cpl_size row, nrow = cpl_table_get_nrow (oi_table);
+  cpl_size nrow = cpl_table_get_nrow (oi_table);
   cpl_array ** pdata = cpl_table_get_data_array (oi_table, data);
   cpl_array ** pflag = cpl_table_get_data_array (oi_table, flag);
   
   CPLCHECK_MSG ("Cannot get data");
   
-  cpl_size indx, size = cpl_array_get_size (pdata[0]);
+  cpl_size size = cpl_array_get_size (pdata[0]);
   
   /* Loop on row and index. Add to FLAG if data is above threshold */
-  for ( row = 0 ; row < nrow ; row ++ ) {
+  for ( cpl_size row = 0 ; row < nrow ; row ++ ) {
         if (pdata[row]==NULL) continue;
-	for ( indx = 0 ; indx < size ; indx ++ ) {
+        
+	for ( cpl_size indx = 0 ; indx < size ; indx ++ ) {
 	  if ( cpl_array_get (pdata[row], indx, &nv) > value ) {
 	       cpl_array_set (pflag[row], indx, cpl_array_get (pflag[row], indx, &nv) + 1 );
 	  }
@@ -2613,6 +2755,51 @@ cpl_error_code gravi_vis_flag_threshold (cpl_table * oi_table, const char * data
   gravi_msg_function_exit(0);
   return CPL_ERROR_NONE;
 }
+
+cpl_error_code gravi_vis_flag_median (cpl_table * oi_table, const char * data, const char *flag, double value)
+{
+  gravi_msg_function_start(0);
+  cpl_ensure_code (oi_table, CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (data, CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (flag, CPL_ERROR_ILLEGAL_OUTPUT);
+  
+  /* Get pointer to speed up */
+  int nv = 0;
+  cpl_size nrow = cpl_table_get_nrow (oi_table);
+  cpl_array ** pdata = cpl_table_get_data_array (oi_table, data);
+  cpl_array ** pflag = cpl_table_get_data_array (oi_table, flag);
+  
+  CPLCHECK_MSG ("Cannot get data");
+  
+  cpl_size size = cpl_array_get_size (pdata[0]);
+  cpl_vector * i_vector = cpl_vector_new (size);
+  
+  /* Loop on row and index. Add to FLAG if data is above threshold */
+  for ( cpl_size row = 0 ; row < nrow ; row ++ ) {
+        if (pdata[row]==NULL || size<100) continue;
+
+      /* Set */
+      for (cpl_size indx = 0; indx < size; indx++) 
+          cpl_vector_set (i_vector, indx, cpl_array_get (pdata[0],indx,&nv));
+
+      /* Median filter over 8 pixels wide */
+      cpl_vector * o_vector = cpl_vector_filter_median_create (i_vector, 4);
+
+      /* Check whose pixel have a large uncertainties compare to this median */
+      for ( cpl_size indx = 0 ; indx < size ; indx ++ ) {
+          if ( cpl_array_get (pdata[row], indx, &nv) > value * cpl_vector_get (o_vector, indx)) {
+              cpl_array_set (pflag[row], indx, cpl_array_get (pflag[row], indx, &nv) + 1 );
+          }
+      }
+
+      FREE (cpl_vector_delete, o_vector);
+  }
+
+  FREE (cpl_vector_delete, i_vector);
+  gravi_msg_function_exit(0);
+  return CPL_ERROR_NONE;
+}
+
 
 /*----------------------------------------------------------------------------*/
 /**
