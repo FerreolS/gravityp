@@ -380,6 +380,12 @@ static int gravity_viscal(cpl_frameset            * frameset,
 		vis_data = gravi_data_load_frame (frame, NULL);
 		vis_calib = gravi_compute_tf (vis_data, diamcat_data);
 
+        /* Smooth the TF if required */
+        cpl_size resmooth_sc = gravi_param_get_int (parlist, "gravity.viscal.nsmooth-lambda-tfsc");
+        if (resmooth_sc > 0) {
+            gravi_vis_smooth (vis_calib, resmooth_sc);
+        }
+
 		/* Check the TF has been computed */
 		if (vis_calib == NULL) {
 		  cpl_msg_error (cpl_func, "Cannot compute this TF... continue");
@@ -466,17 +472,7 @@ static int gravity_viscal(cpl_frameset            * frameset,
 	  cpl_errorstate_set (errorstate);
 	}
 
-	/* 
-	 * Smooth the TF if required
-	 */
-    cpl_size resmooth_sc = gravi_param_get_int (parlist, "gravity.viscal.nsmooth-lambda-tfsc");
-    if (resmooth_sc > 0) {
-		cpl_msg_info (cpl_func, "*** Smooth TF files as requested ***");
-        for (cpl_size tf = 0; tf < nb_calib; tf ++)
-            gravi_vis_smooth (vis_calibs[tf], resmooth_sc);
-    }
-    
-	
+    	
 	/* 
 	 * Apply the TF to the SCIENCE files of the frameset
 	 */

@@ -2210,16 +2210,22 @@ cpl_error_code gravi_vis_smooth_amp (cpl_table * oi_table, const char * name, co
   /* Loop on rows */
   for (cpl_size row = 0 ; row < nrow ; row ++) {
 
+    /* */
+
 	/* Loop on  waves */
 	for (cpl_size wave = 0 ; wave < nwave ; wave ++) {
         double sum = 0.0, weight = 0.0;
 
         /* Loop on samples to average */
 		for (cpl_size samp = CPL_MAX(0,wave-nsamp) ; samp < CPL_MIN(nwave,wave+nsamp) ; samp ++) {
-            double w = pow (gravi_table_get_value (oi_table,err,row,samp), -2.0);
-            if (gravi_table_get_value (oi_table,"FLAG",row,samp)) w = 10e-20;
-            sum    += gravi_table_get_value (oi_table,name,row,samp) * w;
-            weight += w;
+            if (gravi_table_get_value (oi_table,"FLAG",row,samp)) {
+                weight += 10e-20;
+                sum += 0.0;
+            } else {
+                double w = pow (gravi_table_get_value (oi_table,err,row,samp), -2.0);
+                sum    += gravi_table_get_value (oi_table,name,row,samp) * w;
+                weight += w;
+            }
 		}
 
         cpl_array_set_double (smo_array, wave, sum / weight);
@@ -2276,10 +2282,14 @@ cpl_error_code gravi_vis_smooth_phi (cpl_table * oi_table, const char * name, co
 
         /* Loop on samples to average */
 		for (cpl_size samp = CPL_MAX(0,wave-nsamp) ; samp < CPL_MIN(nwave,wave+nsamp) ; samp ++) {
-            double w = pow (gravi_table_get_value (oi_table,err,row,samp), -2.0);
-            if (gravi_table_get_value (oi_table,"FLAG",row,samp)) w = 10e-20;
-            sum    += cexp (1.*I* gravi_table_get_value (oi_table,name,row,samp) * CPL_MATH_RAD_DEG) * w;
-            weight += w;
+            if (gravi_table_get_value (oi_table,"FLAG",row,samp)) {
+                weight += 10e-20;
+                sum += 0.0;
+            } else {
+                double w = pow (gravi_table_get_value (oi_table,err,row,samp), -2.0);
+                sum    += cexp (1.*I* gravi_table_get_value (oi_table,name,row,samp) * CPL_MATH_RAD_DEG) * w;
+                weight += w;
+            }
 		}
         
         cpl_array_set_double (smo_array, wave, carg (sum) * CPL_MATH_DEG_RAD);
