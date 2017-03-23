@@ -2369,7 +2369,6 @@ cpl_error_code gravi_vis_fit_amp (cpl_table * oi_table, const char * name,
   gravi_msg_function_start(1);
   cpl_ensure_code (oi_table, CPL_ERROR_NULL_INPUT);
   if (maxdeg < 0) return CPL_ERROR_NONE;
-  cpl_size mindeg = 0;
 
   /* Get values */
   cpl_size nwave = cpl_table_get_column_depth (oi_table, name);
@@ -2382,58 +2381,41 @@ cpl_error_code gravi_vis_fit_amp (cpl_table * oi_table, const char * name,
   cpl_array ** e_array = cpl_table_get_data_array (oi_table, err);
   cpl_array ** f_array = cpl_table_get_data_array (oi_table, "FLAG");
   
-  
   /* Loop on rows */
   for (cpl_size row = 0 ; row < nrow ; row ++) {
 
-      /* Valid points -- FIXME: to be replaced by a valid fitsig
-       * when this developement will become available */
-      cpl_size nvalid = 0;
-      cpl_vector * is_valid = cpl_vector_new (nwave);
-      for (cpl_size wave = 0 ; wave < nwave ; wave ++) {
-          if (cpl_array_get (f_array[row],wave,&nv))
-              cpl_vector_set (is_valid, wave, 0);
-          else {
-              cpl_vector_set (is_valid, wave, 1);
-              nvalid ++;
-          }
-      }
-      
       /* Create the vectors and matrix */
-      cpl_matrix * matrix = cpl_matrix_new (1,nvalid);
-      cpl_vector * vector = cpl_vector_new (nvalid);
-      cpl_vector * fitsig = cpl_vector_new (nvalid);
-      cpl_polynomial * fit = cpl_polynomial_new (1);
-
+      cpl_matrix * coeff = cpl_matrix_new (nwave,maxdeg+1);
+      cpl_matrix * rhs   = cpl_matrix_new (nwave,1);
+      
       /* Fill */
-      for (cpl_size valid = 0, wave = 0 ; wave < nwave ; wave ++) {
-          if (!cpl_vector_get (is_valid, wave)) continue;
-		  double sigma = cpl_array_get (f_array[row],wave,&nv) ? 1e20 : 
-                         cpl_array_get (e_array[row],wave,&nv);
+      for (cpl_size wave = 0 ; wave < nwave ; wave ++) {
+		  double weight = cpl_array_get (f_array[row],wave,&nv) ? 10e-20 : 
+                          pow (cpl_array_get (e_array[row],wave,&nv), -2);
 		  double value = cpl_array_get (f_array[row],wave,&nv) ? 0.0 : 
                          cpl_array_get (v_array[row],wave,&nv);
-          cpl_matrix_set (matrix, 0, valid, wave);
-          cpl_vector_set (vector, valid, value);
-          cpl_vector_set (fitsig, valid, sigma);
-          valid++;
+          cpl_matrix_set (rhs, wave, 0, value * weight);
+          for (cpl_size deg = 0; deg <= maxdeg; deg++) 
+              cpl_matrix_set (coeff, wave, deg, pow ((double)wave,(double)deg) * weight);
           CPLCHECK_MSG ("Cannot fill");
       }
 
-      /* Fit */
-      cpl_polynomial_fit (fit, matrix, NULL, vector, NULL, CPL_FALSE, &mindeg, &maxdeg);
-      CPLCHECK_MSG ("Cannot fit");
-
+      /* Solve */
+      cpl_matrix * solve = cpl_matrix_solve_normal (coeff, rhs);
+      CPLCHECK_MSG ("Cannot solve matrix");
+      
       /* Evaluate */
       for (cpl_size wave = 0 ; wave < nwave ; wave ++) {
-          double value = cpl_polynomial_eval_1d (fit, wave, NULL);
+          double value = 0;
+          for (cpl_size deg = 0; deg <= maxdeg; deg++)
+              value += cpl_matrix_get (solve, deg, 0) * pow (wave, deg);
           cpl_array_set (v_array[row],wave,value);
           CPLCHECK_MSG ("Cannot evaluate");
       }
       
-      FREE (cpl_matrix_delete, matrix);
-      FREE (cpl_vector_delete, vector);
-      FREE (cpl_vector_delete, fitsig);
-      FREE (cpl_polynomial_delete, fit);
+      FREE (cpl_matrix_delete, coeff);
+      FREE (cpl_matrix_delete, rhs);
+      FREE (cpl_matrix_delete, solve);
   }
 
   gravi_msg_function_exit(1);
@@ -2756,6 +2738,20 @@ cpl_error_code gravi_vis_flag_threshold (cpl_table * oi_table, const char * data
   return CPL_ERROR_NONE;
 }
 
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Flag samples of OIFITS table based on runnning median.
+ * 
+ * @param oi_table:  the cpl_table to update, in-place
+ * @param name:      the column name to verify
+ * @param flag:      the corresponding flag column (to update in-place)
+ * @param value:     the threshold to compare
+ *
+ * For each sample in the column, if sample>value*median then the corresponding 
+ * element in the flag column is set to 'T'.
+ */
+/*----------------------------------------------------------------------------*/
+
 cpl_error_code gravi_vis_flag_median (cpl_table * oi_table, const char * data, const char *flag, double value)
 {
   gravi_msg_function_start(0);
@@ -2785,7 +2781,7 @@ cpl_error_code gravi_vis_flag_median (cpl_table * oi_table, const char * data, c
       /* Median filter over 8 pixels wide */
       cpl_vector * o_vector = cpl_vector_filter_median_create (i_vector, 4);
 
-      /* Check whose pixel have a large uncertainties compare to this median */
+      /* Check whose pixel have a large values compare to this median */
       for ( cpl_size indx = 0 ; indx < size ; indx ++ ) {
           if ( cpl_array_get (pdata[row], indx, &nv) > value * cpl_vector_get (o_vector, indx)) {
               cpl_array_set (pflag[row], indx, cpl_array_get (pflag[row], indx, &nv) + 1 );
@@ -3019,6 +3015,8 @@ cpl_error_code gravi_vis_compute_column_mean (cpl_table * out_table,
     gravi_msg_function_exit(0);
     return CPL_ERROR_NONE;
 }
+
+
 
 
 /**@}*/
