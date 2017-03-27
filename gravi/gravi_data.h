@@ -80,6 +80,7 @@ typedef struct _gravi_data_ gravi_data;
 #define gravi_data_get_qc(data) gravi_plist_get_qc (gravi_data_get_plist(data, GRAVI_PRIMARY_HDR_EXT) )
 #define gravi_data_is_internal(data) gravi_pfits_is_calib (gravi_data_get_plist(data, GRAVI_PRIMARY_HDR_EXT))
 #define gravi_data_get_img(data,ext) cpl_imagelist_get (gravi_data_get_cube (data,ext), 0)
+#define gravi_data_get_spec_res(data) gravi_pfits_get_spec_res (gravi_data_get_plist (data, GRAVI_PRIMARY_HDR_EXT))
 
 /*----------------------------------------------------------------------------
                             Public prototypes
