@@ -176,13 +176,13 @@ cpl_parameter * gravi_parameter_add_profile (cpl_parameterlist *self)
     
     /* Method for profile */
     p = cpl_parameter_new_enum ("gravity.calib.profile-mode", CPL_TYPE_STRING,
-                                "Methode to compute the profile."
+                                "Method to compute the extraction profile. "
                                 "PROFILE corresponds to the pixel intensities measured in the "
                                 "FLAT files (Gaussian like with FWHM of approx 1.5 pixel). "
-                                "This is the AUTO for the Low and Med spectral resolution. "
-                                "GAUSS corresponds to a Gaussian fit of the pixel intensities measured "
+                                "This is the AUTO option for the Low and Med spectral resolution. "
+                                "GAUSS corresponds to a Gaussian fit of the (non-zero) pixel intensities measured "
                                 "in the FLAT files. BOX corresponds to a box-card of 6 pixels centered "
-                                "on the spectra measured in the FLAT files. This is the AUTO for High "
+                                "on the spectra measured in the FLAT files. This is the AUTO option for High "
                                 "spectral resolution",
                                 "gravity.calib", "AUTO",
                                 4, "AUTO", "PROFILE", "GAUSS", "BOX");
@@ -200,8 +200,8 @@ cpl_parameter * gravi_parameter_add_profile (cpl_parameterlist *self)
 
 	/* The width of the profile element */
     p = cpl_parameter_new_value ("gravity.calib.profile-width", CPL_TYPE_INT,
-                                 "Width the detector window extracted around the default "
-                                 "position of each spectra, and on which the profile "
+                                 "Width of the detector window extracted around the default "
+                                 "position of each spectrum, and on which the profile "
                                  "will be applied to perform the extraction.",
                                  "gravity.calib", 6);
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "profile-width");
@@ -220,8 +220,11 @@ cpl_parameter * gravi_parameter_add_wave (cpl_parameterlist *self)
 
     /* Method for profile */
     p = cpl_parameter_new_value ("gravity.calib.force-wave-ft-equal", CPL_TYPE_BOOL,
-                                "Force the spatial order of the wavelength 2D fit for FT to zero",
-                                "gravity.calib", FALSE);
+                                "Force the spatial order of the wavelength 2D fit for FT to "
+                                 "zero (so all region share the same calibration). "
+                                 "This is used to build the P2VM calibration of the TAC "
+                                 "real-time code running on the instrument ifself.",
+                                 "gravity.calib", FALSE);
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "force-wave-ft-equal");
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
 	cpl_parameterlist_append (self, p);
@@ -355,8 +358,8 @@ cpl_parameter * gravi_parameter_add_biasmethod (cpl_parameterlist *self)
     
     cpl_parameter *p;
     p = cpl_parameter_new_enum ("gravity.preproc.bias-method", CPL_TYPE_STRING,
-                                "Methode to average the biaspixels when cleaning-up\n "
-                                "the SC detector (only apply to MED and LOW). Ideally\n "
+                                "Method to average the biaspixels when cleaning-up\n "
+                                "the SC detector (only applied to MED and LOW). Ideally\n "
                                 "the same value shall be used when reducing the DARK\n "
                                 "with gravity_dark and the OBJECT with gravity_vis.",
                                 "gravity.preproc", "MEDIAN",
@@ -378,9 +381,9 @@ cpl_parameter * gravi_parameter_add_extract (cpl_parameterlist *self)
                                  "account for lost frames in exposure (issue on the\n "
                                  "instrument side, report to instrument team). The\n "
                                  "time of all DITs in exposure are increased by\n "
-                                 "ditshift x PERIOD, hence ditshift=+1 means\n "
-                                 "the system has lost one DIT. ditshift can be 0,\n " 
-                                 "positive, or negative.",
+                                 "ditshift x PERIOD. ditshift can be 0,\n " 
+                                 "positive (system has lost one SC DIT), or negative "
+                                 "(SC desynchronized).",
                                  "gravity.preproc",0);
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "ditshift-sc");
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
@@ -394,7 +397,7 @@ cpl_parameter * gravi_parameter_add_average_vis (cpl_parameterlist *self)
     cpl_ensure (self, CPL_ERROR_NULL_INPUT, NULL);
     cpl_parameter *p;
 	p = cpl_parameter_new_value ("gravity.postprocess.average-vis", CPL_TYPE_BOOL,
-                                 "Average the observation from the different input files (if any)\n "
+                                 "Average the results from the different input files (if any)\n "
                                  "in the output product, instead of simply appending them.",
                                  "gravity.postprocess", FALSE);
 	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "average-vis");
@@ -447,10 +450,10 @@ cpl_error_code gravi_parameter_add_compute_snr (cpl_parameterlist *self, int isC
     
     /* Number of FT samples to average to compute SNR and GDELAY */
 	p = cpl_parameter_new_value ("gravity.signal.nsmooth-snr-ft", CPL_TYPE_INT,
-                                 "Number of sample to average coherently when computing\n "
-                                 "the real-time SNR and GDELAY of the FT (shall corresponds\n "
-                                 "to the atmospheric coherence time). The runing integration\n "
-                                 "window is actually -nsmooth -> +nsmooth.",
+                                 "Number of samples to average coherently when computing\n "
+                                 "the real-time SNR and GDELAY of the FT (shall correspond\n "
+                                 "to the atmospheric coherence time). The integration\n "
+                                 "window runs from -nsmooth -> +nsmooth.",
                                  "gravity.signal", 5);
 	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "nsmooth-snr-ft");
 	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
@@ -466,9 +469,10 @@ cpl_error_code gravi_parameter_add_compute_signal (cpl_parameterlist *self, int 
     
     /* Phase reference for SC */
 	p = cpl_parameter_new_enum ("gravity.signal.reference-phase-sc", CPL_TYPE_STRING,
-                                "Compute the reference phase of the SC from the FT\n "
-                                "(FT, normal mode) or a self-reference build from\n "
-                                "a fit of the SC phase itself for each DIT (SC)",
+                                "Compute the reference phase of the SC. The normal behavior "
+                                "is to use the phase of the FT (reference-phase-sc=FT).\n "
+                                "Alternatively, one can use a self-reference built from\n "
+                                "a fit of the SC phase itself for each DIT (reference-phase-sc=SC)",
                                 "gravity.signal",
 								"FT", 2, "SC", "FT");
 	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "reference-phase-sc");
@@ -484,7 +488,7 @@ cpl_error_code gravi_parameter_add_rejection (cpl_parameterlist *self, int isCal
     
     cpl_parameter *p;
 	p = cpl_parameter_new_value ("gravity.signal.snr-min-ft", CPL_TYPE_DOUBLE,
-                                 "SNR threshold to accept FT frames (>0). It rizes the first bit (<<0)\n "
+                                 "SNR threshold to accept FT frames (>0). It raises the first bit (<<0)\n "
                                  "of column REJECTION_FLAG of FT.",
                                  "gravity.signal", isCalib ? 30.0 : 3.0);
 	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "snr-min-ft");
@@ -493,7 +497,7 @@ cpl_error_code gravi_parameter_add_rejection (cpl_parameterlist *self, int isCal
 
 	/* OPDC_STATE threshold for fringe DET in FT */
 	p = cpl_parameter_new_value ("gravity.signal.global-state-min-ft", CPL_TYPE_DOUBLE,
-                                 "Minimum OPDC state to accept FT frames (>=0) It rizes the second bit\n "
+                                 "Minimum OPDC state to accept FT frames (>=0) It raises the second bit\n "
                                  "(<<1) of column REJECTION_FLAG of FT.",
                                  "gravity.signal", 2.0);
 	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "global-state-min-ft");
@@ -501,7 +505,7 @@ cpl_error_code gravi_parameter_add_rejection (cpl_parameterlist *self, int isCal
 	cpl_parameterlist_append (self, p);
     
 	p = cpl_parameter_new_value ("gravity.signal.global-state-max-ft", CPL_TYPE_DOUBLE,
-                                 "Maximum OPDC state to accept FT frames (>=0) It rizes the second bit\n "
+                                 "Maximum OPDC state to accept FT frames (>=0) It raises the second bit\n "
                                  "(<<1) of column REJECTION_FLAG of FT.",
                                  "gravity.signal", 4.0);
 	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "global-state-max-ft");
@@ -510,7 +514,7 @@ cpl_error_code gravi_parameter_add_rejection (cpl_parameterlist *self, int isCal
 
 	/* STATE threshold for fringe DET in FT */
 	p = cpl_parameter_new_value ("gravity.signal.state-min-ft", CPL_TYPE_DOUBLE,
-                                 "Minimum OPDC state per baseline to accept FT frames (>=0) It rizes\n "
+                                 "Minimum OPDC state per baseline to accept FT frames (>=0) It raises\n "
                                  "the second bit (<<1) of column REJECTION_FLAG of FT.",
                                  "gravity.signal", 1.0);
 	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "state-min-ft");
@@ -519,10 +523,10 @@ cpl_error_code gravi_parameter_add_rejection (cpl_parameterlist *self, int isCal
 	
 	/* Minimum detection ratio to accept SC frame */
 	p = cpl_parameter_new_value ("gravity.signal.tracking-min-sc", CPL_TYPE_DOUBLE,
-                                 "Minimum ratio of accepted FT frames to accept SC frames (0..1),\n "
+                                 "Minimum ratio of accepted FT frames in order to accept a SC frames (0..1),\n "
                                  "that is, for each SC DIT, the fraction of the time the\n "
                                  "REJECTION_FLAG of the FT is not 0.\n "
-                                 "It rizes the first bit (<<0) of column REJECTION_FLAG of SC",
+                                 "It raises the first bit (<<0) of column REJECTION_FLAG of SC",
                                  "gravity.signal", 0.8);
 	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "tracking-min-sc");
 	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
@@ -531,7 +535,7 @@ cpl_error_code gravi_parameter_add_rejection (cpl_parameterlist *self, int isCal
 	/* vFactor threshold to accept SC frame */
 	p = cpl_parameter_new_value ("gravity.signal.vfactor-min-sc", CPL_TYPE_DOUBLE,
                                  "vFactor threshold to accept SC frame (0..1).\n ",
-                                 "It rizes the second bit (<<1) of column REJECTION_FLAG of SC",
+                                 "It raises the second bit (<<1) of column REJECTION_FLAG of SC",
                                  "gravity.signal", isCalib ? 0.8 : 0.1);
 	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "vfactor-min-sc");
 	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
@@ -563,7 +567,7 @@ cpl_error_code gravi_parameter_add_compute_vis (cpl_parameterlist *self, int isC
 
 	/* Number of bootstrap */
 	p = cpl_parameter_new_value ("gravity.vis.nboot", CPL_TYPE_INT,
-                                 "Number of bootstrap to compute error (1..100)",
+                                 "Number of bootstraps to compute error (1..100)",
                                  "gravity.vis", isCalib ? 1 : 20);
 	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "nboot");
 	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
@@ -571,9 +575,9 @@ cpl_error_code gravi_parameter_add_compute_vis (cpl_parameterlist *self, int isC
 
     /* Visibility correction */
 	p = cpl_parameter_new_enum ("gravity.vis.vis-correction-sc", CPL_TYPE_STRING,
-                                "Correction of SC visibility from the losses du to long-exposure.\n "
-                                "Either using the measured visibility losses with the FT (VFACTOR\n "
-                                "and/or PFACTOR, see the manual for the algorithms) or by forcing\n "
+                                "Correction of SC visibility from losses due to long integration,\n "
+                                "using the measured visibility losses with the FT (VFACTOR\n "
+                                "and/or PFACTOR) or by forcing\n "
                                 "the SC visibilities to match those of the FT (FORCE). Possible\n "
                                 "choices are",
                                 "gravity.vis",
