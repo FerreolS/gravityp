@@ -77,8 +77,8 @@ static char gravity_p2vm_description[] =
     "* Compute the p2vm, write product\n"
     GRAVI_RECIPE_INPUT"\n"    
     GRAVI_DARK_RAW"      : raw dark, all shutters closed (DPR.TYPE=DARK)\n"
-    GRAVI_FLAT_RAW"  x4  : raw flats, one sutter open (DPR.TYPE=FLAT)\n"
-    GRAVI_P2VM_RAW"  x6  : raw p2vms, two sutters open (DPR.TYPE=P2VM)\n"
+    GRAVI_FLAT_RAW"  x4  : raw flats, one shutter open (DPR.TYPE=FLAT)\n"
+    GRAVI_P2VM_RAW"  x6  : raw p2vms, two shutters open (DPR.TYPE=P2VM)\n"
     GRAVI_WAVE_RAW"      : raw wavelength calibration for FT (DPR.TYPE=WAVE)\n"
     GRAVI_WAVESC_RAW"    : raw wavelength calibration for SC (DPR.TYPE=WAVESC)\n"
     GRAVI_RECIPE_OUTPUT"\n"
@@ -199,11 +199,16 @@ static int gravity_p2vm_create(cpl_plugin * plugin)
     
     /* Phase definition in P2VM */
     p = cpl_parameter_new_enum ("gravity.calib.phase-calibration", CPL_TYPE_STRING,
-                                "The relative phase of the P2VM are defined by \n "
-                                "NONE defines phiA(lbd) at zero for all baselines;\n "
-                                "CLOSURE defines phiA(lbd) at zero for baselines (01,02,03);\n "
-                                "DISP defines phiA(lbd) to have zero mean and minimum GD for baselines (01,02,03);\n "
+                                "This option changes the phase reference of the P2VM:\n "
+                                "NONE defines phiA(lbd) at zero for all baselines "
+                                "(P2VM calibrates only the internal phase-shift of the beam combiner);\n "
+                                "CLOSURE defines phiA(lbd) at zero for baselines 01, 02 and 03 "
+                                "(P2VM calibrates the phase-shift and the closure-phase of the beam combiner);\n "
+                                "DISP defines phiA(lbd) to have zero mean and minimum GD for baselines (01,02,03); "
+                                "(P2VM calibrates the phase-shift, the closure-phase and the "
+                                "spectral-dispersion of the beam combiner);\n "
                                 "FULL defines phiA(lbd) to have zero-GD for baselines (01,02,03)",
+                                "(P2VM calibrates the full phase with respect to zero-astrometry);\n "
                                 "gravi.p2vm", "CLOSURE", 4, "NONE", "CLOSURE", "DISP", "FULL");
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "phase-calibration");
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
