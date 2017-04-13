@@ -71,7 +71,16 @@ static char gravity_postprocess_short[] = "Post-process the products, to fine-tu
 static char gravity_postprocess_description[] =
     "This recipe allows to manipulate the product of the GRAVITY pipeline, mostly the VIS. It permits to merge several files together into a single VIS file with all observations; to average the observations of one or several VIS file to increse the SNR; to remove some data (FT, SC); and to resample the SC observation with spectral binning.\n"
     "\n"
-    "The list of input files can be P2VMRED, VIS, VIS_CALIBRATED (or even RAW for some parameters). However they should all be compatible in term of setup and observed objets !! Note that the recipe performs only litle checks of the input file content and structure. Thus the user shall ensure the input files are conformable (same polarisation and spectral mode for instante)";
+    "The list of input files can be P2VMRED, VIS, VIS_CALIBRATED (or even RAW for some parameters). However they should all be compatible in term of setup and observed objets !! Note that the recipe performs only litle checks of the input file content and structure. Thus the user shall ensure the input files are conformable (same polarisation and spectral mode for instante)\n"
+    GRAVI_RECIPE_FLOW"\n"
+    "* Load the files\n"
+    "* Execute request from user\n"
+    "* Write product\n"
+    GRAVI_RECIPE_INPUT"\n"    
+    "Input files    : see above\n"
+    GRAVI_RECIPE_OUTPUT"\n"
+    "POSTPROCESSED          : Output file\n"
+    "";
 
 /*-----------------------------------------------------------------------------
                                 Function code

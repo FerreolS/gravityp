@@ -55,9 +55,15 @@ static const char gravity_eop_short[] = "Download the last values of the Earth O
 static const char gravity_eop_description[] =
 "This recipe downloads the latest version of the Earth Orientation Parameter \n"
 "and DUT from the IERS site. File is created in the current directory. A web connection is required.\n"
-"The recipe doesn't need any input, but it creates the following product:\n"
-"gravity_eop_calib.fits " GRAVI_EOP_MAP "\n"
-"\n";
+        GRAVI_RECIPE_FLOW"\n"
+    "* Download the IERS data\n"
+    "* Convert into CPL table\n"
+    "* Write product\n"
+    GRAVI_RECIPE_INPUT"\n"
+    "None : No input\n"
+    GRAVI_RECIPE_OUTPUT"\n"
+    GRAVI_EOP_MAP"           : EOP calibration file (gravity_eop_calib.fits)\n"
+    "";
 
 static const char gravity_eop_name[] = "gravity_eop";
 
