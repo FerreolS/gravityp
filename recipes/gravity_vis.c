@@ -70,17 +70,17 @@ static int gravity_vis(cpl_frameset *, const cpl_parameterlist *);
  -----------------------------------------------------------------------------*/
 static char gravity_vis_short[] = "Compute the visibilities from raw observation of OBJECT.";
 static char gravity_vis_description[] =
-    "This recipe is associated to the observing template. Its reduces the raw data acquired on calibrator or science targets and computes the uncalibrated visibilities, saved in an OIFITS file. If several OBJECT are provided, the recipe will reduce all of them and merge the resulting data into a single OIFITS. If several SKY_RAW are provided, the recipe reduces the first OBJECT with the first SKY. Then each new OBJECT with the next SKY. When the number of sky is reached, the recipe loops back to first sky (so if the number of SKYs is larger than the number of OBJECTs, the last SKY won't be used). The recipe will reduce the data even if no SKY or no DARK is provided. However this will lead to wrong estimate of the visibility and square visibility of the object. If the DIAMETER_CAT is not provided, the recipe will use the diameter provided in the header to compute the transfer function QC parameters."
+    "This recipe is associated to the observations template. Its reduces the raw data acquired on calibrator or science targets and computes the uncalibrated visibilities, saved in an OIFITS file. If several OBJECT are provided, the recipe will reduce all of them and merge the resulting data into a single OIFITS. If several SKY_RAW are provided, the recipe reduces the first OBJECT with the first SKY file. Then each new OBJECT with the next SKY. When the number of SKYs is reached, the recipe loops back to first SKY file (so if the number of SKYs is larger than the number of OBJECTs, the last SKY won't be used). The recipe will reduce the data even if no SKY or no DARK is provided. However this will lead to wrong estimate of the visibility and squared visibility of the object. If the file DIAMETER_CAT is not provided, the recipe will use the diameter provided in the header to compute the transfer function QC parameters."
     "\n"
-    "The tag in the DO category can be SINGLE/DUAL and CAL/SCI. They should reflect the mode (SINGLE or DUAL) and the DPR.CATG of the observation (SCIENCE or CALIB). The tag in the PRO.CATG category will be SINGLE/DUAL and CAL/SCI depending on the input tag.\n"
+    "The tag in the DO category can be SINGLE/DUAL and CAL/SCI. They should reflect the instrument mode (SINGLE or DUAL) and the DPR.CATG of the observation (SCIENCE or CALIB). The tag in the PRO.CATG category will be SINGLE/DUAL and CAL/SCI depending on the input tag.\n"
     GRAVI_RECIPE_FLOW"\n"
-    "* Load the input file (loop on input files)\n"
-    "* Extract the spectrums\n"
-    "* Interpolate the spectrums into a common wavelength table\n"
-    "* Compute the real-time visibilities\n"
-    "* Compute additional signals (SNR, GDELAY...)\n"
-    "* Compute selection flags\n"
-    "* Average the real-time visibilities\n"
+    "* Load the input file (loop on input OBJECT files)\n"
+    "* Extract the spectrums (use BAD, DARK, SKY, FLAT files)\n"
+    "* Interpolate the spectrums into a common wavelength table (use WAVE file)\n"
+    "* Compute the real-time visibilities (use P2VM file)\n"
+    "* Compute additional real-time signals (SNR, GDELAY...)\n"
+    "* Compute selection flags (= flag frames with SNR lower than threshold, vFactor lower than threshold...)\n"
+    "* Average the real-time visibilities, considering the selection flag\n"
     "* Write the product\n"
     GRAVI_RECIPE_INPUT"\n"    
     GRAVI_FLAT_MAP"               : flat calibration (PRO.CATG="GRAVI_FLAT_MAP")\n"
@@ -93,11 +93,11 @@ static char gravity_vis_description[] =
     GRAVI_DISP_MODEL" (opt)   : fiber dispersion model (PRO.CATG="GRAVI_DISP_MODEL")\n"
     GRAVI_DIAMETER_CAT" (opt) : catalog of diameter (PRO.CATG="GRAVI_DIAMETER_CAT")\n"
     GRAVI_RECIPE_OUTPUT"\n"
-    GRAVI_VIS_SINGLE_SCIENCE"           : OIFITS with uncalibrated visibilities\n"
+    GRAVI_VIS_SINGLE_SCIENCE"           : OIFITS file with uncalibrated visibilities\n"
     GRAVI_SINGLE_SKY_MAP" (opt)         : sky map\n"
-    GRAVI_P2VMRED_SINGLE_SCIENCE" (opt) : intermediate product\n"
-    GRAVI_SPECTRUM" (opt)           : intermediate product\n"
-    GRAVI_PREPROC" (opt)            : intermediate product\n"
+    GRAVI_P2VMRED_SINGLE_SCIENCE" (opt) : intermediate product (see detailled description of data)\n"
+    GRAVI_SPECTRUM" (opt)           : intermediate product (see detailled description of data)\n"
+    GRAVI_PREPROC" (opt)            : intermediate product (see detailled description of data)\n"
     "";
 
 /*-----------------------------------------------------------------------------
@@ -219,9 +219,12 @@ static int gravity_vis_create(cpl_plugin * plugin)
 
     /* Correct from internal transmission */
 	p = cpl_parameter_new_value ("gravity.vis.flat-flux", CPL_TYPE_BOOL,
-                                 "Flat the OI_FLUX with instrument transmission recorded in the\n"
-                                 " input P2VM calibration map. Thus flux is the spectrum recorded\n"
-                                 " at the detector (FALSE); or the spectrum at the instrument entrance (TRUE).",
+                                 "Normalize the flux (stored in OI_FLUX binary extension) with "
+                                 "instrument transmission recorded in the \n"
+                                 "input P2VM calibration map. Consequently, the flux quantity is either "
+                                 "the intensity level recorded \n"
+                                 "in the detector, thus including the instrument transmission (FALSE); "
+                                 "or the intensity level at the instrument entrance (TRUE).",
                                  "gravity.vis", FALSE);
 	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "flat-flux");
 	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);

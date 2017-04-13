@@ -63,7 +63,7 @@ static int gravity_viscal(cpl_frameset *, const cpl_parameterlist *);
 
 static char gravity_viscal_short[] = "Calibrate visibilities from the transfer function.";
 static char gravity_viscal_description[] =
-    "This recipe calibrates the visibilities acquired on science target using visibilities acquired on calibrator target. If the DIAMETER_CAT is not provided, the recipe will use the diameter provided in the header to compute the transfer function QC parameters. The corresponding keywords are INS.SOBJ.DIAMETER and FT.ROBJ.DIAMETER. The OI_FLUX data are not yet calibrated."
+    "This recipe calibrates the visibilities acquired on science target using visibilities acquired on a calibrator target. If the DIAMETER_CAT is not provided, the recipe will use the diameter provided in the header to compute the transfer function QC parameters. The corresponding keywords are INS.SOBJ.DIAMETER and FT.ROBJ.DIAMETER. The OI_FLUX data are not yet calibrated."
     "\n"
     "The tag in the DO category can be SINGLE/DUAL and CAL/SCI. They should reflect the mode (SINGLE or DUAL) and the DPR.CATG of the observation (SCIENCE or CALIB). The tag in the PRO.CATG category will be SINGLE/DUAL and CAL/SCI depending on the input tag.\n"
     GRAVI_RECIPE_FLOW"\n"
@@ -72,7 +72,7 @@ static char gravity_viscal_description[] =
     GRAVI_RECIPE_INPUT"\n"    
     GRAVI_VIS_SINGLE_SCIENCE" (>=1) : visibilities on sciences\n"
     GRAVI_VIS_SINGLE_CALIB" (>=1) : visibilities on calibrators\n"
-    GRAVI_DIAMETER_CAT" (opt)   : catalog of diameter\n"
+    GRAVI_DIAMETER_CAT" (opt)   : catalog of stellar diameters\n"
     GRAVI_RECIPE_OUTPUT"\n"    
     GRAVI_VIS_SINGLE_CALIBRATED" : calibrated science visibilities\n"
     GRAVI_TF_SINGLE_CALIB" :  Transfer Function (TF) estimated on calibrators\n"

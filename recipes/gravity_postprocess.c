@@ -69,9 +69,9 @@ static int gravity_postprocess(cpl_frameset *, const cpl_parameterlist *);
 
 static char gravity_postprocess_short[] = "Post-process the products, to fine-tune their content.";
 static char gravity_postprocess_description[] =
-    "The recipe allows to manipulate the product of the GRAVITY pipeline, mostly the VIS. It permits to merge several files together into a single VIS file with all observations; to average the observations of one or several VIS file to increse the SNR; to remove some data (FT, SC); and to resample the SC observation with spectral bining.\n"
+    "This recipe allows to manipulate the product of the GRAVITY pipeline, mostly the VIS. It permits to merge several files together into a single VIS file with all observations; to average the observations of one or several VIS file to increse the SNR; to remove some data (FT, SC); and to resample the SC observation with spectral binning.\n"
     "\n"
-    "The list of input file can be P2VMRED, VIS, VIS_CALIBRATED (or even RAW for some parameters). However they should all be compatible in term of setup and observed objet !! Note that the recipe performs only little checks of the input file content and structure. Thus the user shall ensure the input files are conformable (same polarisation and spectral mode for instante)";
+    "The list of input files can be P2VMRED, VIS, VIS_CALIBRATED (or even RAW for some parameters). However they should all be compatible in term of setup and observed objets !! Note that the recipe performs only litle checks of the input file content and structure. Thus the user shall ensure the input files are conformable (same polarisation and spectral mode for instante)";
 
 /*-----------------------------------------------------------------------------
                                 Function code

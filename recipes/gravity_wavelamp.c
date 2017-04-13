@@ -65,7 +65,7 @@ static int gravity_wavelamp(cpl_frameset *, const cpl_parameterlist *);
 static char gravity_wavelamp_short[] = "Measure the position of the Argon lines in the spectra.";
 static char gravity_wavelamp_description[] =
 "This recipe is associated to the template gravity_wavelamp.\n"
-"It reduce the raw argon file (WAVELAMP) and process it.\n"
+"It reduces the raw file obtained with the Argon lamp (WAVELAMP) and process it so that it can be used to calibrate the fiber dispersion (recipe gravity_disp).\n"
     GRAVI_RECIPE_FLOW"\n"
     "* Extract the spectrums of the Argon exposure\n"
     "* Interpolate the spectrums into a common wavelength table\n"

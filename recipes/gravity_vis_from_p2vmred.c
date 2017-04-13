@@ -63,7 +63,7 @@ static int gravity_vis_from_p2vmred(cpl_frameset *, const cpl_parameterlist *);
  -----------------------------------------------------------------------------*/
 static char gravity_vis_from_p2vmred_short[] = "Compute the visibilities from P2VMRED intermediate product.";
 static char gravity_vis_from_p2vmred_description[] =
-    "This recipe average the real-time data from input P2VMRED files into a VIS product. It allows to run the reduction with different parameters (for instance for SNR thresholding) without having to re-reduce the files from scratch. Typically the reduction is 4x faster when started from this intermediate product.\n"
+    "This recipe averages the real-time data of P2VMRED files into a VIS product. It allows to run the reduction with different parameters (for instance for SNR thresholding) without having to re-reduce the files from scratch. Typically the reduction is 4x faster when started from this intermediate product.\n"
     "\n"
     "The tag in the DO category can be SINGLE/DUAL and CAL/SCI. They should reflect the mode (SINGLE or DUAL) and the DPR.CATG of the observation (SCIENCE or CALIB). The tag in the PRO.CATG category will be SINGLE/DUAL and CAL/SCI depending on the input tag.\n"
     GRAVI_RECIPE_FLOW"\n"

@@ -53,8 +53,8 @@ cpl_error_code gravity_eop_compute_qc(cpl_table * eop_table,
 
 static const char gravity_eop_short[] = "Download the last values of the Earth Orientation Parameters and DUT from IERS.";
 static const char gravity_eop_description[] =
-"This recipe download the latest version of the Earth Orientation Parameter \n"
-"and DUT from the IERS site. A web connection is required.\n"
+"This recipe downloads the latest version of the Earth Orientation Parameter \n"
+"and DUT from the IERS site. File is created in the current directory. A web connection is required.\n"
 "The recipe doesn't need any input, but it creates the following product:\n"
 "gravity_eop_calib.fits " GRAVI_EOP_MAP "\n"
 "\n";
