@@ -19,7 +19,7 @@
  */
 
 /**
- * @defgroup gravi_data Properties
+ * @defgroup gravi_data gravi_data related functions
  *
  * This module implements the gravi data type. The type @c gravi_data is
  * basically a structure of variables container which consists of type

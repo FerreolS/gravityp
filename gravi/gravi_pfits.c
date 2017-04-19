@@ -19,7 +19,7 @@
  */
 
 /**
- * @defgroup gravi_pfits  TBD
+ * @defgroup gravi_pfits  Gravity property list
  */
 /**@{*/
 

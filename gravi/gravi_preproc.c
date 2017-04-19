@@ -19,7 +19,7 @@
  */
 
 /**
- * @defgroup gravi_preproc  TBD
+ * @defgroup gravi_preproc  Preprocessing functions
  */
 /**@{*/
 

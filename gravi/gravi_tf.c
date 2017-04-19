@@ -19,7 +19,7 @@
  */
 
 /**
- * @defgroup gravi_tf
+ * @defgroup gravi_tf Transfer function computation
  */
 /**@{*/
 

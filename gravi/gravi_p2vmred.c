@@ -19,7 +19,7 @@
  */
 
 /**
- * @defgroup gravi_p2vmred  TBD
+ * @defgroup gravi_p2vmred  Compute the visibilities
  */
 /**@{*/
 

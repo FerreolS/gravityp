@@ -19,7 +19,7 @@
  */
 
 /**
- * @defgroup gravi_image  TBD
+ * @defgroup gravi_image  Image reconstruction (MIRA)
  */
 /**@{*/
 

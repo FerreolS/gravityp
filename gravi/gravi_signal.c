@@ -2325,6 +2325,8 @@ cpl_error_code gravi_compute_signals (gravi_data * p2vmred_data,
 	
 	/* verbose */
 	cpl_msg_info (cpl_func, "Start polarisation %d over %d",pol+1, CPL_MAX(npol_sc,npol_ft));
+	cpl_msg_info(cpl_func, "Insname FT : %s, pol %d npol %d", GRAVI_INSNAME(GRAVI_FT,pol,npol_ft), pol, npol_ft);
+	cpl_msg_info(cpl_func, "Insname SC : %s, pol %d npol %d", GRAVI_INSNAME(GRAVI_SC,pol,npol_sc), pol, npol_sc);
 
 	/* Get the table of reduced data from FT */
 	cpl_table * vis_FT = gravi_data_get_oi_vis (p2vmred_data, GRAVI_FT, pol, npol_ft);

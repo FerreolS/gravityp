@@ -18,7 +18,7 @@
  */
 
 /**
- * @defgroup gravi_eop  TBD
+ * @defgroup gravi_eop  Earth Orientation Parameters
  */
 /**@{*/
 

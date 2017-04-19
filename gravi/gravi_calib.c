@@ -19,7 +19,7 @@
  */
 
 /**
- * @defgroup gravi_calib  TBD
+ * @defgroup gravi_calib  Detector calibration
  */
 /**@{*/
 
@@ -82,7 +82,7 @@ cpl_image * gravi_create_profile_image (cpl_image * mean_img,
 /**
  * @brief Compute the DARK calibration map
  * 
- * @param dark_data  The input raw dark
+ * @param raw_data  The input raw dark
  * 
  * @return The output DARK calibration map
  *

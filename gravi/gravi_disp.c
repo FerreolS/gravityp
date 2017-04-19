@@ -19,7 +19,7 @@
  */
 
 /**
- * @defgroup gravi_disp  TBD
+ * @defgroup gravi_disp  Dispersion and Argon calibration
  */
 /**@{*/
 

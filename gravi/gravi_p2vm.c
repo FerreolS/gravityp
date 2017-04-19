@@ -19,7 +19,7 @@
  */
 
 /**
- * @defgroup gravi_p2vm  TBD
+ * @defgroup gravi_p2vm  P2VM calibration
  */
 /**@{*/
 

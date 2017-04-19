@@ -19,7 +19,7 @@
  */
 
 /**
- * @defgroup gravi_metrology  TBD
+ * @defgroup gravi_metrology  Metrology reduction
  */
 /**@{*/
 

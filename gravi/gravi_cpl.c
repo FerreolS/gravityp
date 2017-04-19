@@ -19,7 +19,7 @@
  */
 
 /**
- * @defgroup gravi_cpl  TBD
+ * @defgroup gravi_cpl  Gravity CPL interface
  */
 /**@{*/
 
