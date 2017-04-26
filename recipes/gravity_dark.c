@@ -63,7 +63,7 @@ static char gravity_dark_description[] =
     "This recipe computes the DARK calibration for the SC, the FT and the ACQ detectors. The SC detector is first debiased using the biaspixels, before computing the dark mean and rms. For detectors, the mean dark level of each pixel and the stdev of each pixel are saved in the output product.\n"
     GRAVI_RECIPE_FLOW"\n"
     "* Loop on input dark files and concatenate them\n"
-    "* Compute the median and rms of these concatednated files\n"
+    "* Compute the median and rms of these concatenated files\n"
     "* Save the product (FT, SC, ACQ camera into same product)\n"
     GRAVI_RECIPE_INPUT"\n"    
     GRAVI_DARK_RAW"      : raw dark, all shutters closed (DPR.TYPE=DARK)\n"
