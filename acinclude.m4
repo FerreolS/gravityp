@@ -93,8 +93,8 @@ AC_DEFUN([GRAVI_SET_PATHS],
         privatelibdir='${libdir}/${PACKAGE}-${VERSION}'
     fi
 
-    if test -z "$htmldir"; then
-        htmldir='${datadir}/doc/esopipes/${PACKAGE}-${VERSION}/html'
+    if test -z "$apidocdir"; then
+        apidocdir='${datadir}/doc/esopipes/${PACKAGE}-${VERSION}/html'
     fi
 
     if test -z "$pipedocsdir"; then
@@ -115,7 +115,7 @@ AC_DEFUN([GRAVI_SET_PATHS],
 
     AC_SUBST(plugindir)
     AC_SUBST(privatelibdir)
-    AC_SUBST(htmldir)
+    AC_SUBST(apidocdir)
     AC_SUBST(pipedocsdir)
     AC_SUBST(configdir)
     AC_SUBST(wkfextradir)

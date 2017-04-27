@@ -30,11 +30,11 @@ TOPSUBDIRS = irplib gravi recipes reflex
 COMPILE_LAST =
 
 
-HTML_SUBDIRS =
+DOXYGEN_SUBDIRS =
 
 SUBDIRS = $(COMPILE_FIRST) $(TOPSUBDIRS) $(COMPILE_LAST)
 
-EXTRA_DIST = m4macros/eso.m4 m4macros/cpl.m4 admin/html.am \
+EXTRA_DIST = m4macros/eso.m4 m4macros/cpl.m4 admin/doxygen.am \
 	doxygen/Doxyfile.in setup BUGS README_image_reconstruction.txt \
 	README_yorick_update.txt README_mira_update.txt
 
@@ -49,9 +49,9 @@ DISTCHECK_CONFIGURE_FLAGS = --enable-maintainer-mode
 
 MAINTAINERCLEANFILES = Makefile.in aclocal.m4 config.h.in configure stamp-h.in
 
-clean-local: clean-html
+clean-local: clean-doxygen
 
-dist-hook: html
+dist-hook: doxygen
 	@if test -d $(top_srcdir)/html; then \
 	  echo "cp -pr $(top_srcdir)/html $(distdir)"; \
 	  cp -pr $(top_srcdir)/html $(distdir); \
@@ -65,9 +65,9 @@ clean-local:
 
 endif
 
-uninstall-local: uninstall-html
+uninstall-local: uninstall-doxygen
 
 libtool: $(LIBTOOL_DEPS)
 	$(SHELL) ./config.status --recheck
 
-include $(top_srcdir)/admin/html.am
+include $(top_srcdir)/admin/doxygen.am
