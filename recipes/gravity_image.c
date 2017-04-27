@@ -150,62 +150,7 @@ static int gravity_image_create(cpl_plugin * plugin)
         cpl_ensure_code(0, (int)CPL_ERROR_ILLEGAL_OUTPUT);             
     }                                                                  
 
-    /* Fill the parameters list */
-    /* --isotropic */
-/*    p = cpl_parameter_new_value("gravi.gravity_image.isotropic_option",
-            CPL_TYPE_BOOL, "a flag", "gravi.gravity_image", FALSE);
-    cpl_parameter_set_alias(p, CPL_PARAMETER_MODE_CLI, "isotropic");
-    cpl_parameter_disable(p, CPL_PARAMETER_MODE_ENV);
-    cpl_parameterlist_append(recipe->parameters, p);
-*/
-
-    /* --pixelsize */
-    p = cpl_parameter_new_value("gravi.gravity_image.pixelsize",
-            CPL_TYPE_DOUBLE, "size of the pixel (milliarcseconds)",
-            "gravi.gravity_image", 0.2);
-    cpl_parameter_set_alias(p, CPL_PARAMETER_MODE_CLI, "pixelsize");
-    cpl_parameter_disable(p, CPL_PARAMETER_MODE_ENV);
-    cpl_parameterlist_append(recipe->parameters, p);
-
-    /* --dim */
-    p = cpl_parameter_new_value("gravi.gravity_image.dim",
-            CPL_TYPE_INT, "number of pixels per side of the image",
-            "gravi.gravity_image", 100);
-    cpl_parameter_set_alias(p, CPL_PARAMETER_MODE_CLI, "dim");
-    cpl_parameter_disable(p, CPL_PARAMETER_MODE_ENV);
-    cpl_parameterlist_append(recipe->parameters, p);
-
-    /* --regul */
-    p = cpl_parameter_new_value("gravi.gravity_image.regul",
-            CPL_TYPE_STRING, "name of regularization method",
-            "gravi.gravity_image", "totvar");
-    cpl_parameter_set_alias(p, CPL_PARAMETER_MODE_CLI, "regul");
-    cpl_parameter_disable(p, CPL_PARAMETER_MODE_ENV);
-    cpl_parameterlist_append(recipe->parameters, p);
-
-    /* --regul_mu */
-    p = cpl_parameter_new_value("gravi.gravity_image.regul_mu",
-            CPL_TYPE_DOUBLE, "global regularization weight",
-            "gravi.gravity_image", 1E4);
-    cpl_parameter_set_alias(p, CPL_PARAMETER_MODE_CLI, "regul_mu");
-    cpl_parameter_disable(p, CPL_PARAMETER_MODE_ENV);
-    cpl_parameterlist_append(recipe->parameters, p);
-
-    /* --maxeval */
-    p = cpl_parameter_new_value("gravi.gravity_image.maxeval",
-            CPL_TYPE_INT, "maximum number of evaluations of the objective function",
-            "gravi.gravity_image", 2000);
-    cpl_parameter_set_alias(p, CPL_PARAMETER_MODE_CLI, "maxeval");
-    cpl_parameter_disable(p, CPL_PARAMETER_MODE_ENV);
-    cpl_parameterlist_append(recipe->parameters, p);
- 
-    /* --timeout */
-    p = cpl_parameter_new_value("gravi.gravity_image.timeout",
-            CPL_TYPE_DOUBLE, "Maximum execution time of Mira process (s)",
-            "gravi.gravity_image", 60.);
-    cpl_parameter_set_alias(p, CPL_PARAMETER_MODE_CLI, "timeout");
-    cpl_parameter_disable(p, CPL_PARAMETER_MODE_ENV);
-    cpl_parameterlist_append(recipe->parameters, p);
+    gravi_parameter_add_image (recipe->parameters);
 
     return 0;
 }

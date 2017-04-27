@@ -113,47 +113,7 @@ static void test_image(void)
         cpl_frame_set_tag(frame, GRAVI_MIRA_INPUT_PROCATG);
 
         parlist=cpl_parameterlist_new();
-        /* --isotropic */
-        p = cpl_parameter_new_value("gravi.gravi_image_reconstruct.isotropic_option",
-                CPL_TYPE_BOOL, "a flag", "gravi.gravi_image_reconstruct", FALSE);
-        cpl_parameterlist_append(parlist, p);
-
-        /* --pixelsize */
-        p = cpl_parameter_new_value("gravi.gravi_image_reconstruct.pixelsize",
-                CPL_TYPE_DOUBLE, "size of the pixel (milliarcseconds)",
-                "gravi.gravi_image_reconstruct", 0.2);
-        cpl_parameterlist_append(parlist, p);
-
-        /* --dim */
-        p = cpl_parameter_new_value("gravi.gravi_image_reconstruct.dim",
-                CPL_TYPE_INT, "number of pixels per side of the image",
-                "gravi.gravi_image_reconstruct", 100);
-        cpl_parameterlist_append(parlist, p);
-
-        /* --regul */
-        p = cpl_parameter_new_value("gravi.gravi_image_reconstruct.regul",
-                CPL_TYPE_STRING, "name of regularization method",
-                "gravi.gravi_image_reconstruct", "totvar");
-        cpl_parameterlist_append(parlist, p);
-
-        /* --regul_mu */
-        p = cpl_parameter_new_value("gravi.gravi_image_reconstruct.regul_mu",
-                CPL_TYPE_DOUBLE, "global regularization weight",
-                "gravi.gravi_image_reconstruct", 1E4);
-        cpl_parameterlist_append(parlist, p);
-
-        /* --maxeval */
-        p = cpl_parameter_new_value("gravi.gravi_image_reconstruct.maxeval",
-                CPL_TYPE_INT, "maximum number of evaluations of the objective function",
-                "gravi.gravi_image_reconstruct", 2000);
-        cpl_parameterlist_append(parlist, p);
-
-	    /* --timeout */
-	    p = cpl_parameter_new_value("gravi.gravi_image_reconstruct.timeout",
-            	CPL_TYPE_DOUBLE, "Maximum execution time of Mira process (s)",
-            	"gravi.gravi_image_reconstruct", 60.);
-	    cpl_parameterlist_append(parlist, p);
-
+        gravi_parameter_add_image (parlist);
 
         /* Call the function */
         image=gravi_image(frame, parlist);
@@ -190,7 +150,7 @@ static void test_image(void)
 int main(void)
 {
 #if defined CPL_VERSION_CODE && CPL_VERSION_CODE >= CPL_VERSION(4, 0, 0)
-    cpl_test_init(PACKAGE_BUGREPORT, CPL_MSG_WARNING);
+    cpl_test_init(PACKAGE_BUGREPORT, CPL_MSG_INFO);
 #else
     cpl_init();
 #endif

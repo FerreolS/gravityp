@@ -136,6 +136,7 @@ cpl_error_code gravi_parameter_add_compute_snr (cpl_parameterlist *self, int isC
 cpl_error_code gravi_parameter_add_compute_signal (cpl_parameterlist *self, int isCalib);
 cpl_error_code gravi_parameter_add_rejection (cpl_parameterlist *self, int iscalib);
 cpl_error_code gravi_parameter_add_compute_vis (cpl_parameterlist *self, int iscalib);
+cpl_error_code gravi_parameter_add_image (cpl_parameterlist *self);
 
 cpl_frameset * gravi_frameset_extract (cpl_frameset * frameset, const char ** frame_tags, int nb_tabs);
 cpl_frameset * gravi_frameset_extract_wave_map(cpl_frameset * );
