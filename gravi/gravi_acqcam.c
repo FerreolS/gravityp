@@ -51,7 +51,9 @@
                                Private prototypes
  -----------------------------------------------------------------------------*/
 
-int gravi_acqcam_isblink (cpl_imagelist * imglist, cpl_size pos);
+double exp1 (double x);
+double sin1 (double x);
+int gravi_acqcam_xy_diode (const double v[], double *xd, double *yd);
 
 cpl_error_code gravi_acqcam_get_pup_ref (cpl_propertylist * header,
                                          cpl_size tel,
@@ -81,13 +83,15 @@ const int * GRAVI_LVMQ_FREE = NULL;
 
 /* Number of parameters in the model 'gravi_acqcam_spot' 
  * And position of parameters */
-#define GRAVI_SPOT_NA    29
+#define GRAVI_SPOT_NA    30
 #define GRAVI_SPOT_SUB   0
 #define GRAVI_SPOT_ANGLE 8
 #define GRAVI_SPOT_SCALE 9
 #define GRAVI_SPOT_DIODE 10
-#define GRAVI_SPOT_FWHM  12
-#define GRAVI_SPOT_FLUX  13
+#define GRAVI_SPOT_FWHM  13
+#define GRAVI_SPOT_FLUX  14
+
+#define GRAVI_ACQ_PUP_FLUX 1e6
 
 /*-----------------------------------------------------------------------------
                              Functions code
@@ -175,16 +179,37 @@ cpl_error_code gravi_preproc_acqcam (gravi_data *output_data,
         
     } else {
         cpl_msg_info (cpl_func, "Remove the blinking");
-    
-        int blink = gravi_acqcam_isblink (imglist, 0) == 1 ? 0 : 1;
-        
-        /* Remove the blink only for pupil */
+
+        /* Get pupil diode flux for all images. Deal with the
+         * change of format (FIXME: make it more clean) */
+        double flux[nrow];
         for (cpl_size row = 0; row < nrow; row ++) {
+            cpl_image * img = cpl_imagelist_get (imglist,row);
+            if (nx < 1100)                
+                flux[row] = cpl_image_get_flux_window (img, 1, 800, 1000, 1000) - 
+                            cpl_image_get_median_window (img, 1, 800, 1000, 1000) * 1000 * 200;
+            else
+                flux[row] = cpl_image_get_flux_window (img, 1, 1200, 2048, 1536) -
+                            cpl_image_get_median_window (img, 1, 1200, 2048, 1536) * 2048 * 336;
+
+                cpl_msg_debug (cpl_func, "flux %lli = %.2f",row, flux[row]);
+        }
+            
+        for (cpl_size row = 0; row < nrow; row ++) {
+
+            /* Find the best possible blink, default is
+             * current (hence frame will be zero) */
+            cpl_size blink = row;
+            if ( (flux[row] - flux[CPL_MAX(row-1,0)] ) > GRAVI_ACQ_PUP_FLUX) blink = row-1;
+            if ( (flux[row] - flux[CPL_MIN(row+1,nrow-1)] ) > GRAVI_ACQ_PUP_FLUX) blink = row+1;
+
+            cpl_msg_debug (cpl_func, "row %lli is debiased with %lli",row,blink);
+            
+            /* Remove the blink only for pupil part of the camera */
             gravi_image_subtract_window (cpl_imagelist_get (imglist, row),
                                          cpl_imagelist_get (imglist, blink),
                                          1, ury, nx, ny, 1, ury);
             CPLCHECK_MSG ("Cannot remove blinked pupil");
-            if (row == blink && row < nrow-2) blink +=2;
         }
     }
 
@@ -228,7 +253,7 @@ cpl_error_code gravi_preproc_acqcam (gravi_data *output_data,
 /*----------------------------------------------------------------------------*/
 
 /* Fast sin function */
-inline double sin1 (double x)
+double sin1 (double x)
 {
     /* Within -pi +pi*/
     while (x >=  CPL_MATH_PI) x -= CPL_MATH_2PI;
@@ -243,7 +268,7 @@ inline double sin1 (double x)
 }
 
 /* Fast exp function */
-inline double exp1 (double x) {
+double exp1 (double x) {
   x = 1.0 + x / 256.0;
   x *= x; x *= x; x *= x; x *= x;
   x *= x; x *= x; x *= x; x *= x;
@@ -253,15 +278,15 @@ inline double exp1 (double x) {
 /* Compute the 4 diode positions from {angle, scaling, dx, dy} 
  * The model assume the 4 diodes form a rectangle centered on
  * the pupil. Hence this model has a 180deg degeneracy */
-inline int gravi_acqcam_xy_diode (const double v[], double *xd, double *yd)
+int gravi_acqcam_xy_diode (const double v[], double *xd, double *yd)
 {
-    /* Angle */
-    double ang = v[GRAVI_SPOT_ANGLE] * CPL_MATH_RAD_DEG;
-    double sang = sin1 (ang) * v[GRAVI_SPOT_SCALE];
-    double cang = sin1 (ang + CPL_MATH_PI_2) * v[GRAVI_SPOT_SCALE];
-
     double dx = v[GRAVI_SPOT_DIODE+0];
     double dy = v[GRAVI_SPOT_DIODE+1];
+    
+    /* Angle */
+    double ang = (v[GRAVI_SPOT_ANGLE] - v[GRAVI_SPOT_DIODE+2])* CPL_MATH_RAD_DEG;
+    double sang = sin1 (ang) * v[GRAVI_SPOT_SCALE];
+    double cang = sin1 (ang + CPL_MATH_PI_2) * v[GRAVI_SPOT_SCALE];
     
     /* Diode arrangement */
     xd[0] = -cang * dx + sang * dy;
@@ -427,17 +452,19 @@ cpl_error_code gravi_acqcam_get_diode_ref (cpl_propertylist * header,
 
     /* Hardcoded theoretical positions in mm */
 
-    /* If UTs or ATs, select scaling and position */
+    /* If UTs or ATs, select scaling, rotation, and spacing */
     if (telname[0] == 'U') {
         cpl_vector_set (output, GRAVI_SPOT_ANGLE,  0.0);
         cpl_vector_set (output, GRAVI_SPOT_SCALE, 16.225);
         cpl_vector_set (output, GRAVI_SPOT_DIODE+0, 0.363);
         cpl_vector_set (output, GRAVI_SPOT_DIODE+1, 0.823);
+        cpl_vector_set (output, GRAVI_SPOT_DIODE+2, 0);
     } else if (telname[0] == 'A') {
         cpl_vector_set (output, GRAVI_SPOT_ANGLE,  0.0);
         cpl_vector_set (output, GRAVI_SPOT_SCALE, 73.0154);
         cpl_vector_set (output, GRAVI_SPOT_DIODE+0, 0.122);
         cpl_vector_set (output, GRAVI_SPOT_DIODE+1, 0.158);
+        cpl_vector_set (output, GRAVI_SPOT_DIODE+2, 0);
     } else 
         return cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
                                       "Cannot get telescope name");
@@ -616,7 +643,7 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
     if (fitAll) for (int d=0;d<16;d++) cpl_vector_set (a_start, GRAVI_SPOT_FLUX+d, RMS);
 
     /* Fit sub-aperture mean position; and diode rotation */
-    const int ia_global[] = {1,0,0,0, 1,0,0,0, 1,0,0,0, 0,
+    const int ia_global[] = {1,0,0,0, 1,0,0,0, 1,0, 0,0,0, 0,
                              0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
     GRAVI_LVMQ_FREE = ia_global;
 
@@ -707,7 +734,7 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
      * and individual intensities of spots. (high order and scaling
      * are only fitted if fitAll != 0) */
     int F = fitAll;
-    const int ia_fine[] = {1,F,1,F, 1,1,F,F, 1,F,0,0, 0,
+    const int ia_fine[] = {1,F,1,F, 1,1,F,F, 1,F, 0,0,0, 0,
                            1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
     GRAVI_LVMQ_FREE = ia_fine;
 
@@ -878,11 +905,11 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         gravi_acqcam_spot_imprint (mean_img, a_final);
         
         /* Add QC parameters */
-        sprintf (qc_name, "ESO QC ACQ PUP%i NORTH_ANGLE", tel+1);
+        sprintf (qc_name, "ESO QC ACQ FIELD%i NORTH_ANGLE", tel+1);
         cpl_msg_info (cpl_func, "%s = %f", qc_name, fangle);
         cpl_propertylist_update_double (o_header, qc_name, fangle);
-        cpl_propertylist_set_comment (o_header, qc_name, "[deg] predicted North angle on ACQ");
-
+        cpl_propertylist_set_comment (o_header, qc_name, "[deg] y->x, predicted North direction on ACQ");
+        
         sprintf (qc_name, "ESO QC ACQ PUP%i NSPOT", tel+1);
         cpl_msg_info (cpl_func, "%s = %i", qc_name, nspot);
         cpl_propertylist_update_int (o_header, qc_name, nspot);
@@ -891,7 +918,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         sprintf (qc_name, "ESO QC ACQ PUP%i ANGLE", tel+1);
         cpl_msg_info (cpl_func, "%s = %f", qc_name, angle);
         cpl_propertylist_update_double (o_header, qc_name, angle);
-        cpl_propertylist_set_comment (o_header, qc_name, "[deg] diode angle on ACQ");
+        cpl_propertylist_set_comment (o_header, qc_name, "[deg] y->x, diode angle on ACQ");
 
         sprintf (qc_name, "ESO QC ACQ PUP%i SCALE", tel+1);
         cpl_msg_info (cpl_func, "%s = %f", qc_name, scale);
@@ -1005,50 +1032,6 @@ double gravi_acqcam_z2meter (double PositionPixels)
                                       D_beam / (f_PT * D_lenslet) * Llambda / CPL_MATH_2PI * PositionPixels;
     
     return f_lens * f_lens * LongitudinalDefocusShift / (f_PT + LongitudinalDefocusShift) / f_PT * (D_AT / D_lenslet);
-}
-
-/*----------------------------------------------------------------------------*/
-/**
- * @brief Return 1 if flux(pos) < flux(pos+1) * 
- */
-/*----------------------------------------------------------------------------*/
-
-int gravi_acqcam_isblink (cpl_imagelist * imglist, cpl_size pos)
-{
-    gravi_msg_function_start(1);
-    cpl_ensure (imglist, CPL_ERROR_NULL_INPUT, -1);
-    
-    int blinkOFF = 1;
-
-    /* Ensure two images */
-    cpl_size nrow = cpl_imagelist_get_size (imglist);
-    if (nrow == 1) return blinkOFF;
-
-    /* Get size */
-    cpl_image * img = cpl_imagelist_get (imglist,0);
-    cpl_size nx = cpl_image_get_size_x (img);
-
-    /* Part of the image to analyse */
-    cpl_size llx, urx, lly, ury;
-    if (nx < 1100) {
-        llx =  1;
-        urx =  1000;
-        lly =  800;
-        ury =  1000;
-    } else {
-        llx =  1;
-        urx =  2048;
-        lly =  1200;
-        ury =  1536;
-    }
-
-    /* tell if the first image is blink on or off */
-    double flux0 = cpl_image_get_flux_window (cpl_imagelist_get (imglist,pos), llx, lly, urx, ury);
-    double flux1 = cpl_image_get_flux_window (cpl_imagelist_get (imglist,pos+1), llx, lly, urx, ury);
-    if (flux0 > flux1) blinkOFF = 0;
-
-    gravi_msg_function_exit(1);
-    return blinkOFF;
 }
 
 
