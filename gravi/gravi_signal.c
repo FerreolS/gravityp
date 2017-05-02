@@ -1053,18 +1053,18 @@ cpl_error_code gravi_vis_create_acq_sc (cpl_table * vis_SC,
 
   /* Get ACQ data */
   int * pup_n = cpl_table_get_data_int (vis_ACQ, "PUPIL_NSPOT");
-  double * pup_x = cpl_table_get_data_double (vis_ACQ, "PUPIL_U");
-  double * pup_y = cpl_table_get_data_double (vis_ACQ, "PUPIL_V");
-  double * pup_z = cpl_table_get_data_double (vis_ACQ, "PUPIL_W");
+  double * pup_x = cpl_table_get_data_double (vis_ACQ, "PUPIL_X");
+  double * pup_y = cpl_table_get_data_double (vis_ACQ, "PUPIL_Y");
+  double * pup_z = cpl_table_get_data_double (vis_ACQ, "PUPIL_Z");
   CPLCHECK_MSG("Cannot get direct pointer to data");
 
   /* New columns */
-  gravi_table_new_column (vis_SC, "PUPIL_U", "m", CPL_TYPE_DOUBLE);
-  double * pup_x_sc = cpl_table_get_data_double (vis_SC, "PUPIL_U");
-  gravi_table_new_column (vis_SC, "PUPIL_V", "m", CPL_TYPE_DOUBLE);
-  double * pup_y_sc = cpl_table_get_data_double (vis_SC, "PUPIL_V");
-  gravi_table_new_column (vis_SC, "PUPIL_W", "n", CPL_TYPE_DOUBLE);
-  double * pup_z_sc = cpl_table_get_data_double (vis_SC, "PUPIL_W");
+  gravi_table_new_column (vis_SC, "PUPIL_X", NULL, CPL_TYPE_DOUBLE);
+  double * pup_x_sc = cpl_table_get_data_double (vis_SC, "PUPIL_X");
+  gravi_table_new_column (vis_SC, "PUPIL_Y", NULL, CPL_TYPE_DOUBLE);
+  double * pup_y_sc = cpl_table_get_data_double (vis_SC, "PUPIL_Y");
+  gravi_table_new_column (vis_SC, "PUPIL_Z", NULL, CPL_TYPE_DOUBLE);
+  double * pup_z_sc = cpl_table_get_data_double (vis_SC, "PUPIL_Z");
 
   /* Loop on base and rows */
   for (cpl_size base = 0; base < nbase; base++) {
@@ -2146,43 +2146,9 @@ cpl_error_code gravi_vis_create_opddisp_sc (cpl_table * vis_SC,
               }
           }
       }
-  } else if ( cpl_table_has_column (disp_table,"N_MEAN") &&
-              cpl_table_has_column (disp_table,"BETA") &&
-              !cpl_table_has_column (disp_table,"WAVE0")) {
-      /* The N_MEAN and N_DIFF are described as n(lbd) / n(lbdmet)
-       * with a polynomial versus (lbd-lbdmet)/lbdmet 
-       * FIXME: This shall be removed in the medium-term */
-      gravi_msg_warning ("FIXME","Very old version of DISP_MODEL -- update it");
-      cpl_size disp_order = cpl_table_get_column_depth (disp_table, "N_MEAN");
-      for (int t = 0; t < 4; t++) {
-          for (int w = 0; w < nwave_sc; w++ ) {
-              double lbd = (cpl_table_get (wave_table, "EFF_WAVE", w, NULL) - LAMBDA_MET) / LAMBDA_MET;
-              for (int o = 0; o < disp_order; o++) {
-                  n_mean[t][w] += gravi_table_get_value (disp_table, "N_MEAN", t, o) * pow (lbd, o);
-                  n_diff[t][w] += gravi_table_get_value (disp_table, "N_DIFF", t, o) * pow (lbd, o);
-              }
-          }
-      }
-  } else if ( !cpl_table_has_column (disp_table,"N_MEAN") &&
-              cpl_table_has_column (disp_table,"BETA") &&
-              cpl_table_has_column (disp_table,"WAVE0")) {
-      /* The N_MEAN and N_DIFF are described as n(lbd).lbdmet / n(lbdmet).lbd
-       * with a polynomial versus 1./lbd - 1/lbd0  in [um^-1] 
-       * FIXME: shall be removed */
-      gravi_msg_warning ("FIXME","Deprecated version of DISP_MODEL -- update it");
-      cpl_size disp_order = cpl_table_get_column_depth (disp_table, "BETA");
-      for (int t = 0; t < 4; t++) {
-          double lbd0 = cpl_table_get (disp_table, "WAVE0", t, NULL);
-          for (int w = 0; w < nwave_sc; w++ ) {
-              double lbd = cpl_table_get (wave_table, "EFF_WAVE", w, NULL);
-              double xfit = lbd0 > 1. ? 1e-6/lbd - 1./lbd0 : lbd0/lbd - 1.0;
-              for (int o = 0; o < disp_order; o++) {
-                  n_mean[t][w] += gravi_table_get_value (disp_table, "BETA", t, o)  * pow (xfit, o) * lbd / LAMBDA_MET;
-                  n_diff[t][w] += gravi_table_get_value (disp_table, "GAMMA", t, o) * pow (xfit, o) * lbd / LAMBDA_MET;
-              }
-          }
-      }
   } else {
+      FREELOOP (cpl_free, n_mean, 4);
+      FREELOOP (cpl_free, n_diff, 4);
       cpl_msg_error (cpl_func,"The DISP_MODEL is not recognized... contact the DRS team");
       return cpl_error_set_message (cpl_func,CPL_ERROR_ILLEGAL_INPUT,
                                     "The DISP_MODEL is not recognized... contact the DRS team");
