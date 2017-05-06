@@ -846,7 +846,7 @@ int metrology_algorithm(structTacData * tacData)
                 tacData->sum_speed_fiber_coupler[tel][side] *= tacConfiguration->decrement_factor_speed;
                 tacData->sum_speed_fiber_coupler[tel][side] += speed;
                 
-                delta_phase = tacData->sum_speed_fiber_coupler[tel][side] / tacConfiguration->number_for_speed;
+                delta_phase = tacData->sum_speed_fiber_coupler[tel][side] / tacConfiguration->norm_speed;
                 
             } else {
                 delta_phase = 0.;
@@ -957,7 +957,7 @@ int metrology_algorithm(structTacData * tacData)
                         tacData->sum_speed_telescope[tel][diode][side] *= tacConfiguration->decrement_factor_speed;
                         tacData->sum_speed_telescope[tel][diode][side] += speed;
                         
-                        delta_phase = tacData->sum_speed_telescope[tel][diode][side] / tacConfiguration->number_for_speed;
+                        delta_phase = tacData->sum_speed_telescope[tel][diode][side] / tacConfiguration->norm_speed;
                         
                     } else {
                         delta_phase = 0.;
