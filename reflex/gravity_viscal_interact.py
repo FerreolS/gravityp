@@ -68,9 +68,9 @@ class DataPlotterManager(object):
         science = list()
         self.raw_tf = None
         for f in fitsFiles:
-            if f.category == "VIS_SINGLE_CAL_RAW" or f.category == "VIS_DUAL_CAL_RAW":
+            if f.category == "SINGLE_CAL_VIS" or f.category == "DUAL_CAL_VIS":
                 calibrators.append(f)
-            elif f.category == "VIS_SINGLE_SCI_RAW" or f.category == "VIS_SINGLE_SCI_RAW":
+            elif f.category == "SINGLE_SCI_VIS" or f.category == "DUAL_SCI_VIS":
                 science.append(f)
     
         if len(calibrators) != 0:
