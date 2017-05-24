@@ -36,6 +36,11 @@ if PRO.CATG like "DUAL_SCI_VIS" and INSTRUME=="GRAVITY" then
   REFLEX.TARGET = "T";
 }
 
+if PRO.CATG=="DIAMETER_CAT" and INSTRUME=="GRAVITY" then
+{
+  REFLEX.CATG = "DIAMETER_CAT"; 
+} 
+
 //*****************************************************
 //Selection of actions and grouping
 //*****************************************************
@@ -49,7 +54,10 @@ select execute(ACTION_VISCALIB) from inputFiles where EXEC.CATG == "VIS_TO_CALIB
 
 action ACTION_VISCALIB
 {
-recipe gravi_all_viscal;
-product SINGLE_SCI_VIS_CALIBRATED {REFLEX.CATG =  "SINGLE_SCI_VIS_CALIBRATED"; PRO.CATG = " SINGLE_SCI_VIS_CALIBRATED"; PRO.EXT="single_sci_vis_calibrated.fits";}
+  minRet = 0; maxRet = 1;
+  select file as DIAMETER_CAT from calibFiles where PRO.CATG == "DIAMETER_CAT" and inputFile.INSTRUME==INSTRUME;
+
+  recipe gravi_all_viscal;
+  product SINGLE_SCI_VIS_CALIBRATED {REFLEX.CATG =  "SINGLE_SCI_VIS_CALIBRATED"; PRO.CATG = " SINGLE_SCI_VIS_CALIBRATED"; PRO.EXT="single_sci_vis_calibrated.fits";}
 }
 
