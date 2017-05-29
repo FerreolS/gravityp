@@ -838,6 +838,94 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
     }
     
     /* 
+     * Compute mean image 
+     */
+    
+    cpl_image * mean_img = cpl_imagelist_collapse_create (acqcam_imglist);
+
+    /* 
+     * Compute FIELD columns
+     */
+    
+    /* Create columns */
+    gravi_table_new_column (acqcam_table, "FIELD_SC_X", "pix", CPL_TYPE_DOUBLE);
+    gravi_table_new_column (acqcam_table, "FIELD_SC_Y", "pix", CPL_TYPE_DOUBLE);
+    gravi_table_new_column (acqcam_table, "FIELD_FT_X", "pix", CPL_TYPE_DOUBLE);
+    gravi_table_new_column (acqcam_table, "FIELD_FT_Y", "pix", CPL_TYPE_DOUBLE);
+
+    /* Loop on tel */
+    for (int tel = 0; tel < ntel; tel++) {
+        cpl_msg_info (cpl_func, "Compute field position for beam %i", tel+1);
+
+        /* Guess of expected positions, in case Single and Dual */        
+        double xFT = 100.0, yFT = 100.0, xSC = 100.0, ySC = 100.0;
+        // FIXME: TBD
+
+        /* Box size */
+        cpl_size xsize = 15, ysize = 15;
+        
+        /* Fill first guess */
+        cpl_array * parameters = cpl_array_new (7, CPL_TYPE_DOUBLE);
+        cpl_array_set_double (parameters, 0, 0.0);
+        cpl_array_set_double (parameters, 2, 0.0);
+        cpl_array_set_double (parameters, 3, xSC);
+        cpl_array_set_double (parameters, 4, ySC);
+        cpl_array_set_double (parameters, 5, 3.0);
+        cpl_array_set_double (parameters, 6, 3.0);
+        
+        /* Detect SC in mean images */
+        cpl_fit_image_gaussian (mean_img, NULL, (cpl_size)xFT, (cpl_size)xFT,
+                                xsize, ysize, parameters,
+                                NULL, NULL, NULL, NULL, NULL,
+                                NULL, NULL, NULL, NULL);
+
+        cpl_msg_info (cpl_func,"Found SC object at %.2f %.2f pix",
+                      cpl_array_get (parameters,3,NULL),
+                      cpl_array_get (parameters,4,NULL));
+
+        /* Add QC parameters */
+        sprintf (qc_name, "ESO QC ACQ FIELD_SC X");
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, cpl_array_get (parameters,3,NULL));
+        cpl_propertylist_update_double (o_header, qc_name, cpl_array_get (parameters,3,NULL));
+        cpl_propertylist_set_comment (o_header, qc_name, "[pixel] position in mean image");
+        
+        sprintf (qc_name, "ESO QC ACQ FIELD_SC Y");
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, cpl_array_get (parameters,4,NULL));
+        cpl_propertylist_update_double (o_header, qc_name, cpl_array_get (parameters,4,NULL));
+        cpl_propertylist_set_comment (o_header, qc_name, "[pixel] position in mean image");
+        
+        
+        /* Detect FT in mean images */
+        cpl_array_set_invalid (parameters, 1);
+        cpl_array_set_double (parameters, 3, xFT);
+        cpl_array_set_double (parameters, 4, yFT);
+        
+        cpl_fit_image_gaussian (mean_img, NULL, (cpl_size)xFT, (cpl_size)xFT,
+                                xsize, ysize, parameters,
+                                NULL, NULL, NULL, NULL, NULL,
+                                NULL, NULL, NULL, NULL);
+
+        /* Add QC parameters */
+        sprintf (qc_name, "ESO QC ACQ FIELD_FT X");
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, cpl_array_get (parameters,3,NULL));
+        cpl_propertylist_update_double (o_header, qc_name, cpl_array_get (parameters,3,NULL));
+        cpl_propertylist_set_comment (o_header, qc_name, "[pixel] position in mean image");
+        
+        sprintf (qc_name, "ESO QC ACQ FIELD_FT Y");
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, cpl_array_get (parameters,4,NULL));
+        cpl_propertylist_update_double (o_header, qc_name, cpl_array_get (parameters,4,NULL));
+        cpl_propertylist_set_comment (o_header, qc_name, "[pixel] position in mean image");
+        
+        /* Loop on all images */
+        // TBD
+
+        
+        /* Delete parameters */
+        FREE (cpl_array_delete, parameters);
+    }
+    
+    
+    /* 
      * Compute PUPIL columns
      */
 
@@ -851,8 +939,6 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
     gravi_table_new_column (acqcam_table, "PUPIL_V", "m", CPL_TYPE_DOUBLE);
     gravi_table_new_column (acqcam_table, "PUPIL_W", "m", CPL_TYPE_DOUBLE);
     
-    /* Compute mean image */
-    cpl_image * mean_img = cpl_imagelist_collapse_create (acqcam_imglist);
     int nspot = 0;
     
     /* Loop on tel */
