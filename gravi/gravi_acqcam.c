@@ -76,6 +76,8 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img, cpl_size ntry,
 
 double gravi_acqcam_z2meter (double PositionPixels);
 
+cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y, cpl_size size);
+
 /* This global variable optimises the computation
  * of partial derivative on fitted parameters */
 const extern int * GRAVI_LVMQ_FREE;
@@ -776,6 +778,60 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
 
 /*----------------------------------------------------------------------------*/
 /**
+ * @brief Fit a Gaussian into an image, and mark the position.
+ * 
+ * @param img:    input image
+ * @param x,y:    input/output position (guess and best fit)
+ * @param size:   size of box to consider
+ * 
+ * The function use cpl_fit_image_gaussian to fit a Gaussian into the image
+ * The best-fit position is then fill with 0 in the image.
+ */
+/*----------------------------------------------------------------------------*/
+
+cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y, cpl_size size)
+{
+    gravi_msg_function_start(0);
+    cpl_ensure_code (img, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (x, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (y, CPL_ERROR_NULL_INPUT);
+
+    /* Fill first guess */
+    cpl_array * parameters = cpl_array_new (7, CPL_TYPE_DOUBLE);
+    cpl_array_fill_window_invalid (parameters, 0, 7);
+    cpl_array_set (parameters, 2, 0);
+    cpl_array_set (parameters, 3, *x);
+    cpl_array_set (parameters, 4, *y);
+    cpl_array_set (parameters, 5, 3);
+    cpl_array_set (parameters, 6, 3);
+    
+    double med = cpl_image_get_median_window (img,
+                     (cpl_size)(*x)-size, (cpl_size)(*y)-size,
+                     (cpl_size)(*x)+size, (cpl_size)(*y)+size);
+    cpl_array_set (parameters, 0, med);
+    
+    /* Fit Gaussian */
+    cpl_fit_image_gaussian (img, NULL, (cpl_size)(*x), (cpl_size)(*y),
+                            size, size, parameters,
+                            NULL, NULL, NULL, NULL, NULL,
+                            NULL, NULL, NULL, NULL);
+
+    /* Set back */
+    *x = cpl_array_get (parameters,3,NULL);
+    *y = cpl_array_get (parameters,4,NULL);
+
+    /* Fill image with zero at the detected position */
+    cpl_image_set (img, (cpl_size)(*x), (cpl_size)(*y), 0.0);
+    
+    /* Delete */
+    FREE (cpl_array_delete, parameters);
+    
+    gravi_msg_function_exit(0);
+    return CPL_ERROR_NONE;
+}
+
+/*----------------------------------------------------------------------------*/
+/**
  * @brief Reduce the ACQ camera images
  *  
  * @param output_data:  The output gravi_data where the OI_VIS_ACQ table
@@ -858,71 +914,65 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         cpl_msg_info (cpl_func, "Compute field position for beam %i", tel+1);
 
         /* Guess of expected positions, in case Single and Dual */        
-        double xFT = 100.0, yFT = 100.0, xSC = 100.0, ySC = 100.0;
         // FIXME: TBD
+        double xFT = 70.0 + tel*250, yFT = 110.0;
+        double xSC = 110.0 + tel*250, ySC = 150.0;
 
         /* Box size */
-        cpl_size xsize = 15, ysize = 15;
-        
-        /* Fill first guess */
-        cpl_array * parameters = cpl_array_new (7, CPL_TYPE_DOUBLE);
-        cpl_array_set_double (parameters, 0, 0.0);
-        cpl_array_set_double (parameters, 2, 0.0);
-        cpl_array_set_double (parameters, 3, xSC);
-        cpl_array_set_double (parameters, 4, ySC);
-        cpl_array_set_double (parameters, 5, 3.0);
-        cpl_array_set_double (parameters, 6, 3.0);
-        
-        /* Detect SC in mean images */
-        cpl_fit_image_gaussian (mean_img, NULL, (cpl_size)xFT, (cpl_size)xFT,
-                                xsize, ysize, parameters,
-                                NULL, NULL, NULL, NULL, NULL,
-                                NULL, NULL, NULL, NULL);
+        cpl_size size = 25;
 
-        cpl_msg_info (cpl_func,"Found SC object at %.2f %.2f pix",
-                      cpl_array_get (parameters,3,NULL),
-                      cpl_array_get (parameters,4,NULL));
+        /* Detec SC */
+        gravi_acq_fit_gaussian (mean_img, &xSC, &ySC, size);
 
         /* Add QC parameters */
         sprintf (qc_name, "ESO QC ACQ FIELD_SC X");
-        cpl_msg_info (cpl_func, "%s = %f", qc_name, cpl_array_get (parameters,3,NULL));
-        cpl_propertylist_update_double (o_header, qc_name, cpl_array_get (parameters,3,NULL));
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, xSC);
+        cpl_propertylist_update_double (o_header, qc_name, xSC);
         cpl_propertylist_set_comment (o_header, qc_name, "[pixel] position in mean image");
         
         sprintf (qc_name, "ESO QC ACQ FIELD_SC Y");
-        cpl_msg_info (cpl_func, "%s = %f", qc_name, cpl_array_get (parameters,4,NULL));
-        cpl_propertylist_update_double (o_header, qc_name, cpl_array_get (parameters,4,NULL));
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, ySC);
+        cpl_propertylist_update_double (o_header, qc_name, ySC);
         cpl_propertylist_set_comment (o_header, qc_name, "[pixel] position in mean image");
         
-        
-        /* Detect FT in mean images */
-        cpl_array_set_invalid (parameters, 1);
-        cpl_array_set_double (parameters, 3, xFT);
-        cpl_array_set_double (parameters, 4, yFT);
-        
-        cpl_fit_image_gaussian (mean_img, NULL, (cpl_size)xFT, (cpl_size)xFT,
-                                xsize, ysize, parameters,
-                                NULL, NULL, NULL, NULL, NULL,
-                                NULL, NULL, NULL, NULL);
+        /* Detec SC */
+        gravi_acq_fit_gaussian (mean_img, &xFT, &yFT, size);
 
         /* Add QC parameters */
         sprintf (qc_name, "ESO QC ACQ FIELD_FT X");
-        cpl_msg_info (cpl_func, "%s = %f", qc_name, cpl_array_get (parameters,3,NULL));
-        cpl_propertylist_update_double (o_header, qc_name, cpl_array_get (parameters,3,NULL));
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, xFT);
+        cpl_propertylist_update_double (o_header, qc_name, xFT);
         cpl_propertylist_set_comment (o_header, qc_name, "[pixel] position in mean image");
         
         sprintf (qc_name, "ESO QC ACQ FIELD_FT Y");
-        cpl_msg_info (cpl_func, "%s = %f", qc_name, cpl_array_get (parameters,4,NULL));
-        cpl_propertylist_update_double (o_header, qc_name, cpl_array_get (parameters,4,NULL));
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, yFT);
+        cpl_propertylist_update_double (o_header, qc_name, yFT);
         cpl_propertylist_set_comment (o_header, qc_name, "[pixel] position in mean image");
         
         /* Loop on all images */
-        // TBD
+        for (cpl_size row = 0; row < nrow; row++) {
+            if (row %10 == 0 || row == (nrow-1))
+                cpl_msg_info_overwritable (cpl_func, "Fit image %lld over %lld", row+1, nrow);
+            
+            /* Get data */
+            cpl_image * img = cpl_imagelist_get (acqcam_imglist, row);
 
-        
-        /* Delete parameters */
-        FREE (cpl_array_delete, parameters);
-    }
+            /* Detec SC */
+            double xsc = xSC, ysc = ySC;
+            gravi_acq_fit_gaussian (img, &xsc, &ysc, size);
+            
+            cpl_table_set (acqcam_table, "FIELD_SC_X", row*ntel+tel, xsc);
+            cpl_table_set (acqcam_table, "FIELD_SC_Y", row*ntel+tel, ysc);
+
+            /* Detec SC */
+            double xft = xFT, yft = yFT;
+            gravi_acq_fit_gaussian (img, &xft, &yft, size);
+            
+            cpl_table_set (acqcam_table, "FIELD_FT_X", row*ntel+tel, xft);
+            cpl_table_set (acqcam_table, "FIELD_FT_Y", row*ntel+tel, yft);
+        } /* End loop on images */
+
+    } /* End loop on tel */
     
     
     /* 
