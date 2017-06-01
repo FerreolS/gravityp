@@ -909,14 +909,102 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
     gravi_table_new_column (acqcam_table, "FIELD_FT_X", "pix", CPL_TYPE_DOUBLE);
     gravi_table_new_column (acqcam_table, "FIELD_FT_Y", "pix", CPL_TYPE_DOUBLE);
 
+    /* Position of roof center on full frame */
+    double roof_x[] = {274.4, 787.1, 1236.1, 1673.4};
+    double roof_y[] = {242.3, 247.7, 225.8, 235.6};
+
+    /* Position of single-field spot on full frame */
+    double spot_x[] = {289. , 798.2, 1245.5, 1696.};
+    double spot_y[] = {186.5, 187.5,  172.5,  178.};
+
+    /* Default position angle of roof */
+    double roof_pos[] = {38.49, 38.54, 38.76, 39.80};
+
+    /* If sub-windowing, we read the sub-window size */
+    cpl_size nsx = 512;
+    cpl_size nsy = 512;
+    if ( cpl_propertylist_has (header, "ESO DET1 FRAMES NX") ) {
+      nsx = cpl_propertylist_get_int (header, "ESO DET1 FRAMES NX");
+      nsy = cpl_propertylist_get_int (header, "ESO DET1 FRAMES NY");
+    }
+
+    /* Compute separation */
+    double dx_in = cpl_propertylist_get_double(header, "ESO INS SOBJ X");
+    double dy_in = cpl_propertylist_get_double(header, "ESO INS SOBJ Y");
+    CPLCHECK_MSG ("Cannot get separation");
+    double rho_in = sqrt(dx_in*dx_in + dy_in*dy_in);
+
     /* Loop on tel */
     for (int tel = 0; tel < ntel; tel++) {
+        char name[90];
+	double rp=roof_pos[tel]; // default value of roof position angle
+	double scale;
+	cpl_size sx=tel*512+1, sy=1;
         cpl_msg_info (cpl_func, "Compute field position for beam %i", tel+1);
 
-        /* Guess of expected positions, in case Single and Dual */        
-        // FIXME: TBD
-        double xFT = 70.0 + tel*250, yFT = 110.0;
-        double xSC = 110.0 + tel*250, ySC = 150.0;
+	/* Read roof position angle */
+	sprintf (name, "ESO INS DROTOFF%d", tel + 1);
+	if ( cpl_propertylist_has (header, name) ) {
+	  rp = cpl_propertylist_get_double(header, name);
+	}
+
+	/* Approx. position angle of the binary, left from top */ 
+	double approx_PA = 270.-rp;
+
+	/* Get the telescope name and ID */
+	const char * telname = gravi_conf_get_telname (tel, header);
+	// int telid = atoi (telname+2) - 1;
+	CPLCHECK ("Cannot get telescope name");
+
+	/* Hardcoded approx. plate-scale in mas/pix */
+	if (telname[0] == 'U') {
+	  scale = 18.;
+	} else if (telname[0] == 'A') {
+	  scale = 80.;
+	} else 
+	  return cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
+					"Cannot get telescope name");
+
+	/* If sub-windowing, we read the sub-window start for field */
+	if ( nsx != 512 ) {
+	  sprintf (name, "ESO DET1 FRAM%d STRX", tel + 1);
+	  sx = cpl_propertylist_get_int (header, name);
+	  
+	  sprintf (name, "ESO DET1 FRAM%d STRY", tel + 1);
+	  sy = cpl_propertylist_get_int (header, name);
+	  
+	  CPLCHECK_MSG ("Cannot get sub-windowing parameters");
+	}
+	
+	cpl_msg_debug (cpl_func,"sub-window field %lli sx= %lld sy = %lld", tel, sx, sy);
+
+	/*  Expected position of the two stars */
+	double xFT, yFT, xSC, ySC;
+
+	if (rho_in == 0.) {
+	  /* TODO: close dual-field */
+	  /* Single-field case */
+	  /* Simply shift the best spot from full frame to cut-out */
+	  xFT = spot_x[tel] - sx + nsx*tel + 1;
+	  yFT = spot_y[tel] - sy + 1;
+	  xSC = xFT;
+	  ySC = yFT;
+	} else {
+	  /* Pixel position of roof center on cut-out frame */
+	  /* Shift from full frame to cut-out */
+	  double cutout_roof_x = roof_x[tel] - sx + nsx*tel + 1;
+	  double cutout_roof_y = roof_y[tel] - sy + 1;
+
+	  /* Approx pixel offset from SC to FT, divided by 2 */
+	  double approx_dx=0.5*rho_in*sin(approx_PA*M_PI/180.)/scale;
+	  double approx_dy=0.5*rho_in*cos(approx_PA*M_PI/180.)/scale;
+
+	  /* Expected position of the two stars */
+	  xFT = cutout_roof_x - approx_dx ;
+	  yFT = cutout_roof_y - approx_dx ;
+	  xSC = cutout_roof_x + approx_dx ;
+	  ySC = cutout_roof_y + approx_dx ;
+	}
 
         /* Box size */
         cpl_size size = 25;
@@ -925,28 +1013,33 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         gravi_acq_fit_gaussian (mean_img, &xSC, &ySC, size);
 
         /* Add QC parameters */
-        sprintf (qc_name, "ESO QC ACQ FIELD_SC X");
-        cpl_msg_info (cpl_func, "%s = %f", qc_name, xSC);
-        cpl_propertylist_update_double (o_header, qc_name, xSC);
+        sprintf (qc_name, "ESO QC ACQ FIELD%i SC_X", tel+1);
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, xSC + sx - 1 - nsx*tel);
+        cpl_propertylist_update_double (o_header, qc_name, xSC + sx - 1 - nsx*tel);
         cpl_propertylist_set_comment (o_header, qc_name, "[pixel] position in mean image");
         
-        sprintf (qc_name, "ESO QC ACQ FIELD_SC Y");
-        cpl_msg_info (cpl_func, "%s = %f", qc_name, ySC);
-        cpl_propertylist_update_double (o_header, qc_name, ySC);
+        sprintf (qc_name, "ESO QC ACQ FIELD%i SC_Y", tel+1);
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, ySC + sy -1);
+        cpl_propertylist_update_double (o_header, qc_name, ySC + sy -1);
         cpl_propertylist_set_comment (o_header, qc_name, "[pixel] position in mean image");
         
-        /* Detec SC */
-        gravi_acq_fit_gaussian (mean_img, &xFT, &yFT, size);
+	if (rho_in != 0.) {
+	  /* Detec FT */
+	  gravi_acq_fit_gaussian (mean_img, &xFT, &yFT, size);
+	} else {
+	  xFT=xSC;
+	  yFT=ySC;
+	}
 
         /* Add QC parameters */
-        sprintf (qc_name, "ESO QC ACQ FIELD_FT X");
-        cpl_msg_info (cpl_func, "%s = %f", qc_name, xFT);
-        cpl_propertylist_update_double (o_header, qc_name, xFT);
+        sprintf (qc_name, "ESO QC ACQ FIELD%i FT_X", tel+1);
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, xFT + sx - 1 - nsx*tel);
+        cpl_propertylist_update_double (o_header, qc_name, xFT + sx - 1 - nsx*tel);
         cpl_propertylist_set_comment (o_header, qc_name, "[pixel] position in mean image");
         
-        sprintf (qc_name, "ESO QC ACQ FIELD_FT Y");
-        cpl_msg_info (cpl_func, "%s = %f", qc_name, yFT);
-        cpl_propertylist_update_double (o_header, qc_name, yFT);
+        sprintf (qc_name, "ESO QC ACQ FIELD%i FT_Y", tel+1);
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, yFT + sy -1);
+        cpl_propertylist_update_double (o_header, qc_name, yFT + sy -1);
         cpl_propertylist_set_comment (o_header, qc_name, "[pixel] position in mean image");
         
         /* Loop on all images */
@@ -960,13 +1053,25 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
             /* Detec SC */
             double xsc = xSC, ysc = ySC;
             gravi_acq_fit_gaussian (img, &xsc, &ysc, size);
+
+	    /* Shift back positions to full frame */
+	    xsc += sx - 1 - nsx*tel;
+	    ysc += sy - 1;
             
             cpl_table_set (acqcam_table, "FIELD_SC_X", row*ntel+tel, xsc);
             cpl_table_set (acqcam_table, "FIELD_SC_Y", row*ntel+tel, ysc);
 
-            /* Detec SC */
-            double xft = xFT, yft = yFT;
-            gravi_acq_fit_gaussian (img, &xft, &yft, size);
+            /* Detec FT */
+	    double xft = xFT, yft = yFT;
+	    if (rho_in != 0.) {
+	      gravi_acq_fit_gaussian (img, &xft, &yft, size);
+	      /* Shift back positions to full frame */
+	      xft += sx - 1 - nsx*tel;
+	      yft += sy - 1;
+	    } else {
+	      xft=xsc;
+	      yft=ysc;
+	    }
             
             cpl_table_set (acqcam_table, "FIELD_FT_X", row*ntel+tel, xft);
             cpl_table_set (acqcam_table, "FIELD_FT_Y", row*ntel+tel, yft);
