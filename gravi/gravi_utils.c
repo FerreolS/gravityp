@@ -1207,8 +1207,8 @@ const char * gravi_conf_get_telname (int gravi_beam, cpl_propertylist * header)
 cpl_error_code gravi_dump_the_boss (double ra, double dec)
 {
     /* GC coordinates in [rad] */
-    double c_ra  = gravi_dec_to_rad ("17:45:40.03599");
-    double c_dec = gravi_ra_to_rad ("-29:00:28.1699");
+    double c_ra  = gravi_ra_to_rad ("17:45:40.03599");
+    double c_dec = gravi_dec_to_rad ("-29:00:28.1699");
 
     /* Distance in [rad] */
     double dist = acos ( sin (c_dec) * sin (dec) + cos (c_dec) * cos (dec) * cos (ra - c_ra) );
