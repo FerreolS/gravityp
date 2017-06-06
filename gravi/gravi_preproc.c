@@ -51,7 +51,8 @@
                               Private prototypes
  -----------------------------------------------------------------------------*/
 cpl_table * gravi_table_ft_format (cpl_table * table_ft, cpl_table * sky_table_std,
-								   cpl_table * sky_table_avg, int n_region, double gain);
+								   cpl_table * sky_table_avg, cpl_table * badft_table,
+                                   int n_region, double gain);
 
 cpl_table * gravi_imglist_sc_collapse (cpl_table * profile_table,
                                        cpl_imagelist * raw_imglist,
@@ -254,7 +255,8 @@ cpl_error_code gravi_remove_badpixel_sc (cpl_imagelist * imglist_sc, cpl_image *
 
 cpl_table * gravi_table_ft_format (cpl_table * pix_table,
 								   cpl_table * skystd_table,
-								   cpl_table * skyavg_table,
+                                   cpl_table * skyavg_table,
+                                   cpl_table * badft_table,
 								   int n_region, double gain)
 {
   /* Verbose */
@@ -269,6 +271,10 @@ cpl_table * gravi_table_ft_format (cpl_table * pix_table,
   cpl_array ** arr_data = cpl_table_get_data_array (pix_table, "PIX");
   CPLCHECK_NUL ("Cannot get data");
   
+  /* Get PIX of badft */
+  cpl_array ** arr_badft = cpl_table_get_data_array (badft_table, "PIX");
+  CPLCHECK_NUL ("Cannot get data");
+
   /* Get the dimensions for the descramling */
   cpl_size npix = cpl_table_get_column_depth (pix_table, "PIX");
   cpl_size sizex = cpl_table_get_column_dimension(pix_table, "PIX", 0);
@@ -344,6 +350,7 @@ cpl_table * gravi_table_ft_format (cpl_table * pix_table,
        * If 2 pixels per element
        * - data     = data1 - mean_sky1 + data2 - mean_sky2
        * - var_data = data + var_sky1 + var_sky2
+       * Only considere the pixel that are not flag as BAD
 	   * Allocating the arrays wrap data takes most of
 	   * the time of the extract (80%) */
 	  
@@ -352,11 +359,17 @@ cpl_table * gravi_table_ft_format (cpl_table * pix_table,
 		double *pDataErr = cpl_malloc (ny_out * sizeof(double));
 		for (cpl_size j = 0; j < ny_out; j++) {
 		  long idx = sizex * (j + ny*pol) + region*nx;
-		  double value = cpl_array_get (arr_data[row], idx, NULL) / gain - pSky[idx];
-		  if (nx>1) value += cpl_array_get (arr_data[row], idx+1, NULL) / gain - pSky[idx+1];
+		  double value = 0;
+		  double var = 0;
+          if (cpl_array_get (arr_badft[0], idx, NULL) == 0) { // if not bad
+              value += cpl_array_get (arr_data[row], idx, NULL) / gain - pSky[idx];
+              var += pSkyVar[idx];
+          }
+		  if (nx>1 && cpl_array_get (arr_badft[0], idx+1, NULL) == 0) { // if not bad and if there is 2 pixels
+		      value += cpl_array_get (arr_data[row], idx+1, NULL) / gain - pSky[idx+1];
+		      var += pSkyVar[idx+1];
+		  }
 		  pData[j]   = value;
-		  double var = pSkyVar[idx];
-		  if (nx>1) var += pSkyVar[idx+1];
 		  pDataErr[j] = sqrt (CPL_MAX (value,0.0) + var);
 		}
 		tData[row]    = cpl_array_wrap_double (pData, ny_out);
@@ -612,9 +625,12 @@ gravi_data * gravi_extract_spectrum (gravi_data * raw_data,
 
 		CPLCHECK_NUL("Problem while getting the tables");
 
+        /* Get the badpixel image */
+        cpl_table * badft_table = gravi_data_get_table(bad_map, GRAVI_IMAGING_DATA_FT_EXT);
+
 		/* Convert PIX column to DATA# and DATAERR# */
 		cpl_table * spectrum_ft;
-        spectrum_ft = gravi_table_ft_format (imaging_data_ft, skystd_table, skyavg_table, n_region, gain_ft);
+        spectrum_ft = gravi_table_ft_format (imaging_data_ft, skystd_table, skyavg_table, badft_table, n_region, gain_ft);
         CPLCHECK_NUL ("Cannot format FT data");
 
         /* Set units */
