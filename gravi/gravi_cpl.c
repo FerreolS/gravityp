@@ -2796,4 +2796,30 @@ cpl_matrix * svdcmp (cpl_matrix * a_in, cpl_vector * w, cpl_matrix * v)
 	return a;
 }
 
+
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief   Extract rows from table based on the TIME column.
+ * 
+ * @param	table        input table
+ * @param   start, end   max and min accepted time.
+ *
+ * @return A new table, with rows matching TIME>=start && TIME<end
+ */
+/*----------------------------------------------------------------------------*/
+cpl_table * gravi_table_extract_time_interval (cpl_table *table, double start, double end)
+{
+    gravi_msg_function_start(1);
+	cpl_ensure (table, CPL_ERROR_NULL_INPUT, NULL);
+    
+    /* Select only interested */
+    cpl_table_select_all (table);
+    cpl_table_and_selected_double (table, "TIME", CPL_NOT_LESS_THAN, start);
+    cpl_table_and_selected_double (table, "TIME", CPL_LESS_THAN, end);
+    cpl_table * out = cpl_table_extract_selected (table);
+    
+    gravi_msg_function_exit(1);
+    return out;
+}
+
 /**@}*/

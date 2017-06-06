@@ -161,6 +161,8 @@ cpl_matrix * gravi_matrix_interpolate_col (cpl_matrix * matrix,
 
 cpl_matrix * gravi_matrix_invertSV_create (cpl_matrix * a_in);
 
+cpl_table * gravi_table_extract_time_interval (cpl_table *table, double start, double end);
+
 
 #endif /* GRAVI_CPL_H_ */
 
