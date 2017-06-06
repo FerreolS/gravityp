@@ -507,7 +507,7 @@ static int gravity_disp(cpl_frameset            * frameset,
 
 			/* Visibility and flux are averaged and the followings
 			 * are saved in Visibility data in tables VIS, VIS2 and T3 */
-			tmpvis_data = gravi_compute_vis (p2vmred_data, parlist);
+			tmpvis_data = gravi_compute_vis (p2vmred_data, -1e12, 1e12, parlist);
 			CPLCHECK_CLEAN ("Cannot average the visibilities");
 
 			/* Save the VIS */

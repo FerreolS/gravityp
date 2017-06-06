@@ -1125,6 +1125,7 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
 /*----------------------------------------------------------------------------*/
 
 gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
+                                double start_time, double end_time,
                                 const cpl_parameterlist * parlist)
 {
 	gravi_msg_function_start(1);
@@ -1179,6 +1180,15 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
             /* Get the input table of FT */
             cpl_table * vis_FT = gravi_data_get_oi_vis (p2vmred_data, GRAVI_FT, pol, npol_ft);
             cpl_table * flux_FT = gravi_data_get_oi_flux (p2vmred_data, GRAVI_FT, pol, npol_ft);
+
+            /* Keep only selected rows */
+            vis_FT  = gravi_table_extract_time_interval (vis_FT, start_time, end_time);
+            flux_FT = gravi_table_extract_time_interval (flux_FT, start_time, end_time);
+
+            cpl_msg_info (cpl_func,"nrow = %lld", cpl_table_get_nrow(vis_FT));
+            cpl_msg_info (cpl_func,"nrow = %lld", cpl_table_get_nrow(flux_FT));
+
+            /* Get parameters */
             int nwave_ft = cpl_table_get_column_depth (vis_FT, "VISDATA");
             cpl_size nrow_ft  = cpl_table_get_nrow (vis_FT) / nbase;
             int nseg_ft = CPL_MIN (nrow_ft, 100);
@@ -1291,6 +1301,9 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
             gravi_data_add_table (vis_data, oiflux_plist, GRAVI_OI_FLUX_EXT, oi_flux_FT);
             
             CPLCHECK_NUL ("Cannot add tables");
+
+            FREE (cpl_table_delete, vis_FT);
+            FREE (cpl_table_delete, flux_FT);
             
         } /* end loop on pol */
     } /* End FT */
@@ -1326,6 +1339,12 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
             /* Get the input table of SC */
             cpl_table * vis_SC = gravi_data_get_oi_vis (p2vmred_data, GRAVI_SC, pol, npol_sc);
             cpl_table * flux_SC = gravi_data_get_oi_flux (p2vmred_data, GRAVI_SC, pol, npol_sc);
+
+            /* Keep only selected rows */
+            vis_SC  = gravi_table_extract_time_interval (vis_SC, start_time, end_time);
+            flux_SC = gravi_table_extract_time_interval (flux_SC, start_time, end_time);
+            
+            /* Get parameters */
             cpl_table * oi_wavelengthsc = gravi_data_get_oi_wave (p2vmred_data, GRAVI_SC, pol, npol_sc);
             int nwave_sc = cpl_table_get_column_depth (vis_SC, "VISDATA");
             cpl_size nrow_sc  = cpl_table_get_nrow (vis_SC) / nbase;
@@ -1406,7 +1425,6 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
                 double mean_delay = 0.0;
                 gravi_array_get_group_delay_loop (&visData_sc, wavenumber_sc, &mean_delay, 1, 2e-3, CPL_FALSE);
                 gravi_array_multiply_phasor (visData_sc, - 2*I*CPL_MATH_PI * mean_delay, wavenumber_sc);
-                cpl_msg_debug (cpl_func, "group-delay in SC is : %f [microns]", mean_delay * 1e6);
                 
                 /* Save this delay [m] */
                 cpl_table_set (oi_vis_SC, "GDELAY", base, mean_delay);
@@ -1414,7 +1432,6 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
                 /* Compute and remove the mean phase in [rad] */
                 double mean_phase = carg (cpl_array_get_mean_complex (visData_sc));
                 cpl_array_multiply_scalar_complex (visData_sc, cexp(- I * mean_phase));
-                cpl_msg_debug (cpl_func, "phase-delay in SC is : %f [deg]", mean_phase * 180 / CPL_MATH_PI);
                 
                 /* Save this phase [rad] */
                 cpl_table_set (oi_vis_SC, "PHASE", base, mean_phase);
@@ -1478,6 +1495,7 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
                 /* Save the FC metrology lock date */
                 double lockdate = gravi_pfits_get_metfc_lockmjd (p2vmred_header, tel);
                 cpl_table_set (oi_flux_SC, "LKDT_MET_FC", tel, lockdate);
+                
             } /* End loop on beams */
 
             /* 
@@ -1523,6 +1541,9 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
             FREE (cpl_array_delete, wavenumber_sc);
             CPLCHECK_NUL ("Cannot delete wavenumber");
 
+            FREE (cpl_table_delete, vis_SC);
+            FREE (cpl_table_delete, flux_SC);
+            
         } /* end loop on pol */
     } /* End SC */
     
@@ -1686,7 +1707,9 @@ cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data)
             cpl_table * oi_vis_SC = gravi_data_get_oi_vis (vis_data, GRAVI_SC, pol, npol_sc);
             
             for (int base = 0; base < nbase; base++) {
-                /* FIXME: repair these QC parameters, for instance by computing them in P2VMRED */
+                /* FIXME: repair these QC parameters, for instance by computing them in P2VMRED 
+                 * and ensure the other QC parameters are computed as the mean over all 
+                 * observations */
                 
                 // sprintf (qc_name, "ESO QC VFACTOR%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
                 // double vmean = gravi_table_get_column_mean (vis_SC, "V_FACTOR_WL", base, nbase);

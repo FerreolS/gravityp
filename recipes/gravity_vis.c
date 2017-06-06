@@ -746,7 +746,7 @@ static int gravity_vis(cpl_frameset * frameset,
 
 		/* Visibility and flux are averaged and the followings
 		 * are saved in Visibility data in tables VIS, VIS2 and T3 */
-		tmpvis_data = gravi_compute_vis (p2vmred_data, parlist);
+		tmpvis_data = gravi_compute_vis (p2vmred_data, -1e12, 1e12, parlist);
 		CPLCHECK_CLEAN ("Cannot average the P2VMRED frames into VIS");
 
 		/* Save the astro file, which is a lighter version of the p2vmreduced */
