@@ -745,10 +745,21 @@ static int gravity_vis(cpl_frameset * frameset,
 		}
 
 		/* Visibility and flux are averaged and the followings
-		 * are saved in Visibility data in tables VIS, VIS2 and T3 */
-		tmpvis_data = gravi_compute_vis (p2vmred_data, -1e12, 1e12, parlist);
+		 * are saved in tables VIS, VIS2 and T3 */
+		tmpvis_data = gravi_compute_vis (p2vmred_data, parlist);
 		CPLCHECK_CLEAN ("Cannot average the P2VMRED frames into VIS");
 
+        /* Merge with already existing */
+        if (vis_data == NULL) {
+            vis_data = tmpvis_data; tmpvis_data = NULL;
+        }
+        else {
+            cpl_msg_info (cpl_func,"Merge with previous OI_VIS");
+            gravi_data_append (vis_data, tmpvis_data, 1);
+            FREE (gravi_data_delete, tmpvis_data);
+        }
+
+        
 		/* Save the astro file, which is a lighter version of the p2vmreduced */
 		if (gravi_param_get_bool (parlist,"gravity.dfs.astro-file")) {
 
@@ -760,17 +771,6 @@ static int gravity_vis(cpl_frameset * frameset,
 			CPLCHECK_CLEAN ("Cannot save the ASTROREDUCED product");
 		}
 		
-
-        /* Merge with already existing */
-        if (ivis == 0) {
-            vis_data = tmpvis_data; tmpvis_data = NULL;
-        }
-        else {
-            cpl_msg_info (cpl_func,"Merge with previous OI_VIS");
-            gravi_data_append (vis_data, tmpvis_data, 1);
-            FREE (gravi_data_delete, tmpvis_data);
-        }
-
 		cpl_msg_info (cpl_func,"Free the p2vmreduced");
 		FREE (cpl_frameset_delete, current_frameset);
 		FREE (gravi_data_delete, p2vmred_data);

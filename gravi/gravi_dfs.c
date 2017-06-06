@@ -549,6 +549,24 @@ cpl_error_code gravi_parameter_add_compute_vis (cpl_parameterlist *self, int isC
     cpl_ensure_code (self, CPL_ERROR_NULL_INPUT);
     cpl_parameter *p;
     
+    /* Start time */
+	p = cpl_parameter_new_value ("gravity.vis.start-time", CPL_TYPE_DOUBLE,
+                                 "Start TIME for considering frames, in\n "
+                                 "micro-seconds from PCR.ACQ.START value",
+                                 "gravity.vis", -1e12);
+	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "start-time");
+	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	cpl_parameterlist_append (self, p);
+
+    /* End time */
+	p = cpl_parameter_new_value ("gravity.vis.end-time", CPL_TYPE_DOUBLE,
+                                 "End TIME for considering frames, in\n "
+                                 "micro-seconds from PCR.ACQ.START value",
+                                 "gravity.vis", 1e12);
+	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "end-time");
+	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	cpl_parameterlist_append (self, p);
+    
     /* Debias SC VIS2 */
 	p = cpl_parameter_new_value ("gravity.vis.debias-sc", CPL_TYPE_BOOL,
                                  "Subtract the V2 bias from SC",
