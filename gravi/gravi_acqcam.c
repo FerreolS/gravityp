@@ -815,13 +815,17 @@ cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y, cp
                             size, size, parameters,
                             NULL, NULL, NULL, NULL, NULL,
                             NULL, NULL, NULL, NULL);
+    CPLCHECK_MSG("Error fitting Gaussian");
+
+    /* To do that, one would need to check that x and y are within the image */
 
     /* Set back */
-    *x = cpl_array_get (parameters,3,NULL);
-    *y = cpl_array_get (parameters,4,NULL);
+    /* *x = cpl_array_get (parameters,3,NULL); */
+    /* *y = cpl_array_get (parameters,4,NULL); */
 
     /* Fill image with zero at the detected position */
-    cpl_image_set (img, (cpl_size)(*x), (cpl_size)(*y), 0.0);
+    /* cpl_image_set (img, (cpl_size)(*x), (cpl_size)(*y), 0.0); */
+    /* CPLCHECK_MSG("Error setting peak to zero"); */
     
     /* Delete */
     FREE (cpl_array_delete, parameters);
@@ -946,6 +950,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
 	sprintf (name, "ESO INS DROTOFF%d", tel + 1);
 	if ( cpl_propertylist_has (header, name) ) {
 	  rp = cpl_propertylist_get_double(header, name);
+	  CPLCHECK ("Cannot get rotation");
 	}
 
 	/* Approx. position angle of the binary, left from top */ 
@@ -963,7 +968,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
 	  scale = 80.;
 	} else 
 	  return cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
-					"Cannot get telescope name");
+					"Cannot determine scale");
 
 	/* If sub-windowing, we read the sub-window start for field */
 	if ( nsx != 512 ) {
@@ -1011,6 +1016,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
 
         /* Detec SC */
         gravi_acq_fit_gaussian (mean_img, &xSC, &ySC, size);
+	CPLCHECK_MSG("Error fitting SC");
 
         /* Add QC parameters */
         sprintf (qc_name, "ESO QC ACQ FIELD%i SC_X", tel+1);
@@ -1026,6 +1032,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
 	if (rho_in != 0.) {
 	  /* Detec FT */
 	  gravi_acq_fit_gaussian (mean_img, &xFT, &yFT, size);
+	  CPLCHECK_MSG("Error fitting FT");
 	} else {
 	  xFT=xSC;
 	  yFT=ySC;
@@ -1049,10 +1056,12 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
             
             /* Get data */
             cpl_image * img = cpl_imagelist_get (acqcam_imglist, row);
+	    CPLCHECK_MSG("Error getting image");
 
             /* Detec SC */
             double xsc = xSC, ysc = ySC;
             gravi_acq_fit_gaussian (img, &xsc, &ysc, size);
+	    CPLCHECK_MSG("Error fitting SC");
 
 	    /* Shift back positions to full frame */
 	    xsc += sx - 1 - nsx*tel;
@@ -1060,11 +1069,13 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
             
             cpl_table_set (acqcam_table, "FIELD_SC_X", row*ntel+tel, xsc);
             cpl_table_set (acqcam_table, "FIELD_SC_Y", row*ntel+tel, ysc);
+	    CPLCHECK_MSG("Error setting SC columns");
 
             /* Detec FT */
 	    double xft = xFT, yft = yFT;
 	    if (rho_in != 0.) {
 	      gravi_acq_fit_gaussian (img, &xft, &yft, size);
+	      CPLCHECK_MSG("Error fitting FT");
 	      /* Shift back positions to full frame */
 	      xft += sx - 1 - nsx*tel;
 	      yft += sy - 1;
@@ -1075,6 +1086,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
             
             cpl_table_set (acqcam_table, "FIELD_FT_X", row*ntel+tel, xft);
             cpl_table_set (acqcam_table, "FIELD_FT_Y", row*ntel+tel, yft);
+	    CPLCHECK_MSG("Error setting FT column");
         } /* End loop on images */
 
     } /* End loop on tel */
