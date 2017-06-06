@@ -39,6 +39,8 @@
  -----------------------------------------------------------------------------*/
 
 gravi_data * gravi_compute_vis (gravi_data *, const cpl_parameterlist *);
+cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data);
+
 cpl_error_code gravi_vis_mjd_to_time (gravi_data * vis_data);
 
 cpl_error_code gravi_flat_flux (gravi_data * vis_calib, gravi_data * p2vm_data);

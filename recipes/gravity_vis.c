@@ -778,6 +778,8 @@ static int gravity_vis(cpl_frameset * frameset,
     }
     /* End loop on the input files to reduce */
 
+    gravi_compute_vis_qc (vis_data);
+
 	/* Compute the QC parameters of the TF 
 	 * FIXME: compute QC TF only for CALIB star */
 	gravi_compute_tf_qc (vis_data, diamcat_data);
