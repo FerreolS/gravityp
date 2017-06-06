@@ -422,6 +422,8 @@ cpl_error_code gravi_flux_average_bootstrap(cpl_table * oi_flux_avg,
   cpl_msg_debug(cpl_func,"Total integration time = %.3f s", total_exptime);
   cpl_table_set_double (oi_flux_avg, "INT_TIME", tel, total_exptime);
   cpl_table_set_double (oi_flux_avg, "MJD", tel, mjd_avg);
+  cpl_table_set (oi_flux_avg, "NVALID", tel, nvalid);
+  cpl_table_set (oi_flux_avg, "NDIT", tel, nrow);
 
   /* Set the TARGET_ID and STA_INDEX */
   cpl_table_set_int (oi_flux_avg, "TARGET_ID", tel, cpl_table_get_int (oi_flux, "TARGET_ID", tel, &nv));
@@ -729,6 +731,8 @@ cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
   cpl_table_set_double (oi_t3_avg, "V1COORD", closure, v1Coord);
   cpl_table_set_double (oi_t3_avg, "U2COORD", closure, u2Coord);
   cpl_table_set_double (oi_t3_avg, "V2COORD", closure, v2Coord);
+  cpl_table_set (oi_t3_avg, "NVALID", closure, nvalid);
+  cpl_table_set (oi_t3_avg, "NDIT", closure, nrow);
   
   /* Set the TARGET_ID */
   cpl_table_set_int (oi_t3_avg, "TARGET_ID", closure, cpl_table_get_int (oi_vis, "TARGET_ID", base0, &nv));
@@ -1075,14 +1079,22 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
   CPLCHECK_MSG("cannot flag baddata data");
   
   /* Compute the total integration time */
-  cpl_table_set_double (oi_vis_avg,  "INT_TIME", base, total_exptime);
-  cpl_table_set_double (oi_vis2_avg, "INT_TIME", base, total_exptime);
-  cpl_table_set_double (oi_vis_avg,  "MJD", base, mjd_avg);
-  cpl_table_set_double (oi_vis2_avg, "MJD", base, mjd_avg);
-  cpl_table_set_double (oi_vis_avg,  "UCOORD", base, uCoord);
-  cpl_table_set_double (oi_vis_avg,  "VCOORD", base, vCoord);
-  cpl_table_set_double (oi_vis2_avg, "UCOORD", base, uCoord);
-  cpl_table_set_double (oi_vis2_avg, "VCOORD", base, vCoord);
+  cpl_table_set (oi_vis_avg,  "INT_TIME", base, total_exptime);
+  cpl_table_set (oi_vis2_avg, "INT_TIME", base, total_exptime);
+  cpl_table_set (oi_vis_avg,  "MJD", base, mjd_avg);
+  cpl_table_set (oi_vis2_avg, "MJD", base, mjd_avg);
+  cpl_table_set (oi_vis_avg,  "UCOORD", base, uCoord);
+  cpl_table_set (oi_vis_avg,  "VCOORD", base, vCoord);
+  cpl_table_set (oi_vis2_avg, "UCOORD", base, uCoord);
+  cpl_table_set (oi_vis2_avg, "VCOORD", base, vCoord);
+  CPLCHECK_MSG("cannot fill time");
+
+  /* Set some statistics */
+  cpl_table_set (oi_vis2_avg, "NVALID", base, nvalid);
+  cpl_table_set (oi_vis2_avg, "NDIT", base, nrow);
+  cpl_table_set (oi_vis_avg, "NVALID", base, nvalid);
+  cpl_table_set (oi_vis_avg, "NDIT", base, nrow);
+  CPLCHECK_MSG("cannot fill nvalid");
   
   /* Set the TARGET_ID and STA_INDEX */
   cpl_table_set_int (oi_vis_avg,  "TARGET_ID", base, cpl_table_get_int (oi_vis, "TARGET_ID", base, &nv));
@@ -1176,9 +1188,18 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
              * Loop on bases to compute OIVIS2 and OIVIS for FT
              */
             cpl_msg_info (cpl_func, "Compute OIVIS2 and OIVIS for FT");
-            
+
+            /* Create product */
             cpl_table * oi_vis2_FT = gravi_table_oi_create (nwave_ft, 1, GRAVI_OI_VIS2_EXT);
+            
+            gravi_table_new_column (oi_vis2_FT, "NDIT", NULL, CPL_TYPE_INT);
+            gravi_table_new_column (oi_vis2_FT, "NVALID", NULL, CPL_TYPE_INT);
+            
             cpl_table * oi_vis_FT = gravi_table_oi_create (nwave_ft, 1, GRAVI_OI_VIS_EXT);
+            
+            gravi_table_new_column (oi_vis_FT, "NDIT", NULL, CPL_TYPE_INT);
+            gravi_table_new_column (oi_vis_FT, "NVALID", NULL, CPL_TYPE_INT);
+            CPLCHECK_NUL ("Cannot create product");
 
             for (int base = 0; base < nbase; base++) {
                 
@@ -1197,7 +1218,11 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
              */
             cpl_msg_info (cpl_func, "Compute OIT3 for FT");
 
+            /* Create product */
             cpl_table * oi_T3_FT = gravi_table_oi_create (nwave_ft, 1, GRAVI_OI_T3_EXT);
+            
+            gravi_table_new_column (oi_T3_FT, "NDIT", NULL, CPL_TYPE_INT);
+            gravi_table_new_column (oi_T3_FT, "NVALID", NULL, CPL_TYPE_INT);
             
             for (int clo = 0; clo < nclo; clo++){
                 
@@ -1214,7 +1239,11 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
              */
             cpl_msg_info (cpl_func, "Compute OI_FLUX for FT");
 		
+            /* Create product */
             cpl_table * oi_flux_FT = gravi_table_oi_create (nwave_ft, 1, GRAVI_OI_FLUX_EXT);
+            
+            gravi_table_new_column (oi_flux_FT, "NDIT", NULL, CPL_TYPE_INT);
+            gravi_table_new_column (oi_flux_FT, "NVALID", NULL, CPL_TYPE_INT);
             
             for (int tel = 0; tel < ntel; tel++){
                 
@@ -1319,10 +1348,16 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
              */
             cpl_msg_info (cpl_func, "Compute OIVIS2 and OIVIS for SC");
 
+            /* Create averaged product */
             cpl_table * oi_vis2_SC = gravi_table_oi_create (nwave_sc, 1, GRAVI_OI_VIS2_EXT);
             cpl_table * oi_vis_SC = gravi_table_oi_create (nwave_sc, 1, GRAVI_OI_VIS_EXT);
             
-            /* Additional columns in final, averaged product */
+            gravi_table_new_column (oi_vis2_SC, "NDIT", NULL, CPL_TYPE_INT);
+            gravi_table_new_column (oi_vis2_SC, "NVALID", NULL, CPL_TYPE_INT);
+            
+            gravi_table_new_column (oi_vis_SC, "NDIT", NULL, CPL_TYPE_INT);
+            gravi_table_new_column (oi_vis_SC, "NVALID", NULL, CPL_TYPE_INT);
+            
             gravi_table_new_column (oi_vis_SC, "GDELAY", "m", CPL_TYPE_DOUBLE);
             gravi_table_new_column (oi_vis_SC, "PHASE", "rad", CPL_TYPE_DOUBLE);
 
@@ -1398,8 +1433,12 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
              * Loop on triplet to compute OIT3 for SC
              */
             cpl_msg_info (cpl_func, "Compute OIT3 for SC");
-            
+
+            /* Create average product */
             cpl_table * oi_T3_SC = gravi_table_oi_create (nwave_sc, 1, GRAVI_OI_T3_EXT);
+            
+            gravi_table_new_column (oi_T3_SC, "NDIT", NULL, CPL_TYPE_INT);
+            gravi_table_new_column (oi_T3_SC, "NVALID", NULL, CPL_TYPE_INT);
             
             for (int clo = 0; clo < nclo; clo++){
                 
@@ -1418,6 +1457,8 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
             
             cpl_table * oi_flux_SC = gravi_table_oi_create (nwave_sc, 1, GRAVI_OI_FLUX_EXT);
             
+            gravi_table_new_column (oi_flux_SC, "NDIT", NULL, CPL_TYPE_INT);
+            gravi_table_new_column (oi_flux_SC, "NVALID", NULL, CPL_TYPE_INT);
             gravi_table_new_column (oi_flux_SC, "LKDT_MET_FC", "mjd", CPL_TYPE_DOUBLE);
 
             gravi_vis_compute_column_mean (oi_flux_SC, flux_SC, "OPD_MET_FC", 4);
@@ -1496,6 +1537,15 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
 }
 
 
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief The function compute the QC parameters for a VIS (averaged) data
+ * 
+ * @param vis_data  VIS data containing OI_FLUX and OI_VIS tables
+ * 	  	            comming from the @c gravi_compute_vis
+ */
+/*----------------------------------------------------------------------------*/
+
 cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data)
 {
 	gravi_msg_function_start(1);
@@ -1525,8 +1575,7 @@ cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data)
         for (int pol = 0; pol < npol_ft; pol++) {
             cpl_msg_info (cpl_func, "Start FT polarisation %d over %d",pol+1, npol_ft);
             
-            /* 
-             * Loop on bases to compute OIVIS2 and OIVIS for FT
+            /* Loop on bases to compute OIVIS2 and OIVIS for FT
              */
             cpl_msg_info (cpl_func, "Compute QC OIVIS2 and OIVIS for FT");
             
@@ -1534,13 +1583,13 @@ cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data)
             cpl_table * oi_vis_FT = gravi_data_get_oi_vis (vis_data, GRAVI_FT, pol, npol_ft);
 
             for (int base = 0; base < nbase; base++) {
-                /* FIXME: repair these QC parameters, for instance by computing them in P2VMRED */
                 
-                // /* Add the QC parameters for FT */
-                // sprintf (qc_name, "ESO QC ACCEPTED_RATIO_FT%s_P%d", GRAVI_BASE_NAME[base], pol+1);
-                // double ratio = 0.0; for (cpl_size r=0; r<nrow_ft;r++) ratio += (reject_flag_ft[r*nbase+base]>0?0:1);
-                // cpl_propertylist_update_double (plist, qc_name, round(ratio / nrow_ft * 100.0 * 1e2) / 1e2);
-                // cpl_propertylist_set_comment (plist, qc_name, "[%] of accepted frames");
+                /* Add the QC parameters for FT */
+                sprintf (qc_name, "ESO QC ACCEPTED_RATIO_FT%s_P%d", GRAVI_BASE_NAME[base], pol+1);
+                double ratio = gravi_table_get_column_mean (oi_vis_FT, "NVALID", base, nbase) /
+                               gravi_table_get_column_mean (oi_vis_FT, "NDIT", base, nbase);
+                cpl_propertylist_update_double (plist, qc_name, round(100 * ratio * 1e2) / 1e2);
+                cpl_propertylist_set_comment (plist, qc_name, "[%] of accepted frames");
                 
                 sprintf (qc_name, "ESO QC VISPHIERR_FT%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
                 cpl_propertylist_update_double (plist, qc_name, cpl_array_get_mean(cpl_table_get_array (oi_vis_FT, "VISPHIERR", base)));
@@ -1649,10 +1698,11 @@ cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data)
                 // cpl_propertylist_update_double (plist, qc_name, pmean);
                 // cpl_propertylist_set_comment (plist, qc_name, "mean p-factor");
                 
-                // sprintf (qc_name, "ESO QC ACCEPTED_RATIO_SC%s_P%d", GRAVI_BASE_NAME[base], pol+1);
-                // double ratio = 0.0; for (cpl_size r=0; r<nrow_sc;r++) ratio += (reject_flag_sc[r*nbase+base]>0?0:1);
-                // cpl_propertylist_update_double (plist, qc_name, round(ratio / nrow_sc * 100.0 * 1e2) / 1e2);
-                // cpl_propertylist_set_comment (plist, qc_name, "[%] of accepted frames");
+                sprintf (qc_name, "ESO QC ACCEPTED_RATIO_SC%s_P%d", GRAVI_BASE_NAME[base], pol+1);
+                double ratio = gravi_table_get_column_mean (oi_vis_SC, "NVALID", base, nbase) /
+                               gravi_table_get_column_mean (oi_vis_SC, "NDIT", base, nbase);
+                cpl_propertylist_update_double (plist, qc_name, round(100 * ratio * 1e2) / 1e2);
+                cpl_propertylist_set_comment (plist, qc_name, "[%] of accepted frames");
                 
                 sprintf (qc_name, "ESO QC GD_SC%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
                 cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_SC, "GDELAY", base, nbase));
