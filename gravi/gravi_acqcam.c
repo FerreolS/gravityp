@@ -804,11 +804,13 @@ cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y, cp
     cpl_array_set (parameters, 4, *y);
     cpl_array_set (parameters, 5, 3);
     cpl_array_set (parameters, 6, 3);
+    CPLCHECK_MSG("Error creating parameter table");
     
     double med = cpl_image_get_median_window (img,
                      (cpl_size)(*x)-size, (cpl_size)(*y)-size,
                      (cpl_size)(*x)+size, (cpl_size)(*y)+size);
     cpl_array_set (parameters, 0, med);
+    CPLCHECK_MSG("Error getting median");
     
     /* Fit Gaussian */
     cpl_fit_image_gaussian (img, NULL, (cpl_size)(*x), (cpl_size)(*y),
@@ -817,15 +819,14 @@ cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y, cp
                             NULL, NULL, NULL, NULL);
     CPLCHECK_MSG("Error fitting Gaussian");
 
-    /* To do that, one would need to check that x and y are within the image */
-
     /* Set back */
-    /* *x = cpl_array_get (parameters,3,NULL); */
-    /* *y = cpl_array_get (parameters,4,NULL); */
+    *x = cpl_array_get (parameters,3,NULL);
+    *y = cpl_array_get (parameters,4,NULL);
+    CPLCHECK_MSG("Error reading fit result");
 
     /* Fill image with zero at the detected position */
-    /* cpl_image_set (img, (cpl_size)(*x), (cpl_size)(*y), 0.0); */
-    /* CPLCHECK_MSG("Error setting peak to zero"); */
+    cpl_image_set (img, (cpl_size)(*x), (cpl_size)(*y), 0.0);
+    CPLCHECK_MSG("Error setting peak to zero");
     
     /* Delete */
     FREE (cpl_array_delete, parameters);
@@ -937,6 +938,9 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
     double dy_in = cpl_propertylist_get_double(header, "ESO INS SOBJ Y");
     CPLCHECK_MSG ("Cannot get separation");
     double rho_in = sqrt(dx_in*dx_in + dy_in*dy_in);
+    char const * dpr_type = cpl_propertylist_get_string(header, "ESO DPR TYPE");
+    CPLCHECK("Error reading header information");
+    if (!strcmp(dpr_type, "OBJECT,SINGLE")) rho_in = 0.;
 
     /* Loop on tel */
     for (int tel = 0; tel < ntel; tel++) {
