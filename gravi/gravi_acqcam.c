@@ -936,8 +936,8 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
     /* Compute separation */
     double dx_in = cpl_propertylist_get_double(header, "ESO INS SOBJ X");
     double dy_in = cpl_propertylist_get_double(header, "ESO INS SOBJ Y");
-    CPLCHECK_MSG ("Cannot get separation");
     double rho_in = sqrt(dx_in*dx_in + dy_in*dy_in);
+    CPLCHECK_MSG ("Cannot get separation");
     char const * dpr_type = cpl_propertylist_get_string(header, "ESO DPR TYPE");
     CPLCHECK("Error reading header information");
     if (!strcmp(dpr_type, "OBJECT,SINGLE")) rho_in = 0.;
@@ -945,17 +945,17 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
     /* Loop on tel */
     for (int tel = 0; tel < ntel; tel++) {
         char name[90];
-	double rp=roof_pos[tel]; // default value of roof position angle
-	double scale;
-	cpl_size sx=tel*512+1, sy=1;
+        double rp=roof_pos[tel]; // default value of roof position angle
+        double scale;
+        cpl_size sx=tel*512+1, sy=1;
         cpl_msg_info (cpl_func, "Compute field position for beam %i", tel+1);
-
-	/* Read roof position angle */
-	sprintf (name, "ESO INS DROTOFF%d", tel + 1);
-	if ( cpl_propertylist_has (header, name) ) {
-	  rp = cpl_propertylist_get_double(header, name);
-	  CPLCHECK ("Cannot get rotation");
-	}
+        
+        /* Read roof position angle */
+        sprintf (name, "ESO INS DROTOFF%d", tel + 1);
+        if ( cpl_propertylist_has (header, name) ) {
+            rp = cpl_propertylist_get_double(header, name);
+            CPLCHECK ("Cannot get rotation");
+        }
 
 	/* Approx. position angle of the binary, left from top */ 
 	double approx_PA = 270.-rp;
@@ -985,7 +985,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
 	  CPLCHECK_MSG ("Cannot get sub-windowing parameters");
 	}
 	
-	cpl_msg_debug (cpl_func,"sub-window field %lli sx= %lld sy = %lld", tel, sx, sy);
+	cpl_msg_debug (cpl_func,"sub-window field %i sx= %lld sy = %lld", tel, sx, sy);
 
 	/*  Expected position of the two stars */
 	double xFT, yFT, xSC, ySC;
@@ -1006,7 +1006,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
 
 	  /* Approx pixel offset from SC to FT, divided by 2 */
 	  double approx_dx=0.5*rho_in*sin(approx_PA*M_PI/180.)/scale;
-	  double approx_dy=0.5*rho_in*cos(approx_PA*M_PI/180.)/scale;
+	  // double approx_dy=0.5*rho_in*cos(approx_PA*M_PI/180.)/scale;
 
 	  /* Expected position of the two stars */
 	  xFT = cutout_roof_x - approx_dx ;
@@ -1109,6 +1109,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
     gravi_table_new_column (acqcam_table, "PUPIL_U", "m", CPL_TYPE_DOUBLE);
     gravi_table_new_column (acqcam_table, "PUPIL_V", "m", CPL_TYPE_DOUBLE);
     gravi_table_new_column (acqcam_table, "PUPIL_W", "m", CPL_TYPE_DOUBLE);
+    gravi_table_new_column (acqcam_table, "OPD_PUPIL", "m", CPL_TYPE_DOUBLE);
     
     int nspot = 0;
     
@@ -1117,6 +1118,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         cpl_msg_info (cpl_func, "Compute pupil position for beam %i", tel+1);
 
         /* Get the conversion angle xy to uv in [rad] */
+        double drotoff = gravi_pfits_get_drotoff (header, tel);
         double fangle = gravi_pfits_get_fangle_acqcam (header, tel);
         double cfangle = cos(fangle * CPL_MATH_RAD_DEG);
         double sfangle = sin(fangle * CPL_MATH_RAD_DEG);
@@ -1246,6 +1248,12 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
                 cpl_table_set (acqcam_table, "PUPIL_U", row*ntel+tel, u_shift);
                 cpl_table_set (acqcam_table, "PUPIL_V", row*ntel+tel, v_shift);
                 cpl_table_set (acqcam_table, "PUPIL_W", row*ntel+tel, w_shift);
+
+                /* Compute the OPD_PUPIL */
+                double opd_pupil = rho_in / 3600e3 * CPL_MATH_RAD_DEG / scale * 
+                    ( x_shift * cos(drotoff*CPL_MATH_RAD_DEG) +
+                      y_shift * sin(drotoff*CPL_MATH_RAD_DEG) );
+                cpl_table_set (acqcam_table, "OPD_PUPIL", row*ntel+tel, opd_pupil);
             }
             
             FREE (cpl_vector_delete, a_row);
