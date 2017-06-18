@@ -558,6 +558,17 @@ double gravi_pfits_get_ptfc_acqcam (const cpl_propertylist * plist, int spot)
     return value;
 }
 
+double gravi_pfits_get_drotoff (const cpl_propertylist * plist, int tel)
+{
+    char name[90];
+
+    /* Angle of binary on ACQ image */
+    sprintf (name, "ESO INS DROTOFF%i", tel+1);
+    double drottoff = cpl_propertylist_get_double (plist, name);
+
+    return drottoff;
+}
+
 double gravi_pfits_get_fangle_acqcam (const cpl_propertylist * plist, int tel)
 {
     char name[90];
@@ -571,8 +582,10 @@ double gravi_pfits_get_fangle_acqcam (const cpl_propertylist * plist, int tel)
     double dy = cpl_propertylist_get_double (plist, "ESO INS SOBJ Y");
     double posangle = atan2 (dx, dy) * CPL_MATH_DEG_RAD;
 
-    /* Angle of North in ACQ image, from vertical to right */
-    double fangle = posangle - drottoff - 90.0;
+    /* Angle of North in ACQ image, from vertical (y+) to right (x+) */
+    double fangle = - posangle - drottoff + 270;
+    if (fangle >= 180) fangle -= 360.0;
+    if (fangle < -180) fangle += 360.0;
     if (fangle >= 180) fangle -= 360.0;
     if (fangle < -180) fangle += 360.0;
     

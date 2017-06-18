@@ -209,6 +209,7 @@ double gravi_pfits_get_robj_diam (const cpl_propertylist * plist);
 double gravi_pfits_get_diameter(const cpl_propertylist * plist, int type_data);
 
 double gravi_pfits_get_ptfc_acqcam (const cpl_propertylist * plist, int spot);
+double gravi_pfits_get_drotoff (const cpl_propertylist * plist, int tel);
 double gravi_pfits_get_fangle_acqcam (const cpl_propertylist * plist, int tel);
 
 const char * gravi_pfits_get_resolution(const cpl_propertylist * plist);
