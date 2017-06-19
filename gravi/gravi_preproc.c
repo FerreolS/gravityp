@@ -290,7 +290,7 @@ cpl_table * gravi_table_ft_format (cpl_table * pix_table,
   /* Number of RAW pixels */
   cpl_size n_output = 24;
   cpl_size nx = sizex / n_output;
-  cpl_msg_info (cpl_func, "Descramble %lld x %lld as %lld outputs x %lld pixels x %lld channels x %lld pol",
+  cpl_msg_info (cpl_func, "Descramble %lld x %lld as %lld outputs x %lld pixels x %lld channels x %i pol",
                 sizex, sizey, n_output, nx, ny, npol);
 
   /* Copy the column TIME */
