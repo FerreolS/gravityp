@@ -1118,10 +1118,15 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         cpl_msg_info (cpl_func, "Compute pupil position for beam %i", tel+1);
 
         /* Get the conversion angle xy to uv in [rad] */
-        double drotoff = gravi_pfits_get_drotoff (header, tel);
         double fangle = gravi_pfits_get_fangle_acqcam (header, tel);
         double cfangle = cos(fangle * CPL_MATH_RAD_DEG);
         double sfangle = sin(fangle * CPL_MATH_RAD_DEG);
+        CPLCHECK_MSG ("Cannot read ESO INS DROTOFF#");
+        
+        /* Get the orientation of star */
+        double drotoff = gravi_pfits_get_drotoff (header, tel);
+        double cdrotoff = cos(drotoff * CPL_MATH_RAD_DEG);
+        double sdrotoff = sin(drotoff * CPL_MATH_RAD_DEG);
         CPLCHECK_MSG ("Cannot read ESO INS DROTOFF#");
 
         /* Allocate memory */
@@ -1250,9 +1255,8 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
                 cpl_table_set (acqcam_table, "PUPIL_W", row*ntel+tel, w_shift);
 
                 /* Compute the OPD_PUPIL */
-                double opd_pupil = rho_in / 3600e3 * CPL_MATH_RAD_DEG / scale * 
-                    ( x_shift * cos(drotoff*CPL_MATH_RAD_DEG) +
-                      y_shift * sin(drotoff*CPL_MATH_RAD_DEG) );
+                double opd_pupil = rho_in * GRAVI_MATH_RAD_MAS / scale * 
+                                   (x_shift * cdrotoff + y_shift * sdrotoff);
                 cpl_table_set (acqcam_table, "OPD_PUPIL", row*ntel+tel, opd_pupil);
             }
             
