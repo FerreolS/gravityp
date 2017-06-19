@@ -74,9 +74,6 @@ cpl_error_code gravi_vis_compute_isdelay(cpl_table * oi_vis,
 										   const char * name_isp,
 										   const char * name_gdl,
 										   cpl_table * oi_wavelength);
-cpl_error_code gravi_signal_create_sync (cpl_table * vis_SC, int nbase_sc, double dit_sc,
-										 cpl_table * vis_FT, int nbase_ft,
-										 const char * name);
 cpl_error_code gravi_vis_create_pfactor_sc (cpl_table * vis_SC, cpl_table * flux_FT);
 cpl_error_code gravi_vis_create_f1f2_sc (cpl_table * vis_SC, cpl_table * flux_SC);
 cpl_error_code gravi_vis_create_f1f2_ft (cpl_table * vis_FT, cpl_table * flux_FT);
@@ -767,7 +764,7 @@ cpl_error_code gravi_signal_create_sync (cpl_table * vis_SC, int nbase_sc, doubl
 	  /* Check if enough data */
 	  if ( first_ft[row_sc * nbase_sc + base_sc] < 2 ||
 		   last_ft[row_sc * nbase_sc + base_sc] > nrow_ft - 2 ) {
-	        cpl_msg_warning (cpl_func,"Not enough %s data to synchronise with SC DIT %lli over %lli", name, row_sc+1, nrow_sc);
+	        cpl_msg_warning (cpl_func,"Not enough %s data to synchronise with DIT %lli over %lli", name, row_sc+1, nrow_sc);
 		first_ft[row_sc * nbase_sc + base_sc] = 0;
 		last_ft[row_sc * nbase_sc + base_sc]  = 0;
 	  }
