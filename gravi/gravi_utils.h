@@ -114,6 +114,9 @@ extern char GRAVI_DATAERR[50][10];
 
 #define GRAVI_LBD_FTSC 6
 
+/* MATH */
+#define GRAVI_MATH_RAD_MAS 4.848136811095360246362499795228298560267887751251691952347755e-09
+
 /*
  * Lab input connected to each GRAVITY input window
  */
