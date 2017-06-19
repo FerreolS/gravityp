@@ -1363,7 +1363,7 @@ cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
     
     /* Get data */
     double * opd_acq = cpl_table_get_data_double (visacq_tmp, "OPD_PUPIL");
-    // int * nspot = cpl_table_get_data_int (visacq_tmp, "PUPIL_NSPOT");
+    int * nspot = cpl_table_get_data_int (visacq_tmp, "PUPIL_NSPOT");
     int * first = cpl_table_get_data_int (visacq_tmp, "FIRST_MET");
     int * last  = cpl_table_get_data_int (visacq_tmp, "LAST_MET");
     CPLCHECK_MSG ("Cannot load data");
@@ -1373,6 +1373,17 @@ cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
 
         /* Loop on ACQ rows with undetected spot and
          * which could be recovered -- TO BE DONE */
+        if (gravi_pfits_get_mjd (header) < 57876.5) {
+            cpl_msg_info (cpl_func, "Compute OPD_PUPIL for blink ACQ frames");
+            for (cpl_size row = 1; row < nrow_acq-1; row++) {
+                if (nspot[row*ntel+tel] == 0 &&
+                    nspot[(row-1)*ntel+tel] > 0 &&
+                    nspot[(row+1)*ntel+tel] > 0) {
+                    opd_acq[row*ntel+tel] = 0.5* (opd_acq[(row-1)*ntel+tel] + opd_acq[(row+1)*ntel+tel]);
+                }
+            }
+        }
+        
 
         /* Loop on ACQ rows, fill the corresponding MET rows */
         for (cpl_size row = 0; row < nrow_acq; row++) {            
