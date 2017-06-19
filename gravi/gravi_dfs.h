@@ -116,6 +116,7 @@ cpl_error_code gravi_parameter_disable (cpl_parameter * p);
 cpl_parameter * gravi_parameter_add_badpix (cpl_parameterlist *self);
 cpl_parameter * gravi_parameter_add_profile (cpl_parameterlist *self);
 cpl_parameter * gravi_parameter_add_wave (cpl_parameterlist *self);
+cpl_parameter * gravi_parameter_add_metrology (cpl_parameterlist *self);
 
 cpl_parameter * gravi_parameter_add_static_name (cpl_parameterlist *self);
 cpl_parameter * gravi_parameter_add_debug_file (cpl_parameterlist *self);
