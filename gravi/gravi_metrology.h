@@ -33,7 +33,8 @@
                                Public prototypes
  -----------------------------------------------------------------------------*/
 
-cpl_error_code gravi_metrology_reduce (gravi_data *);
+cpl_error_code gravi_metrology_reduce (gravi_data *,
+                                       const cpl_parameterlist * parlist);
 
 cpl_table * gravi_metrology_create (cpl_table * metrology_table,
                                     cpl_propertylist * header);

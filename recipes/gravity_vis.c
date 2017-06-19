@@ -210,6 +210,7 @@ static int gravity_vis_create(cpl_plugin * plugin)
 
     /* Extraction */
     gravi_parameter_add_extract (recipe->parameters);
+    gravi_parameter_add_metrology (recipe->parameters);
     
     /* Snr, signal, rejectio flags, vis */
     gravi_parameter_add_compute_snr (recipe->parameters, isCalib);
@@ -710,7 +711,7 @@ static int gravity_vis(cpl_frameset * frameset,
 		CPLCHECK_CLEAN ("Cannot reduce OPDC");
         
 		/* Reduce the metrology into OI_VIS_MET */
-		gravi_metrology_reduce (p2vmred_data);
+		gravi_metrology_reduce (p2vmred_data, parlist);
 		CPLCHECK_CLEAN ("Cannot reduce metrology");
 
 		/* Compute the uv and pointing directions with ERFA */

@@ -477,7 +477,7 @@ static int gravity_piezo(cpl_frameset * frameset,
 		CPLCHECK_CLEAN ("Cannot reduce OPDC");
         
 		/* Reduce the metrology */
-		gravi_metrology_reduce (p2vmred_data);
+		gravi_metrology_reduce (p2vmred_data, parlist);
 		CPLCHECK_CLEAN ("Cannot reduce metrology");
 
 		/* Compute the SNR_SMT and GDELAY_SMT columns */

@@ -40,10 +40,12 @@
 
 #include "gravi_data.h"
 #include "gravi_pfits.h"
+#include "gravi_dfs.h"
 
 #include "gravi_cpl.h"
 #include "gravi_utils.h"
 #include "gravi_ellipse.h"
+#include "gravi_signal.h"
 
 #include "gravi_metrology.h"
 
@@ -54,6 +56,11 @@
 
 cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
                                     cpl_table * vismet_table,
+                                    cpl_propertylist * header);
+
+cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
+                                    cpl_table * vismet_table,
+                                    double delay,
                                     cpl_propertylist * header);
 
 
@@ -1314,7 +1321,94 @@ cpl_table * gravi_metrology_create (cpl_table * metrology_table, cpl_propertylis
     gravi_msg_function_exit(1);
     return vismet_table;
 }
+
+cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
+                                    cpl_table * vismet_table,
+                                    double delay,
+                                    cpl_propertylist * header)
+{
+    gravi_msg_function_start(1);
+	cpl_ensure_code (visacq_table, CPL_ERROR_NULL_INPUT);
+	cpl_ensure_code (vismet_table, CPL_ERROR_NULL_INPUT);
+	cpl_ensure_code (header,  CPL_ERROR_NULL_INPUT);
+
+    cpl_msg_info (cpl_func,"Use acq-correction-delay = %.3f [s]",delay);
+
+    /* Get size */
+	int ntel = 4;
+	cpl_size nrow_met = cpl_table_get_nrow (vismet_table) / ntel;
+	cpl_size nrow_acq = cpl_table_get_nrow (visacq_table) / ntel;
+
+    /* Create a temporary table */
+    cpl_table * visacq_tmp = cpl_table_new (nrow_acq * ntel);
+    cpl_table_duplicate_column (visacq_tmp, "TIME", visacq_table, "TIME");
+    cpl_table_duplicate_column (visacq_tmp, "OPD_PUPIL", visacq_table, "OPD_PUPIL");
+    cpl_table_duplicate_column (visacq_tmp, "PUPIL_NSPOT", visacq_table, "PUPIL_NSPOT");
+
+    /* Move the time of the temporary table 
+     * delta is in [s] */
+    cpl_table_add_scalar (visacq_tmp, "TIME", 1e6 * delay);
     
+    /* Get the ACQ DIT in [us] */
+    double dit_acq = gravi_pfits_get_dit_acqcam (header) * 1e6;
+    cpl_msg_info (cpl_func,"dit_acq = %g [us]", dit_acq);
+
+    /* Create SYNC information */
+    gravi_signal_create_sync (visacq_tmp, ntel, dit_acq,
+                              vismet_table, ntel, "MET");
+
+    /* Create column */
+	gravi_table_new_column (vismet_table, "OPD_PUPIL", "m", CPL_TYPE_DOUBLE);
+    double * opd_met = cpl_table_get_data_double (vismet_table, "OPD_PUPIL");
+    
+    /* Get data */
+    double * opd_acq = cpl_table_get_data_double (visacq_tmp, "OPD_PUPIL");
+    // int * nspot = cpl_table_get_data_int (visacq_tmp, "PUPIL_NSPOT");
+    int * first = cpl_table_get_data_int (visacq_tmp, "FIRST_MET");
+    int * last  = cpl_table_get_data_int (visacq_tmp, "LAST_MET");
+    CPLCHECK_MSG ("Cannot load data");
+
+    /* Loop on beam */
+    for (cpl_size tel = 0; tel < ntel; tel++) {
+
+        /* Loop on ACQ rows with undetected spot and
+         * which could be recovered -- TO BE DONE */
+
+        /* Loop on ACQ rows, fill the corresponding MET rows */
+        for (cpl_size row = 0; row < nrow_acq; row++) {            
+            for (cpl_size row_met = first[row*ntel+tel]; row_met < last[row*ntel+tel]; row_met++) {
+                opd_met[row_met*ntel+tel] = opd_acq[row*ntel+tel];
+            }
+        }
+
+        /* Loop on MET rows, to fill the empty by the closet futur value */
+        double opd = opd_met[nrow_acq*ntel+tel];
+        for (cpl_size row = nrow_met-1; row >= 0; row--) {
+            if (opd_met[row*ntel+tel] != 0 ) opd = opd_met[row*ntel+tel];
+            else opd_met[row*ntel+tel] = opd;
+        }
+
+        /* Loop on MET rows, to fill the empty by the closet past value */
+        opd = opd_met[0*ntel+tel];
+        for (cpl_size row = 0; row < nrow_met; row++) {
+            if (opd_met[row*ntel+tel] != 0) opd = opd_met[row*ntel+tel];
+            else opd_met[row*ntel+tel] = opd;
+        }
+        
+        
+    }/* End loop on beam */
+
+    /* Free the tmp table */
+    FREE (cpl_table_delete, visacq_tmp);
+    
+    /* Return */
+    gravi_msg_function_exit(1);
+    return CPL_ERROR_NONE;
+}
+
+        
+        
+
 /*----------------------------------------------------------------------------*/
 /**
  * @brief Fill the VIS_MET table with the DRS algorithm
@@ -2106,7 +2200,8 @@ cpl_table * gravi_metrology_compute_p2vm (cpl_table * metrology_table, double wa
  */
 /* -------------------------------------------------------------------- */
 
-cpl_error_code gravi_metrology_reduce (gravi_data * data)
+cpl_error_code gravi_metrology_reduce (gravi_data * data,
+                                       const cpl_parameterlist * parlist)
 {
     gravi_msg_function_start(1);
 	cpl_ensure_code (data, CPL_ERROR_NULL_INPUT);
@@ -2117,22 +2212,30 @@ cpl_error_code gravi_metrology_reduce (gravi_data * data)
 	CPLCHECK_MSG ("Cannot load met extension");
 
     /* Create the table */
-	cpl_table * vis_met = NULL;
-	vis_met = gravi_metrology_create (metrology_table, header);
-	CPLCHECK_MSG ("Cannot create vis_met");
+	cpl_table * vismet_table = NULL;
+	vismet_table = gravi_metrology_create (metrology_table, header);
+	CPLCHECK_MSG ("Cannot create vismet_table");
+
+    /* If VIS_ACQ table exist, we compute the OPD_PUPIL */
+    if (gravi_data_has_extension (data, GRAVI_OI_VIS_ACQ_EXT)) {
+        cpl_table * visacq_table;        
+        visacq_table = gravi_data_get_table (data, GRAVI_OI_VIS_ACQ_EXT);
+        double delay = gravi_param_get_double_default (parlist, "gravity.metrology.acq-correction-delay",0.0);
+        gravi_metrology_acq (visacq_table, vismet_table, delay, header);
+    }
 
 	/* Reduce the metrology with the DRS algorithm, this 
-	 * creates the VIS_MET table */
-	gravi_metrology_drs (metrology_table, vis_met, header);
+	 * creates the OI_VIS_MET table */
+	gravi_metrology_drs (metrology_table, vismet_table, header);
 	CPLCHECK_MSG ("Cannot reduce metrology with DRS algo");
 
 	/* Add the columns from TAC algorithm */
-	gravi_metrology_tac (metrology_table, vis_met, header);
+	gravi_metrology_tac (metrology_table, vismet_table, header);
 	CPLCHECK_MSG ("Cannot reduce metrology with TAC algo");
 
-	/* Add the VIS_MET table to the gravi_data */
-	gravi_data_add_table (data, NULL, GRAVI_OI_VIS_MET_EXT, vis_met);
-	CPLCHECK_MSG ("Cannot add vis_met in p2vmred_data");
+	/* Add the VISMET_TABLE table to the gravi_data */
+	gravi_data_add_table (data, NULL, GRAVI_OI_VIS_MET_EXT, vismet_table);
+	CPLCHECK_MSG ("Cannot add OI_VIS_MET in p2vmred_data");
 	
     gravi_msg_function_exit(1);
 	return CPL_ERROR_NONE;
