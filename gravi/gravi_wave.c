@@ -815,6 +815,7 @@ cpl_error_code gravi_wave_compute_opds (gravi_data * spectrum_data,
 	cpl_msg_info (cpl_func, "Compute the phase of MET_FC");
     
     cpl_table * vismet_table = gravi_metrology_create (met_table, spectrum_header);
+    gravi_metrology_drs (met_table, vismet_table, spectrum_header);
     
     /* Compute the mean LBD_MET for this file */
     double lbd_met = gravi_pfits_get_met_wavelength_mean (spectrum_header, met_table);
