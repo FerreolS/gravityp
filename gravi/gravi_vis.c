@@ -61,19 +61,17 @@ cpl_error_code gravi_array_online_variance_res(cpl_array ** data,
 											   int n, int rephase);
 cpl_error_code gravi_flux_average_bootstrap(cpl_table * oi_flux_avg,
 											cpl_table * oi_flux,
-											int nseg, int nboot, int tel);
+											int nboot);
 cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
 										  cpl_table * oi_vis,
 										  cpl_table * oi_flux,
-										  int nseg, int nboot,
-										  int closure,
+										  int nboot,
 										  int use_vFactor,
                                           int use_pFactor);
 cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
 											cpl_table * oi_vis2_avg,
 											cpl_table * oi_vis,
-											int nseg, int nboot,
-											int base,
+											int nboot, 
 											int use_exp_phase,
 											int use_vFactor,
                                             int use_pFactor,
@@ -246,20 +244,15 @@ cpl_error_code gravi_array_online_variance_res(cpl_array ** data,
 
 cpl_error_code gravi_flux_average_bootstrap(cpl_table * oi_flux_avg,
 											cpl_table * oi_flux,
-											int nseg,
-											int nboot,
-											int tel)
+											int nboot)
 {
    gravi_msg_function_start(0);
    cpl_ensure_code (oi_flux_avg, CPL_ERROR_ILLEGAL_OUTPUT);
    cpl_ensure_code (oi_flux,     CPL_ERROR_NULL_INPUT);
-   cpl_ensure_code (nseg>0,  CPL_ERROR_ILLEGAL_INPUT);
    cpl_ensure_code (nboot>0, CPL_ERROR_ILLEGAL_INPUT);
-   cpl_ensure_code (tel>=0,  CPL_ERROR_ILLEGAL_INPUT);
-  
-  /* Tel for base and base for closure */
+
+   /* parameters */
   int nv = 0, ntel = 4;
-  cpl_size nvalid = 0;
   cpl_size nrow = cpl_table_get_nrow (oi_flux) / ntel;
   cpl_size nwave = cpl_table_get_column_depth (oi_flux, "FLUX");
 
@@ -270,11 +263,16 @@ cpl_error_code gravi_flux_average_bootstrap(cpl_table * oi_flux_avg,
   double * pMJD     = cpl_table_get_data_double (oi_flux, "MJD");
   CPLCHECK_MSG ("Cannot get the data");
 
+  /* Loop on tel */
+  for (cpl_size tel = 0; tel < ntel; tel++) {
+      
+  /* Tel for base and base for closure */
+  cpl_size nvalid = 0;
+
   /* Arrays to store the final, integrated quantities 
    * 0: current boot, 1: running_mean, 2: first boot, 3: variance */
   cpl_array **flux_res = gravi_array_new_list (4, CPL_TYPE_DOUBLE, nwave);
   double total_exptime = 0.0, mjd_avg = 0.0;
-  
 
   /* 
    * (0) Optimize the number of segment
@@ -287,14 +285,14 @@ cpl_error_code gravi_flux_average_bootstrap(cpl_table * oi_flux_avg,
   }
   
   /* Build an optimal number of segment and nrow_per_segment */
-  cpl_size nrow_per_seg = CPL_MAX( nvalid / nseg, 1);
-  nseg = nvalid / nrow_per_seg;
+  cpl_size nrow_per_seg = CPL_MAX(nvalid / CPL_MIN (nrow, 100), 1);
+  cpl_size nseg = nvalid / nrow_per_seg;
 
   /* Ensure there are at least 5 samples to bootstrap on,
    * if no add montecarlo samples */
   cpl_size nsamp = 5, nmontecarlo = CPL_MAX (nsamp - nseg, 0);
 
-  cpl_msg_info ("Stat", "%6lld valid frames over %6lld (%5.1f%%), make %4d seg. of %5lld (miss %lld), add %lld MonteCarlo",
+  cpl_msg_info ("Stat", "%6lld valid frames over %6lld (%5.1f%%), make %4lld seg. of %5lld (miss %lld), add %lld MonteCarlo",
 				nvalid, nrow, (double)nvalid/(double)nrow*100.0,
 				nseg, nrow_per_seg, nvalid - nseg*nrow_per_seg, nmontecarlo);
   
@@ -432,6 +430,8 @@ cpl_error_code gravi_flux_average_bootstrap(cpl_table * oi_flux_avg,
   FREELOOP (cpl_array_delete, flux_res, 4);
   cpl_free(flag);
 
+  } /* End loop on tel */
+  
   gravi_msg_function_exit(0);
   return CPL_ERROR_NONE;
 }
@@ -456,9 +456,7 @@ cpl_error_code gravi_flux_average_bootstrap(cpl_table * oi_flux_avg,
 cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
 										  cpl_table * oi_vis,
 										  cpl_table * oi_flux,
-										  int nseg,
 										  int nboot,
-										  int closure,
 										  int use_vFactor,
                                           int use_pFactor)
 {
@@ -466,9 +464,7 @@ cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
   cpl_ensure_code (oi_t3_avg, CPL_ERROR_ILLEGAL_OUTPUT);
   cpl_ensure_code (oi_vis,    CPL_ERROR_NULL_INPUT);
   cpl_ensure_code (oi_flux,   CPL_ERROR_NULL_INPUT);
-  cpl_ensure_code (nseg>0,     CPL_ERROR_ILLEGAL_INPUT);
   cpl_ensure_code (nboot>0,    CPL_ERROR_ILLEGAL_INPUT);
-  cpl_ensure_code (closure>=0, CPL_ERROR_ILLEGAL_INPUT);
 
   /* Tel for base and base for closure 
    * Assume all the observations are made with the same array geometry.
@@ -476,15 +472,8 @@ cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
    * sta_index_t3[1] <-> tel1[clo[j][1]] = tel2[clo[j][0]]
    * sta_index_t3[2] <-> tel2[clo[j][2]] = tel2[clo[j][1]]
    */
-  int nv = 0, nbase = 6, ntel = 4;
-  int base0 = GRAVI_CLO_BASE[closure][0];
-  int base1 = GRAVI_CLO_BASE[closure][1];
-  int base2 = GRAVI_CLO_BASE[closure][2];
-  int ctel0 = GRAVI_CLO_TEL[closure][0];
-  int ctel1 = GRAVI_CLO_TEL[closure][1];
-  int ctel2 = GRAVI_CLO_TEL[closure][2];
+  int nv = 0, nbase = 6, ntel = 4, nclo = 4;
 
-  cpl_size nvalid = 0;
   cpl_size nrow = cpl_table_get_nrow (oi_vis) / nbase;
   cpl_size nwave = cpl_table_get_column_depth (oi_vis, "VISDATA");
 
@@ -499,6 +488,17 @@ cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
   cpl_array ** pVFACTOR = use_vFactor?cpl_table_get_data_array (oi_vis, "V_FACTOR"):NULL;
   double * pPFACTOR = use_pFactor?cpl_table_get_data_double (oi_vis, "P_FACTOR"):NULL;
   CPLCHECK_MSG ("Cannot get the data");
+
+  /* Loop on closure */
+  for (cpl_size closure = 0; closure < nclo; closure++) {
+
+  cpl_size nvalid = 0;
+  int base0 = GRAVI_CLO_BASE[closure][0];
+  int base1 = GRAVI_CLO_BASE[closure][1];
+  int base2 = GRAVI_CLO_BASE[closure][2];
+  int ctel0 = GRAVI_CLO_TEL[closure][0];
+  int ctel1 = GRAVI_CLO_TEL[closure][1];
+  int ctel2 = GRAVI_CLO_TEL[closure][2];
   
   /* Arrays to store the final, integrated quantities 
    * 0: current boot, 1: running_mean, 2: first boot, 3: variance */
@@ -521,14 +521,14 @@ cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
   }
   
   /* Build an optimal number of segment and nrow_per_segment */
-  cpl_size nrow_per_seg = CPL_MAX (nvalid / nseg, 1);
-  nseg = nvalid / nrow_per_seg;
+  cpl_size nrow_per_seg = CPL_MAX (nvalid / CPL_MIN (nrow, 100), 1);
+  cpl_size nseg = nvalid / nrow_per_seg;
 
   /* Ensure there are at least 5 samples to bootstrap on,
    * if no add montecarlo samples */
   cpl_size nsamp = 5, nmontecarlo = CPL_MAX (nsamp - nseg, 0);
 
-  cpl_msg_info ("Stat", "%6lld valid frames over %6lld (%5.1f%%), make %4d seg. of %5lld (miss %lld), add %lld MonteCarlo",
+  cpl_msg_info ("Stat", "%6lld valid frames over %6lld (%5.1f%%), make %4lld seg. of %5lld (miss %lld), add %lld MonteCarlo",
 				nvalid, nrow, (double)nvalid/(double)nrow*100.0,
 				nseg, nrow_per_seg, nvalid - nseg*nrow_per_seg, nmontecarlo);
   
@@ -750,6 +750,8 @@ cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
   FREELOOP (cpl_array_delete, t3Amp_res, 4);
   FREE (cpl_free, flagclo);
   
+  } /* End loop on closure */
+  
   gravi_msg_function_exit(0);
   return CPL_ERROR_NONE;
 }
@@ -778,9 +780,7 @@ cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
 cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
 											cpl_table * oi_vis2_avg,
 											cpl_table * oi_vis,
-											int nseg,
 											int nboot,
-											int base,
 											int use_exp_phase,
 											int use_vFactor,
                                             int use_pFactor,
@@ -790,14 +790,10 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
   cpl_ensure_code (oi_vis_avg,  CPL_ERROR_ILLEGAL_OUTPUT);
   cpl_ensure_code (oi_vis2_avg, CPL_ERROR_ILLEGAL_OUTPUT);
   cpl_ensure_code (oi_vis,      CPL_ERROR_NULL_INPUT);
-  cpl_ensure_code (nseg>0,  CPL_ERROR_ILLEGAL_INPUT);
   cpl_ensure_code (nboot>0, CPL_ERROR_ILLEGAL_INPUT);
-  cpl_ensure_code (base>=0, CPL_ERROR_ILLEGAL_INPUT);
-  
-  /* Tel for base */
+
+  /* Parameters */
   int nv = 0, nbase = 6;
-  
-  cpl_size nvalid = 0;
   cpl_size nrow = cpl_table_get_nrow (oi_vis) / nbase;
   cpl_size nwave = cpl_table_get_column_depth (oi_vis, "VISDATA");
 
@@ -813,6 +809,12 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
   cpl_array ** pVFACTOR = use_vFactor?cpl_table_get_data_array (oi_vis, "V_FACTOR"):NULL;
   double * pPFACTOR = use_pFactor?cpl_table_get_data_double (oi_vis, "P_FACTOR"):NULL;
   CPLCHECK_MSG ("Cannot get the data");
+
+  /* Loop on base */
+  for (cpl_size base = 0; base < nbase; base ++) {
+
+  /* Tel for base */
+  cpl_size nvalid = 0;
 
   /* Arrays to store the final, integrated quantities 
    * 0: current boot, 1: running_mean, 2: first boot, 3: variance */
@@ -834,14 +836,14 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
   for ( int row=0 ; row<nrow; row++ ) if ( flag[row * nbase + base] == 0 ) nvalid++;
 
   /* Build an optimal number of segment and nrow_per_segment */
-  cpl_size nrow_per_seg = CPL_MAX (nvalid / nseg, 1);
-  nseg = nvalid / nrow_per_seg;
+  cpl_size nrow_per_seg = CPL_MAX (nvalid / CPL_MIN (nrow, 100), 1);
+  cpl_size nseg = nvalid / nrow_per_seg;
 
   /* Ensure there are at least 5 samples to bootstrap on,
    * if no add montecarlo samples */
   cpl_size nsamp = 5, nmontecarlo = CPL_MAX (nsamp - nseg, 0);
 
-  cpl_msg_info ("Stat", "%6lld valid frames over %6lld (%5.1f%%), make %4d seg. of %5lld (miss %lld), add %lld MonteCarlo",
+  cpl_msg_info ("Stat", "%6lld valid frames over %6lld (%5.1f%%), make %4lld seg. of %5lld (miss %lld), add %lld MonteCarlo",
 				nvalid, nrow, (double)nvalid/(double)nrow*100.0,
 				nseg, nrow_per_seg, nvalid - nseg*nrow_per_seg, nmontecarlo);
 
@@ -1108,6 +1110,9 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
   FREELOOP (cpl_array_delete, visPhi_res, 4);
   FREELOOP (cpl_array_delete, visR_res, 4);
   FREELOOP (cpl_array_delete, visI_res, 4);
+
+  }
+  /* End loop on bases */
   
   gravi_msg_function_exit(0);
   return CPL_ERROR_NONE;
@@ -1131,7 +1136,7 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
 	cpl_ensure (p2vmred_data, CPL_ERROR_NULL_INPUT, NULL);
 	cpl_ensure (parlist,      CPL_ERROR_NULL_INPUT, NULL);
 	
-	int nv, nbase = 6, ntel=4, nclo=4;
+	int nv, nbase = 6, ntel = 4;
 
     double start_time = gravi_param_get_double (parlist, "gravity.vis.start-time");
     double end_time = gravi_param_get_double (parlist, "gravity.vis.end-time");
@@ -1188,88 +1193,60 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
             int nwave_ft = cpl_table_get_column_depth (vis_FT, "VISDATA");
             CPLCHECK_NUL ("Cannot get data");
 
+            /* Create averated product */
+            cpl_table * oi_vis2_FT = gravi_table_oi_create (nwave_ft, 1, GRAVI_OI_VIS2_EXT);
+            gravi_table_new_column (oi_vis2_FT, "NDIT", NULL, CPL_TYPE_INT);
+            gravi_table_new_column (oi_vis2_FT, "NVALID", NULL, CPL_TYPE_INT);
+            
+            cpl_table * oi_vis_FT = gravi_table_oi_create (nwave_ft, 1, GRAVI_OI_VIS_EXT);
+            gravi_table_new_column (oi_vis_FT, "NDIT", NULL, CPL_TYPE_INT);
+            gravi_table_new_column (oi_vis_FT, "NVALID", NULL, CPL_TYPE_INT);
+
+            cpl_table * oi_T3_FT = gravi_table_oi_create (nwave_ft, 1, GRAVI_OI_T3_EXT);
+            gravi_table_new_column (oi_T3_FT, "NDIT", NULL, CPL_TYPE_INT);
+            gravi_table_new_column (oi_T3_FT, "NVALID", NULL, CPL_TYPE_INT);
+
+            cpl_table * oi_flux_FT = gravi_table_oi_create (nwave_ft, 1, GRAVI_OI_FLUX_EXT);
+            gravi_table_new_column (oi_flux_FT, "NDIT", NULL, CPL_TYPE_INT);
+            gravi_table_new_column (oi_flux_FT, "NVALID", NULL, CPL_TYPE_INT);
+            CPLCHECK_NUL ("Cannot create product");
+
             /* Keep only selected rows */
             vis_FT  = gravi_table_extract_time_interval (vis_FT, start_time, end_time);
             flux_FT = gravi_table_extract_time_interval (flux_FT, start_time, end_time);
 
-            cpl_msg_info (cpl_func,"nrow = %lld", cpl_table_get_nrow(vis_FT));
-            cpl_msg_info (cpl_func,"nrow = %lld", cpl_table_get_nrow(flux_FT));
-
-            /* Get parameters */
-            cpl_size nrow_ft  = cpl_table_get_nrow (vis_FT) / nbase;
-            int nseg_ft = CPL_MIN (nrow_ft, 100);
-            
             /* 
              * Compute OIVIS2 and OIVIS for FT
              */
             cpl_msg_info (cpl_func, "Compute OIVIS2 and OIVIS for FT");
             
-            /* Create product */
-            cpl_table * oi_vis2_FT = gravi_table_oi_create (nwave_ft, 1, GRAVI_OI_VIS2_EXT);
-            
-            gravi_table_new_column (oi_vis2_FT, "NDIT", NULL, CPL_TYPE_INT);
-            gravi_table_new_column (oi_vis2_FT, "NVALID", NULL, CPL_TYPE_INT);
-            
-            cpl_table * oi_vis_FT = gravi_table_oi_create (nwave_ft, 1, GRAVI_OI_VIS_EXT);
-            
-            gravi_table_new_column (oi_vis_FT, "NDIT", NULL, CPL_TYPE_INT);
-            gravi_table_new_column (oi_vis_FT, "NVALID", NULL, CPL_TYPE_INT);
-            CPLCHECK_NUL ("Cannot create product");
-
-            /* Loop on base */
-            for (int base = 0; base < nbase; base++) {
-                
-                gravi_vis_average_bootstrap (oi_vis_FT, oi_vis2_FT, vis_FT,
-                                             nseg_ft, nboot_ft, base,
-                                             exp_phase_flag_ft,
-                                             v_factor_flag_ft,
-                                             p_factor_flag_ft,
-                                             debiasing_flag_ft);
-                CPLCHECK_NUL("Cannot average the FT frames");
-                
-            } /* End loop on base */
+            gravi_vis_average_bootstrap (oi_vis_FT, oi_vis2_FT, vis_FT,
+                                         nboot_ft,
+                                         exp_phase_flag_ft,
+                                         v_factor_flag_ft,
+                                         p_factor_flag_ft,
+                                         debiasing_flag_ft);
+            CPLCHECK_NUL("Cannot average the FT frames");
 
             /* 
              * Compute OIT3 for FT
              */
             cpl_msg_info (cpl_func, "Compute OIT3 for FT");
 
-            /* Create product */
-            cpl_table * oi_T3_FT = gravi_table_oi_create (nwave_ft, 1, GRAVI_OI_T3_EXT);
-            
-            gravi_table_new_column (oi_T3_FT, "NDIT", NULL, CPL_TYPE_INT);
-            gravi_table_new_column (oi_T3_FT, "NVALID", NULL, CPL_TYPE_INT);
-
-            /* Loop on triplet */
-            for (int clo = 0; clo < nclo; clo++){
-                
-                gravi_t3_average_bootstrap (oi_T3_FT, vis_FT, flux_FT,
-                                            nseg_ft, nboot_ft, clo,
-                                            v_factor_flag_ft,
-                                            p_factor_flag_ft);
-                
-                CPLCHECK_NUL("Cannot average t3 of FT");
-            } /* End loop on triplets */
+            gravi_t3_average_bootstrap (oi_T3_FT, vis_FT, flux_FT,
+                                        nboot_ft,
+                                        v_factor_flag_ft,
+                                        p_factor_flag_ft);
+            CPLCHECK_NUL("Cannot average t3 of FT");
             
             /* 
              * Compute OI_FLUX for FT
              */
             cpl_msg_info (cpl_func, "Compute OI_FLUX for FT");
 		
-            /* Create product */
-            cpl_table * oi_flux_FT = gravi_table_oi_create (nwave_ft, 1, GRAVI_OI_FLUX_EXT);
-            
-            gravi_table_new_column (oi_flux_FT, "NDIT", NULL, CPL_TYPE_INT);
-            gravi_table_new_column (oi_flux_FT, "NVALID", NULL, CPL_TYPE_INT);
-            
-            /* Loop on tel */
-            for (int tel = 0; tel < ntel; tel++){
-                
-                gravi_flux_average_bootstrap (oi_flux_FT, flux_FT,
-                                              nseg_ft, nboot_ft, tel);
-                
-                CPLCHECK_NUL("Cannot average flux of FT");
-            } /* End loop on beams */
+            gravi_flux_average_bootstrap (oi_flux_FT, flux_FT,
+                                          nboot_ft);
+            CPLCHECK_NUL("Cannot average flux of FT");
             
             /* 
              * Add tables in the vis_data
@@ -1349,12 +1326,11 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
             cpl_table * vis_SC = gravi_data_get_oi_vis (p2vmred_data, GRAVI_SC, pol, npol_sc);
             cpl_table * flux_SC = gravi_data_get_oi_flux (p2vmred_data, GRAVI_SC, pol, npol_sc);
             cpl_table * oi_wavelengthsc = gravi_data_get_oi_wave (p2vmred_data, GRAVI_SC, pol, npol_sc);
-            int nwave_sc = cpl_table_get_column_depth (vis_SC, "VISDATA");
             CPLCHECK_NUL ("Cannot get data");
 
-            /* Get the wavelength array of FT and SC data in [m] 
-             * Also compute the wavenumber for SC in [m^-1] */
+            /* Compute the wavenumber for SC in [m^-1] */
             cpl_array * wavenumber_sc;
+            int nwave_sc = cpl_table_get_column_depth (vis_SC, "VISDATA");
             wavenumber_sc = cpl_array_new (nwave_sc, CPL_TYPE_DOUBLE);
             for (cpl_size wave = 0; wave < nwave_sc; wave ++){
                 cpl_array_set (wavenumber_sc, wave, 1./cpl_table_get (oi_wavelengthsc, "EFF_WAVE", wave, &nv));
@@ -1362,37 +1338,46 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
 
             CPLCHECK_NUL ("Cannot build the wave and wavenumber");
 
+            /* Create averaged tables */
+            cpl_table * oi_vis2_SC = gravi_table_oi_create (nwave_sc, 1, GRAVI_OI_VIS2_EXT);
+            gravi_table_new_column (oi_vis2_SC, "NDIT", NULL, CPL_TYPE_INT);
+            gravi_table_new_column (oi_vis2_SC, "NVALID", NULL, CPL_TYPE_INT);
+            
+            cpl_table * oi_vis_SC = gravi_table_oi_create (nwave_sc, 1, GRAVI_OI_VIS_EXT);
+            gravi_table_new_column (oi_vis_SC, "NDIT", NULL, CPL_TYPE_INT);
+            gravi_table_new_column (oi_vis_SC, "NVALID", NULL, CPL_TYPE_INT);
+            gravi_table_new_column (oi_vis_SC, "GDELAY", "m", CPL_TYPE_DOUBLE);
+            gravi_table_new_column (oi_vis_SC, "PHASE", "rad", CPL_TYPE_DOUBLE);
+            
+            cpl_table * oi_T3_SC = gravi_table_oi_create (nwave_sc, 1, GRAVI_OI_T3_EXT);
+            gravi_table_new_column (oi_T3_SC, "NDIT", NULL, CPL_TYPE_INT);
+            gravi_table_new_column (oi_T3_SC, "NVALID", NULL, CPL_TYPE_INT);
+            
+            cpl_table * oi_flux_SC = gravi_table_oi_create (nwave_sc, 1, GRAVI_OI_FLUX_EXT);
+            gravi_table_new_column (oi_flux_SC, "NDIT", NULL, CPL_TYPE_INT);
+            gravi_table_new_column (oi_flux_SC, "NVALID", NULL, CPL_TYPE_INT);
+            gravi_table_new_column (oi_flux_SC, "LKDT_MET_FC", "mjd", CPL_TYPE_DOUBLE);
+
+            CPLCHECK_NUL("Cannot create columns in averaged OIFITS...");
+
             /* Keep only selected rows */
             vis_SC  = gravi_table_extract_time_interval (vis_SC, start_time, end_time);
             flux_SC = gravi_table_extract_time_interval (flux_SC, start_time, end_time);
-            
-            /* Get parameters */
-            cpl_size nrow_sc  = cpl_table_get_nrow (vis_SC) / nbase;
-            int nseg_sc = CPL_MIN (nrow_sc, 100);
-            
+                        
             /* 
              * Compute OIVIS2 and OIVIS for SC
              */
             cpl_msg_info (cpl_func, "Compute OIVIS2 and OIVIS for SC");
+            
+            gravi_vis_average_bootstrap (oi_vis_SC, oi_vis2_SC, vis_SC,
+                                         nboot_sc,
+                                         exp_phase_flag_sc,
+                                         v_factor_flag_sc,
+                                         p_factor_flag_sc,
+                                         debiasing_flag_sc);            
+            CPLCHECK_NUL("Cannot average the SC frames");
 
-            /* Create averaged product */
-            cpl_table * oi_vis2_SC = gravi_table_oi_create (nwave_sc, 1, GRAVI_OI_VIS2_EXT);
-            cpl_table * oi_vis_SC = gravi_table_oi_create (nwave_sc, 1, GRAVI_OI_VIS_EXT);
-            
-            gravi_table_new_column (oi_vis2_SC, "NDIT", NULL, CPL_TYPE_INT);
-            gravi_table_new_column (oi_vis2_SC, "NVALID", NULL, CPL_TYPE_INT);
-            
-            gravi_table_new_column (oi_vis_SC, "NDIT", NULL, CPL_TYPE_INT);
-            gravi_table_new_column (oi_vis_SC, "NVALID", NULL, CPL_TYPE_INT);
-            
-            gravi_table_new_column (oi_vis_SC, "GDELAY", "m", CPL_TYPE_DOUBLE);
-            gravi_table_new_column (oi_vis_SC, "PHASE", "rad", CPL_TYPE_DOUBLE);
-
-            CPLCHECK_NUL("Cannot create columns in averaged OIFITS...");
-
-            // Shall consider the case where OPD_DISP is NULL or absent
-            // gravi_vis_compute_column_mean (oi_vis_SC, vis_SC, "OPD_DISP", 6);
-            
+            /* Compute other columns */
             gravi_vis_compute_column_mean (oi_vis_SC, vis_SC, "OPD_MET_FC", 6);
             gravi_vis_compute_column_mean (oi_vis_SC, vis_SC, "PHASE_REF_COEFF", 6);
             gravi_vis_compute_column_mean (oi_vis_SC, vis_SC, "E_U", 6);
@@ -1400,25 +1385,13 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
             gravi_vis_compute_column_mean (oi_vis_SC, vis_SC, "E_W", 6);
             gravi_vis_compute_column_mean (oi_vis_SC, vis_SC, "E_AZ", 6);
             gravi_vis_compute_column_mean (oi_vis_SC, vis_SC, "E_ZD", 6);
-            
-            CPLCHECK_NUL("Cannot create columns in averaged OIFITS...");
-
-            /* Loop on base */
+            CPLCHECK_NUL("Cannot compute means.");
+                
+            /* Re compute the astrometric phase from VISDATA to deal with absolute phase
+             * VISDATA as well as (R,I) remains unchanged. The goal is to split
+             * the differential phase, calibratable so far, from the absolute phase */
             for (int base = 0; base < nbase; base++) {
                 
-                gravi_vis_average_bootstrap (oi_vis_SC, oi_vis2_SC, vis_SC,
-                                             nseg_sc, nboot_sc, base,
-                                             exp_phase_flag_sc,
-                                             v_factor_flag_sc,
-                                             p_factor_flag_sc,
-                                             debiasing_flag_sc);
-                
-                CPLCHECK_NUL("Cannot average the SC frames");
-                
-                /* Re compute the astrometric phase from VISDATA to deal with absolute phase
-                 * VISDATA as well as (R,I) remains unchanged. The goal is to split
-                 * the differential phase, calibratable so far, from the absolute phase */
-
                 /* We duplicate VISDATA, to keep the value untouched in the table */
                 cpl_array * visData_sc, * visErr_sc;
                 visData_sc = cpl_array_cast (cpl_table_get_array (oi_vis_SC, "VISDATA", base),
@@ -1459,54 +1432,33 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
              */
             cpl_msg_info (cpl_func, "Compute OIT3 for SC");
 
-            /* Create average product */
-            cpl_table * oi_T3_SC = gravi_table_oi_create (nwave_sc, 1, GRAVI_OI_T3_EXT);
-            
-            gravi_table_new_column (oi_T3_SC, "NDIT", NULL, CPL_TYPE_INT);
-            gravi_table_new_column (oi_T3_SC, "NVALID", NULL, CPL_TYPE_INT);
-
-            /* Loop on triplet */
-            for (int clo = 0; clo < nclo; clo++){
-                
-                gravi_t3_average_bootstrap (oi_T3_SC, vis_SC, flux_SC,
-                                            nseg_sc, nboot_sc, clo,
-                                            v_factor_flag_sc,
-                                            p_factor_flag_sc);
-                
-                CPLCHECK_NUL("Cannot average t3 of SC");
-            }/* End loop on triplets */
+            gravi_t3_average_bootstrap (oi_T3_SC, vis_SC, flux_SC,
+                                        nboot_sc,
+                                        v_factor_flag_sc,
+                                        p_factor_flag_sc);
+            CPLCHECK_NUL("Cannot average t3 of SC");
             
             /* 
              * Compute OI_FLUX for SC
              */
             cpl_msg_info (cpl_func, "Compute OI_FLUX for SC");
-            
-            cpl_table * oi_flux_SC = gravi_table_oi_create (nwave_sc, 1, GRAVI_OI_FLUX_EXT);
-            
-            gravi_table_new_column (oi_flux_SC, "NDIT", NULL, CPL_TYPE_INT);
-            gravi_table_new_column (oi_flux_SC, "NVALID", NULL, CPL_TYPE_INT);
-            gravi_table_new_column (oi_flux_SC, "LKDT_MET_FC", "mjd", CPL_TYPE_DOUBLE);
 
+            gravi_flux_average_bootstrap (oi_flux_SC, flux_SC,
+                                          nboot_sc);
+            CPLCHECK_NUL("Cannot average flux of SC");
+            
+            /* Compute other columns */
             gravi_vis_compute_column_mean (oi_flux_SC, flux_SC, "OPD_MET_FC", 4);
             gravi_vis_compute_column_mean (oi_flux_SC, flux_SC, "FT_POS", 4);
             gravi_vis_compute_column_mean (oi_flux_SC, flux_SC, "SC_POS", 4);
             gravi_vis_compute_column_mean (oi_flux_SC, flux_SC, "OPL_AIR", 4);
+            CPLCHECK_NUL ("Cannot compute mean columns");
             
-            CPLCHECK_NUL ("Cannot create columns");
-            
-            /* Loop on tel */
+            /* Save the FC metrology lock date */
             for (int tel = 0; tel < ntel; tel++){
-                
-                gravi_flux_average_bootstrap (oi_flux_SC, flux_SC,
-                                              nseg_sc, nboot_sc, tel);
-                
-                CPLCHECK_NUL("Cannot average flux of SC");
-
-                /* Save the FC metrology lock date */
                 double lockdate = gravi_pfits_get_metfc_lockmjd (p2vmred_header, tel);
                 cpl_table_set (oi_flux_SC, "LKDT_MET_FC", tel, lockdate);
-                
-            } /* End loop on beams */
+            }
 
             /* 
              * Add tables in the vis_data
@@ -3091,8 +3043,8 @@ cpl_error_code gravi_vis_erase_obs (cpl_table * oi_table, cpl_array *flag_array,
  * ntel tel (or base or triplet). The output table shall thus contain ntel
  * rows while the input table shall contain ntel*NDIT rows.
  *
- * Note that this routine is not optimized for performance and thus shall be
- * used on the FT tables.
+ * Note that this routine is not optimized for performance and thus shall 
+ * not be used on the FT tables.
  */
 /*----------------------------------------------------------------------------*/
 
