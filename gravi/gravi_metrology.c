@@ -1285,16 +1285,16 @@ int metrology_algorithm(structTacData * tacData)
  *
  * @return a new VIS_MET table
  *
- * Create the VIS_MET table from the METROLOGY table with
- * the pipeline alorithm. The table has nsample*ntel rows, so that the
+ * Create the VIS_MET table from the METROLOGY table.
+ * The table has nsample*ntel rows, so that the
  * measurements for beam 0 are in rows 0,5,10,15... the ones for beam 1
  * are in 1,6,11,16... that is following the same format as OI_FLUX.
- * The table contains the columns PHASE_MET_FC (scalar) and PHASE_MET_TEL
- * (array of 4 values = diodes).
+ * This function only create the TIME column.
  */
 /*----------------------------------------------------------------------------*/
 
-cpl_table * gravi_metrology_create (cpl_table * metrology_table, cpl_propertylist * header)
+cpl_table * gravi_metrology_create (cpl_table * metrology_table,
+                                    cpl_propertylist * header)
 {
     gravi_msg_function_start(1);
 	cpl_ensure (metrology_table, CPL_ERROR_NULL_INPUT, NULL);
@@ -1321,6 +1321,21 @@ cpl_table * gravi_metrology_create (cpl_table * metrology_table, cpl_propertylis
     gravi_msg_function_exit(1);
     return vismet_table;
 }
+
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Fill the VIS_MET table with the OPD_PUPIL column
+ *
+ * @param visacq_table: input OI_VIS_ACQ table
+ * @param vismet_table: output OI_VIS_MET table
+ * @param delay:        delay in [s] between TIME in ACQ and the correction
+ *                      seen by the metrology (TIME in OI_VIS_MET)
+ * @param header:       corresponding HEADER
+ *
+ * Fill the OI_VIS_MET table from the OPD_PUPIL column computed from
+ * the OPD_PUPIL column of the OI_VIS_ACQ table.
+ */
+/*----------------------------------------------------------------------------*/
 
 cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
                                     cpl_table * vismet_table,
@@ -1357,11 +1372,11 @@ cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
     gravi_signal_create_sync (visacq_tmp, ntel, dit_acq,
                               vismet_table, ntel, "MET");
 
-    /* Create column */
+    /* Create column in output table */
 	gravi_table_new_column (vismet_table, "OPD_PUPIL", "m", CPL_TYPE_DOUBLE);
     double * opd_met = cpl_table_get_data_double (vismet_table, "OPD_PUPIL");
     
-    /* Get data */
+    /* Get data from input table */
     double * opd_acq = cpl_table_get_data_double (visacq_tmp, "OPD_PUPIL");
     int * nspot = cpl_table_get_data_int (visacq_tmp, "PUPIL_NSPOT");
     int * first = cpl_table_get_data_int (visacq_tmp, "FIRST_MET");
@@ -1371,8 +1386,7 @@ cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
     /* Loop on beam */
     for (cpl_size tel = 0; tel < ntel; tel++) {
 
-        /* Loop on ACQ rows with undetected spot and
-         * which could be recovered -- TO BE DONE */
+        /* Loop on ACQ rows with undetected spot */
         if (gravi_pfits_get_mjd (header) < 57876.5) {
             cpl_msg_info (cpl_func, "Compute OPD_PUPIL for blink ACQ frames");
             for (cpl_size row = 1; row < nrow_acq-1; row++) {
@@ -1384,7 +1398,6 @@ cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
             }
         }
         
-
         /* Loop on ACQ rows, fill the corresponding MET rows */
         for (cpl_size row = 0; row < nrow_acq; row++) {            
             for (cpl_size row_met = first[row*ntel+tel]; row_met < last[row*ntel+tel]; row_met++) {
@@ -1406,7 +1419,6 @@ cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
             else opd_met[row*ntel+tel] = opd;
         }
         
-        
     }/* End loop on beam */
 
     /* Free the tmp table */
@@ -1417,23 +1429,17 @@ cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
     return CPL_ERROR_NONE;
 }
 
-        
-        
-
 /*----------------------------------------------------------------------------*/
 /**
  * @brief Fill the VIS_MET table with the DRS algorithm
  *
  * @param metrology_table: input METROLOGY table
+ * @param vismet_table: output OI_VIS_MET table
  * @param header:     corresponding HEADER
  *
- * @return a new VIS_MET table
- *
  * Fill the VIS_MET table from the METROLOGY table with
- * the pipeline alorithm. The table has nsample*ntel rows, so that the
- * measurements for beam 0 are in rows 0,5,10,15... the ones for beam 1
- * are in 1,6,11,16... that is following the same format as OI_FLUX.
- * The table contains the columns PHASE_MET_FC (scalar) and PHASE_MET_TEL
+ * the pipeline alorithm. The function creates the columns
+ * PHASE_MET_FC (scalar) and PHASE_MET_TEL
  * (array of 4 values = diodes).
  */
 /*----------------------------------------------------------------------------*/
