@@ -46,6 +46,7 @@
 #include "gravi_utils.h"
 #include "gravi_ellipse.h"
 #include "gravi_signal.h"
+#include "gravi_eop.h"
 
 #include "gravi_metrology.h"
 
@@ -62,7 +63,6 @@ cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
                                     cpl_table * vismet_table,
                                     double delay,
                                     cpl_propertylist * header);
-
 
 long gravi_round (double number);
 long gravi_round (double number)
@@ -2227,6 +2227,7 @@ cpl_table * gravi_metrology_compute_p2vm (cpl_table * metrology_table, double wa
 /* -------------------------------------------------------------------- */
 
 cpl_error_code gravi_metrology_reduce (gravi_data * data,
+                                       gravi_data * eop_data,
                                        const cpl_parameterlist * parlist)
 {
     gravi_msg_function_start(1);
@@ -2241,6 +2242,9 @@ cpl_error_code gravi_metrology_reduce (gravi_data * data,
 	cpl_table * vismet_table = NULL;
 	vismet_table = gravi_metrology_create (metrology_table, header);
 	CPLCHECK_MSG ("Cannot create vismet_table");
+
+    /* Compuet the pointing */
+    gravi_eop_pointing (vismet_table, header, eop_data);
 
     /* If VIS_ACQ table exist, we compute the OPD_PUPIL */
     if (gravi_data_has_extension (data, GRAVI_OI_VIS_ACQ_EXT)) {

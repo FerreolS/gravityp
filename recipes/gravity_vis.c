@@ -711,7 +711,7 @@ static int gravity_vis(cpl_frameset * frameset,
 		CPLCHECK_CLEAN ("Cannot reduce OPDC");
         
 		/* Reduce the metrology into OI_VIS_MET */
-		gravi_metrology_reduce (p2vmred_data, parlist);
+		gravi_metrology_reduce (p2vmred_data, eop_map, parlist);
 		CPLCHECK_CLEAN ("Cannot reduce metrology");
 
 		/* Compute the uv and pointing directions with ERFA */
