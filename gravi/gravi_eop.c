@@ -246,6 +246,145 @@ void cross(double x[3], double y[3], double z[3])
     z[2] = x[0] * y[1] - x[1] * y[0];
 }
 
+
+
+cpl_error_code gravi_eop_pointing (cpl_table * input_table,
+                                   cpl_propertylist * header,
+                                   gravi_data * eop_data)
+{
+    gravi_msg_function_start(1);
+    cpl_ensure_code (input_table, CPL_ERROR_NULL_INPUT);
+    
+    double t_skip = 1./24/3600, mjd0 = -1.0, mjd1 = -1.0;
+    cpl_msg_info (cpl_func, "Compute pointing with full ERFA every %.2f s",t_skip*24*3600.0);
+    
+    /* Read UTC as MJD */
+    double *mjd = cpl_table_get_data_double (input_table, "MJD");
+    double mean_mjd = cpl_table_get_column_mean (input_table, "MJD");
+    
+	/* Create new columns */
+	cpl_table_new_column_array (input_table, "E_U", CPL_TYPE_DOUBLE, 3);
+	cpl_table_new_column_array (input_table, "E_V", CPL_TYPE_DOUBLE, 3);
+	cpl_table_new_column_array (input_table, "E_W", CPL_TYPE_DOUBLE, 3);
+	cpl_table_new_column_array (input_table, "E_AZ", CPL_TYPE_DOUBLE, 3);
+	cpl_table_new_column_array (input_table, "E_ZD", CPL_TYPE_DOUBLE, 3);
+	cpl_array ** p_u = cpl_table_get_data_array (input_table,"E_U");
+	cpl_array ** p_v = cpl_table_get_data_array (input_table,"E_V");
+	cpl_array ** p_w = cpl_table_get_data_array (input_table,"E_W");
+	cpl_array ** p_az = cpl_table_get_data_array (input_table,"E_AZ");
+	cpl_array ** p_zd = cpl_table_get_data_array (input_table,"E_ZD");
+    CPLCHECK_MSG ("Cannot create data");
+
+	/* Checked by J. Woillez */
+	double elev = gravi_pfits_get_geoelev (header); // Height in [m]
+	double lon = gravi_pfits_get_geolon (header) * CPL_MATH_RAD_DEG; // Lat in [rad]
+	double lat = gravi_pfits_get_geolat (header) * CPL_MATH_RAD_DEG; // Lon in [rad], East positive
+	CPLCHECK_MSG ("Cannot get the data");
+
+	/* Compute Earth Orientation Paramters at given MJDs */
+	double dut1, pmx, pmy;
+	gravi_eop_interpolate (1, &mean_mjd, &pmx, &pmy, &dut1, eop_data);
+	CPLCHECK_MSG ("Cannot interpolate");
+
+	/* We use the FT coordinate for all uv coordinates */
+	double raep = gravi_pfits_get_mid_raep (header); // [rad]
+	double decp = gravi_pfits_get_mid_decep (header); // [rad]
+	double pmra   = gravi_pfits_get_pmra (header) * CPL_MATH_RAD_DEG / 3600.0 / cos(decp); // dRA/dt, not cos(Dec)xdRA/dt [rad/year]
+	double pmdec  = gravi_pfits_get_pmdec (header) * CPL_MATH_RAD_DEG / 3600.0; // dDec/dt [rad/year]
+	double parallax = gravi_pfits_get_plx (header); // [as]
+	double sysvel = 0.0;
+	CPLCHECK_MSG ("Cannot get the header data");
+
+	/* Allocate memory for the tmp computations */
+	eraASTROM astrom;
+	double eo, rcUp, dcUp, rcUm, dcUm, rcVp, dcVp, rcVm, dcVm;
+	double enuobUp[3], enuobUm[3], enuobVp[3], enuobVm[3];
+	double ez[3] = {0.0, 0.0, 1.0}; // Zenith direction in ENU frame
+
+	/* Step for finite difference, 10 arcsec chosen for optimal accuracy */
+	double eps = 10.0 / 3600.0 * CPL_MATH_RAD_DEG; // [rad]
+
+	/* Prepare centered finite differences
+	 * eU corresponds to +RA
+	 * eV corresponds to +DEC */
+	dtp2s (+eps, 0.0, raep, decp, &rcUp, &dcUp);
+	dtp2s (-eps, 0.0, raep, decp, &rcUm, &dcUm);
+	dtp2s (0.0, +eps, raep, decp, &rcVp, &dcVp);
+	dtp2s (0.0, -eps, raep, decp, &rcVm, &dcVm);
+
+	/* Loop on rows. the baselines are not assumed to share the
+	 * same MJD since this function is called after the averaging */
+	cpl_size n_row = cpl_table_get_nrow (input_table);
+	for (cpl_size row = 0 ; row < n_row ; row++) {
+
+	  /* Transformation from ICRS to Observed (neglect refraction, all at zero)
+	   * Update precession/nudation every t_skip, otherwise rotate earth only
+	   * If the time is strickly the same as previous row, we skip this computation */
+
+	  if (mjd[row] != mjd1 ) {
+
+		/* Allocate memory */
+		double * eu = cpl_malloc (sizeof(double) * 3);
+		double * ev = cpl_malloc (sizeof(double) * 3);
+		double * ew = cpl_malloc (sizeof(double) * 3);
+		double * eaz = cpl_malloc (sizeof(double) * 3);
+		double * ezd = cpl_malloc (sizeof(double) * 3);
+
+		if ( fabs (mjd[row]-mjd0) > t_skip ) {
+		  eraApco13 (2400000.5, mjd[row], dut1, lon, lat, elev, pmx/3600.0*CPL_MATH_RAD_DEG, pmy/3600.0*CPL_MATH_RAD_DEG, 0.0, 0.0, 0.0, 0.0, &astrom, &eo);
+		  mjd0 = mjd[row];
+		}
+		else
+		  eraAper13 (2400000.5, mjd[row] + dut1/(24.0*3600.0), &astrom);
+
+		/* Transform from celestial to intermediate, compute eU */
+		eraAtcoq (rcUp, dcUp, pmra, pmdec, parallax, sysvel, &astrom, enuobUp);
+		eraAtcoq (rcUm, dcUm, pmra, pmdec, parallax, sysvel, &astrom, enuobUm);
+		difference (enuobUp, enuobUm, eu);
+		normalize (eu);
+
+		/* Transform from celestial to intermediate, compute eV */
+		eraAtcoq (rcVp, dcVp, pmra, pmdec, parallax, sysvel, &astrom, enuobVp);
+		eraAtcoq (rcVm, dcVm, pmra, pmdec, parallax, sysvel, &astrom, enuobVm);
+		difference (enuobVp, enuobVm, ev);
+		normalize (ev);
+
+		/* Transform from celestial to intermediate, compute eW */
+		eraAtcoq (raep, decp, pmra, pmdec, parallax, sysvel, &astrom, ew);
+		multiply (ew, -1.0);
+
+		/* Using pointing and zenith directions, compute eAz */
+		cross (ew, ez, eaz);
+		normalize (eaz);
+
+		/* Using pointing and azimuth directions, compute eZd */
+		cross (ew, eaz, ezd);
+		normalize (ezd);
+
+		/* Wrap into vectors. It makes the data valid, and is the fastest
+		 * This and the duplication take most of the time of this function */
+		p_u[row] = cpl_array_wrap_double (eu, 3);
+		p_v[row] = cpl_array_wrap_double (ev, 3);
+		p_w[row] = cpl_array_wrap_double (ew, 3);
+		p_az[row] = cpl_array_wrap_double (eaz, 3);
+		p_zd[row] = cpl_array_wrap_double (ezd, 3);
+
+	  } else {
+		p_u[row] = cpl_array_duplicate (p_u[row-1]);
+		p_v[row] = cpl_array_duplicate (p_v[row-1]);
+		p_w[row] = cpl_array_duplicate (p_w[row-1]);
+		p_az[row] = cpl_array_duplicate (p_az[row-1]);
+		p_zd[row] = cpl_array_duplicate (p_zd[row-1]);
+	  }
+
+	  mjd1 = mjd[row];
+	  CPLCHECK_MSG ("Cannot run the ERFA transform");
+	} /* End loop on rows */
+  
+  gravi_msg_function_exit(1);
+  return CPL_ERROR_NONE;
+}
+
 /*----------------------------------------------------------------------------*/
 /**
  * @brief Compute the pointing direction

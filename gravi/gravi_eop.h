@@ -31,6 +31,10 @@
                                Public prototypes
  -----------------------------------------------------------------------------*/
 
+cpl_error_code gravi_eop_pointing (cpl_table * input_table,
+                                   cpl_propertylist * header,
+                                   gravi_data * eop_data);
+    
 cpl_error_code gravi_compute_pointing (gravi_data * p2vmred_data, 
                                        gravi_data * eop_data);
 
