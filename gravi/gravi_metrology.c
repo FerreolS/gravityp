@@ -1299,6 +1299,9 @@ cpl_table * gravi_metrology_create (cpl_table * metrology_table,
     gravi_msg_function_start(1);
 	cpl_ensure (metrology_table, CPL_ERROR_NULL_INPUT, NULL);
 	cpl_ensure (header,  CPL_ERROR_NULL_INPUT, NULL);
+
+    /* Read MJD of PRC */
+    double mjd0 = gravi_convert_to_mjd (gravi_pfits_get_start_prcacq (header));
 		
 	/* Create the output table for VIS_MET */
 	int ntel = 4;
@@ -1308,12 +1311,18 @@ cpl_table * gravi_metrology_create (cpl_table * metrology_table,
     /* Create the TIME column */
 	cpl_table_new_column (vismet_table, "TIME", CPL_TYPE_INT);
 	cpl_table_set_column_unit (vismet_table, "TIME", "usec");
+    
+    /* Create the MJD column */
+	cpl_table_new_column (vismet_table, "MJD", CPL_TYPE_DOUBLE);
+	cpl_table_set_column_unit (vismet_table, "MJD", "day");
 
-    /* Fill the TIME column */
+    /* Fill the TIME and MJD column */
     for (cpl_size row = 0; row < nrow; row++) {
         int time_met = cpl_table_get_int (metrology_table, "TIME", row, NULL);
+        double mjd_met = time_met / 86400.E6 + mjd0;
         for (cpl_size tel = 0; tel < ntel; tel++) {
             cpl_table_set_int (vismet_table, "TIME", row*ntel+tel, time_met);
+            cpl_table_set_double (vismet_table, "MJD",  row*ntel+tel, mjd_met);
         }
     }
 
