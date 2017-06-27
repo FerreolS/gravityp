@@ -2243,8 +2243,10 @@ cpl_error_code gravi_metrology_reduce (gravi_data * data,
 	vismet_table = gravi_metrology_create (metrology_table, header);
 	CPLCHECK_MSG ("Cannot create vismet_table");
 
-    /* Compuet the pointing */
-    gravi_eop_pointing (vismet_table, header, eop_data);
+    /* Compute the pointing */
+    gravi_eop_pointing (vismet_table, header,
+                        (eop_data ? gravi_data_get_table_x (eop_data, 0) : NULL),
+                        (eop_data ? gravi_data_get_header (eop_data) : NULL));
 
     /* If VIS_ACQ table exist, we compute the OPD_PUPIL */
     if (gravi_data_has_extension (data, GRAVI_OI_VIS_ACQ_EXT)) {

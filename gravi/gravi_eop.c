@@ -63,7 +63,9 @@ int gravity_eop_verify_ftp_code (char * msg, int length);
 
 cpl_error_code gravi_eop_interpolate (cpl_size n, double *mjd,
 									  double *pmx, double *pmy,
-									  double *dut, gravi_data * eop_data);
+									  double *dut,
+                                      cpl_table * eop_table,
+                                      cpl_propertylist * header);
 
 void eraAtcoq (double rc, double dc, double pmr, double pmd, double px,
 			   double rv, eraASTROM *astrom, double enuob[3]);
@@ -84,9 +86,15 @@ void cross (double x[3], double y[3], double z[3]);
  * and manipulate coordinates and 3D vectors
  */
 
-cpl_error_code gravi_eop_interpolate (cpl_size n, double *mjd, double *pmx, double *pmy, double *dut, gravi_data * eop_data)
+cpl_error_code gravi_eop_interpolate (cpl_size n, double *mjd,
+                                      double *pmx, double *pmy,
+                                      double *dut,
+                                      cpl_table * eop_table,
+                                      cpl_propertylist * header)
 {  
   gravi_msg_function_start(1);
+  cpl_ensure_code (eop_table, CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (header, CPL_ERROR_NULL_INPUT);
   cpl_ensure_code (n>0, CPL_ERROR_ILLEGAL_INPUT);
   cpl_ensure_code (mjd, CPL_ERROR_NULL_INPUT);
   cpl_ensure_code (pmx, CPL_ERROR_NULL_INPUT);
@@ -98,23 +106,6 @@ cpl_error_code gravi_eop_interpolate (cpl_size n, double *mjd, double *pmx, doub
   cpl_vector *vpmx = cpl_vector_wrap (n, pmx);
   cpl_vector *vpmy = cpl_vector_wrap (n, pmy);
   cpl_vector *vdut = cpl_vector_wrap (n, dut);
-  cpl_vector_fill (vpmx, 0.0);
-  cpl_vector_fill (vpmy, 0.0);
-  cpl_vector_fill (vdut, 0.0);
-
-  /* Check if data available. If not, we return zero */
-  if ( eop_data == NULL )
-  {
-	cpl_msg_warning (cpl_func, "No EOP_PARAM. Use EOP and DUT=0.0s");
-    cpl_vector_unwrap (vmjd);
-    cpl_vector_unwrap (vpmx);
-    cpl_vector_unwrap (vpmy);
-    cpl_vector_unwrap (vdut);
-    return CPL_ERROR_NONE;
-  }
-  
-  cpl_table * eop_table = gravi_data_get_table_x (eop_data, 0);
-  cpl_propertylist * header = gravi_data_get_header (eop_data);
 
   /* Check validity of input mjd with table */
   if (cpl_vector_get_min (vmjd) < cpl_table_get_column_min (eop_table, "MJD") ||
@@ -253,7 +244,8 @@ void cross(double x[3], double y[3], double z[3])
  * 
  * @param input_table   input/output data
  * @param header        input header
- * @param eop_data:     data containing the EOP pameters
+ * @param eop_table:    table containing the EOP pameters
+ * @param eop_header:   header of EOP table
  * 
  * Compute the pointing direction in Observed coordinate for every frames of
  * the SC, so that the real-time projected baseline can be recomputed easily
@@ -265,10 +257,12 @@ void cross(double x[3], double y[3], double z[3])
 
 cpl_error_code gravi_eop_pointing (cpl_table * input_table,
                                    cpl_propertylist * header,
-                                   gravi_data * eop_data)
+                                   cpl_table * eop_table,
+                                   cpl_propertylist * eop_header)
 {
     gravi_msg_function_start(1);
     cpl_ensure_code (input_table, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (header,      CPL_ERROR_NULL_INPUT);
     
     double t_skip = 1./24/3600, mjd0 = -1.0, mjd1 = -1.0;
     cpl_msg_info (cpl_func, "Compute pointing with full ERFA every %.2f s",t_skip*24*3600.0);
@@ -296,10 +290,15 @@ cpl_error_code gravi_eop_pointing (cpl_table * input_table,
 	double lat = gravi_pfits_get_geolat (header) * CPL_MATH_RAD_DEG; // Lon in [rad], East positive
 	CPLCHECK_MSG ("Cannot get the data");
 
-	/* Compute Earth Orientation Paramters at given MJDs */
-	double dut1, pmx, pmy;
-	gravi_eop_interpolate (1, &mean_mjd, &pmx, &pmy, &dut1, eop_data);
-	CPLCHECK_MSG ("Cannot interpolate");
+	/* Compute Earth Orientation Parameters for the mean MJD */
+	double dut1 = 0, pmx = 0, pmy = 0;
+    if (eop_table != NULL) {
+        gravi_eop_interpolate (1, &mean_mjd, &pmx, &pmy, &dut1,
+                               eop_table, eop_header);
+        CPLCHECK_MSG ("Cannot interpolate");
+    } else {
+        cpl_msg_warning (cpl_func, "No EOP_PARAM. Use EOP and DUT=0.0s");
+    }
 
 	/* We use the FT coordinate for all uv coordinates */
 	double raep = gravi_pfits_get_mid_raep (header); // [rad]
@@ -346,7 +345,8 @@ cpl_error_code gravi_eop_pointing (cpl_table * input_table,
 		double * ezd = cpl_malloc (sizeof(double) * 3);
 
 		if ( fabs (mjd[row]-mjd0) > t_skip ) {
-		  eraApco13 (2400000.5, mjd[row], dut1, lon, lat, elev, pmx/3600.0*CPL_MATH_RAD_DEG, pmy/3600.0*CPL_MATH_RAD_DEG, 0.0, 0.0, 0.0, 0.0, &astrom, &eo);
+		  eraApco13 (2400000.5, mjd[row], dut1, lon, lat, elev, pmx/3600.0*CPL_MATH_RAD_DEG,
+                     pmy/3600.0*CPL_MATH_RAD_DEG, 0.0, 0.0, 0.0, 0.0, &astrom, &eo);
 		  mjd0 = mjd[row];
 		}
 		else
@@ -437,11 +437,13 @@ cpl_error_code gravi_compute_pointing (gravi_data * p2vmred_data, gravi_data * e
 	cpl_msg_info(cpl_func, "Compute pointing for %s ",type_data==GRAVI_FT?"FT":"SC");
 
     /* Compute for this polarisation */
-    gravi_eop_pointing (oi_vis, hdr_data, eop_data);
+    gravi_eop_pointing (oi_vis, hdr_data,
+                        (eop_data ? gravi_data_get_table_x (eop_data, 0) : NULL),
+                        (eop_data ? gravi_data_get_header (eop_data) : NULL));
 	CPLCHECK_MSG ("Cannot compute pointing");
     
 	/* Fill second polarisation */
-	if ( npol > 1) {
+	if (npol > 1) {
 	  cpl_msg_debug (cpl_func,"Duplicate in the 2sd polarisation");
 
 	  cpl_table * oi_vis_1 =  gravi_data_get_oi_vis (p2vmred_data, type_data, 1, npol);
@@ -460,6 +462,143 @@ cpl_error_code gravi_compute_pointing (gravi_data * p2vmred_data, gravi_data * e
   return CPL_ERROR_NONE;
 }
 
+
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Compute the UCOORD and VCOORD (uv)
+ * 
+ * @param input_table   input/output data
+ * @param oi_array      input OI_ARRAY table
+ * @param header        input header
+ * @param eop_table:    table containing the EOP pameters
+ * @param eop_header:   header of EOP table
+ * 
+ * This function re-computes the UCOORD and VCOORD of the OI_VIS
+ * tables using the HEADER coordinates, the OI_ARRAY baseline and
+ * the MJD time of the OI_VIS table. It is based on ERFA library.
+ * The SC and FT OI_VIS tables are updated.
+ */
+/*----------------------------------------------------------------------------*/
+
+cpl_error_code gravi_eop_uv (cpl_table * oi_vis,
+                             cpl_table * oi_array,
+                             cpl_propertylist * hdr_data,
+                             cpl_table * eop_table,
+                             cpl_propertylist * eop_header)
+{
+  gravi_msg_function_start(1);
+  cpl_ensure_code (oi_vis,   CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (oi_array, CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (hdr_data, CPL_ERROR_NULL_INPUT);
+  
+  double t_skip = 2./24/3600, mjd0 = -1.0, mjd1 = -1.0;
+  cpl_msg_info (cpl_func, "Compute pointing with full ERFA every %.2f s",t_skip*24*3600.0);
+
+  /* Read UTC as MJD */
+  double *mjd = cpl_table_get_data_double (oi_vis, "MJD");
+  double mean_mjd = cpl_table_get_column_mean (oi_vis, "MJD");
+
+  /* Checked by J. Woillez */
+  double elev = gravi_pfits_get_geoelev (hdr_data); // Height in [m]
+  double lon = gravi_pfits_get_geolon (hdr_data) * CPL_MATH_RAD_DEG; // Lat in [rad]
+  double lat = gravi_pfits_get_geolat (hdr_data) * CPL_MATH_RAD_DEG; // Lon in [rad], East positive
+  
+  /* Compute Earth Orientation Parameters for the mean MJD */
+  double dut1 = 0, pmx = 0, pmy = 0;
+  if (eop_table != NULL) {
+      gravi_eop_interpolate (1, &mean_mjd, &pmx, &pmy, &dut1,
+                             eop_table, eop_header);
+      CPLCHECK_MSG ("Cannot interpolate");
+  } else {
+      cpl_msg_warning (cpl_func, "No EOP_PARAM. Use EOP and DUT=0.0s");
+  }
+    
+  /* We use the FT coordinate for all uv coordinates */
+  double raep = gravi_pfits_get_mid_raep (hdr_data); // [rad]
+  double decp = gravi_pfits_get_mid_decep (hdr_data); // [rad]
+  double pmra   = gravi_pfits_get_pmra (hdr_data) * CPL_MATH_RAD_DEG / 3600.0 / cos(decp); // dRA/dt, not cos(Dec)xdRA/dt [rad/year]
+  double pmdec  = gravi_pfits_get_pmdec (hdr_data) * CPL_MATH_RAD_DEG / 3600.0; // dDec/dt [rad/year]
+  double parallax = gravi_pfits_get_plx (hdr_data); // [as]
+  double sysvel = 0.0;
+  CPLCHECK_MSG ("Cannot get the header data");
+
+  /* Allocate memory for the tmp computations */
+  eraASTROM astrom;
+  double eo, rcUp, dcUp, rcUm, dcUm, rcVp, dcVp, rcVm, dcVm;
+  double enuobUp[3], enuobUm[3], enuobVp[3], enuobVm[3], eu[3], ev[3];
+  
+  CPLCHECK_MSG ("Cannot get the data");
+  
+  /* Step for finite difference, 10 arcsec chosen for optimal accuracy */
+  double eps = 10.0 / 3600.0 * CPL_MATH_RAD_DEG; // [rad]
+
+  /* Prepare centered finite differences
+   * eU corresponds to +RA
+   * eV corresponds to +DEC */
+  dtp2s (+eps, 0.0, raep, decp, &rcUp, &dcUp);
+  dtp2s (-eps, 0.0, raep, decp, &rcUm, &dcUm);
+  dtp2s (0.0, +eps, raep, decp, &rcVp, &dcVp);
+  dtp2s (0.0, -eps, raep, decp, &rcVm, &dcVm);
+
+  /* Loop on bases to compute the physical 3D baseline as T2-T1 [m]
+   * Note: The telescope locations STAXYZ are given in the [West,South,Up]
+   * frame (ESO convention), whereas the UVW, calculated later on, are in
+   * the [East,North,Up] frame. Hence the sign changes below on X and Y. */
+  double baseline[6][3];
+  for ( int base = 0; base < 6; base ++) {
+	  int tel1=0; while ( cpl_table_get (oi_array, "STA_INDEX", tel1, NULL) != gravi_table_get_value (oi_vis, "STA_INDEX", base, 0) ) tel1++;
+	  int tel2=0; while ( cpl_table_get (oi_array, "STA_INDEX", tel2, NULL) != gravi_table_get_value (oi_vis, "STA_INDEX", base, 1) ) tel2++;
+	  baseline[base][0] = -(gravi_table_get_value (oi_array, "STAXYZ", tel2, 0) - gravi_table_get_value (oi_array, "STAXYZ", tel1, 0));
+	  baseline[base][1] = -(gravi_table_get_value (oi_array, "STAXYZ", tel2, 1) - gravi_table_get_value (oi_array, "STAXYZ", tel1, 1));
+	  baseline[base][2] = +(gravi_table_get_value (oi_array, "STAXYZ", tel2, 2) - gravi_table_get_value (oi_array, "STAXYZ", tel1, 2));
+  }
+  
+  double * uCoord = cpl_table_get_data_double (oi_vis, "UCOORD");
+  double * vCoord = cpl_table_get_data_double (oi_vis, "VCOORD");
+  
+  /* Loop on rows. */
+  cpl_size n_row = cpl_table_get_nrow (oi_vis);
+  for (cpl_size row = 0 ; row < n_row ; row++) {
+      
+	  /* Transformation from ICRS to Observed (neglect refraction, all at zero)
+	   * Update precession/nudation every t_skip, otherwise rotate earth only
+	   * If the time is strickly the same as previous row, we skip this computation */
+      
+	  if (mjd[row] != mjd1 ) {
+          
+          if ( fabs (mjd[row]-mjd0) > t_skip ) {
+              eraApco13 (2400000.5, mjd[row], dut1, lon, lat, elev, pmx/3600.0*CPL_MATH_RAD_DEG,
+                         pmy/3600.0*CPL_MATH_RAD_DEG, 0.0, 0.0, 0.0, 0.0, &astrom, &eo);
+              mjd0 = mjd[row]; }
+          else
+              eraAper13 (2400000.5, mjd[row] + dut1/(24.0*3600.0), &astrom);
+          
+          /* Transform from celestial to intermediate, compute eU */
+          eraAtcoq (rcUp, dcUp, pmra, pmdec, parallax, sysvel, &astrom, enuobUp);
+          eraAtcoq (rcUm, dcUm, pmra, pmdec, parallax, sysvel, &astrom, enuobUm);
+          difference (enuobUp, enuobUm, eu);
+          normalize (eu);
+          
+          /* Transform from celestial to intermediate, compute eV */
+          eraAtcoq (rcVp, dcVp, pmra, pmdec, parallax, sysvel, &astrom, enuobVp);
+          eraAtcoq (rcVm, dcVm, pmra, pmdec, parallax, sysvel, &astrom, enuobVm);
+          difference (enuobVp, enuobVm, ev);
+          normalize (ev);
+	  }
+      
+ 	  /* Project physical baseline into u,v */
+	  int base = row % 6;
+	  uCoord[row] = eu[0] * baseline[base][0] + eu[1] * baseline[base][1] + eu[2] * baseline[base][2];
+	  vCoord[row] = ev[0] * baseline[base][0] + ev[1] * baseline[base][1] + ev[2] * baseline[base][2];
+      
+	  mjd1 = mjd[row];
+	  CPLCHECK_MSG ("Cannot compute the uv");
+  } /* End loop on rows */
+  
+  gravi_msg_function_exit(1);
+  return CPL_ERROR_NONE;
+}
+
 /*----------------------------------------------------------------------------*/
 /**
  * @brief Compute the UCOORD and VCOORD (uv)
@@ -468,9 +607,7 @@ cpl_error_code gravi_compute_pointing (gravi_data * p2vmred_data, gravi_data * e
  * @param eop_data:       data containing the EOP pameters
  * 
  * This function re-computes the UCOORD and VCOORD of the OI_VIS
- * tables using the HEADER coordinates, the OI_ARRAY baseline and
- * the MJD time of the OI_VIS table. It is based on ERFA library.
- * The SC and FT OI_VIS tables are updated.
+ * tables of the SC and FT.
  */
 /*----------------------------------------------------------------------------*/
 
@@ -489,102 +626,15 @@ cpl_error_code gravi_compute_uv (gravi_data * p2vmred_data, gravi_data * eop_dat
 
 	int pol = 0, npol = gravi_pfits_get_pola_num (hdr_data, type_data);
 	cpl_table * oi_vis =  gravi_data_get_oi_vis (p2vmred_data, type_data, pol, npol);
-	double t_skip = 2./24/3600, mjd0 = -1.0, mjd1 = -1.0;
 
-	cpl_msg_info(cpl_func, "Compute uv for %s (full ERFA every %.2f s)",type_data==GRAVI_FT?"FT":"SC",t_skip*24*3600.0);
+	cpl_msg_info(cpl_func, "Compute uv for %s",type_data==GRAVI_FT?"FT":"SC");
 
-	/* Read UTC as MJD */
-	double *mjd = cpl_table_get_data_double (oi_vis, "MJD");
-	double mean_mjd = cpl_table_get_column_mean (oi_vis, "MJD");
-
-	/* Checked by J. Woillez */
-	double elev = gravi_pfits_get_geoelev (hdr_data); // Height in [m]
-	double lon = gravi_pfits_get_geolon (hdr_data) * CPL_MATH_RAD_DEG; // Lat in [rad]
-	double lat = gravi_pfits_get_geolat (hdr_data) * CPL_MATH_RAD_DEG; // Lon in [rad], East positive
-
-	/* Compute Earth Orientation Paramters at mean MJD */
-	double dut1, pmx, pmy;
-	gravi_eop_interpolate (1, &mean_mjd, &pmx, &pmy, &dut1, eop_data);
+    /* Compute for this polarisation */
+    gravi_eop_uv (oi_vis, oi_array, hdr_data,
+                  (eop_data ? gravi_data_get_table_x (eop_data, 0) : NULL),
+                  (eop_data ? gravi_data_get_header (eop_data) : NULL));
+	CPLCHECK_MSG ("Cannot compute pointing");
     
-	/* We use the FT coordinate for all uv coordinates */
-	double raep = gravi_pfits_get_mid_raep (hdr_data); // [rad]
-	double decp = gravi_pfits_get_mid_decep (hdr_data); // [rad]
-	double pmra   = gravi_pfits_get_pmra (hdr_data) * CPL_MATH_RAD_DEG / 3600.0 / cos(decp); // dRA/dt, not cos(Dec)xdRA/dt [rad/year]
-	double pmdec  = gravi_pfits_get_pmdec (hdr_data) * CPL_MATH_RAD_DEG / 3600.0; // dDec/dt [rad/year]
-	double parallax = gravi_pfits_get_plx (hdr_data); // [as]
-	double sysvel = 0.0;
-
-	/* Allocate memory for the tmp computations */
-	eraASTROM astrom;
-	double eo, rcUp, dcUp, rcUm, dcUm, rcVp, dcVp, rcVm, dcVm;
-	double enuobUp[3], enuobUm[3], enuobVp[3], enuobVm[3], eu[3], ev[3];
-
-	CPLCHECK_MSG ("Cannot get the data");
-
-	/* Step for finite difference, 10 arcsec chosen for optimal accuracy */
-	double eps = 10.0 / 3600.0 * CPL_MATH_RAD_DEG; // [rad]
-
-	/* Prepare centered finite differences
-	 * eU corresponds to +RA
-	 * eV corresponds to +DEC */
-	dtp2s (+eps, 0.0, raep, decp, &rcUp, &dcUp);
-	dtp2s (-eps, 0.0, raep, decp, &rcUm, &dcUm);
-	dtp2s (0.0, +eps, raep, decp, &rcVp, &dcVp);
-	dtp2s (0.0, -eps, raep, decp, &rcVm, &dcVm);
-
-	/* Loop on bases to compute the physical 3D baseline as T2-T1 [m]
-	 * Note: The telescope locations STAXYZ are given in the [West,South,Up]
-	 * frame (ESO convention), whereas the UVW, calculated later on, are in
-	 * the [East,North,Up] frame. Hence the sign changes below on X and Y. */
-	double baseline[6][3];
-	for ( int base = 0; base < 6; base ++) {
-	  int tel1=0; while ( cpl_table_get (oi_array, "STA_INDEX", tel1, NULL) != gravi_table_get_value (oi_vis, "STA_INDEX", base, 0) ) tel1++;
-	  int tel2=0; while ( cpl_table_get (oi_array, "STA_INDEX", tel2, NULL) != gravi_table_get_value (oi_vis, "STA_INDEX", base, 1) ) tel2++;
-	  baseline[base][0] = -(gravi_table_get_value (oi_array, "STAXYZ", tel2, 0) - gravi_table_get_value (oi_array, "STAXYZ", tel1, 0));
-	  baseline[base][1] = -(gravi_table_get_value (oi_array, "STAXYZ", tel2, 1) - gravi_table_get_value (oi_array, "STAXYZ", tel1, 1));
-	  baseline[base][2] = +(gravi_table_get_value (oi_array, "STAXYZ", tel2, 2) - gravi_table_get_value (oi_array, "STAXYZ", tel1, 2));
-	}
-
-	double * uCoord = cpl_table_get_data_double (oi_vis, "UCOORD");
-	double * vCoord = cpl_table_get_data_double (oi_vis, "VCOORD");
-
-	/* Loop on rows. */
-	cpl_size n_row = cpl_table_get_nrow (oi_vis);
-	for (cpl_size row = 0 ; row < n_row ; row++) {
-
-	  /* Transformation from ICRS to Observed (neglect refraction, all at zero)
-	   * Update precession/nudation every t_skip, otherwise rotate earth only
-	   * If the time is strickly the same as previous row, we skip this computation */
-
-	  if (mjd[row] != mjd1 ) {
-
-		if ( fabs (mjd[row]-mjd0) > t_skip ) {
-		  eraApco13 (2400000.5, mjd[row], dut1, lon, lat, elev, pmx/3600.0*CPL_MATH_RAD_DEG, pmy/3600.0*CPL_MATH_RAD_DEG, 0.0, 0.0, 0.0, 0.0, &astrom, &eo);
-		  mjd0 = mjd[row]; }
-		else
-		  eraAper13 (2400000.5, mjd[row] + dut1/(24.0*3600.0), &astrom);
-
-		/* Transform from celestial to intermediate, compute eU */
-		eraAtcoq (rcUp, dcUp, pmra, pmdec, parallax, sysvel, &astrom, enuobUp);
-		eraAtcoq (rcUm, dcUm, pmra, pmdec, parallax, sysvel, &astrom, enuobUm);
-		difference (enuobUp, enuobUm, eu);
-		normalize (eu);
-
-		/* Transform from celestial to intermediate, compute eV */
-		eraAtcoq (rcVp, dcVp, pmra, pmdec, parallax, sysvel, &astrom, enuobVp);
-		eraAtcoq (rcVm, dcVm, pmra, pmdec, parallax, sysvel, &astrom, enuobVm);
-		difference (enuobVp, enuobVm, ev);
-		normalize (ev);
-	  }
-
- 	  /* Project physical baseline into u,v */
-	  int base = row % 6;
-	  uCoord[row] = eu[0] * baseline[base][0] + eu[1] * baseline[base][1] + eu[2] * baseline[base][2];
-	  vCoord[row] = ev[0] * baseline[base][0] + ev[1] * baseline[base][1] + ev[2] * baseline[base][2];
-
-	  mjd1 = mjd[row];
-	  CPLCHECK_MSG ("Cannot compute the uv");
-	} /* End loop on rows */
 
 	/* Copy second polarisation. Assume they have same uv-plane */
 	if (npol > 1) {
