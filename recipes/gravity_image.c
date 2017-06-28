@@ -120,7 +120,7 @@ int cpl_plugin_get_info(cpl_pluginlist * list)
 static int gravity_image_create(cpl_plugin * plugin)
 {
     cpl_recipe    * recipe;                                               
-    cpl_parameter * p;
+    // cpl_parameter * p;
                                                                        
     /* Do not create the recipe if an error code is already set */     
     if (cpl_error_get_code() != CPL_ERROR_NONE) {                      
