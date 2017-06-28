@@ -478,90 +478,33 @@ int gravi_calib_test(void){
 
 	cpl_parameterlist * parlist = cpl_parameterlist_new();
 
-   /* --Save the preproc files */
-	p = cpl_parameter_new_value("gravity.dfs.preproc-file",
-			CPL_TYPE_BOOL, "Save the preprocessed file", "gravity.dfs", FALSE);
-	cpl_parameter_set_alias(p, CPL_PARAMETER_MODE_CLI, "preproc-file");
-	cpl_parameter_disable(p, CPL_PARAMETER_MODE_ENV);
-	cpl_parameterlist_append(parlist, p);
+    /* Use static names (output_procatg.fits) */
+    gravi_parameter_add_static_name (parlist);
 
-	/* --Save the p2vm reduced files */
-	p = cpl_parameter_new_value("gravity.dfs.p2vmred-file",
-			CPL_TYPE_BOOL, "Save the file with non averaged visibilities", "gravity.dfs", FALSE);
-	cpl_parameter_set_alias(p, CPL_PARAMETER_MODE_CLI, "p2vmreduced-file");
-	cpl_parameter_disable(p, CPL_PARAMETER_MODE_ENV);
-	cpl_parameterlist_append(parlist, p);
+    /* Intermediate files */
+    gravi_parameter_add_biassub_file (parlist);
+    gravi_parameter_add_spectrum_file (parlist);
+    gravi_parameter_add_preproc_file (parlist);
+    gravi_parameter_add_p2vmred_file (parlist);
+    gravi_parameter_add_astro_file (parlist);
 
-	/* --SNR threshold for fringe DET in FT */
-	p = cpl_parameter_new_value("gravity.signal.snr-min-ft",
-			CPL_TYPE_DOUBLE, "SNR threshold to accept FT frames (>0)", "gravi.vis_reduce", 3.0);
-	cpl_parameter_set_alias(p, CPL_PARAMETER_MODE_CLI, "snr-min-ft");
-	cpl_parameter_disable(p, CPL_PARAMETER_MODE_ENV);
-	cpl_parameterlist_append(parlist, p);
+    /* Averaging */
+    gravi_parameter_add_average_vis (parlist);
 
-	/* --STATE threshold for fringe DET in FT */
-	p = cpl_parameter_new_value("gravity.signal.state-min-ft",
-			CPL_TYPE_DOUBLE, "minimum OPDC state to accept FT frames (>=0)", "gravi.vis_reduce", 1.0);
-	cpl_parameter_set_alias(p, CPL_PARAMETER_MODE_CLI, "state-min-ft");
-	cpl_parameter_disable(p, CPL_PARAMETER_MODE_ENV);
-	cpl_parameterlist_append(parlist, p);
+    /* Bias-method */
+    gravi_parameter_add_biasmethod (parlist);
 
-	/* --Minimum detection ratio to accept SC frame */
-	p = cpl_parameter_new_value("gravity.signal.tracking-min-sc",
-			CPL_TYPE_DOUBLE, "Minimum ratio of accepted FT frames to accept SC frames (0..1)", "gravi.vis_reduce", 0.8);
-	cpl_parameter_set_alias(p, CPL_PARAMETER_MODE_CLI, "tracking-min-sc");
-	cpl_parameter_disable(p, CPL_PARAMETER_MODE_ENV);
-	cpl_parameterlist_append(parlist, p);
-
-	/* --vFactor threshold to accept SC frame */
-	p = cpl_parameter_new_value("gravity.signal.vfactor-min-sc",
-			CPL_TYPE_DOUBLE, "vFactor threshold to accept SC frame (0..1)", "gravi.vis_reduce", 0.1);
-	cpl_parameter_set_alias(p, CPL_PARAMETER_MODE_CLI, "vfactor-min-sc");
-	cpl_parameter_disable(p, CPL_PARAMETER_MODE_ENV);
-	cpl_parameterlist_append(parlist, p);
-
-	/* --Number of bootstrap */
-	p = cpl_parameter_new_value("gravity.vis.nboot",
-			CPL_TYPE_INT, "Number of bootstrap to compute error (1..100)", "gravi.vis_reduce", 20);
-	cpl_parameter_set_alias(p, CPL_PARAMETER_MODE_CLI, "nboot");
-	cpl_parameter_disable(p, CPL_PARAMETER_MODE_ENV);
-	cpl_parameterlist_append(parlist, p);
-
-    /* -- Visibility correction */
-	p = cpl_parameter_new_enum ("gravity.vis.vis-correction-sc",
-			CPL_TYPE_STRING, "Correction of visibility losses", "gravi.vis_reduce",
-								"VFACTOR", 3, "VFACTOR", "FORCE", "NONE");
-	cpl_parameter_set_alias(p, CPL_PARAMETER_MODE_CLI, "vis-correction-sc");
-	cpl_parameter_disable(p, CPL_PARAMETER_MODE_ENV);
-	cpl_parameterlist_append(parlist, p);
-
-    /* --Use the vis_flat */
-	p = cpl_parameter_new_value("gravity.vis.flat-flux",
-			CPL_TYPE_BOOL, "Flat the OI_FLUX with instrument transmission", "gravi", FALSE);
-	cpl_parameter_set_alias(p, CPL_PARAMETER_MODE_CLI, "flat-flux");
-	cpl_parameter_disable(p, CPL_PARAMETER_MODE_ENV);
-	cpl_parameterlist_append(parlist, p);
-
-    /* --Save the astro reduced files */
-	p = cpl_parameter_new_value("gravity.dfs.astro-file",
-			CPL_TYPE_BOOL, "Save the astrometric non averaged visibilities", "gravity.dfs", FALSE);
-	cpl_parameter_set_alias(p, CPL_PARAMETER_MODE_CLI, "astro-file");
-	cpl_parameter_disable(p, CPL_PARAMETER_MODE_ENV);
-	cpl_parameterlist_append(parlist, p);
-
-    /* --Debias the V2 of SC */
-	p = cpl_parameter_new_value("gravity.vis.debias-sc",
-			CPL_TYPE_BOOL, "Subtract the V2 bias from SC", "gravi.vis_reduce", TRUE);
-	cpl_parameter_set_alias(p, CPL_PARAMETER_MODE_CLI, "debias-sc");
-	cpl_parameter_disable(p, CPL_PARAMETER_MODE_ENV);
-	cpl_parameterlist_append(parlist, p);
-
-    /* --Debias the V2 of FT */
-	p = cpl_parameter_new_value("gravity.vis.debias-ft",
-			CPL_TYPE_BOOL, "Subtract the V2 bias from FT", "gravi.vis_reduce", TRUE);
-	cpl_parameter_set_alias(p, CPL_PARAMETER_MODE_CLI, "debias-ft");
-	cpl_parameter_disable(p, CPL_PARAMETER_MODE_ENV);
-	cpl_parameterlist_append(parlist, p);
+    /* Extraction */
+    gravi_parameter_add_extract (parlist);
+    gravi_parameter_add_metrology (parlist);
+    
+    /* Snr, signal, rejectio flags, vis */
+    int isCalib = 0;
+    gravi_parameter_add_compute_snr (parlist, isCalib);
+    gravi_parameter_add_compute_signal (parlist, isCalib);
+    gravi_parameter_add_rejection (parlist, isCalib);
+    gravi_parameter_add_compute_vis (parlist, isCalib);
+    
 
 
 	/* Add the FLAT_RAW and WAVE_RAW to the p2vm frameset */
@@ -796,7 +739,7 @@ int gravi_calib_test(void){
 			"gravi_compute_opdc_state :  ...", flag);
 
 	/* Reduce the metrology */
-    test (gravi_metrology_reduce (p2vm_reduced),
+    test (gravi_metrology_reduce (p2vm_reduced, NULL, parlist),
 			"gravi_metrology_reduce : reduce the metrology ...", flag);
 
     //gravi_data_save_data (p2vm_reduced, "test_files/p2vm_reduced.fits", CPL_IO_CREATE);
