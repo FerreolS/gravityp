@@ -1275,6 +1275,65 @@ int metrology_algorithm(structTacData * tacData)
                              Functions code
  -----------------------------------------------------------------------------*/
 
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief get the receiver position in the MET_POS table
+ *
+ * @param metrology_table: input MET_POT data
+ * @param tel : telescope number
+ * @param diode : diode number
+ *
+ *
+ * @return met position as double
+ *
+ */
+/*----------------------------------------------------------------------------*/
+
+double  gravi_metrology_get_posx (gravi_data * metrology_pos, gravi_data * data,
+                                    int tel, int diode)
+{
+	cpl_ensure (metrology_pos, CPL_ERROR_NULL_INPUT, 0);
+	cpl_ensure (data, CPL_ERROR_NULL_INPUT, 0);
+
+	/* retrieve tel_name from sta_index */
+	cpl_table * oi_array = gravi_data_get_table(data, GRAVI_OI_ARRAY_EXT);
+	CPLCHECK_INT("load oi_array");
+	cpl_propertylist * plist = gravi_data_get_plist(data, GRAVI_PRIMARY_HDR_EXT);
+	int sta_index = cpl_table_get_int(gravi_data_get_oi_table(data, GRAVI_OI_FLUX_EXT,
+			GRAVI_INSNAME(GRAVI_SC,0, gravi_pfits_get_pola_num (plist, GRAVI_SC))), "STA_INDEX", tel, NULL);
+	CPLCHECK_INT("Get sta_index");
+	int tel_index=0; while ( cpl_table_get (oi_array, "STA_INDEX", tel_index, NULL) != sta_index ) tel_index++;
+	char * col_name = cpl_sprintf("%.3s-X", cpl_table_get_string(oi_array, "TEL_NAME", tel_index));
+
+	/* get the position of the diode */
+	double pos = cpl_table_get (gravi_data_get_table(metrology_pos, "MetReceiver"), col_name, diode, NULL);
+//	printf("sta_index %d, tel_index %d, %s\n : %g",sta_index, tel_index, col_name, pos);
+
+	return pos;
+}
+
+double  gravi_metrology_get_posy (gravi_data * metrology_pos, gravi_data * data,
+                                    int tel, int diode)
+{
+	cpl_ensure (metrology_pos, CPL_ERROR_NULL_INPUT, 0);
+	cpl_ensure (data, CPL_ERROR_NULL_INPUT, 0);
+
+	/* retrieve tel_name from sta_index */
+	cpl_table * oi_array = gravi_data_get_table(data, GRAVI_OI_ARRAY_EXT);
+	cpl_propertylist * plist = gravi_data_get_plist(data, GRAVI_PRIMARY_HDR_EXT);
+	CPLCHECK_INT("load oi_array and plist");
+	int sta_index = cpl_table_get_int(gravi_data_get_oi_table(data, GRAVI_OI_FLUX_EXT,
+			GRAVI_INSNAME(GRAVI_SC,0, gravi_pfits_get_pola_num (plist, GRAVI_SC))), "STA_INDEX", tel, NULL);
+	CPLCHECK_INT("Get sta_index");
+	int tel_index=0; while ( cpl_table_get (oi_array, "STA_INDEX", tel_index, NULL) != sta_index ) tel_index++;
+	char * col_name = cpl_sprintf("%.3s-Y", cpl_table_get_string(oi_array, "TEL_NAME", tel_index));
+
+	/* get the position of the diode */
+	double pos = cpl_table_get (gravi_data_get_table(metrology_pos, "MetReceiver"), col_name, diode, NULL);
+//	printf("sta_index %d, tel_index %d, %s\n : %g",sta_index, tel_index, col_name, pos);
+
+	return pos;
+}
 
 /*----------------------------------------------------------------------------*/
 /**
@@ -2228,6 +2287,7 @@ cpl_table * gravi_metrology_compute_p2vm (cpl_table * metrology_table, double wa
 
 cpl_error_code gravi_metrology_reduce (gravi_data * data,
                                        gravi_data * eop_data,
+                                       gravi_data * met_pos,
                                        const cpl_parameterlist * parlist)
 {
     gravi_msg_function_start(1);
@@ -2269,6 +2329,15 @@ cpl_error_code gravi_metrology_reduce (gravi_data * data,
 	gravi_data_add_table (data, NULL, GRAVI_OI_VIS_MET_EXT, vismet_table);
 	CPLCHECK_MSG ("Cannot add OI_VIS_MET in p2vmred_data");
 	
+	/* get met position */
+	if (met_pos)
+	{
+		for (int tel=0; tel<4; tel++)
+			for (int diode=0; diode<4; diode++)
+				cpl_msg_info(cpl_func, "Input %d of diode %d X : %g Y : %g ", tel, diode,
+						gravi_metrology_get_posx (met_pos,data, tel, diode), gravi_metrology_get_posy (met_pos,data, tel, diode));
+	}
+
     gravi_msg_function_exit(1);
 	return CPL_ERROR_NONE;
 }

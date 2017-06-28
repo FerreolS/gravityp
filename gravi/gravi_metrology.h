@@ -35,6 +35,7 @@
 
 cpl_error_code gravi_metrology_reduce (gravi_data *,
                                        gravi_data *,
+                                       gravi_data * met_pos,
                                        const cpl_parameterlist * parlist);
 
 cpl_table * gravi_metrology_create (cpl_table * metrology_table,

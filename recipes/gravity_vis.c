@@ -91,6 +91,7 @@ static char gravity_vis_description[] =
     GRAVI_SINGLE_SCIENCE_RAW"     : raw object (DPR.TYPE=OBJECT,SINGLE)\n"
     GRAVI_SINGLE_SKY_RAW"     : raw sky (DPR.TYPE=SKY,SINGLE)\n"
     GRAVI_DISP_MODEL" (opt)   : fiber dispersion model (PRO.CATG="GRAVI_DISP_MODEL")\n"
+    GRAVI_MET_POS" (opt)      : met receiver position (PRO.CATG="GRAVI_MET_POS")\n"
     GRAVI_DIAMETER_CAT" (opt) : catalog of diameter (PRO.CATG="GRAVI_DIAMETER_CAT")\n"
     GRAVI_RECIPE_OUTPUT"\n"
     GRAVI_VIS_SINGLE_SCIENCE"           : OIFITS file with uncalibrated visibilities\n"
@@ -362,7 +363,7 @@ static int gravity_vis(cpl_frameset * frameset,
     cpl_frameset * recipe_frameset=NULL, * wavecalib_frameset=NULL, * dark_frameset=NULL,
 	  * darkcalib_frameset=NULL, * sky_frameset=NULL, * flatcalib_frameset=NULL, * p2vmcalib_frameset=NULL,
 	  * badcalib_frameset=NULL, *used_frameset=NULL, * current_frameset=NULL, * dispcalib_frameset=NULL,
-	  * diamcat_frameset = NULL, *eop_frameset = NULL;
+	  * metpos_frameset=NULL, * diamcat_frameset = NULL, *eop_frameset = NULL;
 	
 	cpl_frame * frame=NULL;
 	
@@ -371,7 +372,7 @@ static int gravity_vis(cpl_frameset * frameset,
 	
 	gravi_data * p2vm_map=NULL, * data=NULL, * wave_map=NULL, * dark_map=NULL,
         * profile_map=NULL, * badpix_map=NULL, * preproc_data=NULL, * p2vmred_data=NULL, * tmpvis_data=NULL,
-        * vis_data=NULL, * disp_map=NULL, * diamcat_data=NULL, *eop_map=NULL;
+        * vis_data=NULL, * disp_map=NULL, * met_pos=NULL, * diamcat_data=NULL, *eop_map=NULL;
 	gravi_data ** sky_maps = NULL;
 	
 	int nb_frame, nb_sky, isky;
@@ -393,6 +394,7 @@ static int gravity_vis(cpl_frameset * frameset,
     flatcalib_frameset = gravi_frameset_extract_flat_map (frameset);
     badcalib_frameset = gravi_frameset_extract_bad_map (frameset);
 	dispcalib_frameset = gravi_frameset_extract_disp_map (frameset);
+	metpos_frameset = gravi_frameset_extract_met_pos (frameset);
 	diamcat_frameset = gravi_frameset_extract_diamcat_map (frameset);
 	eop_frameset = gravi_frameset_extract_eop_map (frameset);
 	
@@ -475,6 +477,14 @@ static int gravity_vis(cpl_frameset * frameset,
 	}
 	else
 	  cpl_msg_info (cpl_func, "There is no DISP_MODEL in the frameset");
+
+    /* Load the MET_POS in the input frameset */
+    if (!cpl_frameset_is_empty (metpos_frameset)) {
+	  frame = cpl_frameset_get_position (metpos_frameset, 0);
+	  met_pos = gravi_data_load_frame (frame, used_frameset);
+	}
+	else
+	  cpl_msg_info (cpl_func, "There is no MET_POS in the frameset");
 
 	/* Load the EOP_PARAM */
 	if ( !cpl_frameset_is_empty (eop_frameset) ) {
@@ -711,7 +721,7 @@ static int gravity_vis(cpl_frameset * frameset,
 		CPLCHECK_CLEAN ("Cannot reduce OPDC");
         
 		/* Reduce the metrology into OI_VIS_MET */
-		gravi_metrology_reduce (p2vmred_data, eop_map, parlist);
+		gravi_metrology_reduce (p2vmred_data, eop_map, met_pos, parlist);
 		CPLCHECK_CLEAN ("Cannot reduce metrology");
 
 		/* Compute the uv and pointing directions with ERFA */

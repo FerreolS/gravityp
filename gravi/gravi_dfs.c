@@ -118,7 +118,8 @@ cpl_error_code gravi_dfs_set_groups(cpl_frameset * set)
 				  (!strcmp(tag, GRAVI_ZP_CAL)) ||
 				  (!strcmp(tag, GRAVI_DISP_VIS)) ||
 				  (!strcmp(tag, GRAVI_DIAMETER_CAT)) ||
-				  (!strcmp(tag, GRAVI_DISP_MODEL))){
+				  (!strcmp(tag, GRAVI_DISP_MODEL)) ||
+				  (!strcmp(tag, GRAVI_MET_POS))){
         	/* CALIB frames */
         	cpl_frame_set_group(frame, CPL_FRAME_GROUP_CALIB);
         }else if (
@@ -774,6 +775,10 @@ cpl_frameset * gravi_frameset_extract_dispvis_data (cpl_frameset * frameset) {
 }
 cpl_frameset * gravi_frameset_extract_disp_map (cpl_frameset * frameset) {
   const char *tags[] = {GRAVI_DISP_MODEL};
+  return gravi_frameset_extract (frameset, tags, 1);
+}
+cpl_frameset * gravi_frameset_extract_met_pos (cpl_frameset * frameset) {
+  const char *tags[] = {GRAVI_MET_POS};
   return gravi_frameset_extract (frameset, tags, 1);
 }
 cpl_frameset * gravi_frameset_extract_wavelamp_map (cpl_frameset * frameset) {
