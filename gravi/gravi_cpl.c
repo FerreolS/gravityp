@@ -204,22 +204,33 @@ double gravi_table_get_column_mean (cpl_table * table, const char * name, int ba
   cpl_size nrow = cpl_table_get_nrow (table) / nbase;
   cpl_ensure (nrow,  CPL_ERROR_ILLEGAL_INPUT, 0.0);
   
-  cpl_type type = cpl_table_get_column_type (table, name);
+  cpl_type type  = cpl_table_get_column_type (table, name);
+  cpl_size depth = cpl_table_get_column_depth (table, name);
   
-  if ( type == CPL_TYPE_DOUBLE ) {
+  if (depth == 0 && type == CPL_TYPE_DOUBLE) {
 	double * data = cpl_table_get_data_double (table, name);
 	cpl_ensure (data, CPL_ERROR_ILLEGAL_INPUT, 0.0);
 	for (cpl_size r=0; r<nrow;r++) mean += data[r*nbase+base];
   }
-  else if (type == CPL_TYPE_FLOAT) {
+  else if (depth == 0 && type == CPL_TYPE_FLOAT) {
 	float * data = cpl_table_get_data_float (table, name);
 	cpl_ensure (data, CPL_ERROR_ILLEGAL_INPUT, 0.0);
 	for (cpl_size r=0; r<nrow;r++) mean += data[r*nbase+base];
   }
-  else if (type == CPL_TYPE_INT) {
+  else if (depth == 0 && type == CPL_TYPE_INT) {
 	int * data = cpl_table_get_data_int (table, name);
 	cpl_ensure (data, CPL_ERROR_ILLEGAL_INPUT, 0.0);
 	for (cpl_size r=0; r<nrow;r++) mean += data[r*nbase+base];
+  }
+  else if (depth > 0) {
+      cpl_array ** arrays = cpl_table_get_data_array (table, name);
+      cpl_ensure (arrays,  CPL_ERROR_ILLEGAL_INPUT, 0.0);
+      cpl_array * output = cpl_array_duplicate (arrays[base]);
+      cpl_ensure (output,  CPL_ERROR_ILLEGAL_INPUT, 0.0);
+      for (cpl_size r=1; r<nrow;r++)
+          cpl_array_add (output, arrays[r*nbase+base]);
+      mean = cpl_array_get_mean (output) / nrow;
+      FREE (cpl_array_delete, output);
   }
   else {
 	cpl_error_set_message (cpl_func,CPL_ERROR_ILLEGAL_INPUT,"unknow type");
@@ -239,21 +250,22 @@ double gravi_table_get_column_std (cpl_table * table, const char * name, int bas
   cpl_size nrow = cpl_table_get_nrow (table) / nbase;
   cpl_ensure (nrow,  CPL_ERROR_ILLEGAL_INPUT, 0.0);
   
-  cpl_type type = cpl_table_get_column_type (table, name);
+  cpl_type type  = cpl_table_get_column_type (table, name);
+  cpl_size depth = cpl_table_get_column_depth (table, name);
   
-  if ( type == CPL_TYPE_DOUBLE ) {
+  if (depth == 0 && type == CPL_TYPE_DOUBLE) {
 	double * data = cpl_table_get_data_double (table, name);
 	cpl_ensure (data, CPL_ERROR_ILLEGAL_INPUT, 0.0);
 	for (cpl_size r=0; r<nrow;r++) mean  += data[r*nbase+base];
 	for (cpl_size r=0; r<nrow;r++) mean2 += data[r*nbase+base] * data[r*nbase+base];
   }
-  else if (type == CPL_TYPE_FLOAT) {
+  else if (depth == 0 && type == CPL_TYPE_FLOAT) {
 	float * data = cpl_table_get_data_float (table, name);
 	cpl_ensure (data, CPL_ERROR_ILLEGAL_INPUT, 0.0);
 	for (cpl_size r=0; r<nrow;r++) mean += data[r*nbase+base];
 	for (cpl_size r=0; r<nrow;r++) mean2 += data[r*nbase+base] * data[r*nbase+base];
   }
-  else if (type == CPL_TYPE_INT) {
+  else if (depth == 0 && type == CPL_TYPE_INT) {
 	int * data = cpl_table_get_data_int (table, name);
 	cpl_ensure (data, CPL_ERROR_ILLEGAL_INPUT, 0.0);
 	for (cpl_size r=0; r<nrow;r++) mean += data[r*nbase+base];
