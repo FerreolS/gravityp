@@ -77,9 +77,9 @@ CPL_CHECK_LIBS
 ESO_CHECK_ERFA
 
 #Checking for Yorick executable
-CHECK_YORICK
-CHECK_YORICK_YETI
-CHECK_YORICK_OPTIMPACK
+CHECK_YORICK([optional])
+CHECK_YORICK_YETI([optional])
+CHECK_YORICK_OPTIMPACK([optional])
 
 # Check for <xx>clipm
 # - can be called multiple times

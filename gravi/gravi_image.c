@@ -59,6 +59,7 @@ const int GRAVI_ERROR_TIMEOUT  = 0 + CPL_ERROR_EOL;
  */
 /*----------------------------------------------------------------------------*/
 
+#ifdef YORICK_BIN
 cpl_image * gravi_image(const cpl_frame * input_frame,
 						const cpl_parameterlist * input_param)
 {
@@ -286,5 +287,6 @@ cpl_image * gravi_image(const cpl_frame * input_frame,
 	for (i=0; i<argv_i-1; i++) cpl_free(yorick_argv[i]);
     return reconstruct_image;
 }
+#endif
 
 /**@}*/

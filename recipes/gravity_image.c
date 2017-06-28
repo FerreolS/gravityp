@@ -258,6 +258,7 @@ static int gravity_image_destroy(cpl_plugin * plugin)
 static int gravity_image(cpl_frameset            * frameset,
                     const cpl_parameterlist * parlist)
 {
+#ifdef YORICK_BIN
     const cpl_frame     *   rawframe;
     double                  qc_param = 0.0;
     cpl_propertylist    *   applist;
@@ -360,4 +361,10 @@ static int gravity_image(cpl_frameset            * frameset,
     cpl_frameset_delete(usedframes);
 
     return (int)cpl_error_get_code();
+#else
+    return (int)cpl_error_set_message(cpl_func, CPL_ERROR_NULL_INPUT,
+                                      "This recipe is only available if "
+                                      "the pipeline was compiled with yorick "
+                                      "support. Check configure --help");
+#endif
 }
