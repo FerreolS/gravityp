@@ -412,6 +412,9 @@ static int gravity_vis_from_p2vmred(cpl_frameset * frameset,
     }
 	/* End loop on the input files to reduce */
 
+    /* Compute QC parameters */
+    gravi_compute_vis_qc (vis_data);
+    
 	/* Perform the normalisation of the SC vis2 and visamp
 	 * to match those of the FT */
     if (!strcmp (gravi_param_get_string (parlist, "gravity.vis.vis-correction-sc"), "FORCE")) {
@@ -436,7 +439,7 @@ static int gravity_vis_from_p2vmred(cpl_frameset * frameset,
 	/* Recompute the TIME column from the MJD column
 	 * in all OIFITS tables to follow standard */
 	gravi_vis_mjd_to_time (vis_data);
-	  
+
 	/* Save the output data file based on the first frame of the frameset */
 	frame = cpl_frameset_get_position (recipe_frameset, 0);
 	

@@ -779,6 +779,7 @@ static int gravity_vis(cpl_frameset * frameset,
     }
     /* End loop on the input files to reduce */
 
+    /* Compute QC parameters */
     gravi_compute_vis_qc (vis_data);
 
 	/* Compute the QC parameters of the TF 
