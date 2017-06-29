@@ -1275,6 +1275,31 @@ int metrology_algorithm(structTacData * tacData)
                              Functions code
  -----------------------------------------------------------------------------*/
 
+cpl_error_code gravi_metrology_update_receiverpos (cpl_propertylist * header,
+                                                   cpl_table *receiver_table)
+{
+    gravi_msg_function_start(1);
+	cpl_ensure (header, CPL_ERROR_NULL_INPUT, 0);
+	cpl_ensure (receiver_table, CPL_ERROR_NULL_INPUT, 0);
+
+    double pos;
+    char name[100];
+    
+    for (int tel=0; tel<4; tel++) {
+        for (int diode=0; diode<4; diode++) {
+            /* Read from table */
+            sprintf (name, "%.3s-Y", gravi_conf_get_telname (tel, header));
+            pos = cpl_table_get (receiver_table, name, diode, NULL);
+            /* Set in header */
+            sprintf (name, "ESO MET %s REC%iX", gravi_conf_get_telname (tel, header), diode+1);
+            cpl_propertylist_update_double (header, name, pos);
+        }
+    }
+
+    gravi_msg_function_exit(1);
+    return CPL_ERROR_NONE;
+}
+
 /*----------------------------------------------------------------------------*/
 /**
  * @brief get the receiver position in the MET_POS table
@@ -1289,51 +1314,31 @@ int metrology_algorithm(structTacData * tacData)
  */
 /*----------------------------------------------------------------------------*/
 
-double  gravi_metrology_get_posx (gravi_data * metrology_pos,
-                                  cpl_propertylist * header,
+double  gravi_metrology_get_posx (cpl_propertylist * header,
                                   int tel, int diode)
 {
     gravi_msg_function_start(1);
 	cpl_ensure (header, CPL_ERROR_NULL_INPUT, 0);
     
+    /* Read from header */
     char name[100];
-    double pos = 0.0;
+    sprintf (name, "ESO MET %s REC%iX", gravi_conf_get_telname (tel, header), diode+1);
+    double pos = cpl_propertylist_get_double(header, name);
     
-    if (metrology_pos) {
-        /* Read from table */
-        sprintf (name, "%.3s-X", gravi_conf_get_telname (tel, header));
-        pos = cpl_table_get (gravi_data_get_table(metrology_pos, "MetReceiver"), name, diode, NULL);
-    }
-    else {
-        /* Read from header */
-        sprintf (name, "ESO MET %s REC%iX", gravi_conf_get_telname (tel, header), diode);
-        pos = cpl_propertylist_get_double(header, name);
-    }
-        
     gravi_msg_function_exit(1);
 	return pos;
 }
 
-double  gravi_metrology_get_posy (gravi_data * metrology_pos,
-                                  cpl_propertylist * header,
+double  gravi_metrology_get_posy (cpl_propertylist * header,
                                   int tel, int diode)
 {
     gravi_msg_function_start(1);
 	cpl_ensure (header, CPL_ERROR_NULL_INPUT, 0);
     
+    /* Read from header */
     char name[100];
-    double pos = 0.0;
-    
-    if (metrology_pos) {
-        /* Read from table */
-        sprintf (name, "%.3s-Y", gravi_conf_get_telname (tel, header));
-        pos = cpl_table_get (gravi_data_get_table(metrology_pos, "MetReceiver"), name, diode, NULL);
-    }
-    else {
-        /* Read from header */
-        sprintf (name, "ESO MET %s REC%iY", gravi_conf_get_telname (tel, header), diode);
-        pos = cpl_propertylist_get_double(header, name);
-    }
+    sprintf (name, "ESO MET %s REC%iY", gravi_conf_get_telname (tel, header), diode+1);
+    double pos = cpl_propertylist_get_double(header, name);
         
     gravi_msg_function_exit(1);
 	return pos;
@@ -2302,6 +2307,19 @@ cpl_error_code gravi_metrology_reduce (gravi_data * data,
 	cpl_propertylist * header = gravi_data_get_header (data);
 	CPLCHECK_MSG ("Cannot load met extension");
 
+	/* Update receiver position */
+	if (met_pos) {
+        cpl_table * pos_table = gravi_data_get_table(met_pos, "MetReceiver");
+        gravi_metrology_update_receiverpos (header, pos_table);
+	}
+    
+    for (int tel=0; tel<4; tel++)
+        for (int diode=0; diode<4; diode++)
+            cpl_msg_info(cpl_func, "Input %d of diode %d X : %g Y : %g ", tel, diode,
+                         gravi_metrology_get_posx (header, tel, diode),
+                         gravi_metrology_get_posy (header, tel, diode));
+    
+
     /* Create the table */
 	cpl_table * vismet_table = NULL;
 	vismet_table = gravi_metrology_create (metrology_table, header);
@@ -2333,15 +2351,6 @@ cpl_error_code gravi_metrology_reduce (gravi_data * data,
 	gravi_data_add_table (data, NULL, GRAVI_OI_VIS_MET_EXT, vismet_table);
 	CPLCHECK_MSG ("Cannot add OI_VIS_MET in p2vmred_data");
 	
-	/* get met position */
-	if (met_pos)
-	{
-		for (int tel=0; tel<4; tel++)
-			for (int diode=0; diode<4; diode++)
-				cpl_msg_info(cpl_func, "Input %d of diode %d X : %g Y : %g ", tel, diode,
-                             gravi_metrology_get_posx (met_pos, header, tel, diode),
-                             gravi_metrology_get_posy (met_pos, header, tel, diode));
-	}
 
     gravi_msg_function_exit(1);
 	return CPL_ERROR_NONE;
