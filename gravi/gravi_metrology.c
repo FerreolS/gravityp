@@ -1290,17 +1290,14 @@ int metrology_algorithm(structTacData * tacData)
 /*----------------------------------------------------------------------------*/
 
 double  gravi_metrology_get_posx (gravi_data * metrology_pos,
-                                  gravi_data * data,
+                                  cpl_propertylist * header,
                                   int tel, int diode)
 {
     gravi_msg_function_start(1);
-	cpl_ensure (data, CPL_ERROR_NULL_INPUT, 0);
+	cpl_ensure (header, CPL_ERROR_NULL_INPUT, 0);
     
     char name[100];
     double pos = 0.0;
-
-    /* Get telescope name */
-    cpl_propertylist * header = gravi_data_get_header (data);
     
     if (metrology_pos) {
         /* Read from table */
@@ -1318,17 +1315,14 @@ double  gravi_metrology_get_posx (gravi_data * metrology_pos,
 }
 
 double  gravi_metrology_get_posy (gravi_data * metrology_pos,
-                                  gravi_data * data,
+                                  cpl_propertylist * header,
                                   int tel, int diode)
 {
     gravi_msg_function_start(1);
-	cpl_ensure (data, CPL_ERROR_NULL_INPUT, 0);
+	cpl_ensure (header, CPL_ERROR_NULL_INPUT, 0);
     
     char name[100];
     double pos = 0.0;
-
-    /* Get telescope name */
-    cpl_propertylist * header = gravi_data_get_header (data);
     
     if (metrology_pos) {
         /* Read from table */
@@ -2345,7 +2339,8 @@ cpl_error_code gravi_metrology_reduce (gravi_data * data,
 		for (int tel=0; tel<4; tel++)
 			for (int diode=0; diode<4; diode++)
 				cpl_msg_info(cpl_func, "Input %d of diode %d X : %g Y : %g ", tel, diode,
-						gravi_metrology_get_posx (met_pos,data, tel, diode), gravi_metrology_get_posy (met_pos,data, tel, diode));
+                             gravi_metrology_get_posx (met_pos, header, tel, diode),
+                             gravi_metrology_get_posy (met_pos, header, tel, diode));
 	}
 
     gravi_msg_function_exit(1);
