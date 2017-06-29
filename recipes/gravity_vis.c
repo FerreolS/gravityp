@@ -865,6 +865,7 @@ cleanup:
 	FREE (cpl_frameset_delete,flatcalib_frameset);
 	FREE (cpl_frameset_delete,badcalib_frameset);
 	FREE (cpl_frameset_delete,p2vmcalib_frameset);
+	FREE (cpl_frameset_delete,metpos_frameset);
 	FREE (cpl_frameset_delete,dark_frameset);
 	FREE (cpl_frameset_delete,diamcat_frameset);
 	FREE (cpl_frameset_delete,sky_frameset);
