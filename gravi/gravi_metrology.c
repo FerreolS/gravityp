@@ -64,6 +64,15 @@ cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
                                     double delay,
                                     cpl_propertylist * header);
 
+cpl_error_code gravi_metrology_update_receiverpos (cpl_propertylist * header,
+                                                   cpl_table *receiver_table);
+
+double  gravi_metrology_get_posx (cpl_propertylist * header,
+                                  int tel, int diode);
+
+double  gravi_metrology_get_posy (cpl_propertylist * header,
+                                  int tel, int diode);
+
 long gravi_round (double number);
 long gravi_round (double number)
 {
@@ -1323,7 +1332,7 @@ double  gravi_metrology_get_posx (cpl_propertylist * header,
     /* Read from header */
     char name[100];
     sprintf (name, "ESO MET %s REC%iX", gravi_conf_get_telname (tel, header), diode+1);
-    double pos = cpl_propertylist_get_double(header, name);
+    double pos = cpl_propertylist_get_double (header, name);
     
     gravi_msg_function_exit(1);
 	return pos;
@@ -1338,7 +1347,7 @@ double  gravi_metrology_get_posy (cpl_propertylist * header,
     /* Read from header */
     char name[100];
     sprintf (name, "ESO MET %s REC%iY", gravi_conf_get_telname (tel, header), diode+1);
-    double pos = cpl_propertylist_get_double(header, name);
+    double pos = cpl_propertylist_get_double (header, name);
         
     gravi_msg_function_exit(1);
 	return pos;
@@ -2311,14 +2320,8 @@ cpl_error_code gravi_metrology_reduce (gravi_data * data,
 	if (met_pos) {
         cpl_table * pos_table = gravi_data_get_table(met_pos, "MetReceiver");
         gravi_metrology_update_receiverpos (header, pos_table);
+        CPLCHECK_MSG ("Cannot update receiver positions");
 	}
-    
-    for (int tel=0; tel<4; tel++)
-        for (int diode=0; diode<4; diode++)
-            cpl_msg_info(cpl_func, "Input %d of diode %d X : %g Y : %g ", tel, diode,
-                         gravi_metrology_get_posx (header, tel, diode),
-                         gravi_metrology_get_posy (header, tel, diode));
-    
 
     /* Create the table */
 	cpl_table * vismet_table = NULL;
@@ -2351,7 +2354,6 @@ cpl_error_code gravi_metrology_reduce (gravi_data * data,
 	gravi_data_add_table (data, NULL, GRAVI_OI_VIS_MET_EXT, vismet_table);
 	CPLCHECK_MSG ("Cannot add OI_VIS_MET in p2vmred_data");
 	
-
     gravi_msg_function_exit(1);
 	return CPL_ERROR_NONE;
 }
