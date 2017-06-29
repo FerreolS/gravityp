@@ -305,7 +305,7 @@ structTacConfiguration * metrology_makeDefaultTacConfiguration(double lambda_met
                 defaultTacConfiguration->rms_flux_telescope[tel][diode][side] = 0.005;
             }
             for (comp = SIN; comp <= COS; comp++) {
-                defaultTacConfiguration->offset_volt_fiber_coupler[tel][side][comp] = 0.01;
+                defaultTacConfiguration->offset_volt_fiber_coupler[tel][side][comp] = 0.00;
                 defaultTacConfiguration->lockin_constant_fiber_coupler[tel][side][comp] = 1.0;
             }
             defaultTacConfiguration->min_allowed_flux_fiber_coupler[tel][side] = 0.01;
@@ -1289,49 +1289,59 @@ int metrology_algorithm(structTacData * tacData)
  */
 /*----------------------------------------------------------------------------*/
 
-double  gravi_metrology_get_posx (gravi_data * metrology_pos, gravi_data * data,
-                                    int tel, int diode)
+double  gravi_metrology_get_posx (gravi_data * metrology_pos,
+                                  gravi_data * data,
+                                  int tel, int diode)
 {
-	cpl_ensure (metrology_pos, CPL_ERROR_NULL_INPUT, 0);
+    gravi_msg_function_start(1);
 	cpl_ensure (data, CPL_ERROR_NULL_INPUT, 0);
+    
+    char name[100];
+    double pos = 0.0;
 
-	/* retrieve tel_name from sta_index */
-	cpl_table * oi_array = gravi_data_get_table(data, GRAVI_OI_ARRAY_EXT);
-	CPLCHECK_INT("load oi_array");
-	cpl_propertylist * plist = gravi_data_get_plist(data, GRAVI_PRIMARY_HDR_EXT);
-	int sta_index = cpl_table_get_int(gravi_data_get_oi_table(data, GRAVI_OI_FLUX_EXT,
-			GRAVI_INSNAME(GRAVI_SC,0, gravi_pfits_get_pola_num (plist, GRAVI_SC))), "STA_INDEX", tel, NULL);
-	CPLCHECK_INT("Get sta_index");
-	int tel_index=0; while ( cpl_table_get (oi_array, "STA_INDEX", tel_index, NULL) != sta_index ) tel_index++;
-	char * col_name = cpl_sprintf("%.3s-X", cpl_table_get_string(oi_array, "TEL_NAME", tel_index));
-
-	/* get the position of the diode */
-	double pos = cpl_table_get (gravi_data_get_table(metrology_pos, "MetReceiver"), col_name, diode, NULL);
-//	printf("sta_index %d, tel_index %d, %s\n : %g",sta_index, tel_index, col_name, pos);
-
+    /* Get telescope name */
+    cpl_propertylist * header = gravi_data_get_header (data);
+    
+    if (metrology_pos) {
+        /* Read from table */
+        sprintf (name, "%.3s-X", gravi_conf_get_telname (tel, header));
+        pos = cpl_table_get (gravi_data_get_table(metrology_pos, "MetReceiver"), name, diode, NULL);
+    }
+    else {
+        /* Read from header */
+        sprintf (name, "ESO MET %s REC%iX", gravi_conf_get_telname (tel, header), diode);
+        pos = cpl_propertylist_get_double(header, name);
+    }
+        
+    gravi_msg_function_exit(1);
 	return pos;
 }
 
-double  gravi_metrology_get_posy (gravi_data * metrology_pos, gravi_data * data,
-                                    int tel, int diode)
+double  gravi_metrology_get_posy (gravi_data * metrology_pos,
+                                  gravi_data * data,
+                                  int tel, int diode)
 {
-	cpl_ensure (metrology_pos, CPL_ERROR_NULL_INPUT, 0);
+    gravi_msg_function_start(1);
 	cpl_ensure (data, CPL_ERROR_NULL_INPUT, 0);
+    
+    char name[100];
+    double pos = 0.0;
 
-	/* retrieve tel_name from sta_index */
-	cpl_table * oi_array = gravi_data_get_table(data, GRAVI_OI_ARRAY_EXT);
-	cpl_propertylist * plist = gravi_data_get_plist(data, GRAVI_PRIMARY_HDR_EXT);
-	CPLCHECK_INT("load oi_array and plist");
-	int sta_index = cpl_table_get_int(gravi_data_get_oi_table(data, GRAVI_OI_FLUX_EXT,
-			GRAVI_INSNAME(GRAVI_SC,0, gravi_pfits_get_pola_num (plist, GRAVI_SC))), "STA_INDEX", tel, NULL);
-	CPLCHECK_INT("Get sta_index");
-	int tel_index=0; while ( cpl_table_get (oi_array, "STA_INDEX", tel_index, NULL) != sta_index ) tel_index++;
-	char * col_name = cpl_sprintf("%.3s-Y", cpl_table_get_string(oi_array, "TEL_NAME", tel_index));
-
-	/* get the position of the diode */
-	double pos = cpl_table_get (gravi_data_get_table(metrology_pos, "MetReceiver"), col_name, diode, NULL);
-//	printf("sta_index %d, tel_index %d, %s\n : %g",sta_index, tel_index, col_name, pos);
-
+    /* Get telescope name */
+    cpl_propertylist * header = gravi_data_get_header (data);
+    
+    if (metrology_pos) {
+        /* Read from table */
+        sprintf (name, "%.3s-Y", gravi_conf_get_telname (tel, header));
+        pos = cpl_table_get (gravi_data_get_table(metrology_pos, "MetReceiver"), name, diode, NULL);
+    }
+    else {
+        /* Read from header */
+        sprintf (name, "ESO MET %s REC%iY", gravi_conf_get_telname (tel, header), diode);
+        pos = cpl_propertylist_get_double(header, name);
+    }
+        
+    gravi_msg_function_exit(1);
 	return pos;
 }
 
