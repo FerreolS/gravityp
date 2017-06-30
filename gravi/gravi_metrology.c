@@ -1284,6 +1284,22 @@ int metrology_algorithm(structTacData * tacData)
                              Functions code
  -----------------------------------------------------------------------------*/
 
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Update the receiver position from header from external calibration
+ *
+ * @param header :         input/output header to be modified
+ * @param receiver_table : table with the new receiver position
+ *
+ * The table shall have a column TEL_NAME with value 'UT1', 'AT3'..., a
+ * column RECX[4] with the x-position of the 4 diode of this telescope,
+ * and a column REXY[4] with the y-position of the 4 diode of this telescope.
+ * 
+ * The function update the keys 'ESO MET UTi RECjX' and 'ESO MET UTi RECjY'
+ * of the the input headers.
+ */
+/*----------------------------------------------------------------------------*/
+
 cpl_error_code gravi_metrology_update_receiverpos (cpl_propertylist * header,
                                                    cpl_table *receiver_table)
 {
@@ -1326,14 +1342,13 @@ cpl_error_code gravi_metrology_update_receiverpos (cpl_propertylist * header,
 
 /*----------------------------------------------------------------------------*/
 /**
- * @brief get the receiver position from header
+ * @brief Read the receiver position from header
  *
  * @param header : input header
- * @param tel : telescope number
- * @param diode : diode number
+ * @param tel : telescope number (0 to 3) in gravity_beam
+ * @param diode : diode number  (0 to 3)
  *
- * @return met position as double
- *
+ * @return Receiver position as double
  */
 /*----------------------------------------------------------------------------*/
 
