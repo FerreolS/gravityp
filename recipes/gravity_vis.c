@@ -91,7 +91,7 @@ static char gravity_vis_description[] =
     GRAVI_SINGLE_SCIENCE_RAW"     : raw object (DPR.TYPE=OBJECT,SINGLE)\n"
     GRAVI_SINGLE_SKY_RAW"     : raw sky (DPR.TYPE=SKY,SINGLE)\n"
     GRAVI_DISP_MODEL" (opt)   : fiber dispersion model (PRO.CATG="GRAVI_DISP_MODEL")\n"
-    GRAVI_MET_POS" (opt)      : met receiver position (PRO.CATG="GRAVI_MET_POS")\n"
+    GRAVI_DIODE_POSITION" (opt)  : met receiver position (PRO.CATG="GRAVI_DIODE_POSITION")\n"
     GRAVI_DIAMETER_CAT" (opt) : catalog of diameter (PRO.CATG="GRAVI_DIAMETER_CAT")\n"
     GRAVI_RECIPE_OUTPUT"\n"
     GRAVI_VIS_SINGLE_SCIENCE"           : OIFITS file with uncalibrated visibilities\n"

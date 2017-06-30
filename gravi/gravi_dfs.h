@@ -67,7 +67,7 @@
 #define GRAVI_EOP_MAP                       "EOP_PARAM"
 #define GRAVI_DISP_MODEL                    "DISP_MODEL"
 #define GRAVI_DIAMETER_CAT                  "DIAMETER_CAT"
-#define GRAVI_MET_POS		                "MET_POS"
+#define GRAVI_DIODE_POSITION		        "DIODE_POSITION"
 #define GRAVI_NAB_CAL                       "NAB_CAL"
 #define GRAVI_DEBUG_MAP                     "DEBUG"
 #define GRAVI_BIASMASK_MAP                  "BIASMASK"

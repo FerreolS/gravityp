@@ -119,7 +119,7 @@ cpl_error_code gravi_dfs_set_groups(cpl_frameset * set)
 				  (!strcmp(tag, GRAVI_DISP_VIS)) ||
 				  (!strcmp(tag, GRAVI_DIAMETER_CAT)) ||
 				  (!strcmp(tag, GRAVI_DISP_MODEL)) ||
-				  (!strcmp(tag, GRAVI_MET_POS))){
+				  (!strcmp(tag, GRAVI_DIODE_POSITION))){
         	/* CALIB frames */
         	cpl_frame_set_group(frame, CPL_FRAME_GROUP_CALIB);
         }else if (
@@ -778,7 +778,7 @@ cpl_frameset * gravi_frameset_extract_disp_map (cpl_frameset * frameset) {
   return gravi_frameset_extract (frameset, tags, 1);
 }
 cpl_frameset * gravi_frameset_extract_met_pos (cpl_frameset * frameset) {
-  const char *tags[] = {GRAVI_MET_POS};
+  const char *tags[] = {GRAVI_DIODE_POSITION};
   return gravi_frameset_extract (frameset, tags, 1);
 }
 cpl_frameset * gravi_frameset_extract_wavelamp_map (cpl_frameset * frameset) {
