@@ -1340,7 +1340,7 @@ cpl_error_code gravi_metrology_update_receiverpos (cpl_propertylist * header,
 double  gravi_metrology_get_posx (cpl_propertylist * header,
                                   int tel, int diode)
 {
-    gravi_msg_function_start(1);
+    gravi_msg_function_start(0);
 	cpl_ensure (header, CPL_ERROR_NULL_INPUT, 0);
     
     /* Read from header */
@@ -1348,14 +1348,14 @@ double  gravi_metrology_get_posx (cpl_propertylist * header,
     sprintf (name, "ESO MET %s REC%iX", gravi_conf_get_telname (tel, header), diode+1);
     double pos = cpl_propertylist_get_double (header, name);
     
-    gravi_msg_function_exit(1);
+    gravi_msg_function_exit(0);
 	return pos;
 }
 
 double  gravi_metrology_get_posy (cpl_propertylist * header,
                                   int tel, int diode)
 {
-    gravi_msg_function_start(1);
+    gravi_msg_function_start(0);
 	cpl_ensure (header, CPL_ERROR_NULL_INPUT, 0);
     
     /* Read from header */
@@ -1363,7 +1363,7 @@ double  gravi_metrology_get_posy (cpl_propertylist * header,
     sprintf (name, "ESO MET %s REC%iY", gravi_conf_get_telname (tel, header), diode+1);
     double pos = cpl_propertylist_get_double (header, name);
         
-    gravi_msg_function_exit(1);
+    gravi_msg_function_exit(0);
 	return pos;
 }
 
