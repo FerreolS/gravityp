@@ -372,7 +372,7 @@ static int gravity_vis(cpl_frameset * frameset,
 	
 	gravi_data * p2vm_map=NULL, * data=NULL, * wave_map=NULL, * dark_map=NULL,
         * profile_map=NULL, * badpix_map=NULL, * preproc_data=NULL, * p2vmred_data=NULL, * tmpvis_data=NULL,
-        * vis_data=NULL, * disp_map=NULL, * met_pos=NULL, * diamcat_data=NULL, *eop_map=NULL;
+        * vis_data=NULL, * disp_map=NULL, * diodepos_data=NULL, * diamcat_data=NULL, *eop_map=NULL;
 	gravi_data ** sky_maps = NULL;
 	
 	int nb_frame, nb_sky, isky;
@@ -478,13 +478,13 @@ static int gravity_vis(cpl_frameset * frameset,
 	else
 	  cpl_msg_info (cpl_func, "There is no DISP_MODEL in the frameset");
 
-    /* Load the MET_POS in the input frameset */
+    /* Load the DIODE_POSITION in the input frameset */
     if (!cpl_frameset_is_empty (metpos_frameset)) {
 	  frame = cpl_frameset_get_position (metpos_frameset, 0);
-	  met_pos = gravi_data_load_frame (frame, used_frameset);
+	  diodepos_data = gravi_data_load_frame (frame, used_frameset);
 	}
 	else
-	  cpl_msg_info (cpl_func, "There is no MET_POS in the frameset");
+	  cpl_msg_info (cpl_func, "There is no DIODE_POSITION in the frameset");
 
 	/* Load the EOP_PARAM */
 	if ( !cpl_frameset_is_empty (eop_frameset) ) {
@@ -721,7 +721,7 @@ static int gravity_vis(cpl_frameset * frameset,
 		CPLCHECK_CLEAN ("Cannot reduce OPDC");
         
 		/* Reduce the metrology into OI_VIS_MET */
-		gravi_metrology_reduce (p2vmred_data, eop_map, met_pos, parlist);
+		gravi_metrology_reduce (p2vmred_data, eop_map, diodepos_data, parlist);
 		CPLCHECK_CLEAN ("Cannot reduce metrology");
 
 		/* Compute the uv and pointing directions with ERFA */
@@ -859,6 +859,7 @@ cleanup:
 	FREE (gravi_data_delete,vis_data);
 	FREE (gravi_data_delete,tmpvis_data);
 	FREE (gravi_data_delete,diamcat_data);
+	FREE (gravi_data_delete,diodepos_data);
 	FREE (gravi_data_delete,eop_map);
 	FREE (cpl_frameset_delete,darkcalib_frameset);
 	FREE (cpl_frameset_delete,wavecalib_frameset);
