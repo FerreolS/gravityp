@@ -1288,20 +1288,35 @@ cpl_error_code gravi_metrology_update_receiverpos (cpl_propertylist * header,
                                                    cpl_table *receiver_table)
 {
     gravi_msg_function_start(1);
-	cpl_ensure (header, CPL_ERROR_NULL_INPUT, 0);
-	cpl_ensure (receiver_table, CPL_ERROR_NULL_INPUT, 0);
+	cpl_ensure_code (header, CPL_ERROR_NULL_INPUT);
+	cpl_ensure_code (receiver_table, CPL_ERROR_NULL_INPUT);
 
-    double pos;
-    char name[100];
-    
+    /* Loop on telescope */
     for (int tel=0; tel<4; tel++) {
+        const char * telname = gravi_conf_get_telname (tel, header);
+
+        /* Get row */
+        cpl_size row;
+        for (row = 0; row<4; row++) {
+            if (!strcmp (telname, cpl_table_get_string (receiver_table, "TEL_NAME", row) )) break;
+        }
+        cpl_ensure_code (row<4, CPL_ERROR_ILLEGAL_INPUT);
+
+        /* Copy in header */
         for (int diode=0; diode<4; diode++) {
-            /* Read from table */
-            sprintf (name, "%.3s-Y", gravi_conf_get_telname (tel, header));
-            pos = cpl_table_get (receiver_table, name, diode, NULL);
+            char name[100];
+            
             /* Set in header */
-            sprintf (name, "ESO MET %s REC%iX", gravi_conf_get_telname (tel, header), diode+1);
-            cpl_propertylist_update_double (header, name, pos);
+            double posx = gravi_table_get_value (receiver_table,"RECX",row,diode);
+            sprintf (name, "ESO MET %s REC%iX", telname, diode+1);
+            cpl_propertylist_update_double (header, name, posx);
+            
+            /* Set in header */
+            double posy = gravi_table_get_value (receiver_table,"RECY",row,diode);
+            sprintf (name, "ESO MET %s REC%iY", telname, diode+1);
+            cpl_propertylist_update_double (header, name, posy);
+
+            cpl_msg_info (cpl_func, "Update diode %i of %s: x=%.3f, y=%.3f", diode+1, telname, posx, posy);
         }
     }
 
@@ -1311,12 +1326,11 @@ cpl_error_code gravi_metrology_update_receiverpos (cpl_propertylist * header,
 
 /*----------------------------------------------------------------------------*/
 /**
- * @brief get the receiver position in the MET_POS table
+ * @brief get the receiver position from header
  *
- * @param metrology_table: input MET_POT data
+ * @param header : input header
  * @param tel : telescope number
  * @param diode : diode number
- *
  *
  * @return met position as double
  *
@@ -2318,7 +2332,7 @@ cpl_error_code gravi_metrology_reduce (gravi_data * data,
 
 	/* Update receiver position */
 	if (met_pos) {
-        cpl_table * pos_table = gravi_data_get_table(met_pos, "MetReceiver");
+        cpl_table * pos_table = gravi_data_get_table (met_pos, "RECEIVER_POSITION");
         gravi_metrology_update_receiverpos (header, pos_table);
         CPLCHECK_MSG ("Cannot update receiver positions");
 	}
