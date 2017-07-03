@@ -3273,11 +3273,11 @@
         </property>
         <property name="P2VM_config" class="ptolemy.data.expr.StringParameter" value="WAVE_RAW,WAVESC_RAW,FLAT_RAW,P2VM_RAW">
         </property>
-        <property name="P2VM_min_number" class="ptolemy.data.expr.Parameter" value="12">
+        <property name="P2VM_min_number" class="ptolemy.data.expr.Parameter" value="13">
         </property>
         <property name="DARK_config" class="ptolemy.data.expr.StringParameter" value="DARK_RAW">
         </property>
-        <property name="SCIENCE-CALIBRATOR_config" class="ptolemy.data.expr.StringParameter" value="SINGLE_SCIENCE_RAW,SINGLE_SCIENCE_SKY_RAW,SINGLE_CALIB_RAW,SINGLE_CALIB_SKY_RAW,DUAL_SCIENCE_RAW,DUAL_SCIENCE_SKY_RAW,DUAL_CALIB_RAW,DUAL_CALIB_SKY_RAW">
+        <property name="SCIENCE-CALIBRATOR_config" class="ptolemy.data.expr.StringParameter" value="SINGLE_SCI_RAW,SINGLE_SKY_RAW,SINGLE_CAL_RAW,DUAL_SCI_RAW,DUAL_SKY_RAW,DUAL_CAL_RAW">
         </property>
         <port name="in" class="ptolemy.actor.TypedIOPort">
             <property name="input"/>
