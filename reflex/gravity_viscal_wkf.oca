@@ -46,7 +46,7 @@ if PRO.CATG=="DIAMETER_CAT" and INSTRUME=="GRAVITY" then
 //*****************************************************
 
 select execute(ACTION_VISCALIB) from inputFiles where EXEC.CATG == "VIS_TO_CALIB"
-  group by PRO.NIGHT.OBS;
+  group by INS.SPEC.RES,INS.POLA.MODE,PRO.NIGHT.OBS;
 
 //*****************************************************
 //Definitions of actions 
