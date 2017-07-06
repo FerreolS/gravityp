@@ -825,7 +825,9 @@ cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y, cp
     CPLCHECK_MSG("Error reading fit result");
 
     /* Fill image with zero at the detected position */
-    cpl_image_set (img, (cpl_size)(*x), (cpl_size)(*y), 0.0);
+    if (*x > 0. && *y > 0.) {
+      cpl_image_set (img, (cpl_size)(*x), (cpl_size)(*y), 0.0);
+    }
     CPLCHECK_MSG("Error setting peak to zero");
     
     /* Delete */
@@ -1018,19 +1020,38 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         /* Box size */
         cpl_size size = 25;
 
+	double xSCguess=xSC, ySCguess=ySC, xFTguess=xFT, yFTguess=yFT;
+	double qc_val=0.;
+
         /* Detec SC */
         gravi_acq_fit_gaussian (mean_img, &xSC, &ySC, size);
 	CPLCHECK_MSG("Error fitting SC");
 
         /* Add QC parameters */
         sprintf (qc_name, "ESO QC ACQ FIELD%i SC_X", tel+1);
-        cpl_msg_info (cpl_func, "%s = %f", qc_name, xSC + sx - 1 - nsx*tel);
-        cpl_propertylist_update_double (o_header, qc_name, xSC + sx - 1 - nsx*tel);
+	if (xSC==0.) {
+	  /* Fitting failed: put QC to 0., reset xSC to gues value */
+	  qc_val = 0.;
+	  xSC = xSCguess;
+	} else {
+	  /* Fiting succeeded: shift into full frame */
+	  qc_val = xSC + sx - 1 - nsx*tel;
+	}
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, qc_val);
+        cpl_propertylist_update_double (o_header, qc_name, qc_val);
         cpl_propertylist_set_comment (o_header, qc_name, "[pixel] position in mean image");
         
         sprintf (qc_name, "ESO QC ACQ FIELD%i SC_Y", tel+1);
-        cpl_msg_info (cpl_func, "%s = %f", qc_name, ySC + sy -1);
-        cpl_propertylist_update_double (o_header, qc_name, ySC + sy -1);
+	if (ySC==0.) {
+	  /* Fitting failed: put QC to 0., reset ySC to gues value */
+	  qc_val = 0.;
+	  ySC = ySCguess;
+	} else {
+	  /* Fiting succeeded: shift into full frame */
+	  qc_val =  ySC + sy -1;
+	}
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, qc_val);
+        cpl_propertylist_update_double (o_header, qc_name, qc_val);
         cpl_propertylist_set_comment (o_header, qc_name, "[pixel] position in mean image");
         
 	if (rho_in != 0.) {
@@ -1044,13 +1065,29 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
 
         /* Add QC parameters */
         sprintf (qc_name, "ESO QC ACQ FIELD%i FT_X", tel+1);
-        cpl_msg_info (cpl_func, "%s = %f", qc_name, xFT + sx - 1 - nsx*tel);
-        cpl_propertylist_update_double (o_header, qc_name, xFT + sx - 1 - nsx*tel);
+	if (xFT==0.) {
+	  /* Fitting failed: put QC to 0., reset xFT to gues value */
+	  qc_val = 0.;
+	  xFT = xFTguess;
+	} else {
+	  /* Fiting succeeded: shift into full frame */
+	  qc_val = xFT + sx - 1 - nsx*tel;
+	}
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, qc_val);
+        cpl_propertylist_update_double (o_header, qc_name, qc_val);
         cpl_propertylist_set_comment (o_header, qc_name, "[pixel] position in mean image");
         
         sprintf (qc_name, "ESO QC ACQ FIELD%i FT_Y", tel+1);
-        cpl_msg_info (cpl_func, "%s = %f", qc_name, yFT + sy -1);
-        cpl_propertylist_update_double (o_header, qc_name, yFT + sy -1);
+	if (yFT==0.) {
+	  /* Fitting failed: put QC to 0., reset yFT to gues value */
+	  qc_val = 0.;
+	  yFT = yFTguess;
+	} else {
+	  /* Fiting succeeded: shift into full frame */
+	  qc_val =  yFT + sy -1;
+	}
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, qc_val);
+        cpl_propertylist_update_double (o_header, qc_name, qc_val);
         cpl_propertylist_set_comment (o_header, qc_name, "[pixel] position in mean image");
         
         /* Loop on all images */
@@ -1068,8 +1105,8 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
 	    CPLCHECK_MSG("Error fitting SC");
 
 	    /* Shift back positions to full frame */
-	    xsc += sx - 1 - nsx*tel;
-	    ysc += sy - 1;
+	    if (xsc != 0.) xsc += sx - 1 - nsx*tel;
+	    if (ysc != 0.) ysc += sy - 1;
             
             cpl_table_set (acqcam_table, "FIELD_SC_X", row*ntel+tel, xsc);
             cpl_table_set (acqcam_table, "FIELD_SC_Y", row*ntel+tel, ysc);
@@ -1081,8 +1118,8 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
 	      gravi_acq_fit_gaussian (img, &xft, &yft, size);
 	      CPLCHECK_MSG("Error fitting FT");
 	      /* Shift back positions to full frame */
-	      xft += sx - 1 - nsx*tel;
-	      yft += sy - 1;
+	      if (xft != 0.) xft += sx - 1 - nsx*tel;
+	      if (yft != 0.) yft += sy - 1;
 	    } else {
 	      xft=xsc;
 	      yft=ysc;
