@@ -835,7 +835,6 @@ cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y, cp
       *x = 0.;
       *y = 0.;
     }
-    printf("SNR=%g\n", A/( rms * 2.*M_PI*sx*sy*sqrt(1-rho*rho) ));
     CPLCHECK_MSG("Error checking significance of fit result");
 
     /* Fill image with zero at the detected position */
