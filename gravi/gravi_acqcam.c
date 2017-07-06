@@ -813,9 +813,10 @@ cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y, cp
     CPLCHECK_MSG("Error getting median");
     
     /* Fit Gaussian */
+    double rms=0.;
     cpl_fit_image_gaussian (img, NULL, (cpl_size)(*x), (cpl_size)(*y),
                             size, size, parameters,
-                            NULL, NULL, NULL, NULL, NULL,
+                            NULL, NULL, &rms, NULL, NULL,
                             NULL, NULL, NULL, NULL);
     CPLCHECK_MSG("Error fitting Gaussian");
 
@@ -823,6 +824,19 @@ cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y, cp
     *x = cpl_array_get (parameters,3,NULL);
     *y = cpl_array_get (parameters,4,NULL);
     CPLCHECK_MSG("Error reading fit result");
+
+    /* Check errors */
+    /* reject result if peak is below 3*rms */
+    double A   = cpl_array_get (parameters, 1, NULL);
+    double rho = cpl_array_get (parameters, 2, NULL);
+    double sx  = cpl_array_get (parameters, 5, NULL);
+    double sy  = cpl_array_get (parameters, 6, NULL);
+    if ( A < 3. * rms * 2.*M_PI*sx*sy*sqrt(1-rho*rho) ) {
+      *x = 0.;
+      *y = 0.;
+    }
+    printf("SNR=%g\n", A/( rms * 2.*M_PI*sx*sy*sqrt(1-rho*rho) ));
+    CPLCHECK_MSG("Error checking significance of fit result");
 
     /* Fill image with zero at the detected position */
     if (*x > 0. && *y > 0.) {
