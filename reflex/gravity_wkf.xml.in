@@ -3273,7 +3273,7 @@
         </property>
         <property name="P2VM_config" class="ptolemy.data.expr.StringParameter" value="WAVE_RAW,WAVESC_RAW,FLAT_RAW,P2VM_RAW">
         </property>
-        <property name="P2VM_min_number" class="ptolemy.data.expr.Parameter" value="13">
+        <property name="P2VM_min_number" class="ptolemy.data.expr.Parameter" value="12">
         </property>
         <property name="DARK_config" class="ptolemy.data.expr.StringParameter" value="DARK_RAW">
         </property>
