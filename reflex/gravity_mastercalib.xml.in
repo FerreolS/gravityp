@@ -3173,7 +3173,7 @@
         </property>
         <property name="derivedFrom" class="org.kepler.moml.NamedObjIdReferralList" value="urn:lsid:kepler-project.org:actor:903:1:urn:lsid:kepler-project.org/ns/:52924:7:99:urn:lsid:kepler-project.org/ns/:80550:67:11">
         </property>
-        <property name="SCIENCE-CALIBRATOR_config" class="ptolemy.data.expr.StringParameter" value="SINGLE_SCIENCE_RAW,SINGLE_SCIENCE_SKY_RAW,SINGLE_CALIB_RAW,SINGLE_CALIB_SKY_RAW,DUAL_SCIENCE_RAW,DUAL_SCIENCE_SKY_RAW,DUAL_CALIB_RAW,DUAL_CALIB_SKY_RAW,BAD,DARK,FLAT,WAVE,P2VM">
+        <property name="SCIENCE-CALIBRATOR_config" class="ptolemy.data.expr.StringParameter" value="SINGLE_SCI_RAW,SINGLE_SKY_RAW,SINGLE_CAL_RAW,DUAL_SCI_RAW,DUAL_SKY_RAW,DUAL_CAL_RAW,BAD,DARK,FLAT,WAVE,P2VM">
         </property>
         <port name="in" class="ptolemy.actor.TypedIOPort">
             <property name="input"/>
