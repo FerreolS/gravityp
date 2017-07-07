@@ -826,12 +826,19 @@ cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y, cp
     CPLCHECK_MSG("Error reading fit result");
 
     /* Check errors */
-    /* reject result if peak is below 3*rms */
+    /* reject result if either:       */
+    /*          * peak is below 3*rms */
+    /*          * sigma_x > 5 pixels  */
+    /*          * sigma_y > 5 pixels  */
     double A   = cpl_array_get (parameters, 1, NULL);
     double rho = cpl_array_get (parameters, 2, NULL);
     double sx  = cpl_array_get (parameters, 5, NULL);
     double sy  = cpl_array_get (parameters, 6, NULL);
-    if ( A < 3. * rms * 2.*M_PI*sx*sy*sqrt(1-rho*rho) ) {
+    if ( A < 3. * rms * 2.*M_PI*sx*sy*sqrt(1-rho*rho) ||
+	 sx > 5. ||
+	 sy > 5.
+	 ) {
+      cpl_msg_info (cpl_func, "rejecting fit: x=%g, y=%g, SNR=%g, sx=%g, sy=%g", *x, *y, A/(rms * 2.*M_PI*sx*sy*sqrt(1-rho*rho)), sx, sy);
       *x = 0.;
       *y = 0.;
     }
@@ -1031,7 +1038,10 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
 	}
 
         /* Box size */
-        cpl_size size = 25;
+	/* Optimal size has been determined empirically. */
+	/* Too small value (15) will sometimes miss even a bright target. */
+	/* Too large value (25) will often pick a wrong star (or backround noise) */
+        cpl_size size = 20;
 
 	double xSCguess=xSC, ySCguess=ySC, xFTguess=xFT, yFTguess=yFT;
 	double qc_val=0.;
