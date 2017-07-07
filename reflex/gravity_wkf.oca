@@ -19,14 +19,14 @@ if DPR.CATG like "%CALIB%" and DPR.TYPE like "%OBJECT%" and DPR.TYPE like "%SING
   REFLEX.TARGET = "T";
 }
 
-if DPR.CATG like "%SCIENCE%" and DPR.TYPE like "%SKY%" and INSTRUME=="GRAVITY" then
+if DPR.CATG like "%SCIENCE%" and DPR.TYPE like "%SKY%" and DPR.TYPE like "%SINGLE%" and INSTRUME=="GRAVITY" then
 {
   DO.CATG = "SINGLE_SKY_RAW";
   REFLEX.CATG = "SINGLE_SKY_RAW";
   RAW.TYPE = "SINGLE_SCI_RAW";
 }
 
-if DPR.CATG like "%CALIB%" and DPR.TYPE like "%SKY%" and INSTRUME=="GRAVITY" then
+if DPR.CATG like "%CALIB%" and DPR.TYPE like "%SKY%" and DPR.TYPE like "%SINGLE%" and INSTRUME=="GRAVITY" then
 {
   DO.CATG = "SINGLE_SKY_RAW";
   REFLEX.CATG = "SINGLE_SKY_RAW";
