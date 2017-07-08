@@ -76,7 +76,7 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img, cpl_size ntry,
 
 double gravi_acqcam_z2meter (double PositionPixels);
 
-cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y, cpl_size size);
+cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y, double *ex, double *ey, cpl_size size);
 
 /* This global variable optimises the computation
  * of partial derivative on fitted parameters */
@@ -782,6 +782,7 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
  * 
  * @param img:    input image
  * @param x,y:    input/output position (guess and best fit)
+ * @param ex,ey:  output uncertainties on x and y
  * @param size:   size of box to consider
  * 
  * The function use cpl_fit_image_gaussian to fit a Gaussian into the image
@@ -789,7 +790,7 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
  */
 /*----------------------------------------------------------------------------*/
 
-cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y, cpl_size size)
+cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y, double *ex, double *ey, cpl_size size)
 {
     gravi_msg_function_start(0);
     cpl_ensure_code (img, CPL_ERROR_NULL_INPUT);
@@ -834,13 +835,19 @@ cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y, cp
     double rho = cpl_array_get (parameters, 2, NULL);
     double sx  = cpl_array_get (parameters, 5, NULL);
     double sy  = cpl_array_get (parameters, 6, NULL);
-    if ( A < 3. * rms * 2.*M_PI*sx*sy*sqrt(1-rho*rho) ||
-	 sx > 5. ||
-	 sy > 5.
-	 ) {
+
+    if ( A < 0. ) {
+      // detection is just not significant
       cpl_msg_info (cpl_func, "rejecting fit: x=%g, y=%g, SNR=%g, sx=%g, sy=%g", *x, *y, A/(rms * 2.*M_PI*sx*sy*sqrt(1-rho*rho)), sx, sy);
       *x = 0.;
       *y = 0.;
+      *ex = -1.;
+      *ey = -1.;
+    } else {
+      // cf. Condon 1996, PASP 109:166
+      double cst = 2. * sqrt(2. * M_PI * (1. - rho*rho) * sx * sy) * rms / A;
+      *ex=cst*sx;
+      *ey=cst*sy;
     }
     CPLCHECK_MSG("Error checking significance of fit result");
 
@@ -933,8 +940,12 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
     /* Create columns */
     gravi_table_new_column (acqcam_table, "FIELD_SC_X", "pix", CPL_TYPE_DOUBLE);
     gravi_table_new_column (acqcam_table, "FIELD_SC_Y", "pix", CPL_TYPE_DOUBLE);
+    gravi_table_new_column (acqcam_table, "FIELD_SC_XERR", "pix", CPL_TYPE_DOUBLE);
+    gravi_table_new_column (acqcam_table, "FIELD_SC_YERR", "pix", CPL_TYPE_DOUBLE);
     gravi_table_new_column (acqcam_table, "FIELD_FT_X", "pix", CPL_TYPE_DOUBLE);
     gravi_table_new_column (acqcam_table, "FIELD_FT_Y", "pix", CPL_TYPE_DOUBLE);
+    gravi_table_new_column (acqcam_table, "FIELD_FT_XERR", "pix", CPL_TYPE_DOUBLE);
+    gravi_table_new_column (acqcam_table, "FIELD_FT_YERR", "pix", CPL_TYPE_DOUBLE);
 
     /* Position of roof center on full frame */
     double roof_x[] = {274.4, 787.1, 1236.1, 1673.4};
@@ -1044,10 +1055,11 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         cpl_size size = 20;
 
 	double xSCguess=xSC, ySCguess=ySC, xFTguess=xFT, yFTguess=yFT;
+	double ex, ey;
 	double qc_val=0.;
 
         /* Detec SC */
-        gravi_acq_fit_gaussian (mean_img, &xSC, &ySC, size);
+        gravi_acq_fit_gaussian (mean_img, &xSC, &ySC, &ex, &ey, size);
 	CPLCHECK_MSG("Error fitting SC");
 
         /* Add QC parameters */
@@ -1079,7 +1091,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         
 	if (rho_in != 0.) {
 	  /* Detec FT */
-	  gravi_acq_fit_gaussian (mean_img, &xFT, &yFT, size);
+	  gravi_acq_fit_gaussian (mean_img, &xFT, &yFT, &ex, &ey, size);
 	  CPLCHECK_MSG("Error fitting FT");
 	} else {
 	  xFT=xSC;
@@ -1124,7 +1136,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
 
             /* Detec SC */
             double xsc = xSC, ysc = ySC;
-            gravi_acq_fit_gaussian (img, &xsc, &ysc, size);
+            gravi_acq_fit_gaussian (img, &xsc, &ysc, &ex, &ey, size);
 	    CPLCHECK_MSG("Error fitting SC");
 
 	    /* Shift back positions to full frame */
@@ -1133,12 +1145,14 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
             
             cpl_table_set (acqcam_table, "FIELD_SC_X", row*ntel+tel, xsc);
             cpl_table_set (acqcam_table, "FIELD_SC_Y", row*ntel+tel, ysc);
+            cpl_table_set (acqcam_table, "FIELD_SC_XERR", row*ntel+tel, ex);
+            cpl_table_set (acqcam_table, "FIELD_SC_YERR", row*ntel+tel, ey);
 	    CPLCHECK_MSG("Error setting SC columns");
 
             /* Detec FT */
 	    double xft = xFT, yft = yFT;
 	    if (rho_in != 0.) {
-	      gravi_acq_fit_gaussian (img, &xft, &yft, size);
+	      gravi_acq_fit_gaussian (img, &xft, &yft, &ex, &ey, size);
 	      CPLCHECK_MSG("Error fitting FT");
 	      /* Shift back positions to full frame */
 	      if (xft != 0.) xft += sx - 1 - nsx*tel;
@@ -1146,10 +1160,13 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
 	    } else {
 	      xft=xsc;
 	      yft=ysc;
+	      // don't touch the errors as we use the same variables for SC and FT
 	    }
             
             cpl_table_set (acqcam_table, "FIELD_FT_X", row*ntel+tel, xft);
             cpl_table_set (acqcam_table, "FIELD_FT_Y", row*ntel+tel, yft);
+            cpl_table_set (acqcam_table, "FIELD_FT_XERR", row*ntel+tel, ex);
+            cpl_table_set (acqcam_table, "FIELD_FT_YERR", row*ntel+tel, ey);
 	    CPLCHECK_MSG("Error setting FT column");
         } /* End loop on images */
 
