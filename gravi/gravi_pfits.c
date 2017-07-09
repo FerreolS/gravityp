@@ -580,6 +580,11 @@ double gravi_pfits_get_fangle_acqcam (const cpl_propertylist * plist, int tel)
     /* Position angle of binary */
     double dx = cpl_propertylist_get_double (plist, "ESO INS SOBJ X");
     double dy = cpl_propertylist_get_double (plist, "ESO INS SOBJ Y");
+    /* If in a mapping template, get stqrting position */
+    if (cpl_propertylist_has(plist, "ESO INS SOBJ OFFX")) {
+      dx -= cpl_propertylist_get_double (plist, "ESO INS SOBJ OFFX");
+      dy -= cpl_propertylist_get_double (plist, "ESO INS SOBJ OFFY");
+    }
     double posangle = atan2 (dx, dy) * CPL_MATH_DEG_RAD;
 
     /* Angle of North in ACQ image, from vertical (y+) to right (x+) */

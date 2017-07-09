@@ -946,6 +946,12 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
     gravi_table_new_column (acqcam_table, "FIELD_FT_Y", "pix", CPL_TYPE_DOUBLE);
     gravi_table_new_column (acqcam_table, "FIELD_FT_XERR", "pix", CPL_TYPE_DOUBLE);
     gravi_table_new_column (acqcam_table, "FIELD_FT_YERR", "pix", CPL_TYPE_DOUBLE);
+    gravi_table_new_column (acqcam_table, "FIELD_SCALE", "mas/pix", CPL_TYPE_DOUBLE);
+    gravi_table_new_column (acqcam_table, "FIELD_SCALEERR", "mas/pix", CPL_TYPE_DOUBLE);
+    gravi_table_new_column (acqcam_table, "FIELD_SC_FIBER_DX", "pix", CPL_TYPE_DOUBLE);
+    gravi_table_new_column (acqcam_table, "FIELD_SC_FIBER_DY", "pix", CPL_TYPE_DOUBLE);
+    gravi_table_new_column (acqcam_table, "FIELD_SC_FIBER_DXERR", "pix", CPL_TYPE_DOUBLE);
+    gravi_table_new_column (acqcam_table, "FIELD_SC_FIBER_DYERR", "pix", CPL_TYPE_DOUBLE);
 
     /* Position of roof center on full frame */
     double roof_x[] = {274.4, 787.1, 1236.1, 1673.4};
@@ -967,8 +973,26 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
     }
 
     /* Compute separation */
-    double dx_in = cpl_propertylist_get_double(header, "ESO INS SOBJ X");
-    double dy_in = cpl_propertylist_get_double(header, "ESO INS SOBJ Y");
+    /* Current FT --> SC vector */ 
+    double sobj_x = cpl_propertylist_get_double(header, "ESO INS SOBJ X");
+    double sobj_y = cpl_propertylist_get_double(header, "ESO INS SOBJ Y");
+    /* Accumulated mapping offsets */
+    double sobj_offx=0., sobj_offy=0, sobj_drho=0., sobj_dth=0.;
+    if (cpl_propertylist_has(header, "ESO INS SOBJ OFFX")) {
+      /* mapping / mosaicing blind offsets from otiginal acquisition
+	 to current position */
+      sobj_offx = cpl_propertylist_get_double(header, "ESO INS SOBJ OFFX");
+      sobj_offy = cpl_propertylist_get_double(header, "ESO INS SOBJ OFFY");
+      /* distance from acquired SC position to current SC position in mas */
+      sobj_drho = sqrt(sobj_offx*sobj_offx+sobj_offy*sobj_offy);
+      /* position angle on sky from acquired SC position to
+	 current SC position, neglecting anamorphism variations */
+      sobj_dth = atan2(sobj_offx, sobj_offy)*180./M_PI;
+    }
+    /* Recover position of originally acquired star, before any blind offset */
+    double dx_in = sobj_x - sobj_offx;
+    double dy_in = sobj_y - sobj_offy;
+
     double rho_in = sqrt(dx_in*dx_in + dy_in*dy_in);
     CPLCHECK_MSG ("Cannot get separation");
     char const * dpr_type = cpl_propertylist_get_string(header, "ESO DPR TYPE");
@@ -1006,6 +1030,33 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
 	} else 
 	  return cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
 					"Cannot determine scale");
+
+	/* Position of the fibres */
+	double fiber_xft=0.;
+	double fiber_yft=0.;
+	double fiber_xsc=0.;
+	double fiber_ysc=0.;
+	sprintf (name, "ESO ACQ FIBER FT%dX", tel + 1);
+	if (cpl_propertylist_has(header, name)) {
+	  fiber_xft=cpl_propertylist_get_double(header, name);
+	  sprintf (name, "ESO ACQ FIBER FT%dY", tel + 1);
+	  fiber_yft=cpl_propertylist_get_double(header, name);
+	  sprintf (name, "ESO ACQ FIBER SC%dX", tel + 1);
+	  fiber_xsc=cpl_propertylist_get_double(header, name);
+	  sprintf (name, "ESO ACQ FIBER SC%dY", tel + 1);
+	  fiber_ysc=cpl_propertylist_get_double(header, name);
+	}
+	double fiber_ft_sc_x=fiber_xsc-fiber_xft;
+	double fiber_ft_sc_y=fiber_ysc-fiber_yft;
+
+        /* Get the North positin angle on the camera */
+        double fangle = gravi_pfits_get_fangle_acqcam (header, tel);
+	CPLCHECK ("Cannot get rotation");
+
+	/* Mapping/mosaicing offset on acq cam axes, in mas,
+	   neglecting amnamorphism variations */
+	double sobj_offx_cam = sobj_drho * sin((fangle+sobj_dth)/180.*M_PI);
+	double sobj_offy_cam = sobj_drho * cos((fangle+sobj_dth)/180.*M_PI);
 
 	/* If sub-windowing, we read the sub-window start for field */
 	if ( nsx != 512 ) {
@@ -1124,7 +1175,50 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         cpl_msg_info (cpl_func, "%s = %f", qc_name, qc_val);
         cpl_propertylist_update_double (o_header, qc_name, qc_val);
         cpl_propertylist_set_comment (o_header, qc_name, "[pixel] position in mean image");
-        
+
+	if (rho_in != 0.) {
+	  /* Measure plate scale */
+	  sprintf (qc_name, "ESO QC ACQ FIELD%i SCALE", tel+1);
+	  double sep = sqrt((ySC-yFT)*(ySC-yFT)+(xSC-xFT)*(xSC-xFT));
+	  double pscale = sep ? rho_in/sep : 0.;
+	  qc_val=pscale;
+	  cpl_msg_info (cpl_func, "%s = %f", qc_name, qc_val);
+	  cpl_propertylist_update_double (o_header, qc_name, qc_val);
+	  cpl_propertylist_set_comment (o_header, qc_name,
+					"[mas/pixel] plate-scale in the "
+					"FT-SC direction");
+
+	  /* Error in SC fibre positioning */
+	  /* The three terms are 
+	       - offset from FT target as detected to original SC
+                 target as detected;
+	       - blind offset command from mapping template projected
+                 on acqisition camera;
+	       - offset from FT fiber to SC fiber. */
+	  sprintf (qc_name, "ESO QC ACQ FIELD%i SC_FIBER_DX", tel+1);
+	  qc_val = 0;
+	  if (scale) {
+	    qc_val = (xSC-xFT) + sobj_offx_cam/scale - fiber_ft_sc_x;
+	  }
+	  cpl_msg_info (cpl_func, "%s = %f", qc_name, qc_val);
+	  cpl_propertylist_update_double (o_header, qc_name, qc_val);
+	  cpl_propertylist_set_comment (o_header, qc_name,
+					"[pixel] dx from SC fiber to "
+					"SC object");
+
+	  sprintf (qc_name, "ESO QC ACQ FIELD%i SC_FIBER_DY", tel+1);
+	  qc_val = 0;
+	  if (scale) {
+	    qc_val = (ySC-yFT) + sobj_offy_cam/pscale - fiber_ft_sc_y;
+	  }
+	  cpl_msg_info (cpl_func, "%s = %f", qc_name, qc_val);
+	  cpl_propertylist_update_double (o_header, qc_name, qc_val);
+	  cpl_propertylist_set_comment (o_header, qc_name,
+					"[pixel] dx from SC fiber to "
+					"SC object");
+
+	}
+
         /* Loop on all images */
         for (cpl_size row = 0; row < nrow; row++) {
             if (row %10 == 0 || row == (nrow-1))
@@ -1135,8 +1229,8 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
 	    CPLCHECK_MSG("Error getting image");
 
             /* Detec SC */
-            double xsc = xSC, ysc = ySC;
-            gravi_acq_fit_gaussian (img, &xsc, &ysc, &ex, &ey, size);
+            double xsc = xSC, ysc = ySC, exsc=0., eysc=0.;
+            gravi_acq_fit_gaussian (img, &xsc, &ysc, &exsc, &eysc, size);
 	    CPLCHECK_MSG("Error fitting SC");
 
 	    /* Shift back positions to full frame */
@@ -1145,14 +1239,14 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
             
             cpl_table_set (acqcam_table, "FIELD_SC_X", row*ntel+tel, xsc);
             cpl_table_set (acqcam_table, "FIELD_SC_Y", row*ntel+tel, ysc);
-            cpl_table_set (acqcam_table, "FIELD_SC_XERR", row*ntel+tel, ex);
-            cpl_table_set (acqcam_table, "FIELD_SC_YERR", row*ntel+tel, ey);
+            cpl_table_set (acqcam_table, "FIELD_SC_XERR", row*ntel+tel, exsc);
+            cpl_table_set (acqcam_table, "FIELD_SC_YERR", row*ntel+tel, eysc);
 	    CPLCHECK_MSG("Error setting SC columns");
 
             /* Detec FT */
-	    double xft = xFT, yft = yFT;
+	    double xft = xFT, yft = yFT, exft=0., eyft=0.;
 	    if (rho_in != 0.) {
-	      gravi_acq_fit_gaussian (img, &xft, &yft, &ex, &ey, size);
+	      gravi_acq_fit_gaussian (img, &xft, &yft, &exft, &eyft, size);
 	      CPLCHECK_MSG("Error fitting FT");
 	      /* Shift back positions to full frame */
 	      if (xft != 0.) xft += sx - 1 - nsx*tel;
@@ -1160,14 +1254,52 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
 	    } else {
 	      xft=xsc;
 	      yft=ysc;
-	      // don't touch the errors as we use the same variables for SC and FT
+	      exft=exsc;
+	      eyft=eysc;
 	    }
             
             cpl_table_set (acqcam_table, "FIELD_FT_X", row*ntel+tel, xft);
             cpl_table_set (acqcam_table, "FIELD_FT_Y", row*ntel+tel, yft);
-            cpl_table_set (acqcam_table, "FIELD_FT_XERR", row*ntel+tel, ex);
-            cpl_table_set (acqcam_table, "FIELD_FT_YERR", row*ntel+tel, ey);
+            cpl_table_set (acqcam_table, "FIELD_FT_XERR", row*ntel+tel, exft);
+            cpl_table_set (acqcam_table, "FIELD_FT_YERR", row*ntel+tel, eyft);
 	    CPLCHECK_MSG("Error setting FT column");
+
+	    /* Compute plate-scale */
+	    double ft_sc_x= xsc - xft;
+	    double ft_sc_y= ysc - yft;
+	    double eft_sc_x=sqrt(exsc*exsc+exft*exft);
+	    double eft_sc_y=sqrt(eysc*eysc+eyft*eyft);
+	    double sep = sqrt(ft_sc_x*ft_sc_x+ft_sc_y*ft_sc_y);
+	    double pscale = sep ? rho_in/sep : 0.;
+	    double escale = 0.;
+	    if (sep) {
+	      escale = rho_in/(sep*sep*sep)*
+		(ft_sc_x*eft_sc_x+ft_sc_y*eft_sc_y) ;
+	    }
+	    cpl_table_set (acqcam_table, "FIELD_SCALE", row*ntel+tel, pscale);
+	    cpl_table_set (acqcam_table, "FIELD_SCALEERR", row*ntel+tel, escale);
+
+	    /* Error in SC fibre positioning */
+	    /* The three terms are 
+	       - offset from FT target as detected to original SC
+	       target as detected;
+	       - blind offset command from mapping template projected
+	       on acqisition camera;
+	       - offset from FT fiber to SC fiber. */
+	    double corrx=0, corry=0., ecorrx=0., ecorry=0.;
+	    if (pscale) {
+	      corrx = ft_sc_x + sobj_offx_cam/pscale - fiber_ft_sc_x;	
+	      corry = ft_sc_y + sobj_offy_cam/pscale - fiber_ft_sc_y;
+	      double tmp=escale/(pscale*pscale);
+	      tmp *= tmp;
+	      ecorrx = sqrt(eft_sc_x*eft_sc_x + eft_sc_y*eft_sc_y + sobj_offx_cam*sobj_offx_cam*tmp);
+	      ecorrx = sqrt(eft_sc_x*eft_sc_x + eft_sc_y*eft_sc_y + sobj_offy_cam*sobj_offy_cam*tmp);
+	    }
+            cpl_table_set (acqcam_table, "FIELD_SC_FIBER_DX", row*ntel+tel, corrx);
+            cpl_table_set (acqcam_table, "FIELD_SC_FIBER_DY", row*ntel+tel, corry);
+            cpl_table_set (acqcam_table, "FIELD_SC_FIBER_DXERR", row*ntel+tel, corrx);
+            cpl_table_set (acqcam_table, "FIELD_SC_FIBER_DYERR", row*ntel+tel, corry);
+
         } /* End loop on images */
 
     } /* End loop on tel */
