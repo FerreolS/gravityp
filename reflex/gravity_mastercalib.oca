@@ -3,7 +3,7 @@
 //*****************************************************
 
 // Raw data
-if DPR.CATG like "%SCIENCE%"  and DPR.TYPE like "%OBJECT%" and DPR.TYPE like "%SINGLE%" and INSTRUME=="GRAVITY" then
+if DPR.CATG like "%SCIENCE%" and DPR.TYPE like "%OBJECT%" and DPR.TYPE like "%SINGLE%" and INSTRUME=="GRAVITY" then
 {
   DO.CATG = "SINGLE_SCI_RAW";
   REFLEX.CATG = "SINGLE_SCI_RAW";
@@ -11,18 +11,26 @@ if DPR.CATG like "%SCIENCE%"  and DPR.TYPE like "%OBJECT%" and DPR.TYPE like "%S
   REFLEX.TARGET = "T";
 }
 
-if (DPR.CATG like "%CALIB%" or DPR.CATG like "%SCIENCE%")  and DPR.TYPE like "%SKY%" and DPR.TYPE like "%SINGLE%" and INSTRUME=="GRAVITY" then
-{
-  DO.CATG = "SINGLE_SKY_RAW";
-  REFLEX.CATG = "SINGLE_SKY_RAW";
-  RAW.TYPE = "SINGLE_SKY_RAW";
-  REFLEX.TARGET = "T";
-}
-
-if DPR.CATG like "%CALIB%"  and DPR.TYPE like "%OBJECT%" and DPR.TYPE like "%SINGLE%" and INSTRUME=="GRAVITY" then
+if DPR.CATG like "%CALIB%" and DPR.TYPE like "%OBJECT%" and DPR.TYPE like "%SINGLE%" and INSTRUME=="GRAVITY" then
 {
   DO.CATG = "SINGLE_CAL_RAW";
   REFLEX.CATG = "SINGLE_CAL_RAW";
+  RAW.TYPE = "SINGLE_CAL_RAW";
+  REFLEX.TARGET = "T";
+}
+
+if DPR.CATG like "%SCIENCE%" and DPR.TYPE like "%SKY%" and DPR.TYPE like "%SINGLE%" and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "SINGLE_SKY_RAW";
+  REFLEX.CATG = "SINGLE_SKY_RAW";
+  RAW.TYPE = "SINGLE_SCI_RAW";
+  REFLEX.TARGET = "T";
+}
+
+if DPR.CATG like "%CALIB%" and DPR.TYPE like "%SKY%" and DPR.TYPE like "%SINGLE%" and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "SINGLE_SKY_RAW";
+  REFLEX.CATG = "SINGLE_SKY_RAW";
   RAW.TYPE = "SINGLE_CAL_RAW";
   REFLEX.TARGET = "T";
 }
@@ -35,38 +43,54 @@ if DPR.CATG like "%SCIENCE%"  and DPR.TYPE like "%OBJECT%" and DPR.TYPE like "%D
   REFLEX.TARGET = "T";
 }
 
-if (DPR.CATG like "%CALIB%" or DPR.CATG like "%SCIENCE%") and DPR.TYPE like "%SKY%" and DPR.TYPE like "%DUAL%" and INSTRUME=="GRAVITY" then
+if DPR.CATG like "%CALIB%" and DPR.TYPE like "%OBJECT%" and DPR.TYPE like "%DUAL%" and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "DUAL_CAL_RAW";
+  REFLEX.CATG = "DUAL_CAL_RAW";
+  RAW.TYPE = "DUAL_CAL_RAW";
+  REFLEX.TARGET = "T";
+}
+
+if DPR.CATG like "%SCIENCE%" and DPR.TYPE like "%SKY%" and DPR.TYPE like "%DUAL%" and INSTRUME=="GRAVITY" then
 {
   DO.CATG = "DUAL_SKY_RAW";
   REFLEX.CATG = "DUAL_SKY_RAW";
-  RAW.TYPE = "DUAL_SKY_RAW";
+  RAW.TYPE = "DUAL_SCI_RAW";
+  REFLEX.TARGET = "T";
+}
+
+if DPR.CATG like "%CALIB%" and DPR.TYPE like "%SKY%" and DPR.TYPE like "%DUAL%" and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "DUAL_SKY_RAW";
+  REFLEX.CATG = "DUAL_SKY_RAW";
+  RAW.TYPE = "DUAL_CAL_RAW";
   REFLEX.TARGET = "T";
 }
 
 // Product
 if PRO.CATG like "%BAD%" then
 {
-  REFLEX.CATG = "BAD";
+  DO.CATG = "BAD";
 }
 
 if PRO.CATG like "%DARK%" then
 {
-  REFLEX.CATG = "DARK";
+  DO.CATG = "DARK";
 }
 
 if PRO.CATG like "%FLAT%" then
 {
-  REFLEX.CATG = "FLAT";
+  DO.CATG = "FLAT";
 }
 
 if PRO.CATG like "%WAVE%" then
 {
-  REFLEX.CATG = "WAVE";
+  DO.CATG = "WAVE";
 }
 
 if PRO.CATG like "%P2VM%" then
 {
-  REFLEX.CATG = "P2VM";
+  DO.CATG = "P2VM";
 }
 
 //*****************************************************
