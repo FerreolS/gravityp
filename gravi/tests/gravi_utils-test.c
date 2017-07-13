@@ -56,7 +56,7 @@
                               PREPROC Private prototypes
  -----------------------------------------------------------------------------*/
 cpl_table * gravi_table_ft_format (cpl_table * table_ft, cpl_table * sky_table_std,
-								   cpl_table * sky_table_avg, int n_region, double gain);
+				cpl_table * sky_table_avg, cpl_table * badpix, int n_region, double gain);
 
 cpl_table * gravi_imglist_sc_collapse (cpl_table * profile_table,
                                        cpl_imagelist * raw_imglist,
@@ -372,8 +372,9 @@ int gravi_utils_test(void){
 	cpl_table * table_ft = gravi_data_get_table (data, GRAVI_IMAGING_DATA_FT_EXT), * tableNew_ft;
 	cpl_table * dark_ft = gravi_data_get_table (dark_map, GRAVI_IMAGING_DATA_FT_EXT);
 	cpl_table * darkStd_ft = gravi_data_get_table (dark_map, GRAVI_IMAGING_ERR_FT_EXT);
+	cpl_table * badpix_ft = gravi_data_get_table (badpix, GRAVI_IMAGING_DATA_FT_EXT);
 
-	test_data (tableNew_ft, gravi_table_ft_format(table_ft, darkStd_ft, dark_ft, 24, 25),
+	test_data (tableNew_ft, gravi_table_ft_format(table_ft, darkStd_ft, dark_ft, badpix_ft, 24, 25),
 			"gravi_table_ft_format_bis : "
 			"Remove the dark and extract the spectrum FT ...", flag);
 	FREE(cpl_table_delete, tableNew_ft);

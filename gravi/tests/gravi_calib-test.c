@@ -739,7 +739,7 @@ int gravi_calib_test(void){
 			"gravi_compute_opdc_state :  ...", flag);
 
 	/* Reduce the metrology */
-    test (gravi_metrology_reduce (p2vm_reduced, NULL, parlist),
+    test (gravi_metrology_reduce (p2vm_reduced, NULL, NULL, parlist),
 			"gravi_metrology_reduce : reduce the metrology ...", flag);
 
     //gravi_data_save_data (p2vm_reduced, "test_files/p2vm_reduced.fits", CPL_IO_CREATE);
