@@ -64,6 +64,7 @@ cpl_error_code gravi_acqcam_get_diode_ref (cpl_propertylist * header,
                                            cpl_vector * output);
 
 static int gravi_acqcam_spot (const double x_in[], const double v[], double *result);
+static int gravi_acqcam_xy_sub (const double v[], double *xsub, double *ysub);
 
 cpl_error_code gravi_acqcam_spot_imprint (cpl_image * img, cpl_vector * a);
 
@@ -305,7 +306,7 @@ int gravi_acqcam_xy_diode (const double v[], double *xd, double *yd)
 }
 
 /* Compute the 4 sub-aperture positions from the sub-aperture modes */
-inline int gravi_acqcam_xy_sub (const double v[], double *xsub, double *ysub)
+static int gravi_acqcam_xy_sub (const double v[], double *xsub, double *ysub)
 {
     /* Sub-apperture arrangement */
     const double * vd = v + GRAVI_SPOT_SUB;
