@@ -1,23 +1,3 @@
-# GRAVI_SET_PREFIX(PREFIX)
-#---------------------------
-AC_DEFUN([GRAVI_SET_PREFIX],
-[
-    unset CDPATH
-    # make $PIPE_HOME the default for the installation
-    AC_PREFIX_DEFAULT($1)
-
-    if test "x$prefix" = "xNONE"; then
-        prefix=$ac_default_prefix
-        ac_configure_args="$ac_configure_args --prefix $prefix"
-    fi
-
-    if test "x$exec_prefix" = "xNONE"; then
-        exec_prefix=$prefix
-    fi
-
-])
-
-
 # GRAVI_SET_VERSION_INFO(VERSION, [CURRENT], [REVISION], [AGE])
 #----------------------------------------------------------------
 # Setup various version information, especially the libtool versioning

@@ -16,8 +16,6 @@ AM_CONFIG_HEADER([config.h])
 
 AM_MAINTAINER_MODE
 
-GRAVI_SET_PREFIX(${PIPE_HOME:-/usr/local})
-
 # Immediately before every release do:
 #-------------------------------------
 #   if (the interface is totally unchanged from previous release)
