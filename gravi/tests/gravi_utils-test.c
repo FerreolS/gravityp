@@ -228,8 +228,9 @@ int gravi_utils_test(void){
 	test_pfailure(CPL_ERROR_NULL_INPUT, gravi_array_wrap_image(NULL),
 			                     "Try to create an array from NULL image... ", flag);
 
-	//cpl_imagelist_delete(img_list);
 	cpl_array_unwrap(ar);
+	gravi_imagelist_unwrap_images(img_list);
+	//cpl_imagelist_delete(img_list);
 
 	/*
 	 * Test unit gravi_shutters_check
