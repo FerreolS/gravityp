@@ -319,220 +319,220 @@ static int gravity_p2vm_destroy(cpl_plugin * plugin)
  */
 /*----------------------------------------------------------------------------*/
 static int gravity_p2vm(cpl_frameset            * frameset,
-		                  const cpl_parameterlist * parlist)
+                        const cpl_parameterlist * parlist)
 {
-	cpl_frameset * p2vm_frameset=NULL, * wavecalib_frameset=NULL, * darkcalib_frameset=NULL,
-	  * flatcalib_frameset=NULL, * dark_frameset=NULL, * wave_frameset=NULL, * wavesc_frameset=NULL,
-	  * badcalib_frameset=NULL, * flat_frameset=NULL, * used_frameset=NULL, * current_frameset=NULL;
-	
-	cpl_frame * frame=NULL, * frame_p2vm=NULL;
-	
-	gravi_data * p2vm_map=NULL, * data=NULL, * dark_map=NULL, * wave_map=NULL,
-        * profile_map=NULL, * badpix_map=NULL, * wave_data=NULL;
+    cpl_frameset * p2vm_frameset=NULL, * wavecalib_frameset=NULL, * darkcalib_frameset=NULL,
+            * flatcalib_frameset=NULL, * dark_frameset=NULL, * wave_frameset=NULL, * wavesc_frameset=NULL,
+            * badcalib_frameset=NULL, * flat_frameset=NULL, * used_frameset=NULL, * current_frameset=NULL;
+
+    cpl_frame * frame=NULL, * frame_p2vm=NULL;
+
+    gravi_data * p2vm_map=NULL, * data=NULL, * dark_map=NULL, * wave_map=NULL,
+            * profile_map=NULL, * badpix_map=NULL, * wave_data=NULL;
     gravi_data * spectrum_data=NULL;
-	gravi_data * preproc_data=NULL;
-	gravi_data ** raw_data=NULL;
-	gravi_data * p2vmred_data = NULL;
+    gravi_data * preproc_data=NULL;
+    gravi_data ** raw_data=NULL;
+    gravi_data * p2vmred_data = NULL;
 
-	int nb_frame, i, nb_frame_gain = 0;
-	
-	cpl_propertylist * met_plist=NULL;
-	int ** valid_trans = cpl_malloc (2 * sizeof (int*));
-	int ** valid_CP = cpl_malloc (2 * sizeof (int*));
-	clock_t start;
-	
-	for (i = 0 ; i < 2; i++){
-		valid_trans[i] = cpl_calloc (4, sizeof (int));
-		valid_CP[i] = cpl_calloc (6, sizeof (int));
-	}
+    int nb_frame, i, nb_frame_gain = 0;
 
-	/* Message */
-	gravity_print_banner (); 
-	cpl_msg_set_time_on();
-	cpl_msg_set_component_on();
-	gravi_msg_function_start(1);
+    cpl_propertylist * met_plist=NULL;
+    int ** valid_trans = cpl_malloc (2 * sizeof (int*));
+    int ** valid_CP = cpl_malloc (2 * sizeof (int*));
+    clock_t start;
 
-   
-	/* Get the input frameset */
-	cpl_ensure_code(gravi_dfs_set_groups(frameset) == CPL_ERROR_NONE, cpl_error_get_code()) ;
+    for (i = 0 ; i < 2; i++){
+        valid_trans[i] = cpl_calloc (4, sizeof (int));
+        valid_CP[i] = cpl_calloc (6, sizeof (int));
+    }
 
-	/* Init the used frameset */
-	used_frameset = cpl_frameset_new ();
+    /* Message */
+    gravity_print_banner (); 
+    cpl_msg_set_time_on();
+    cpl_msg_set_component_on();
+    gravi_msg_function_start(1);
 
-	/* Extract DARK frameset */
-	dark_frameset = gravi_frameset_extract_dark_data (frameset);
-	darkcalib_frameset = gravi_frameset_extract_dark_map (frameset);
-	
-	/* Extract FLAT frameset */
-	flat_frameset = gravi_frameset_extract_flat_data (frameset);
-	flatcalib_frameset = gravi_frameset_extract_flat_map (frameset);
-	
-	/* Extract BAD frameset */
-	badcalib_frameset = gravi_frameset_extract_bad_map (frameset);
-	
-	/* Extract WAVE frameset */
-	wave_frameset = gravi_frameset_extract_wave_data (frameset);
-	wavesc_frameset = gravi_frameset_extract_wavesc_data (frameset);
-	wavecalib_frameset = gravi_frameset_extract_wave_map (frameset);
-	
-	/* Extract P2VM frameset */
-	p2vm_frameset = gravi_frameset_extract_p2vm_data (frameset);
 
-    
+    /* Get the input frameset */
+    cpl_ensure_code(gravi_dfs_set_groups(frameset) == CPL_ERROR_NONE, cpl_error_get_code()) ;
 
-	/*
-	 * (1) Identify and extract the dark file
-	 */
+    /* Init the used frameset */
+    used_frameset = cpl_frameset_new ();
 
-	if (!cpl_frameset_is_empty (dark_frameset)) {
-	  cpl_msg_info (cpl_func, " ***** Compute DARK map ***** ");
+    /* Extract DARK frameset */
+    dark_frameset = gravi_frameset_extract_dark_data (frameset);
+    darkcalib_frameset = gravi_frameset_extract_dark_map (frameset);
 
-	  /* Load this DARK_RAW */
-	  frame = cpl_frameset_get_position (dark_frameset, 0);
-	  data = gravi_data_load_rawframe (frame, used_frameset);
-      gravi_data_detector_cleanup (data, parlist);
-      
-	  /* Compute the dark */
-	  dark_map = gravi_compute_dark (data);
-	  FREE (gravi_data_delete, data);
+    /* Extract FLAT frameset */
+    flat_frameset = gravi_frameset_extract_flat_data (frameset);
+    flatcalib_frameset = gravi_frameset_extract_flat_map (frameset);
 
-	  CPLCHECK_CLEAN ("Cannot compute the DARK map");
+    /* Extract BAD frameset */
+    badcalib_frameset = gravi_frameset_extract_bad_map (frameset);
 
-	  /* Save the dark map */
-	  gravi_data_save_new (dark_map, frameset, NULL, parlist,
-						   NULL, frame, "gravity_p2vm",
-                           NULL, GRAVI_DARK_MAP);
-      
-	  CPLCHECK_CLEAN ("Could not save the DARK map");	  
-	}
-	else if (!cpl_frameset_is_empty (darkcalib_frameset)) {
-	  cpl_msg_info (cpl_func, " ***** Get DARK map ***** ");
-	  
-	  /* Load this DARK */
-	  frame = cpl_frameset_get_position (darkcalib_frameset, 0);
-	  dark_map = gravi_data_load_frame (frame, used_frameset);
-	  
-	  CPLCHECK_CLEAN ("Could not load the DARK map");
-		
-	  /* This new DARK may be used latter for BADPIX */
-	  cpl_frameset_insert (dark_frameset, cpl_frame_duplicate (frame));
-	}
+    /* Extract WAVE frameset */
+    wave_frameset = gravi_frameset_extract_wave_data (frameset);
+    wavesc_frameset = gravi_frameset_extract_wavesc_data (frameset);
+    wavecalib_frameset = gravi_frameset_extract_wave_map (frameset);
 
-	
-	/*
-	 * (2) Identify and extract the BADPIX file
-	 */
+    /* Extract P2VM frameset */
+    p2vm_frameset = gravi_frameset_extract_p2vm_data (frameset);
 
-	if (!cpl_frameset_is_empty (badcalib_frameset)) {
-	  cpl_msg_info (cpl_func, " ***** Get BAD pixel map ***** ");
 
-	  /* The BADPIX is already in the frameset */
-	  frame = cpl_frameset_get_position (badcalib_frameset, 0);
-	  badpix_map = gravi_data_load_frame (frame, used_frameset);
-	}
-	else if (!cpl_frameset_is_empty (dark_frameset) &&
-             !cpl_frameset_is_empty (flat_frameset)) {
-	  cpl_msg_info (cpl_func, " ***** Compute BAD pixel map from DARK and FLAT_RAW ***** ");
 
-      /* Identify the flat files */
-      nb_frame_gain = cpl_frameset_get_size (flat_frameset);
-      raw_data = cpl_calloc (nb_frame_gain, sizeof(gravi_data *));
-	
-      /* Build the list of FLAT files and output file name */
-      for (int i = 0; i < nb_frame_gain; i++) {
-          frame = cpl_frameset_get_position (flat_frameset, i);
-          raw_data[i] = gravi_data_load_rawframe (frame, NULL);
-          gravi_data_detector_cleanup (raw_data[i], parlist);
-      }
-	  
-	  /* Compute it from the DARK and the FLAT_RAW */
-	  badpix_map = gravi_compute_badpix (dark_map, raw_data,
-                                         nb_frame_gain, parlist);
+    /*
+     * (1) Identify and extract the dark file
+     */
 
-	  CPLCHECK_CLEAN("Cannot compute the BAD pixel from DARK and FLAT");
+    if (!cpl_frameset_is_empty (dark_frameset)) {
+        cpl_msg_info (cpl_func, " ***** Compute DARK map ***** ");
 
-	  /* Save the BADPIX */
-	  frame = cpl_frameset_get_position (dark_frameset, 0);
-	  gravi_data_save_new (badpix_map, frameset, NULL, parlist,
-						   NULL, frame, "gravity_p2vm",
-                           NULL, GRAVI_BAD_MAP);
+        /* Load this DARK_RAW */
+        frame = cpl_frameset_get_position (dark_frameset, 0);
+        data = gravi_data_load_rawframe (frame, used_frameset);
+        gravi_data_detector_cleanup (data, parlist);
 
-	  CPLCHECK_CLEAN ("Could not save the BAD pixel map");
+        /* Compute the dark */
+        dark_map = gravi_compute_dark (data);
+        FREE (gravi_data_delete, data);
 
-      FREELOOP (gravi_data_delete, raw_data, nb_frame_gain);
-	}
-    
-	/*
-	 * (3) Check that the FLAT map in the input frameset
-	 */
+        CPLCHECK_CLEAN ("Cannot compute the DARK map");
 
-	 if (!cpl_frameset_is_empty(flatcalib_frameset)) {
-	   cpl_msg_info (cpl_func, " ***** Get FLAT map ***** ");
+        /* Save the dark map */
+        gravi_data_save_new (dark_map, frameset, NULL, parlist,
+                             NULL, frame, "gravity_p2vm",
+                             NULL, GRAVI_DARK_MAP);
 
-	   /* The FLAT is already in the frameset */
-	   frame = cpl_frameset_get_position (flatcalib_frameset, 0);
-	   profile_map = gravi_data_load_frame (frame, used_frameset);
-	 }
-	 else if (!cpl_frameset_is_empty (flat_frameset)) {
-	   cpl_msg_info (cpl_func, " ***** Compute FLAT map ***** ");
+        CPLCHECK_CLEAN ("Could not save the DARK map");	  
+    }
+    else if (!cpl_frameset_is_empty (darkcalib_frameset)) {
+        cpl_msg_info (cpl_func, " ***** Get DARK map ***** ");
 
-       
-	   /* Check calibs */
-	   if (!badpix_map || !dark_map) {
-		 ERROR_CLEAN (CPL_ERROR_ILLEGAL_INPUT, "Missing DARK or BAD in frameset");
-	   }
-	   
-	   /* Identify the flat files */
-	   nb_frame_gain = cpl_frameset_get_size (flat_frameset);
-	   raw_data = cpl_malloc (nb_frame_gain * sizeof(gravi_data *));
-	   
-	   /* Build the list of FLAT files and output file name */
-       for (i = 0; i < nb_frame_gain; i++) {
-           frame = cpl_frameset_get_position (flat_frameset, i);
-           raw_data[i] = gravi_data_load_rawframe (frame, used_frameset);
-           gravi_data_detector_cleanup (raw_data[i], parlist);
-	   }
+        /* Load this DARK */
+        frame = cpl_frameset_get_position (darkcalib_frameset, 0);
+        dark_map = gravi_data_load_frame (frame, used_frameset);
 
-       	   
-	   /* Compute the profile from the list of FLAT */
-	   profile_map = gravi_compute_profile (raw_data, dark_map, badpix_map, nb_frame_gain, parlist);
-       CPLCHECK_CLEAN ("Cannot compute the FLAT profile");
-       
-	   /* Compute the gain QC */
-       cpl_propertylist * gain_header;
-       gain_header = gravi_compute_gain (raw_data, nb_frame_gain, dark_map);
-	   CPLCHECK_CLEAN ("Cannot compute the GAIN");
+        CPLCHECK_CLEAN ("Could not load the DARK map");
 
-       /* Put the gain QC in profile_map */
-       cpl_propertylist * profile_header = gravi_data_get_header (profile_map);
-       cpl_propertylist_append (profile_header, gain_header);
-       FREE (cpl_propertylist_delete, gain_header);
-       	   
-	   /* Save the FLAT map */
-	   frame = cpl_frameset_get_position (flat_frameset, 0);
-	   
-	   gravi_data_save_new (profile_map, frameset, NULL, parlist,
-							used_frameset, frame, "gravity_p2vm",
-                            NULL, GRAVI_FLAT_MAP);
-	   
-	   CPLCHECK_CLEAN ("Could not save the FLAT profile_map");
-	   
-	   /* Free the list of files */
-	   FREELOOP (gravi_data_delete, raw_data, nb_frame_gain);
-	}
-	 
-	/*
-	 * (4) Check and get the WAVE frame
-	 */
+        /* This new DARK may be used latter for BADPIX */
+        cpl_frameset_insert (dark_frameset, cpl_frame_duplicate (frame));
+    }
 
-	if (!cpl_frameset_is_empty (wavecalib_frameset)) {
+
+    /*
+     * (2) Identify and extract the BADPIX file
+     */
+
+    if (!cpl_frameset_is_empty (badcalib_frameset)) {
+        cpl_msg_info (cpl_func, " ***** Get BAD pixel map ***** ");
+
+        /* The BADPIX is already in the frameset */
+        frame = cpl_frameset_get_position (badcalib_frameset, 0);
+        badpix_map = gravi_data_load_frame (frame, used_frameset);
+    }
+    else if (!cpl_frameset_is_empty (dark_frameset) &&
+            !cpl_frameset_is_empty (flat_frameset)) {
+        cpl_msg_info (cpl_func, " ***** Compute BAD pixel map from DARK and FLAT_RAW ***** ");
+
+        /* Identify the flat files */
+        nb_frame_gain = cpl_frameset_get_size (flat_frameset);
+        raw_data = cpl_calloc (nb_frame_gain, sizeof(gravi_data *));
+
+        /* Build the list of FLAT files and output file name */
+        for (int i = 0; i < nb_frame_gain; i++) {
+            frame = cpl_frameset_get_position (flat_frameset, i);
+            raw_data[i] = gravi_data_load_rawframe (frame, NULL);
+            gravi_data_detector_cleanup (raw_data[i], parlist);
+        }
+
+        /* Compute it from the DARK and the FLAT_RAW */
+        badpix_map = gravi_compute_badpix (dark_map, raw_data,
+                nb_frame_gain, parlist);
+
+        CPLCHECK_CLEAN("Cannot compute the BAD pixel from DARK and FLAT");
+
+        /* Save the BADPIX */
+        frame = cpl_frameset_get_position (dark_frameset, 0);
+        gravi_data_save_new (badpix_map, frameset, NULL, parlist,
+                             NULL, frame, "gravity_p2vm",
+                             NULL, GRAVI_BAD_MAP);
+
+        CPLCHECK_CLEAN ("Could not save the BAD pixel map");
+
+        FREELOOP (gravi_data_delete, raw_data, nb_frame_gain);
+    }
+
+    /*
+     * (3) Check that the FLAT map in the input frameset
+     */
+
+    if (!cpl_frameset_is_empty(flatcalib_frameset)) {
+        cpl_msg_info (cpl_func, " ***** Get FLAT map ***** ");
+
+        /* The FLAT is already in the frameset */
+        frame = cpl_frameset_get_position (flatcalib_frameset, 0);
+        profile_map = gravi_data_load_frame (frame, used_frameset);
+    }
+    else if (!cpl_frameset_is_empty (flat_frameset)) {
+        cpl_msg_info (cpl_func, " ***** Compute FLAT map ***** ");
+
+
+        /* Check calibs */
+        if (!badpix_map || !dark_map) {
+            ERROR_CLEAN (CPL_ERROR_ILLEGAL_INPUT, "Missing DARK or BAD in frameset");
+        }
+
+        /* Identify the flat files */
+        nb_frame_gain = cpl_frameset_get_size (flat_frameset);
+        raw_data = cpl_malloc (nb_frame_gain * sizeof(gravi_data *));
+
+        /* Build the list of FLAT files and output file name */
+        for (i = 0; i < nb_frame_gain; i++) {
+            frame = cpl_frameset_get_position (flat_frameset, i);
+            raw_data[i] = gravi_data_load_rawframe (frame, used_frameset);
+            gravi_data_detector_cleanup (raw_data[i], parlist);
+        }
+
+
+        /* Compute the profile from the list of FLAT */
+        profile_map = gravi_compute_profile (raw_data, dark_map, badpix_map, nb_frame_gain, parlist);
+        CPLCHECK_CLEAN ("Cannot compute the FLAT profile");
+
+        /* Compute the gain QC */
+        cpl_propertylist * gain_header;
+        gain_header = gravi_compute_gain (raw_data, nb_frame_gain, dark_map);
+        CPLCHECK_CLEAN ("Cannot compute the GAIN");
+
+        /* Put the gain QC in profile_map */
+        cpl_propertylist * profile_header = gravi_data_get_header (profile_map);
+        cpl_propertylist_append (profile_header, gain_header);
+        FREE (cpl_propertylist_delete, gain_header);
+
+        /* Save the FLAT map */
+        frame = cpl_frameset_get_position (flat_frameset, 0);
+
+        gravi_data_save_new (profile_map, frameset, NULL, parlist,
+                             used_frameset, frame, "gravity_p2vm",
+                             NULL, GRAVI_FLAT_MAP);
+
+        CPLCHECK_CLEAN ("Could not save the FLAT profile_map");
+
+        /* Free the list of files */
+        FREELOOP (gravi_data_delete, raw_data, nb_frame_gain);
+    }
+
+    /*
+     * (4) Check and get the WAVE frame
+     */
+
+    if (!cpl_frameset_is_empty (wavecalib_frameset)) {
         cpl_msg_info (cpl_func, " ***** Get wave map ***** ");
-	  
+
         /* The WAVE in the frame_set is a calibrated wave */
         frame = cpl_frameset_get_position (wavecalib_frameset, 0);
         wave_map = gravi_data_load_frame (frame, used_frameset);
-	}
-	else if (!cpl_frameset_is_empty (wave_frameset)) {
+    }
+    else if (!cpl_frameset_is_empty (wave_frameset)) {
         cpl_msg_info (cpl_func, " ***** Process the WAVE_RAW ***** ");
 
         /* Check calibs */
@@ -542,7 +542,7 @@ static int gravity_p2vm(cpl_frameset            * frameset,
 
         /* Create the WAVE product */
         wave_map = gravi_data_new (0);
-	  
+
         /* Load WAVE_RAW */
         frame = cpl_frameset_get_position (wave_frameset, 0);
         data  = gravi_data_load_rawframe (frame, used_frameset);
@@ -556,75 +556,75 @@ static int gravity_p2vm(cpl_frameset            * frameset,
 
         /* Set the P2VM_MET in WAVE */
         gravi_data_add_table (wave_map, NULL, GRAVI_P2VM_MET_EXT, p2vm_met);
-        
+
         CPLCHECK_CLEAN ("Cannot compute P2VM_MET");
 
         /* Reduce WAVE_RAW */
         cpl_msg_info (cpl_func, "Extract SPECTRUM for WAVE_RAW");
         spectrum_data = gravi_extract_spectrum (data, profile_map, dark_map,
-                                                badpix_map, NULL, parlist);
-        
+                badpix_map, NULL, parlist);
+
         cpl_msg_info (cpl_func, "Compute OPDs for WAVE_RAW");
         gravi_wave_compute_opds (spectrum_data, gravi_data_get_table (data, GRAVI_METROLOGY_EXT));
         FREE (gravi_data_delete, data);        
-        
+
         CPLCHECK_CLEAN ("Cannot process the WAVE_RAW");
 
         /* Save the file with OPD_SC, OPD_FT, OI_VIS_MET */
         if (gravi_param_get_bool (parlist,"gravity.dfs.debug-file")) {
             gravi_data_save_new (spectrum_data, frameset, NULL, parlist,
-                                 used_frameset, frame, "gravity_p2vm",
-                                 NULL, "DEBUG");
+                    used_frameset, frame, "gravity_p2vm",
+                    NULL, "DEBUG");
         }
 
         /* Compute wave calibration for FT */
         gravi_compute_wave (wave_map, spectrum_data, GRAVI_FT, parlist);
-        
+
         CPLCHECK_CLEAN ("Cannot compute wave for FT");
-        
+
         /* Load and process the WAVESC_RAW (if any) */
         if (!cpl_frameset_is_empty (wavesc_frameset)) {
             /* Erase spectrum data */
             cpl_msg_info (cpl_func, "Delete WAVE_RAW data");
             FREE (gravi_data_delete, spectrum_data);
-            
+
             cpl_msg_info (cpl_func, " ***** Process the WAVESC_RAW ***** ");
 
             /* Load and process */
             frame = cpl_frameset_get_position(wavesc_frameset, 0);
             data  = gravi_data_load_rawframe (frame, used_frameset);
             gravi_data_detector_cleanup (data, parlist);
-            
+
             cpl_msg_info (cpl_func, "Extract SPECTRUM for WAVESC_RAW");
             spectrum_data = gravi_extract_spectrum (data, profile_map, dark_map,
-                                                    badpix_map, NULL, parlist);
-            
+                    badpix_map, NULL, parlist);
+
             cpl_msg_info (cpl_func, "Compute OPDs for WAVESC_RAW");
             gravi_wave_compute_opds (spectrum_data, gravi_data_get_table (data, GRAVI_METROLOGY_EXT));
             FREE (gravi_data_delete, data);
-            
+
             CPLCHECK_CLEAN ("Cannot process the WAVESC_RAW");
 
             /* Save the file with OPD_SC, OPD_FT, OI_VIS_MET */
             if (gravi_param_get_bool (parlist,"gravity.dfs.debug-file")) {
                 gravi_data_save_new (spectrum_data, frameset, NULL, parlist,
-                                     used_frameset, frame, "gravity_p2vm",
-                                     NULL, "DEBUG");
+                        used_frameset, frame, "gravity_p2vm",
+                        NULL, "DEBUG");
             }
         }
         else {
             cpl_msg_warning (cpl_func, "No WAVESC_RAW in the SOF:"
-                             " SC wavelength will be inaccurate");
+                    " SC wavelength will be inaccurate");
         }
 
         /* Compute wave calibration for SC */
         gravi_compute_wave (wave_map, spectrum_data, GRAVI_SC, parlist);
-        
+
         CPLCHECK_CLEAN ("Cannot compute wave for SC");
-            
+
         /* Free the  spectrum */
         FREE (gravi_data_delete, spectrum_data);
-        
+
         /* Compute the QC */
         gravi_wave_qc (wave_map, profile_map);
 
@@ -632,43 +632,43 @@ static int gravity_p2vm(cpl_frameset            * frameset,
         gravi_data_save_new (wave_map, frameset, NULL, parlist,
                              used_frameset, frame, "gravity_p2vm",
                              NULL, GRAVI_WAVE_MAP);
-        
+
         CPLCHECK_CLEAN ("Could not save the WAVE map");
-	}
+    }
 
-	/* 
-	 * Build the frameset for the P2VM
-	 */
+    /* 
+     * Build the frameset for the P2VM
+     */
 
-	/* Check if P2VM are provided */
-	if ( cpl_frameset_is_empty (p2vm_frameset) ) {
-	  cpl_msg_info (cpl_func,"All RAW data reduced... stop recipe");
-	  goto cleanup;
-	}
+    /* Check if P2VM are provided */
+    if ( cpl_frameset_is_empty (p2vm_frameset) ) {
+        cpl_msg_info (cpl_func,"All RAW data reduced... stop recipe");
+        goto cleanup;
+    }
 
-	/* Check calibs */
-	if ( !badpix_map || !profile_map || !wave_map || !dark_map) {
-	  ERROR_CLEAN (CPL_ERROR_ILLEGAL_INPUT, "Missing DARK, FLAT, BAD, or WAVE in frameset");
-	}
-	
-	/* Add the FLAT_RAW and WAVE_RAW to the p2vm frameset */
-	if ( !cpl_frameset_is_empty (flat_frameset) )
-	  cpl_frameset_join (p2vm_frameset, flat_frameset);
-	
-	if ( !cpl_frameset_is_empty (wave_frameset) )
-	  cpl_frameset_join (p2vm_frameset, wave_frameset);
+    /* Check calibs */
+    if ( !badpix_map || !profile_map || !wave_map || !dark_map) {
+        ERROR_CLEAN (CPL_ERROR_ILLEGAL_INPUT, "Missing DARK, FLAT, BAD, or WAVE in frameset");
+    }
 
-	/* Get the number of the p2vm frame contained in the frameset */
-	nb_frame = cpl_frameset_get_size (p2vm_frameset);
+    /* Add the FLAT_RAW and WAVE_RAW to the p2vm frameset */
+    if ( !cpl_frameset_is_empty (flat_frameset) )
+        cpl_frameset_join (p2vm_frameset, flat_frameset);
 
-	/* Check if the 11 files are here */
-	if (nb_frame != 11) {
-	  ERROR_CLEAN (CPL_ERROR_ILLEGAL_INPUT, "Missing P2VM in frameset");
-	}
+    if ( !cpl_frameset_is_empty (wave_frameset) )
+        cpl_frameset_join (p2vm_frameset, wave_frameset);
 
-	/*
-	 * (6) Loop on files of the p2vm frameset
-	 */
+    /* Get the number of the p2vm frame contained in the frameset */
+    nb_frame = cpl_frameset_get_size (p2vm_frameset);
+
+    /* Check if the 11 files are here */
+    if (nb_frame != 11) {
+        ERROR_CLEAN (CPL_ERROR_ILLEGAL_INPUT, "Missing P2VM in frameset");
+    }
+
+    /*
+     * (6) Loop on files of the p2vm frameset
+     */
 
     /* Construction of the p2vm data. */
     cpl_msg_info (cpl_func, " ***** Create the P2VM ***** ");
@@ -676,77 +676,77 @@ static int gravity_p2vm(cpl_frameset            * frameset,
     CPLCHECK_CLEAN ("Cannot create the P2VM data");
 
     /* Loop on files */
-	for (i = 0; i < nb_frame; i++) {
-	  
-	  cpl_msg_info (cpl_func, " ***** file %d over %d ***** ", i+1, nb_frame );
-	  current_frameset = cpl_frameset_duplicate (used_frameset);
+    for (i = 0; i < nb_frame; i++) {
 
-	  /* Load this frame */
-	  frame = cpl_frameset_get_position (p2vm_frameset, i);
-	  cpl_frameset_insert (used_frameset, cpl_frame_duplicate (frame));
-	  data = gravi_data_load_rawframe (frame, current_frameset);
-      gravi_data_detector_cleanup (data, parlist);
-      CPLCHECK_CLEAN ("Cannot load data");
+        cpl_msg_info (cpl_func, " ***** file %d over %d ***** ", i+1, nb_frame );
+        current_frameset = cpl_frameset_duplicate (used_frameset);
 
-	  /* Verbose the shutters */
-	  cpl_msg_info (cpl_func, "Shutters: %d-%d-%d-%d",
-					gravi_data_get_shutter (data, 0), gravi_data_get_shutter (data, 1),
-					gravi_data_get_shutter (data, 2), gravi_data_get_shutter (data, 3));
+        /* Load this frame */
+        frame = cpl_frameset_get_position (p2vm_frameset, i);
+        cpl_frameset_insert (used_frameset, cpl_frame_duplicate (frame));
+        data = gravi_data_load_rawframe (frame, current_frameset);
+        gravi_data_detector_cleanup (data, parlist);
+        CPLCHECK_CLEAN ("Cannot load data");
 
-	  /* Create the product filename as the first P2VM file (1-1-0-0).
-	   * This is to ensure the run_gravi_reduce.py script check
-	   * for the correct product */
-	  if ( frame_p2vm==NULL && gravi_data_check_shutter (data, 1,1,0,0) )
-	  {
-		cpl_msg_info (cpl_func,"Use this frame for the P2VM product");
-		frame_p2vm = frame;
-	  }
+        /* Verbose the shutters */
+        cpl_msg_info (cpl_func, "Shutters: %d-%d-%d-%d",
+                      gravi_data_get_shutter (data, 0), gravi_data_get_shutter (data, 1),
+                      gravi_data_get_shutter (data, 2), gravi_data_get_shutter (data, 3));
 
-	  /*
-	   * If all shutter open we just continue
-	   */
-	  if ( gravi_data_check_shutter (data, 1,1,1,1) ) {
-		
-		/* Here we go to next file */
-		cpl_msg_info (cpl_func, "Nothing to be done with the file... yet.");
-		wave_data = data; data = NULL;
-		
-		FREE (cpl_frameset_delete, current_frameset);
-		continue;
-	  }
-	  /* End if all shutters open */
+        /* Create the product filename as the first P2VM file (1-1-0-0).
+         * This is to ensure the run_gravi_reduce.py script check
+         * for the correct product */
+        if ( frame_p2vm==NULL && gravi_data_check_shutter (data, 1,1,0,0) )
+        {
+            cpl_msg_info (cpl_func,"Use this frame for the P2VM product");
+            frame_p2vm = frame;
+        }
 
-      /* Extract spectrum */
-      preproc_data = gravi_extract_spectrum (data, profile_map, dark_map,
-                                             badpix_map, NULL, parlist);
-      FREE (gravi_data_delete, data);
-      CPLCHECK_CLEAN ("Cannot extract spectrum");
+        /*
+         * If all shutter open we just continue
+         */
+        if ( gravi_data_check_shutter (data, 1,1,1,1) ) {
 
-      /* Rescale to common wavelength */
-      gravi_align_spectrum (preproc_data, wave_map, p2vm_map);
-      CPLCHECK_CLEAN ("Cannot re-interpolate spectrum");
-      
-	  /* Compute the part of the p2vm associated to this file */
-	  gravi_compute_p2vm (p2vm_map, preproc_data, valid_trans, valid_CP);
-	  CPLCHECK_CLEAN("Cannot compute the P2VM");
-	  
-	  /* Option save the preproc file */
-	  if (gravi_param_get_bool (parlist,"gravity.dfs.preproc-file")) {
+            /* Here we go to next file */
+            cpl_msg_info (cpl_func, "Nothing to be done with the file... yet.");
+            wave_data = data; data = NULL;
 
-		gravi_data_save_new (preproc_data, frameset, NULL, parlist,
-							 current_frameset, frame, "gravity_p2vm",
-                             NULL, GRAVI_PREPROC);
-	  }
+            FREE (cpl_frameset_delete, current_frameset);
+            continue;
+        }
+        /* End if all shutters open */
 
-	  /* Delete the preproc data */
-	  start = clock();
-	  FREE (gravi_data_delete,preproc_data);
-	  cpl_msg_info(cpl_func, "Execution time to delete preproc_data : %f s",
-				   (clock() - start) / (double)CLOCKS_PER_SEC);
-	  
-	  /* End loop on files to build the p2vm */
-	  FREE (cpl_frameset_delete, current_frameset);
-	}
+        /* Extract spectrum */
+        preproc_data = gravi_extract_spectrum (data, profile_map, dark_map,
+                badpix_map, NULL, parlist);
+        FREE (gravi_data_delete, data);
+        CPLCHECK_CLEAN ("Cannot extract spectrum");
+
+        /* Rescale to common wavelength */
+        gravi_align_spectrum (preproc_data, wave_map, p2vm_map);
+        CPLCHECK_CLEAN ("Cannot re-interpolate spectrum");
+
+        /* Compute the part of the p2vm associated to this file */
+        gravi_compute_p2vm (p2vm_map, preproc_data, valid_trans, valid_CP);
+        CPLCHECK_CLEAN("Cannot compute the P2VM");
+
+        /* Option save the preproc file */
+        if (gravi_param_get_bool (parlist,"gravity.dfs.preproc-file")) {
+
+            gravi_data_save_new (preproc_data, frameset, NULL, parlist,
+                    current_frameset, frame, "gravity_p2vm",
+                    NULL, GRAVI_PREPROC);
+        }
+
+        /* Delete the preproc data */
+        start = clock();
+        FREE (gravi_data_delete,preproc_data);
+        cpl_msg_info(cpl_func, "Execution time to delete preproc_data : %f s",
+                     (clock() - start) / (double)CLOCKS_PER_SEC);
+
+        /* End loop on files to build the p2vm */
+        FREE (cpl_frameset_delete, current_frameset);
+    }
 
 
     /* 
@@ -757,18 +757,18 @@ static int gravity_p2vm(cpl_frameset            * frameset,
     CPLCHECK_CLEAN("Cannot normalise the p2vm_map");
 
 
-	/* 
-	 * (8) Analyse the WAVE to get the phase correction 
-	 *     and the internal spectrum to latter correct.
-	 */
+    /* 
+     * (8) Analyse the WAVE to get the phase correction 
+     *     and the internal spectrum to latter correct.
+     */
 
-	cpl_msg_info (cpl_func, " ***** Analyse the WAVE file to calibrate the internal closure and transmission ***** ");
+    cpl_msg_info (cpl_func, " ***** Analyse the WAVE file to calibrate the internal closure and transmission ***** ");
 
     /* Extract spectrum */
     preproc_data = gravi_extract_spectrum (wave_data, profile_map, dark_map,
-                                           badpix_map, NULL, parlist);
+            badpix_map, NULL, parlist);
     CPLCHECK_CLEAN ("Cannot extract spectrum");
-        
+
     /* Rescale to common wavelength */
     gravi_align_spectrum (preproc_data, wave_map, p2vm_map);
     CPLCHECK_CLEAN ("Cannot re-interpolate spectrum");
@@ -780,78 +780,78 @@ static int gravity_p2vm(cpl_frameset            * frameset,
     CPLCHECK_CLEAN ("Cannot move ext");
 
     /* Compute P2VMRED */
-	p2vmred_data = gravi_compute_p2vmred (preproc_data, p2vm_map, "gravi_single", parlist);
-	FREE (gravi_data_delete, preproc_data);
-	CPLCHECK_CLEAN ("Cannot apply p2vm");
+    p2vmred_data = gravi_compute_p2vmred (preproc_data, p2vm_map, "gravi_single", parlist);
+    FREE (gravi_data_delete, preproc_data);
+    CPLCHECK_CLEAN ("Cannot apply p2vm");
 
-	/* Perform the phase correction */
-	if (!strcmp (gravi_param_get_string (parlist, "gravity.calib.phase-calibration"), "CLOSURE")) {
+    /* Perform the phase correction */
+    if (!strcmp (gravi_param_get_string (parlist, "gravity.calib.phase-calibration"), "CLOSURE")) {
         gravi_p2vm_phase_correction (p2vm_map, p2vmred_data, 0);
     }
     else if (!strcmp (gravi_param_get_string (parlist, "gravity.calib.phase-calibration"), "DISP")) {
         gravi_p2vm_phase_correction (p2vm_map, p2vmred_data, 1);
-	}
+    }
     else if (!strcmp (gravi_param_get_string (parlist, "gravity.calib.phase-calibration"), "FULL")) {
         gravi_p2vm_phase_correction (p2vm_map, p2vmred_data, 2);
-	}
+    }
     else {
         cpl_msg_info (cpl_func, "P2VM phases are kept to zero (option phase-calibration=NONE)");
-	}
+    }
     CPLCHECK_CLEAN ("Cannot recalibrate the P2VM phases");
 
-	/* Add the OI_FLUX to further normalize the flux if needed */
-	gravi_p2vm_transmission (p2vm_map, p2vmred_data);
-	FREE (gravi_data_delete, p2vmred_data);
-	
-	CPLCHECK_CLEAN ("Cannot compute the transmission");
+    /* Add the OI_FLUX to further normalize the flux if needed */
+    gravi_p2vm_transmission (p2vm_map, p2vmred_data);
+    FREE (gravi_data_delete, p2vmred_data);
 
-	/* 
-	 * (9) Create product frame, add DataFlow keywords, save the file, log the
-	 * saved file in the input frameset. Note that the output filename
-	 * is already created (from first P2VM file) 
-	 */
-	
-	gravi_data_save_new (p2vm_map, frameset, NULL, parlist,
-						 used_frameset, frame_p2vm, "gravity_p2vm",
+    CPLCHECK_CLEAN ("Cannot compute the transmission");
+
+    /* 
+     * (9) Create product frame, add DataFlow keywords, save the file, log the
+     * saved file in the input frameset. Note that the output filename
+     * is already created (from first P2VM file) 
+     */
+
+    gravi_data_save_new (p2vm_map, frameset, NULL, parlist,
+                         used_frameset, frame_p2vm, "gravity_p2vm",
                          NULL, GRAVI_P2VM_MAP);
-	
-	CPLCHECK_CLEAN("Could not save the P2VM on the output file");
-	
+
+    CPLCHECK_CLEAN("Could not save the P2VM on the output file");
+
     /* Deallocation of all variables */
- cleanup:
-	cpl_msg_info (cpl_func,"Cleanup memory");
-	
-	FREE (cpl_frameset_delete, dark_frameset);
-	FREE (cpl_frameset_delete, darkcalib_frameset);
-	FREE (cpl_frameset_delete, badcalib_frameset);
-	FREE (gravi_data_delete, spectrum_data);
-	FREE (gravi_data_delete, p2vmred_data);
-	FREE (gravi_data_delete, wave_data);
-	FREE (gravi_data_delete, dark_map);
-	FREELOOP (gravi_data_delete, raw_data, nb_frame_gain);
-	FREE (gravi_data_delete, badpix_map);
-	FREE (cpl_propertylist_delete, met_plist);
-	FREE (cpl_frameset_delete, wavecalib_frameset);
-	FREE (cpl_frameset_delete, flatcalib_frameset);
-	FREE (cpl_frameset_delete, flat_frameset);
-	FREE (cpl_frameset_delete, wave_frameset);
-	FREE (cpl_frameset_delete, wavesc_frameset);
-	FREE (cpl_frameset_delete, used_frameset);
-	FREE (gravi_data_delete, data);
-	FREE (gravi_data_delete, preproc_data);
-	FREE (gravi_data_delete, dark_map);
-	FREE (gravi_data_delete, wave_map);
-	FREE (gravi_data_delete, profile_map);
-	FREELOOP (cpl_free, valid_CP, 2);
-	FREELOOP (cpl_free, valid_trans, 2);
-	FREE (gravi_data_delete, p2vm_map);
-	FREE (cpl_frameset_delete, p2vm_frameset);
+    cleanup:
+    cpl_msg_info (cpl_func,"Cleanup memory");
+
+    FREE (cpl_frameset_delete, dark_frameset);
+    FREE (cpl_frameset_delete, darkcalib_frameset);
+    FREE (cpl_frameset_delete, badcalib_frameset);
+    FREE (gravi_data_delete, spectrum_data);
+    FREE (gravi_data_delete, p2vmred_data);
+    FREE (gravi_data_delete, wave_data);
+    FREE (gravi_data_delete, dark_map);
+    FREELOOP (gravi_data_delete, raw_data, nb_frame_gain);
+    FREE (gravi_data_delete, badpix_map);
+    FREE (cpl_propertylist_delete, met_plist);
+    FREE (cpl_frameset_delete, wavecalib_frameset);
+    FREE (cpl_frameset_delete, flatcalib_frameset);
+    FREE (cpl_frameset_delete, flat_frameset);
+    FREE (cpl_frameset_delete, wave_frameset);
+    FREE (cpl_frameset_delete, wavesc_frameset);
+    FREE (cpl_frameset_delete, used_frameset);
+    FREE (gravi_data_delete, data);
+    FREE (gravi_data_delete, preproc_data);
+    FREE (gravi_data_delete, dark_map);
+    FREE (gravi_data_delete, wave_map);
+    FREE (gravi_data_delete, profile_map);
+    FREELOOP (cpl_free, valid_CP, 2);
+    FREELOOP (cpl_free, valid_trans, 2);
+    FREE (gravi_data_delete, p2vm_map);
+    FREE (cpl_frameset_delete, p2vm_frameset);
     FREE (cpl_frameset_delete, current_frameset);
 
-	/* FIXME: check a *change* of cpl_state instead */
-	CPLCHECK_INT ("Could not cleanup memory");
+    /* FIXME: check a *change* of cpl_state instead */
+    CPLCHECK_INT ("Could not cleanup memory");
 
-	gravi_msg_function_exit(1);
+    gravi_msg_function_exit(1);
     return (int)cpl_error_get_code();
 }
 
