@@ -411,17 +411,17 @@ gravi_data * gravi_create_p2vm (gravi_data * wave_map)
  * @param preproc_data	The the raw data after preprocessing and will be
  * 	  	  	  	  	    identified to compute the p2vm
  * @param valid_trans	Integer array of 2 dimensions the first dimension
- * 	  	  	  	  	  	representes the type of the data (SC = 0 or FT = 1) ,
+ * 	  	  	  	  	  	represents the type of the data (SC = 0 or FT = 1) ,
  * 	  	  	  	  	  	it means that it has 2 elements.
- * 	  	  	  	  	  	the second representes the information about the files
+ * 	  	  	  	  	  	the second represents the information about the files
  * 	  	  	  	  	  	witch compute the transmission of witch telescope,
  * 	  	  	  	  	  	it means that it has 4 elements. (if
  * 	  	  	  	  	  	the file has a shutter 3 open of the data SC
  * 	  	  	  	  	  	valid_trans[0][2] = 1)
  * @param valid_pair	Integer array of 2 dimensions the first dimension
- * 	  	  	  	  	  	representes the type of the data (SC = 0 or FT = 1),
+ * 	  	  	  	  	  	represents the type of the data (SC = 0 or FT = 1),
  * 	  	  	  	  	  	it means that it has 2 elements.
- * 	  	  	  	  	  	the second representes the information about the files
+ * 	  	  	  	  	  	the second represents the information about the files
  * 	  	  	  	  	  	witch compute the phase and coherence of witch
  * 	  	  	  	  	  	base, it means that it has 4 elements.
  * 	  	  	  	  	  	(if the file has a shutter 3 and 4 open of the
