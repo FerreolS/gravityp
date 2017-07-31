@@ -648,8 +648,15 @@ cpl_error_code gravi_compute_snr (gravi_data * p2vmred_data,
     
     /* If two polarisations. Copy this SNR and GDELAY to the second polarisation */
     if (npol > 1) {
+        cpl_msg_info (cpl_func, "Duplicate columns in polarisation 2");
+        if (cpl_table_has_column (oi_vis_p2, "SNR_BOOT"))
+            cpl_table_erase_column(oi_vis_p2, "SNR_BOOT");
         cpl_table_duplicate_column (oi_vis_p2, "SNR_BOOT", oi_vis_p1, "SNR_BOOT");
+        
+        if (cpl_table_has_column (oi_vis_p2, "GDELAY_BOOT"))
+            cpl_table_erase_column(oi_vis_p2, "GDELAY_BOOT");
         cpl_table_duplicate_column (oi_vis_p2, "GDELAY_BOOT", oi_vis_p1, "GDELAY_BOOT");
+        CPLCHECK_MSG("Cannot duplicate column for polarisation 2");
     }
   
     /* Remove useless column (IPHASOR, PHASOR, PHASOR_VAR) when the
