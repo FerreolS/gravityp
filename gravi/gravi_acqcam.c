@@ -1287,7 +1287,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
 	       - blind offset command from mapping template projected
 	       on acqisition camera;
 	       - offset from FT fiber to SC fiber. */
-	    double corrx=0, corry=0., ecorrx=0., ecorry=0.;
+	    double corrx=0, corry=0., ecorrx=0.;
 	    if (pscale) {
 	      corrx = ft_sc_x + sobj_offx_cam/pscale - fiber_ft_sc_x;	
 	      corry = ft_sc_y + sobj_offy_cam/pscale - fiber_ft_sc_y;
