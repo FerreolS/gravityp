@@ -961,8 +961,12 @@ cpl_error_code gravi_compute_opdc_state (gravi_data * p2vmred_data)
 		}
         
 	  } /* End loop on FT rows */
+      
 	} else {
 	  cpl_msg_warning (cpl_func,"No column BASELINE_STATE in OPDC... old data ?");
+	  cpl_msg_warning (cpl_func,"The STATE flags are set to 1 (valid) although the information is unavailable");
+      cpl_table_fill_column_window (oi_flux, "STATE", 0, nrow_ft * ntel, 1);
+      cpl_table_fill_column_window (oi_vis,  "STATE", 0, nrow_ft * nbase, 1);
 	}
 
 	/* Duplicate in the second polarisation if any */
