@@ -89,7 +89,8 @@ cpl_table * gravi_wave_fibre (cpl_table * spectrum_table,
 cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
                                cpl_table * detector_table,
                                cpl_size fullstartx,
-                               int spatial_order);
+                               int spatial_order,
+                               double * rms_residuals);
 
 cpl_error_code gravi_wave_correct_dispersion (cpl_table * wave_fibre,
                                               double n0, double n1, double n2);
@@ -1135,7 +1136,8 @@ cpl_table * gravi_wave_fibre (cpl_table * spectrum_table,
 cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
                                cpl_table * detector_table,
                                cpl_size fullstartx,
-                               int spatial_order)
+                               int spatial_order,
+                               double * rms_residuals)
 {
 	gravi_msg_function_start(1);
 	cpl_ensure (wavefibre_table, CPL_ERROR_NULL_INPUT, NULL);
@@ -1143,6 +1145,7 @@ cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
 
 	int nbase = 6;
 	char name[100];
+	*rms_residuals = 0;
 
     /* Get numbers */
     cpl_size n_region = cpl_table_get_nrow (detector_table);
@@ -1274,14 +1277,15 @@ cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
         
 		CPLCHECK_NUL ("Cannot fit 2D");
 		
-//		/* 
-//		 * Compute residuals 
-//		 */
-//		double rechisq = 0.0;
-//		cpl_vector * residuals = cpl_vector_new (nvalid);
-//		cpl_vector_fill_polynomial_fit_residual	(residuals, vector, NULL, fit2d, matrix, &rechisq);
-//		
-//		CPLCHECK_MSG ("Cannot compute residuals");
+		/*
+		 * Compute residuals
+		 */
+		double rechisq = 0.0;
+		cpl_vector * residuals = cpl_vector_new (nvalid);
+		cpl_vector_fill_polynomial_fit_residual	(residuals, vector, NULL, fit2d, matrix, &rechisq);
+		*rms_residuals += cpl_vector_get_stdev(residuals)/npol;
+		FREE (cpl_vector_delete, residuals);
+		CPLCHECK_NUL ("Cannot compute residuals");
         
 		FREE (cpl_matrix_delete, matrix);
 		FREE (cpl_vector_delete, vector);
@@ -1706,13 +1710,16 @@ cpl_error_code  gravi_compute_wave (gravi_data * wave_map,
     /* Interpolate table 2D */
     cpl_table * wavedata_table;
     int spatial_order=2; // default spatial order
+    double rms_residuals;
     if (type_data == GRAVI_FT && gravi_param_get_bool(parlist, "gravity.calib.force-wave-ft-equal")) {
     	spatial_order = 0;
     	cpl_msg_info (cpl_func, "Option force-waveFT-equal applied");
     }
     wavedata_table = gravi_wave_fit_2d (wavefibre_table,
                                         detector_table,
-                                        fullstartx, spatial_order);
+                                        fullstartx, spatial_order, &rms_residuals);
+	cpl_propertylist_update_double (wave_header, QC_RMS_RESIDUALS(type_data), rms_residuals);
+
     CPLCHECK_MSG ("Cannot fit 2d data");
     
     /* 
