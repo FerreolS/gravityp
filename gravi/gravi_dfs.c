@@ -584,6 +584,15 @@ cpl_error_code gravi_parameter_add_compute_vis (cpl_parameterlist *self, int isC
 	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "end-time");
 	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
 	cpl_parameterlist_append (self, p);
+
+    /* Force same time for all baselines */
+	p = cpl_parameter_new_value ("gravity.vis.force-same-time", CPL_TYPE_BOOL,
+                                 "Force all baseline/quantities to have\n "
+                                 "strickly the same TIME and MJD columns",
+                                 "gravity.vis", FALSE);
+	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "force-same-time");
+	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	cpl_parameterlist_append (self, p);
     
     /* Debias SC VIS2 */
 	p = cpl_parameter_new_value ("gravity.vis.debias-sc", CPL_TYPE_BOOL,

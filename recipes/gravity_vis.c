@@ -760,6 +760,13 @@ static int gravity_vis(cpl_frameset * frameset,
 		tmpvis_data = gravi_compute_vis (p2vmred_data, parlist);
 		CPLCHECK_CLEAN ("Cannot average the P2VMRED frames into VIS");
 
+        /* Set the mean TIME and mean MJD if required */
+        if (gravi_param_get_bool (parlist, "gravity.vis.force-same-time") ) {
+            cpl_msg_info (cpl_func,"Force same time for all quantities/baselines");
+            gravi_vis_force_time (tmpvis_data);
+            CPLCHECK_CLEAN ("Cannot average the TIME in OI_VIS");
+        }
+            
         /* Merge with already existing */
         if (vis_data == NULL) {
             vis_data = tmpvis_data; tmpvis_data = NULL;
@@ -829,7 +836,7 @@ static int gravity_vis(cpl_frameset * frameset,
 	/* Recompute the TIME column from the MJD column
 	 * in all OIFITS tables to follow standard */
 	gravi_vis_mjd_to_time (vis_data);
-	  
+
 	/* Save the output data file based on the first frame of the frameset */
 	cpl_frameset_join (used_frameset, recipe_frameset);
 	frame = cpl_frameset_get_position (recipe_frameset, 0);
