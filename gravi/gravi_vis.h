@@ -60,5 +60,6 @@ cpl_error_code gravi_force_uncertainties (gravi_data * oi_data,
 
 
 cpl_error_code gravi_vis_erase_obs (cpl_table * oi_table, cpl_array *flag_array, cpl_size ntel);
+cpl_error_code gravi_vis_force_time (gravi_data * oi_data);
 
 #endif /* GRAVI_VIS_H_ */

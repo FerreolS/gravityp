@@ -1247,7 +1247,7 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
             gravi_flux_average_bootstrap (oi_flux_FT, flux_FT,
                                           nboot_ft);
             CPLCHECK_NUL("Cannot average flux of FT");
-            
+
             /* 
              * Add tables in the vis_data
              */
@@ -3152,7 +3152,81 @@ cpl_error_code gravi_vis_compute_column_mean (cpl_table * out_table,
     return CPL_ERROR_NONE;
 }
 
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Force all data in OI_TABLE to have the same TIME and MJD.
+ * 
+ * @param oi_data    VIS data to process, in-place
+ * 
+ * The TIME and MJD columns of all OI_VIS, OI_VIS2, OI_FLUX and
+ * OI_T3 are averaged and replaced by these averages. Note that:
+ * SC and FT are averaged into the same time/mjd, all observations are
+ * averaged into the same time/mjd, all observables are averaged into
+ * the same time/mjd.
+ */
+/*----------------------------------------------------------------------------*/
 
+cpl_error_code gravi_vis_force_time (gravi_data * oi_data)
+{
+    gravi_msg_function_start(1);
+    cpl_ensure_code (oi_data, CPL_ERROR_NULL_INPUT);
+    
+    /* Number of extensions */
+    cpl_size nb_ext = gravi_data_get_size (oi_data);
+    cpl_ensure_code (nb_ext>0,   CPL_ERROR_ILLEGAL_INPUT);
+
+    /* Init averaging */
+    double mean_mjd = 0.0;
+    double mean_time = 0.0;
+    cpl_size count = 0;
+
+    /* Loop on extensions */
+    for (int ext = 0; ext < nb_ext; ext++) {
+
+        /* Check if data table */
+        const char * extname = gravi_data_get_extname (oi_data, ext);
+        if (!strcmp (extname, "OI_VIS") || !strcmp (extname, "OI_VIS2") ||
+            !strcmp (extname, "OI_T3") || !strcmp (extname, "OI_FLUX")) {
+
+            /* Average MJD and TIME */
+            cpl_table * oi_table = gravi_data_get_table_x (oi_data, ext);
+            mean_mjd  += cpl_table_get_column_mean (oi_table, "MJD");
+            mean_time += cpl_table_get_column_mean (oi_table, "TIME");
+            count ++;
+
+            CPLCHECK_MSG ("Cannot get TIME or MJD...");
+        }
+    }
+
+    /* Compute mean */
+    cpl_ensure_code (count>0, CPL_ERROR_ILLEGAL_INPUT);
+    mean_mjd /= count;
+    mean_time /= count;
+
+    /* Verbose */
+    cpl_msg_info (cpl_func, "Mean MDJ = %g [mdj]", mean_mjd);
+    cpl_msg_info (cpl_func, "Mean TIME = %g [s]", mean_time);
+
+    /* Loop on extensions */
+    for (int ext = 0; ext < nb_ext; ext++) {
+
+        /* Check if data table */
+        const char * extname = gravi_data_get_extname (oi_data, ext);
+        if (!strcmp (extname, "OI_VIS") || !strcmp (extname, "OI_VIS2") ||
+            !strcmp (extname, "OI_T3") || !strcmp (extname, "OI_FLUX")) {
+
+            /* Set MJD and TIME */
+            cpl_table * oi_table = gravi_data_get_table_x (oi_data, ext);
+            cpl_table_fill_column_window (oi_table, "MJD",  0, CPL_SIZE_MAX, mean_mjd);
+            cpl_table_fill_column_window (oi_table, "TIME", 0, CPL_SIZE_MAX, mean_time);
+            
+            CPLCHECK_MSG ("Cannot set average TIME or MJD...");
+        }
+    }
+    
+    gravi_msg_function_exit(1);
+    return CPL_ERROR_NONE;
+}  
 
 
 /**@}*/
