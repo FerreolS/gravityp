@@ -746,7 +746,7 @@ cpl_propertylist * gravi_plist_get_oifits_keywords (cpl_propertylist * header)
 
 /*-----------------------------------------------------------------------------*/
 /**
- * @brief Extract QC parameters
+ * @brief Extract QC and PRO parameters
  * @param header    The input header
  * @return A new cpl_parameterlist with the QC keywords
  */
@@ -756,7 +756,7 @@ cpl_propertylist *  gravi_plist_get_qc (cpl_propertylist * header){
 
 	cpl_propertylist * applist;
 	cpl_property * p;
-	const char * qc = "QC", * p_name;
+	const char * qc = " QC ", * pro = " PRO ", * p_name;
 	int size, i;
 
 	/* Check inputs */
@@ -768,7 +768,9 @@ cpl_propertylist *  gravi_plist_get_qc (cpl_propertylist * header){
 	for (i = 0; i < size; i++){
 		p = cpl_propertylist_get (header, i);
 		p_name = cpl_property_get_name (p);
-		if ( (strstr(p_name, qc) != NULL) || (strstr(p_name, GRAVI_NIGHT_OBS) != NULL) ) {
+		if ( (strstr(p_name, qc) != NULL) ||
+             (strstr(p_name, pro) != NULL) ||
+             (strstr(p_name, GRAVI_NIGHT_OBS) != NULL) ) {
 			cpl_type type_qc = cpl_property_get_type (p);
 			float p_f;
 			double p_d;
@@ -781,35 +783,35 @@ cpl_propertylist *  gravi_plist_get_qc (cpl_propertylist * header){
 				if (p_f != NAN)
 					cpl_propertylist_append_property(applist, p);
 				else
-					cpl_msg_warning(cpl_func, "The qc parameter %s is not correct", cpl_property_get_name (p));
+					cpl_msg_warning(cpl_func, "The parameter %s is not correct", cpl_property_get_name (p));
 				break;
 			case CPL_TYPE_DOUBLE :
 				p_d = cpl_property_get_double (p);
 				if (p_d != NAN)
 					cpl_propertylist_append_property(applist, p);
 				else
-					cpl_msg_warning(cpl_func, "The qc parameter %s is not correct", cpl_property_get_name (p));
+					cpl_msg_warning(cpl_func, "The parameter %s is not correct", cpl_property_get_name (p));
 				break;
 			case CPL_TYPE_INT :
 				p_i = cpl_property_get_int (p);
 				if (p_i != NAN)
 					cpl_propertylist_append_property(applist, p);
 				else
-					cpl_msg_warning(cpl_func, "The qc parameter %s is not correct", cpl_property_get_name (p));
+					cpl_msg_warning(cpl_func, "The parameter %s is not correct", cpl_property_get_name (p));
 				break;
 			case CPL_TYPE_STRING :
 				p_s = cpl_property_get_string (p);
 				if (p_s)
 					cpl_propertylist_append_property(applist, p);
 				else
-					cpl_msg_warning(cpl_func, "The qc parameter %s is not correct", cpl_property_get_name (p));
+					cpl_msg_warning(cpl_func, "The parameter %s is not correct", cpl_property_get_name (p));
 				break;
 			case CPL_TYPE_CHAR :
 				p_c = cpl_property_get_char (p);
 				if (p_c)
 					cpl_propertylist_append_property(applist, p);
 				else
-					cpl_msg_warning(cpl_func, "The qc parameter %s is not correct", cpl_property_get_name (p));
+					cpl_msg_warning(cpl_func, "The parameter %s is not correct", cpl_property_get_name (p));
 				break;
 			default :
 				cpl_error_set_message(cpl_func, CPL_ERROR_INVALID_TYPE,
