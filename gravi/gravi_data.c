@@ -652,26 +652,29 @@ cpl_error_code gravi_data_save_new (gravi_data 		  * self,
 	
 	cpl_frameset * frameset;
 	int ext, i = 0, j = 0;
-
+    
 	/* If the optional propertylist is not given, we simply
 	 * extract the QC parameters from the saved product. */
 	if (applist == NULL) {
         applist = gravi_data_get_qc (self);
-        
+        CPLCHECK_MSG ("Cannot get QC parameters");
 	} else {
         applist = cpl_propertylist_duplicate (applist);
     }
 
 	/* Add the product CATG to the header */
 	cpl_propertylist_append_string (applist, CPL_DFS_PRO_CATG, proCatg);
+    CPLCHECK_MSG ("Cannot add the CATG parameter");
 
 	/* Copy the DATE-OBS and NIGHT-OBS parameters if present */
 	cpl_propertylist * hdr = gravi_data_get_header (self);
 	if ( cpl_propertylist_has (hdr, GRAVI_NIGHT_OBS) ) {
 	  cpl_propertylist_copy_property (applist, hdr, GRAVI_NIGHT_OBS);
+      CPLCHECK_MSG ("Cannot set NIGHT_OBS");
 	}
 	if ( cpl_propertylist_has (hdr, "DATE-OBS") ) {
 	  cpl_propertylist_copy_property (applist, hdr, "DATE-OBS");
+      CPLCHECK_MSG ("Cannot DATE-OBS");
 	}
 
     /* Create keywords for OIFITS comliancy if VIS product */
