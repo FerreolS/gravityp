@@ -291,6 +291,10 @@ cpl_table * gravi_create_oiarray_table (const cpl_table * array_geometry,
  * @param mode            gravi_single / gravi_dual
  * @param parlist 	  	  The parameter list containing the variables defining
  * 	  	  	  	  	      the size of the profile
+ * @param det_type        The detector to process. If GRAVI_DET_SC, then only
+ *                        the science detector extensions will be processed.
+ *                        GRAVI_DET_FT will do the same for FT detector
+ *                        and GRAVI_DET_ALL will do it for both. 
  * 
  * @return  The data containing the OI_FLUX and OI_VIS tables who compute
  * 	        the visibilies of each acquisition. 
@@ -310,7 +314,8 @@ cpl_table * gravi_create_oiarray_table (const cpl_table * array_geometry,
 /*----------------------------------------------------------------------------*/
 
 gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm_map,
-                                    const char * mode, const cpl_parameterlist * parlist)
+                                    const char * mode, const cpl_parameterlist * parlist,
+                                    enum gravi_detector_type det_type)
 {
 	/* Message and timer */
 	gravi_msg_function_start(1);
@@ -412,6 +417,12 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
 	/*
 	 * For each type of data SC / FT 
 	 */
+    int init_type_data = 1;
+    int end_type_data = 1;
+    if(det_type == GRAVI_DET_SC || det_type == GRAVI_DET_ALL)
+        init_type_data = 0;
+    if(det_type == GRAVI_DET_FT || det_type == GRAVI_DET_ALL)
+        end_type_data = 1;
 	for (int type_data = 0; type_data < 2; type_data ++){
 
         /* Check if this data is present */

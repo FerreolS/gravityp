@@ -728,7 +728,7 @@ int gravi_calib_test(void){
 	/* Compute the flux and visibilities for each telescope and
 	 * per acquisition with the P2VM applied to preproc_data */
 	cpl_msg_info (cpl_func, "Compute the P2VMRED");
-    test_data(p2vm_reduced, gravi_compute_p2vmred (preproc_data, p2vm_data, "gravi_single", parlist),
+    test_data(p2vm_reduced, gravi_compute_p2vmred (preproc_data, p2vm_data, "gravi_single", parlist, GRAVI_DET_ALL),
 			"gravi_p2vm_reduce: reduce the p2vm... ", flag);
 
     /* Move extensions and delete preproc */

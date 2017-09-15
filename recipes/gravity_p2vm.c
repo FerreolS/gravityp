@@ -339,6 +339,7 @@ static int gravity_p2vm(cpl_frameset            * frameset,
     cpl_propertylist * met_plist=NULL;
     int ** valid_trans = cpl_malloc (2 * sizeof (int*));
     int ** valid_CP = cpl_malloc (2 * sizeof (int*));
+    char ext_regexp[500];
     clock_t start;
 
     for (int i = 0 ; i < 2; i++){
@@ -547,7 +548,8 @@ static int gravity_p2vm(cpl_frameset            * frameset,
         frame = cpl_frameset_get_position (wave_frameset, 0);
 
         /* Load WAVE_RAW SC */
-        gravi_data * wave_sc_data = gravi_data_load_rawframe_ext (frame, used_frameset,"^(IMAGING_DATA_SC|IMAGING_DETECTOR_SC)$");
+        snprintf(ext_regexp, 499, "^(%s|%s)$", GRAVI_IMAGING_DATA_SC_EXT, GRAVI_IMAGING_DETECTOR_SC_EXT);
+        gravi_data * wave_sc_data = gravi_data_load_rawframe_ext (frame, used_frameset, ext_regexp);
         gravi_data_detector_cleanup (wave_sc_data, parlist);
 
         /* Reduce WAVE_RAW SC */
@@ -557,7 +559,8 @@ static int gravity_p2vm(cpl_frameset            * frameset,
         FREE (gravi_data_delete, wave_sc_data);
 
         /* Load WAVE_RAW FT */
-        gravi_data * wave_ft_data = gravi_data_load_rawframe_ext (frame, NULL,"^(IMAGING_DATA_FT|IMAGING_DETECTOR_FT)$");
+        snprintf(ext_regexp, 499, "^(%s|%s)$", GRAVI_IMAGING_DATA_FT_EXT, GRAVI_IMAGING_DETECTOR_FT_EXT);
+        gravi_data * wave_ft_data = gravi_data_load_rawframe_ext (frame, NULL, ext_regexp);
 
         /* Reduce WAVE_RAW FT */
         cpl_msg_info (cpl_func, "Extract FT SPECTRUM for WAVE_RAW");
@@ -571,7 +574,7 @@ static int gravity_p2vm(cpl_frameset            * frameset,
         FREE (gravi_data_delete, ft_spectrum_data);        
 
         /* Load WAVE_RAW metrology */
-        gravi_data * wave_met_data  = gravi_data_load_rawframe_ext (frame, NULL,"METROLOGY");
+        gravi_data * wave_met_data  = gravi_data_load_rawframe_ext (frame, NULL, GRAVI_METROLOGY_EXT);
 
         /* Compute the P2VM of the MET from the WAVE_RAW */
         cpl_msg_info (cpl_func, "Compute the P2VM_MET from WAVE_RAW");
@@ -617,7 +620,8 @@ static int gravity_p2vm(cpl_frameset            * frameset,
             frame = cpl_frameset_get_position (wavesc_frameset, 0);
 
             /* Load WAVESC_RAW SC*/
-            gravi_data * wavesc_sc_data  = gravi_data_load_rawframe_ext (frame, used_frameset,"^(IMAGING_DATA_SC|IMAGING_DETECTOR_SC)$");
+            snprintf(ext_regexp, 499, "^(%s|%s)$", GRAVI_IMAGING_DATA_SC_EXT, GRAVI_IMAGING_DETECTOR_SC_EXT);
+            gravi_data * wavesc_sc_data  = gravi_data_load_rawframe_ext (frame, used_frameset, ext_regexp);
             gravi_data_detector_cleanup (wavesc_sc_data, parlist);
 
             cpl_msg_info (cpl_func, "Extract SC SPECTRUM for WAVESC_RAW");
@@ -627,7 +631,8 @@ static int gravity_p2vm(cpl_frameset            * frameset,
             FREE (gravi_data_delete, wavesc_sc_data);
 
             /* Load WAVESC_RAW FT*/
-            gravi_data * wavesc_ft_data  = gravi_data_load_rawframe_ext (frame, used_frameset,"^(IMAGING_DATA_FT|IMAGING_DETECTOR_FT)$");
+            snprintf(ext_regexp, 499, "^(%s|%s)$", GRAVI_IMAGING_DATA_FT_EXT, GRAVI_IMAGING_DETECTOR_FT_EXT);
+            gravi_data * wavesc_ft_data  = gravi_data_load_rawframe_ext (frame, used_frameset, ext_regexp);
 
             cpl_msg_info (cpl_func, "Extract FT SPECTRUM for WAVESC_RAW");
             gravi_data * ft_spectrum_data = gravi_extract_spectrum (wavesc_ft_data, profile_map, dark_map,
@@ -650,7 +655,7 @@ static int gravity_p2vm(cpl_frameset            * frameset,
             FREE (gravi_data_delete, wavesc_met_data);
 
             CPLCHECK_CLEAN ("Cannot process the WAVESC_RAW");
- 
+
             /* Save the file with OPD_SC, OPD_FT, OI_VIS_MET */
             if (gravi_param_get_bool (parlist,"gravity.dfs.debug-file")) {
                 gravi_data_save_new (spectrum_data, frameset, NULL, parlist,
@@ -731,7 +736,8 @@ static int gravity_p2vm(cpl_frameset            * frameset,
         /* Load this frame */
         frame = cpl_frameset_get_position (p2vm_frameset, i);
         cpl_frameset_insert (used_frameset, cpl_frame_duplicate (frame));
-        gravi_data * hdr_data = gravi_data_load_rawframe_ext (frame, current_frameset,"^(ARRAY_GEOMETRY|OPTICAL_TRAIN)$");
+        snprintf(ext_regexp, 499, "^(%s|%s)$", GRAVI_ARRAY_GEOMETRY_EXT, GRAVI_OPTICAL_TRAIN_EXT);
+        gravi_data * hdr_data = gravi_data_load_rawframe_ext (frame, current_frameset, ext_regexp);
         CPLCHECK_CLEAN ("Cannot load data");
 
         /* Verbose the shutters */
@@ -761,11 +767,12 @@ static int gravity_p2vm(cpl_frameset            * frameset,
             FREE (cpl_frameset_delete, current_frameset);
             continue;
         }
-        FREE (gravi_data_delete, hdr_data); 
+        FREE (gravi_data_delete, hdr_data);        
         /* End if all shutters open */
 
         /* Load SC */
-        gravi_data * sc_data = gravi_data_load_rawframe_ext (frame, current_frameset,"^(ARRAY_GEOMETRY|OPTICAL_TRAIN|IMAGING_DATA_SC|IMAGING_DETECTOR_SC)$");
+        snprintf(ext_regexp, 499, "^(%s|%s|%s|%s)$", GRAVI_ARRAY_GEOMETRY_EXT, GRAVI_OPTICAL_TRAIN_EXT, GRAVI_IMAGING_DATA_SC_EXT, GRAVI_IMAGING_DETECTOR_SC_EXT);
+        gravi_data * sc_data = gravi_data_load_rawframe_ext (frame, current_frameset, ext_regexp);
         gravi_data_detector_cleanup (sc_data, parlist);
 
         /* Extract SC spectrum */
@@ -778,12 +785,13 @@ static int gravity_p2vm(cpl_frameset            * frameset,
         gravi_align_spectrum (preproc_data, wave_map, p2vm_map, GRAVI_DET_SC);
         CPLCHECK_CLEAN ("Cannot re-interpolate spectrum");
 
-         /* Compute the part of the p2vm associated to this file */
+        /* Compute the part of the p2vm associated to this file */
         gravi_compute_p2vm (p2vm_map, preproc_data, valid_trans, valid_CP, GRAVI_DET_SC);
         CPLCHECK_CLEAN("Cannot compute the P2VM");
 
         /* Load FT */
-        gravi_data * ft_data = gravi_data_load_rawframe_ext (frame, NULL, "^(IMAGING_DATA_FT|IMAGING_DETECTOR_FT)$");
+        snprintf(ext_regexp, 499, "^(%s|%s)$", GRAVI_IMAGING_DATA_FT_EXT, GRAVI_IMAGING_DETECTOR_FT_EXT);
+        gravi_data * ft_data = gravi_data_load_rawframe_ext (frame, NULL, ext_regexp);
 
         /* Extract FT spectrum */
         gravi_data * ft_preproc_data = gravi_extract_spectrum (ft_data, profile_map, dark_map,
@@ -842,7 +850,8 @@ static int gravity_p2vm(cpl_frameset            * frameset,
     frame = cpl_frameset_get_position (p2vm_frameset, i_wave);
 
     /* Load SC WAVE */
-    gravi_data * wave_sc_data = gravi_data_load_rawframe_ext (frame, NULL,"^(ARRAY_GEOMETRY|OPTICAL_TRAIN|IMAGING_DATA_SC|IMAGING_DETECTOR_SC)$");
+    snprintf(ext_regexp, 499, "^(%s|%s|%s|%s)$", GRAVI_ARRAY_GEOMETRY_EXT, GRAVI_OPTICAL_TRAIN_EXT, GRAVI_IMAGING_DATA_SC_EXT, GRAVI_IMAGING_DETECTOR_SC_EXT);
+    gravi_data * wave_sc_data = gravi_data_load_rawframe_ext (frame, NULL, ext_regexp);
     gravi_data_detector_cleanup (wave_sc_data, parlist);
 
     /* Extract SC spectrum */
@@ -860,28 +869,43 @@ static int gravity_p2vm(cpl_frameset            * frameset,
     gravi_align_spectrum (preproc_data, wave_map, p2vm_map, GRAVI_DET_SC);
     CPLCHECK_CLEAN ("Cannot re-interpolate SC spectrum");
 
+    /* Compute P2VMRED */
+    p2vmred_data = gravi_compute_p2vmred(preproc_data, p2vm_map, "gravi_single", 
+                                         parlist, GRAVI_DET_SC);
+    FREE (gravi_data_delete, preproc_data);
+    CPLCHECK_CLEAN ("Cannot apply p2vm");
+
     /* Load FT WAVE */
-    gravi_data * wave_ft_data = gravi_data_load_rawframe_ext (frame, NULL,"^(IMAGING_DATA_FT|IMAGING_DETECTOR_FT)$");
+    snprintf(ext_regexp, 499, "^(%s|%s|%s|%s)$", GRAVI_ARRAY_GEOMETRY_EXT, GRAVI_OPTICAL_TRAIN_EXT, GRAVI_IMAGING_DATA_FT_EXT, GRAVI_IMAGING_DETECTOR_FT_EXT);
+    gravi_data * wave_ft_data = gravi_data_load_rawframe_ext (frame, NULL, ext_regexp);
 
     /* Extract FT spectrum */
     gravi_data * ft_preproc_data = gravi_extract_spectrum (wave_ft_data, profile_map, dark_map,
             badpix_map, NULL, parlist, GRAVI_DET_FT);
-    FREE (gravi_data_delete, wave_ft_data);
     CPLCHECK_CLEAN ("Cannot extract FT spectrum");
+
+    /* Move extensions necessary to compute the p2vmred */
+    gravi_data_move_ext (ft_preproc_data, wave_ft_data, GRAVI_ARRAY_GEOMETRY_EXT);
+    gravi_data_move_ext (ft_preproc_data, wave_ft_data, GRAVI_OPTICAL_TRAIN_EXT);
+    FREE (gravi_data_delete, wave_ft_data);
+    CPLCHECK_CLEAN ("Cannot move ext");
 
     /* Rescale to common wavelength */
     gravi_align_spectrum (ft_preproc_data, wave_map, p2vm_map, GRAVI_DET_FT);
     CPLCHECK_CLEAN ("Cannot re-interpolate FT spectrum");
 
-    /* Merge extensions of SC and FT extracted spectra */
-    gravi_data_move_ext(preproc_data, ft_preproc_data, GRAVI_IMAGING_DETECTOR_FT_EXT);
-    gravi_data_move_ext(preproc_data, ft_preproc_data, GRAVI_SPECTRUM_DATA_FT_EXT);
-    FREE (gravi_data_delete, ft_preproc_data);
-
     /* Compute P2VMRED */
-    p2vmred_data = gravi_compute_p2vmred (preproc_data, p2vm_map, "gravi_single", parlist);
-    FREE (gravi_data_delete, preproc_data);
+    gravi_data * ft_p2vmred_data = gravi_compute_p2vmred(ft_preproc_data, 
+            p2vm_map, "gravi_single", parlist, GRAVI_DET_FT);
+    FREE (gravi_data_delete, ft_preproc_data);
     CPLCHECK_CLEAN ("Cannot apply p2vm");
+
+    /* Merge extensions of SC and FT extracted spectra */
+    gravi_data_move_ext(p2vmred_data, ft_p2vmred_data, GRAVI_OI_WAVELENGTH_EXT);
+    gravi_data_move_ext(p2vmred_data, ft_p2vmred_data, GRAVI_OI_VIS_EXT);
+    gravi_data_move_ext(p2vmred_data, ft_p2vmred_data, GRAVI_OI_FLUX_EXT);
+    FREE (gravi_data_delete, ft_p2vmred_data);
+    CPLCHECK_CLEAN ("Cannot merge SC and FT extensions");
 
     /* Perform the phase correction */
     if (!strcmp (gravi_param_get_string (parlist, "gravity.calib.phase-calibration"), "CLOSURE")) {

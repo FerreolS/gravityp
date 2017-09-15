@@ -463,7 +463,8 @@ static int gravity_piezo(cpl_frameset * frameset,
 
 		/* Compute the flux and visibilities for each telescope and
 		 * per acquisition with the P2VM applied to preproc_data */
-		p2vmred_data = gravi_compute_p2vmred (preproc_data, p2vm_map, "gravi_single", parlist);
+		p2vmred_data = gravi_compute_p2vmred (preproc_data, p2vm_map,
+		                                "gravi_single", parlist, GRAVI_DET_ALL);
 		CPLCHECK_CLEAN ("Cannot apply p2vm to the preproc data");
 
         /* Move extensions and delete preproc */
