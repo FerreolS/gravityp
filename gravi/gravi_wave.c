@@ -791,7 +791,8 @@ cpl_table * gravi_opds_calibration (cpl_table * spectrum_table,
 /*----------------------------------------------------------------------------*/
 
 cpl_error_code gravi_wave_compute_opds (gravi_data * spectrum_data,
-                                        cpl_table  * met_table)
+                                        cpl_table  * met_table,
+                                        enum gravi_detector_type det_type)
 {
 	gravi_msg_function_start(1);
 	cpl_ensure_code (spectrum_data, CPL_ERROR_NULL_INPUT);
@@ -903,11 +904,22 @@ cpl_error_code gravi_wave_compute_opds (gravi_data * spectrum_data,
     /* 
      * Fill the output 
      */
-    gravi_data_add_table (spectrum_data, NULL, "OPD_SC", sc_table);
-	CPLCHECK_MSG ("Cannot set OPD_SC table");
+    if ((det_type == GRAVI_DET_SC || det_type == GRAVI_DET_ALL))
+    {
+        gravi_data_add_table (spectrum_data, NULL, "OPD_SC", sc_table);
+        CPLCHECK_MSG ("Cannot set OPD_SC table");
+    }
+    else
+        FREE (cpl_table_delete, sc_table);
+        
 
-    gravi_data_add_table (spectrum_data, NULL, "OPD_FT", ft_table);
-	CPLCHECK_MSG ("Cannot set OPD_FT table");
+    if ((det_type == GRAVI_DET_FT || det_type == GRAVI_DET_ALL))
+    {
+        gravi_data_add_table (spectrum_data, NULL, "OPD_FT", ft_table);
+        CPLCHECK_MSG ("Cannot set OPD_FT table");
+    }
+    else
+        FREE (cpl_table_delete, ft_table);
 
     gravi_data_add_table (spectrum_data, NULL, GRAVI_OI_VIS_MET_EXT, vismet_table);
 	CPLCHECK_MSG ("Cannot set OI_VIS_MET table");

@@ -43,6 +43,7 @@
 #include <ctype.h>
 #include <time.h>
 #include <math.h>
+#include <regex.h>
 
 #include "gravi_dfs.h"
 #include "gravi_data.h"
@@ -356,55 +357,148 @@ cpl_error_code gravi_data_append (gravi_data * first, const gravi_data * second,
 gravi_data * gravi_data_load (const char * filename)
 {
     gravi_msg_function_start(0);
-	cpl_ensure (filename, CPL_ERROR_NULL_INPUT, NULL);
+    cpl_ensure (filename, CPL_ERROR_NULL_INPUT, NULL);
 
-	cpl_msg_debug (cpl_func, "Load file : %s", filename);
+    cpl_msg_debug (cpl_func, "Load file : %s", filename);
 
-	/* Find a number of extension on the FITS file */
-	int nb_ext = cpl_fits_count_extensions (filename);
-	if (nb_ext == -1){
-		cpl_error_set_message(cpl_func, CPL_ERROR_ILLEGAL_INPUT, "no extension in this file");
-		return NULL;
-	}
+    /* Find a number of extension on the FITS file */
+    int nb_ext = cpl_fits_count_extensions (filename);
+    if (nb_ext == -1){
+        cpl_error_set_message(cpl_func, CPL_ERROR_ILLEGAL_INPUT, "no extension in this file");
+        return NULL;
+    }
 
-	/* Create data */
-	gravi_data * self = gravi_data_new (0);
+    /* Create data */
+    gravi_data * self = gravi_data_new (0);
 
-	/* Load primary header */
+    /* Load primary header */
     cpl_propertylist * header = cpl_propertylist_load (filename, 0);
-	cpl_propertylist_append (self->primary_hdr, header);
+    cpl_propertylist_append (self->primary_hdr, header);
     FREE (cpl_propertylist_delete, header);
 
-	/* Loop on extensions */
-	for (int i = 0; i < nb_ext ; i++ ){
+    /* Loop on extensions */
+    for (int i = 0; i < nb_ext ; i++ ){
 
-	  /* Load header of this extension */
-	  self->exts_hdrs[i] = cpl_propertylist_load (filename, i+1);
-	  CPLCHECK_NUL ("Cannot load header");
+      /* Load header of this extension */
+      self->exts_hdrs[i] = cpl_propertylist_load (filename, i+1);
+      CPLCHECK_NUL ("Cannot load header");
 
-	  /* Load extension as table */
-	  if (gravi_pfits_get_extension_type (self->exts_hdrs[i]) == 2) {
-		self->exts_tbs[i] = cpl_table_load (filename, i+1, 0);
-		gravi_data_check_savetypes (self->exts_hdrs[i], self->exts_tbs[i]);
-		CPLCHECK_NUL ("Cannot load bintable");
-	  }
-	  /* Load extension as imagelist */
-	  else if (gravi_pfits_get_extension_type (self->exts_hdrs[i]) == 3) {
-		self->exts_imgl[i] = cpl_imagelist_load (filename,CPL_TYPE_DOUBLE,i+1);
-		CPLCHECK_NUL ("Cannot load imagelist");
-	  }
-	  /* error */
-	  else {
-		cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT, "The dimension of the extension is wrong");
-		gravi_data_delete (self);
-		return NULL;
-	  }
-	  
-	  self->nb_ext ++;
-	}
+      /* Load extension as table */
+      if (gravi_pfits_get_extension_type (self->exts_hdrs[i]) == 2) {
+        self->exts_tbs[i] = cpl_table_load (filename, i+1, 0);
+        gravi_data_check_savetypes (self->exts_hdrs[i], self->exts_tbs[i]);
+        CPLCHECK_NUL ("Cannot load bintable");
+      }
+      /* Load extension as imagelist */
+      else if (gravi_pfits_get_extension_type (self->exts_hdrs[i]) == 3) {
+        self->exts_imgl[i] = cpl_imagelist_load (filename,CPL_TYPE_DOUBLE,i+1);
+        CPLCHECK_NUL ("Cannot load imagelist");
+      }
+      /* error */
+      else {
+        cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT, "The dimension of the extension is wrong");
+        gravi_data_delete (self);
+        return NULL;
+      }
+      
+      self->nb_ext ++;
+    }
 
     gravi_msg_function_exit(0);
-	return self;
+    return self;
+}
+
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Low-level function to load FITS file.
+ *
+ * @param filename  Name of the input file.
+ * @param extensions_regexp Extensions to load
+ * @return The newly created gravi data or NULL if an error occurred.
+ *
+ * The function returns a gravi data created by reading the FITS file.
+ * Only the extension names that match the regular expression in 
+ * extensions_regexp parameter are actually loaded 
+ * Currently only the FITS file format is supported. All the gravi data
+ * memory members are allocated.
+ */
+/*----------------------------------------------------------------------------*/
+gravi_data * gravi_data_load_ext(const char * filename, 
+                                 const char * extensions_regexp)
+{
+    gravi_msg_function_start(0);
+    cpl_ensure (filename, CPL_ERROR_NULL_INPUT, NULL);
+
+    cpl_msg_debug (cpl_func, "Load file : %s", filename);
+
+    /* Find a number of extension on the FITS file */
+    int nb_ext = cpl_fits_count_extensions (filename);
+    if (nb_ext == -1){
+        cpl_error_set_message(cpl_func, CPL_ERROR_ILLEGAL_INPUT, "no extension in this file");
+        return NULL;
+    }
+
+    /* Create data */
+    gravi_data * self = gravi_data_new (0);
+
+    /* Load primary header */
+    cpl_propertylist * header = cpl_propertylist_load (filename, 0);
+    cpl_propertylist_append (self->primary_hdr, header);
+    FREE (cpl_propertylist_delete, header);
+
+    //Compile regular expression
+    regex_t filter;
+    int status = regcomp(&filter, extensions_regexp, REG_EXTENDED | REG_NOSUB);
+    if(status) {
+        cpl_error_set_message(cpl_func, CPL_ERROR_ILLEGAL_INPUT, 
+                              "Cannot interpret extension regular expression");
+        return NULL;
+    }
+    
+    /* Loop on extensions */
+    int iext = 0;
+    for (int i = 0; i < nb_ext ; i++ ){
+
+        //Read the extension header
+        cpl_propertylist *proplist = cpl_propertylist_load (filename, i+1);
+        const char *extname = cpl_propertylist_get_string (proplist, "EXTNAME");
+        CPLCHECK_NUL ("Cannot load header");
+
+        //Check whether it is one of the required extensions
+        if (regexec(&filter, extname, 0, NULL, 0) == REG_NOMATCH)
+        {
+            cpl_propertylist_delete(proplist);
+            continue;
+        }
+        /* Load header of this extension */
+        self->exts_hdrs[iext] = proplist;
+
+        /* Load extension as table */
+        if (gravi_pfits_get_extension_type (self->exts_hdrs[iext]) == 2) {
+            self->exts_tbs[iext] = cpl_table_load (filename, i+1, 0);
+            gravi_data_check_savetypes (self->exts_hdrs[iext], self->exts_tbs[iext]);
+            CPLCHECK_NUL ("Cannot load bintable");
+        }
+        /* Load extension as imagelist */
+        else if (gravi_pfits_get_extension_type (self->exts_hdrs[iext]) == 3) {
+            self->exts_imgl[iext] = cpl_imagelist_load (filename,CPL_TYPE_DOUBLE,i+1);
+            CPLCHECK_NUL ("Cannot load imagelist");
+        }
+        /* error */
+        else {
+            cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT, "The dimension of the extension is wrong");
+            gravi_data_delete (self);
+            regfree(&filter);
+            return NULL;
+        }
+
+        self->nb_ext ++;
+        iext++;
+    }
+
+    regfree(&filter);
+    gravi_msg_function_exit(0);
+    return self;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -509,6 +603,45 @@ gravi_data * gravi_data_load_rawframe (cpl_frame * frame,
   // gravi_data_erase (data, GRAVI_IMAGING_DATA_ACQ_EXT);
   // gravi_data_erase (data, "ACQ_ABS_REF_POSITION");
   // CPLCHECK_NUL ("Cannot erase useless data");
+
+  return data;
+}
+
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Load a RAW FITS file and create a gravi_data from specified extensions
+ *
+ * @param filename        Name of the input file.
+ * @param used_frameset   If not NULL, this frameset is append with frame
+ * @param extensions_regexp  Regular expression with extensions to load
+ * @return gravi_data
+ *
+ * Load and create a gravi data type from input RAW frame. Only the extensions
+ * specified by the regular expression are loaded into the gravi_data struct.
+ */
+/*----------------------------------------------------------------------------*/
+gravi_data * gravi_data_load_rawframe_ext (cpl_frame * frame,
+                                           cpl_frameset * used_frameset,
+                                           char * extensions_regexp)
+{
+  cpl_ensure (frame, CPL_ERROR_NULL_INPUT, NULL);
+  
+  const char * filename = cpl_frame_get_filename (frame);
+  cpl_msg_info (cpl_func, "Load RAW file %s (%s)", FILESHORT(filename), cpl_frame_get_tag (frame));
+  
+  if (used_frameset) cpl_frameset_insert (used_frameset, cpl_frame_duplicate (frame));
+
+  /* Load data */
+  gravi_data * data = gravi_data_load_ext(filename, extensions_regexp);
+  CPLCHECK_NUL ("Cannot load data");
+
+  /* Dump minimum info */
+  gravi_data_dump_mode (data);
+  
+  /* Check consistency */
+  //TODO: If not all extensions are loaded the consistency cannot be checked
+  //gravi_data_check_consistency (data);
+  CPLCHECK_NUL ("Cannot check data consistency");
 
   return data;
 }

@@ -565,7 +565,8 @@ gravi_data * gravi_extract_spectrum (gravi_data * raw_data,
 									 gravi_data * dark_map,
 									 gravi_data * bad_map,
 									 gravi_data * sky_map,
-                                     const cpl_parameterlist * parlist)
+                                     const cpl_parameterlist * parlist,
+                                     enum gravi_detector_type det_type)
 {
     gravi_msg_function_start(1);
 	cpl_ensure (raw_data,     CPL_ERROR_NULL_INPUT, NULL);
@@ -585,7 +586,8 @@ gravi_data * gravi_extract_spectrum (gravi_data * raw_data,
     /* Dump all header from RAW product */
     cpl_propertylist_append (spectrum_header, raw_header);
     
-	if (gravi_data_has_detector (raw_data, GRAVI_FT)) {
+	if ((det_type == GRAVI_DET_FT || det_type == GRAVI_DET_ALL) && 
+	        gravi_data_has_detector (raw_data, GRAVI_FT)) {
 
 		/*
 		 *  Compute the flux and variance of each spectral element of FT
@@ -650,7 +652,8 @@ gravi_data * gravi_extract_spectrum (gravi_data * raw_data,
 	}
 
         
-	if (gravi_data_has_detector (raw_data, GRAVI_SC)) {
+    if ((det_type == GRAVI_DET_SC || det_type == GRAVI_DET_ALL) && 
+            gravi_data_has_detector (raw_data, GRAVI_SC)) {
         
         /*
          *  Compute the flux and variance of

@@ -27,6 +27,7 @@
 
 #include <cpl.h>
 #include "gravi_data.h"
+#include "gravi_pfits.h"
 
 /*-----------------------------------------------------------------------------
                               Public prototypes
@@ -41,7 +42,8 @@ gravi_data * gravi_extract_spectrum (gravi_data * raw_data,
 									 gravi_data * dark_map,
 									 gravi_data * bad_map,
 									 gravi_data * sky_map,
-                                     const cpl_parameterlist * parlist);
+                                     const cpl_parameterlist * parlist,
+                                     enum gravi_detector_type det_type);
 
 cpl_error_code gravi_align_spectrum (gravi_data * spectrum_data,
                                      gravi_data * wave_map,

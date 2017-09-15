@@ -334,14 +334,14 @@ static int gravity_p2vm(cpl_frameset            * frameset,
     gravi_data ** raw_data=NULL;
     gravi_data * p2vmred_data = NULL;
 
-    int nb_frame, i, nb_frame_gain = 0;
+    int nb_frame, nb_frame_gain = 0;
 
     cpl_propertylist * met_plist=NULL;
     int ** valid_trans = cpl_malloc (2 * sizeof (int*));
     int ** valid_CP = cpl_malloc (2 * sizeof (int*));
     clock_t start;
 
-    for (i = 0 ; i < 2; i++){
+    for (int i = 0 ; i < 2; i++){
         valid_trans[i] = cpl_calloc (4, sizeof (int));
         valid_CP[i] = cpl_calloc (6, sizeof (int));
     }
@@ -487,7 +487,7 @@ static int gravity_p2vm(cpl_frameset            * frameset,
         raw_data = cpl_malloc (nb_frame_gain * sizeof(gravi_data *));
 
         /* Build the list of FLAT files and output file name */
-        for (i = 0; i < nb_frame_gain; i++) {
+        for (int i = 0; i < nb_frame_gain; i++) {
             frame = cpl_frameset_get_position (flat_frameset, i);
             raw_data[i] = gravi_data_load_rawframe (frame, used_frameset);
             gravi_data_detector_cleanup (raw_data[i], parlist);
@@ -676,7 +676,7 @@ static int gravity_p2vm(cpl_frameset            * frameset,
     CPLCHECK_CLEAN ("Cannot create the P2VM data");
 
     /* Loop on files */
-    for (i = 0; i < nb_frame; i++) {
+    for (int i = 0; i < nb_frame; i++) {
 
         cpl_msg_info (cpl_func, " ***** file %d over %d ***** ", i+1, nb_frame );
         current_frameset = cpl_frameset_duplicate (used_frameset);

@@ -144,6 +144,13 @@
 #define GRAVI_FT 1
 #define GRAVI_TYPE(type) (type==GRAVI_SC?"SC":"FT")
 
+enum gravi_detector_type
+{
+    GRAVI_DET_FT,
+    GRAVI_DET_SC,
+    GRAVI_DET_ALL
+};
+
 /* Modes */
 #define MODE_SINGLE 1
 #define MODE_DUAL   2
