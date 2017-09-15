@@ -411,7 +411,8 @@ static int gravity_wavelamp(cpl_frameset            * frameset,
 
     /* Extract spectrum */
     preproc_data = gravi_extract_spectrum (argon_data, profile_map, dark_map,
-                                           badpix_map, NULL, parlist);
+                                           badpix_map, NULL, parlist, 
+                                           GRAVI_DET_ALL);
 	FREE (gravi_data_delete, argon_data);
     CPLCHECK_CLEAN ("Cannot extract spectrum");
     

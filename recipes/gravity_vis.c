@@ -375,7 +375,7 @@ static int gravity_vis(cpl_frameset * frameset,
         * vis_data=NULL, * disp_map=NULL, * diodepos_data=NULL, * diamcat_data=NULL, *eop_map=NULL;
 	gravi_data ** sky_maps = NULL;
 	
-	int nb_frame, nb_sky, isky;
+	int nb_frame, nb_sky;
 
 	/* Message */
 	gravity_print_banner (); 
@@ -608,6 +608,7 @@ static int gravity_vis(cpl_frameset * frameset,
     nb_frame = cpl_frameset_get_size (recipe_frameset);
 	
     for (int ivis = 0; ivis < nb_frame; ivis++){
+        int isky;
 		current_frameset = cpl_frameset_duplicate (used_frameset);
 
 		cpl_msg_info (cpl_func, " ***** OBJECT %d over %d ***** ", ivis+1, nb_frame);
@@ -660,7 +661,7 @@ static int gravity_vis(cpl_frameset * frameset,
 
         /* Extract spectrum */
         preproc_data = gravi_extract_spectrum (data, profile_map, dark_map, badpix_map,
-                                               sky_maps[isky], parlist);
+                                               sky_maps[isky], parlist, GRAVI_DET_ALL);
 		CPLCHECK_CLEAN ("Cannot extract spectrum");
 
 		/* Option save the spectrum file */
