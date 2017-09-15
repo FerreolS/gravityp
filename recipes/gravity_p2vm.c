@@ -571,6 +571,9 @@ static int gravity_p2vm(cpl_frameset            * frameset,
         /* Copy FT extensions to spectrum_data */
         gravi_data_move_ext(spectrum_data, ft_spectrum_data, GRAVI_IMAGING_DETECTOR_FT_EXT);
         gravi_data_move_ext(spectrum_data, ft_spectrum_data, GRAVI_SPECTRUM_DATA_FT_EXT);
+        cpl_propertylist_copy_property_regexp(gravi_data_get_header(spectrum_data), 
+                                              gravi_data_get_header(ft_spectrum_data), 
+                                              "^ESO QC ",0);
         FREE (gravi_data_delete, ft_spectrum_data);        
 
         /* Load WAVE_RAW metrology */
@@ -643,6 +646,9 @@ static int gravity_p2vm(cpl_frameset            * frameset,
             /* Copy FT extensions to spectrum_data */
             gravi_data_move_ext(spectrum_data, ft_spectrum_data, GRAVI_IMAGING_DETECTOR_FT_EXT);
             gravi_data_move_ext(spectrum_data, ft_spectrum_data, GRAVI_SPECTRUM_DATA_FT_EXT);
+            cpl_propertylist_copy_property_regexp(gravi_data_get_header(spectrum_data), 
+                                                  gravi_data_get_header(ft_spectrum_data), 
+                                                  "^ESO QC ",0);
             FREE (gravi_data_delete, ft_spectrum_data);        
 
             /* Load WAVESC_RAW metrology */
