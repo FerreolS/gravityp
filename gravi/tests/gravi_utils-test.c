@@ -324,7 +324,7 @@ int gravi_utils_test(void){
 	test_pfailure(CPL_ERROR_NULL_INPUT, gravi_extract_spectrum(NULL,
                                                                NULL,
                                                                NULL,  NULL,
-                                                               NULL, NULL),
+                                                               NULL, NULL, GRAVI_DET_ALL),
 			              "gravi_extract_spectrum: Try to extract the spectrum with a NULL data... ", flag);
 
     cpl_parameterlist * parlist = cpl_parameterlist_new ();
@@ -332,7 +332,7 @@ int gravi_utils_test(void){
 	test_data (spectrum_data, gravi_extract_spectrum(data,
                                                      profile_map,
                                                      dark_map,  badpix,
-                                                     NULL, parlist), "gravi_extract_spectrum: extract the spectrum ...", flag);
+                                                     NULL, parlist, GRAVI_DET_ALL), "gravi_extract_spectrum: extract the spectrum ...", flag);
 
     cpl_parameterlist_delete (parlist);
 

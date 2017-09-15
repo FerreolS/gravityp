@@ -423,7 +423,7 @@ static int gravity_wavelamp(cpl_frameset            * frameset,
     //gravi_data_add_table (preproc_data, NULL, "WAVE_ARGON_RAW", argonwave_table);
     
     /* Rescale to common wavelength */
-    gravi_align_spectrum (preproc_data, wave_map, p2vm_map);
+    gravi_align_spectrum (preproc_data, wave_map, p2vm_map, GRAVI_DET_ALL);
     CPLCHECK_CLEAN ("Cannot re-interpolate spectrum");
 
 	/* Compute the ARGON WAVE */

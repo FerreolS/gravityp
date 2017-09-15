@@ -660,8 +660,9 @@ static int gravity_vis(cpl_frameset * frameset,
 		}
 
         /* Extract spectrum */
-        preproc_data = gravi_extract_spectrum (data, profile_map, dark_map, badpix_map,
-                                               sky_maps[isky], parlist, GRAVI_DET_ALL);
+        preproc_data = gravi_extract_spectrum (data, profile_map, dark_map, 
+                                               badpix_map, sky_maps[isky], 
+                                               parlist, GRAVI_DET_ALL);
 		CPLCHECK_CLEAN ("Cannot extract spectrum");
 
 		/* Option save the spectrum file */
@@ -673,7 +674,7 @@ static int gravity_vis(cpl_frameset * frameset,
 		}
         
         /* Rescale to common wavelength */
-        gravi_align_spectrum (preproc_data, wave_map, p2vm_map);
+        gravi_align_spectrum (preproc_data, wave_map, p2vm_map, GRAVI_DET_ALL);
 		CPLCHECK_CLEAN ("Cannot re-interpolate spectrum");
 
         /* Preproc the Acquisition Camera */

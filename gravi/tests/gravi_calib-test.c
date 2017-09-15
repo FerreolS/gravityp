@@ -381,10 +381,12 @@ int gravi_calib_test(void){
 
     cpl_msg_info (cpl_func, "Extract SPECTRUM for WAVE_RAW");
     gravi_data * spectrum_data = gravi_extract_spectrum (data, profile_map, dark_map,
-                                                         badpix_data, NULL,paralist);
+                                                         badpix_data, NULL,paralist,
+                                                         GRAVI_DET_ALL);
 
     cpl_msg_info (cpl_func, "Compute OPDs for WAVE_RAW");
-    gravi_wave_compute_opds (spectrum_data, gravi_data_get_table (data, GRAVI_METROLOGY_EXT));
+    gravi_wave_compute_opds (spectrum_data, gravi_data_get_table (data, GRAVI_METROLOGY_EXT),
+                             GRAVI_DET_ALL);
     FREE (gravi_data_delete, data);
 
     /* Compute wave calibration for FT and SC */
@@ -541,7 +543,8 @@ int gravi_calib_test(void){
 		data = gravi_data_load(filename);
 
 		test_data(preproc_data, gravi_extract_spectrum (data, profile_map, dark_map,
-                                                        badpix_data, NULL,paralist),
+                                                        badpix_data, NULL,paralist,
+                                                        GRAVI_DET_ALL),
 				   "gravi_preproc: Compute the preproc data... ", flag);
 		primary_hdr = gravi_data_get_plist(data,
 											GRAVI_PRIMARY_HDR_EXT);
@@ -555,7 +558,7 @@ int gravi_calib_test(void){
 							   "gravi_create_p2vm: create the p2vm table... ", flag);
 
 		/* Rescale to common wavelength */
-		gravi_align_spectrum (preproc_data, data_wave, p2vm_data);
+		gravi_align_spectrum (preproc_data, data_wave, p2vm_data, GRAVI_DET_ALL);
 
 		}
 
@@ -652,7 +655,8 @@ int gravi_calib_test(void){
 //
 //		}
 
-		test(gravi_compute_p2vm (p2vm_data, preproc_data, valid_trans, valid_CP),
+		test(gravi_compute_p2vm (p2vm_data, preproc_data, valid_trans, valid_CP,
+		        GRAVI_DET_ALL),
 				"gravi_compute_p2vm : Compute the p2vm... ", flag);
 
 		gravi_data_delete (preproc_data);
@@ -707,10 +711,11 @@ int gravi_calib_test(void){
 
 	cpl_msg_info (cpl_func, "Preproc the WAVE");
 	gravi_data * preproc_data=gravi_extract_spectrum (data, profile_map, dark_map,
-                                                      badpix_data, NULL,paralist);
+                                                      badpix_data, NULL,paralist,
+                                                      GRAVI_DET_ALL);
     
 	cpl_parameterlist_delete (paralist);
-    gravi_align_spectrum (preproc_data, data_wave, p2vm_data);
+    gravi_align_spectrum (preproc_data, data_wave, p2vm_data, GRAVI_DET_ALL);
 
     /* Move extensions from raw_data and delete it */
     gravi_data_move_ext (preproc_data, data, GRAVI_ARRAY_GEOMETRY_EXT);

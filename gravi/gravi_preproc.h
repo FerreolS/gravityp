@@ -47,6 +47,7 @@ gravi_data * gravi_extract_spectrum (gravi_data * raw_data,
 
 cpl_error_code gravi_align_spectrum (gravi_data * spectrum_data,
                                      gravi_data * wave_map,
-                                     gravi_data * p2vm_map);
+                                     gravi_data * p2vm_map,
+                                     enum gravi_detector_type det_type);
 
 #endif /* GRAVI_CALIB_H_ */

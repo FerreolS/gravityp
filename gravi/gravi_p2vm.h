@@ -34,7 +34,8 @@
 
 gravi_data * gravi_create_p2vm (gravi_data * wave_data);
 cpl_table* gravi_create_p2vm_table (cpl_table * detector_table, int n_wave);
-cpl_error_code gravi_compute_p2vm (gravi_data * , gravi_data * , int ** , int ** );
+cpl_error_code gravi_compute_p2vm (gravi_data * , gravi_data * , int ** , int ** ,
+                                   enum gravi_detector_type det_type);
 cpl_error_code gravi_p2vm_normalisation (gravi_data * , int ** , int **  );
 cpl_error_code gravi_p2vm_phase_correction (gravi_data * p2vm_map, gravi_data * p2vmreduced, int full_phase);
 cpl_error_code gravi_p2vm_transmission (gravi_data * p2vm_map, gravi_data * p2vmreduced);

@@ -426,6 +426,10 @@ gravi_data * gravi_create_p2vm (gravi_data * wave_map)
  * 	  	  	  	  	  	base, it means that it has 4 elements.
  * 	  	  	  	  	  	(if the file has a shutter 3 and 4 open of the
  * 	  	  	  	  	  	data SC valid_pair[0][5] = 1)
+ * @param det_type      The detector to align. If GRAVI_DET_SC, then only
+ *                      the science detector extensions will be processed.
+ *                      GRAVI_DET_FT will do the same for FT detector
+ *                      and GRAVI_DET_ALL will do it for both. 
  * 
  * The function will compute the transmission, phase and coherence and save
  * them in the p2vm_map giving in the inputs (shall be initialized).
@@ -433,7 +437,8 @@ gravi_data * gravi_create_p2vm (gravi_data * wave_map)
 /*----------------------------------------------------------------------------*/
 
 cpl_error_code gravi_compute_p2vm (gravi_data * p2vm_map, gravi_data * preproc_data,
-								   int ** valid_trans, int ** valid_pair)
+								   int ** valid_trans, int ** valid_pair,
+                                   enum gravi_detector_type det_type)
 {
     gravi_msg_function_start(1);
 	cpl_ensure_code (p2vm_map,     CPL_ERROR_NULL_INPUT);
@@ -444,7 +449,13 @@ cpl_error_code gravi_compute_p2vm (gravi_data * p2vm_map, gravi_data * preproc_d
 	/* 
 	 * Loop on type data  (SC/FT)
 	 */
-	for (int type_data = 0; type_data < 2; type_data ++){
+    int init_type_data = 1;
+    int end_type_data = 1;
+    if(det_type == GRAVI_DET_SC || det_type == GRAVI_DET_ALL)
+        init_type_data = 0;
+    if(det_type == GRAVI_DET_FT || det_type == GRAVI_DET_ALL)
+        end_type_data = 1;
+    for (int type_data = init_type_data; type_data <= end_type_data; type_data++ ) {
 
 		/* Check if SPECTRUM data exists */
         if (!gravi_data_has_spectrum (preproc_data, type_data)) {
