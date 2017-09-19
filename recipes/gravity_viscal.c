@@ -65,7 +65,7 @@ static char gravity_viscal_short[] = "Calibrate visibilities from the transfer f
 static char gravity_viscal_description[] =
     "This recipe calibrates the visibilities acquired on science target using visibilities acquired on a calibrator target. If the DIAMETER_CAT is not provided, the recipe will use the diameter provided in the header to compute the transfer function QC parameters. The corresponding keywords are INS.SOBJ.DIAMETER and FT.ROBJ.DIAMETER. The OI_FLUX data are not yet calibrated."
     "\n"
-    "The tag in the DO category can be SINGLE/DUAL and CAL/SCI. They should reflect the mode (SINGLE or DUAL) and the DPR.CATG of the observation (SCIENCE or CALIB). The tag in the PRO.CATG category will be SINGLE/DUAL and CAL/SCI depending on the input tag.\n"
+    "The tag in the DO category can be SINGLE/DUAL and CAL/SCI. The tag in the PRO.CATG category will be SINGLE/DUAL and CAL/SCI depending on the input tag.\n"
     GRAVI_RECIPE_FLOW"\n"
     "* Loop on all input CALIB files, compute the TF for each of them and write the corresponding product\n"
     "* Loop on all input SCIENCE files, interpolate the TF at that time, calibrate, and write the corresponding product\n"

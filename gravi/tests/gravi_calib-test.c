@@ -53,10 +53,6 @@
 #include "gravi_dfs.h"
 #include "gravi_wave.h"
 #include "gravi-test.c"
-#include <gsl/gsl_math.h>
-#include <gsl/gsl_matrix.h>
-#include <gsl/gsl_vector.h>
-#include <gsl/gsl_linalg.h>
 
 #define DATADIR_TEST DATADIR
 //#define DATADIR_TEST ""

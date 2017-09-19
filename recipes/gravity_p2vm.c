@@ -80,7 +80,7 @@ static char gravity_p2vm_description[] =
     GRAVI_FLAT_RAW"  x4  : raw flats, one shutter open (DPR.TYPE=FLAT)\n"
     GRAVI_P2VM_RAW"  x6  : raw p2vms, two shutters open (DPR.TYPE=P2VM)\n"
     GRAVI_WAVE_RAW"      : raw wavelength calibration for FT (DPR.TYPE=WAVE)\n"
-    GRAVI_WAVESC_RAW"    : raw wavelength calibration for SC (DPR.TYPE=WAVESC)\n"
+    GRAVI_WAVESC_RAW"    : raw wavelength calibration for SC (DPR.TYPE=WAVE,SC)\n"
     GRAVI_RECIPE_OUTPUT"\n"
     GRAVI_DARK_MAP"          : dark calibration\n"
     GRAVI_FLAT_MAP"          : flat calibration\n"

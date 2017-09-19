@@ -3,6 +3,7 @@
 //*****************************************************
 
 // Raw data
+//This classification is for the old DPR keywords, to be removed in the future once the archive contains only new headers
 if DPR.CATG like "%SCIENCE%" and DPR.TYPE like "%OBJECT%" and DPR.TYPE like "%SINGLE%" and INSTRUME=="GRAVITY" then
 {
   DO.CATG = "SINGLE_SCI_RAW";
@@ -11,6 +12,15 @@ if DPR.CATG like "%SCIENCE%" and DPR.TYPE like "%OBJECT%" and DPR.TYPE like "%SI
   REFLEX.TARGET = "T";
 }
 
+if DPR.CATG like "%SCIENCE%" and DPR.TECH like "%INTERFEROMETRY%" and DPR.TYPE like "%OBJECT%" and DPR.TYPE like "%SINGLE%" and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "SINGLE_SCI_RAW";
+  REFLEX.CATG = "SINGLE_SCI_RAW";
+  RAW.TYPE = "SINGLE_SCI_RAW";
+  REFLEX.TARGET = "T";
+}
+
+//This classification is for the old DPR keywords, to be removed in the future once the archive contains only new headers
 if DPR.CATG like "%CALIB%" and DPR.TYPE like "%OBJECT%" and DPR.TYPE like "%SINGLE%" and INSTRUME=="GRAVITY" then
 {
   DO.CATG = "SINGLE_CAL_RAW";
@@ -19,6 +29,15 @@ if DPR.CATG like "%CALIB%" and DPR.TYPE like "%OBJECT%" and DPR.TYPE like "%SING
   REFLEX.TARGET = "T";
 }
 
+if DPR.CATG like "%CALIB%" and DPR.TECH like "%INTERFEROMETRY%" and DPR.TYPE like "%STD%" and DPR.TYPE like "%SINGLE%" and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "SINGLE_CAL_RAW";
+  REFLEX.CATG = "SINGLE_CAL_RAW";
+  RAW.TYPE = "SINGLE_CAL_RAW";
+  REFLEX.TARGET = "T";
+}
+
+//This classification is for the old DPR keywords, to be removed in the future once the archive contains only new headers
 if DPR.CATG like "%SCIENCE%" and DPR.TYPE like "%SKY%" and DPR.TYPE like "%SINGLE%" and INSTRUME=="GRAVITY" then
 {
   DO.CATG = "SINGLE_SKY_RAW";
@@ -26,6 +45,14 @@ if DPR.CATG like "%SCIENCE%" and DPR.TYPE like "%SKY%" and DPR.TYPE like "%SINGL
   RAW.TYPE = "SINGLE_SCI_RAW";
 }
 
+if DPR.CATG like "%SCIENCE%" and DPR.TECH like "%SPECTRUM%" and DPR.TYPE like "%SKY%" and DPR.TYPE like "%SINGLE%" and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "SINGLE_SKY_RAW";
+  REFLEX.CATG = "SINGLE_SKY_RAW";
+  RAW.TYPE = "SINGLE_SCI_RAW";
+}
+
+//This classification is for the old DPR keywords, to be removed in the future once the archive contains only new headers
 if DPR.CATG like "%CALIB%" and DPR.TYPE like "%SKY%" and DPR.TYPE like "%SINGLE%" and INSTRUME=="GRAVITY" then
 {
   DO.CATG = "SINGLE_SKY_RAW";
@@ -33,6 +60,14 @@ if DPR.CATG like "%CALIB%" and DPR.TYPE like "%SKY%" and DPR.TYPE like "%SINGLE%
   RAW.TYPE = "SINGLE_CAL_RAW";
 }
 
+if DPR.CATG like "%CALIB%" and DPR.TECH like "%SPECTRUM%" and DPR.TYPE like "%SKY%" and DPR.TYPE like "%SINGLE%" and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "SINGLE_SKY_RAW";
+  REFLEX.CATG = "SINGLE_SKY_RAW";
+  RAW.TYPE = "SINGLE_CAL_RAW";
+}
+
+//This classification is for the old DPR keywords, to be removed in the future once the archive contains only new headers
 if DPR.CATG like "%SCIENCE%"  and DPR.TYPE like "%OBJECT%" and DPR.TYPE like "%DUAL%" and INSTRUME=="GRAVITY" then
 {
   DO.CATG = "DUAL_SCI_RAW";
@@ -41,7 +76,24 @@ if DPR.CATG like "%SCIENCE%"  and DPR.TYPE like "%OBJECT%" and DPR.TYPE like "%D
   REFLEX.TARGET = "T";
 }
 
+if DPR.CATG like "%SCIENCE%" and DPR.TECH like "%INTERFEROMETRY%" and DPR.TYPE like "%OBJECT%" and DPR.TYPE like "%DUAL%" and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "DUAL_SCI_RAW";
+  REFLEX.CATG = "DUAL_SCI_RAW";
+  RAW.TYPE = "DUAL_SCI_RAW";
+  REFLEX.TARGET = "T";
+}
+
+//This classification is for the old DPR keywords, to be removed in the future once the archive contains only new headers
 if DPR.CATG like "%CALIB%" and DPR.TYPE like "%OBJECT%" and DPR.TYPE like "%DUAL%" and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "DUAL_CAL_RAW";
+  REFLEX.CATG = "DUAL_CAL_RAW";
+  RAW.TYPE = "DUAL_CAL_RAW";
+  REFLEX.TARGET = "T";
+}
+
+if DPR.CATG like "%CALIB%" and DPR.TECH like "%INTERFEROMETRY%" and DPR.TYPE like "%STD%" and DPR.TYPE like "%DUAL%" and INSTRUME=="GRAVITY" then
 {
   DO.CATG = "DUAL_CAL_RAW";
   REFLEX.CATG = "DUAL_CAL_RAW";
@@ -56,12 +108,26 @@ if DPR.CATG like "%SCIENCE%" and DPR.TYPE like "%SKY%" and DPR.TYPE like "%DUAL%
   RAW.TYPE = "DUAL_SCI_RAW";
 }
 
+if DPR.CATG like "%SCIENCE%" and DPR.TECH like "%SPECTRUM%" and DPR.TYPE like "%SKY%" and DPR.TYPE like "%DUAL%" and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "DUAL_SKY_RAW";
+  REFLEX.CATG = "DUAL_SKY_RAW";
+  RAW.TYPE = "DUAL_SCI_RAW";
+}
+
 if DPR.CATG like "%CALIB%" and DPR.TYPE like "%SKY%" and DPR.TYPE like "%DUAL%" and INSTRUME=="GRAVITY" then
 {
   DO.CATG = "DUAL_SKY_RAW";
   REFLEX.CATG = "DUAL_SKY_RAW";
   RAW.TYPE = "DUAL_CAL_RAW";
 }
+
+if DPR.CATG like "%CALIB%" and DPR.TECH like "%SPECTRUM%" and DPR.TYPE like "%SKY%" and DPR.TYPE like "%DUAL%" and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "DUAL_SKY_RAW";
+  REFLEX.CATG = "DUAL_SKY_RAW";
+  RAW.TYPE = "DUAL_CAL_RAW";
+} 
 
 if DPR.CATG like "%CALIB%" and DPR.TECH like "%INTERFEROMETRY%" and DPR.TYPE like "%DARK%" and INSTRUME=="GRAVITY" then
 {
@@ -104,6 +170,13 @@ if DPR.CATG like "%CALIB%" and DPR.TECH like "%INTERFEROMETRY%" and DPR.TYPE=="W
 }
 
 if DPR.CATG like "%CALIB%" and DPR.TECH like "%INTERFEROMETRY%" and DPR.TYPE like "WAVESC" and TPL.NAME like "%P2VM%"and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "WAVESC_RAW";
+  RAW.TYPE = "P2VM_CAL";
+  REFLEX.CATG = "WAVESC_RAW";
+}
+
+if DPR.CATG like "%CALIB%" and DPR.TECH like "%INTERFEROMETRY%" and DPR.TYPE like "WAVE,SC" and TPL.NAME like "%P2VM%"and INSTRUME=="GRAVITY" then
 {
   DO.CATG = "WAVESC_RAW";
   RAW.TYPE = "P2VM_CAL";
