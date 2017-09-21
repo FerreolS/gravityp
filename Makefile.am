@@ -35,7 +35,7 @@ DOXYGEN_SUBDIRS =
 SUBDIRS = $(COMPILE_FIRST) $(TOPSUBDIRS) $(COMPILE_LAST)
 
 EXTRA_DIST = m4macros/eso.m4 m4macros/cpl.m4 admin/doxygen.am \
-	doxygen/Doxyfile.in setup BUGS README_image_reconstruction.txt \
+	doxygen/Doxyfile.in BUGS README_image_reconstruction.txt \
 	README_yorick_update.txt README_mira_update.txt
 
 
