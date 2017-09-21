@@ -1313,10 +1313,12 @@ cpl_error_code gravi_metrology_update_receiverpos (cpl_propertylist * header,
 
         /* Get row */
         cpl_size row;
-        for (row = 0; row<4; row++) {
+        cpl_size nrow = cpl_table_get_nrow(receiver_table);
+
+        for (row = 0; row<nrow; row++) {
             if (!strcmp (telname, cpl_table_get_string (receiver_table, "TEL_NAME", row) )) break;
         }
-        cpl_ensure_code (row<4, CPL_ERROR_ILLEGAL_INPUT);
+        cpl_ensure_code (row<nrow, CPL_ERROR_ILLEGAL_INPUT);
 
         /* Copy in header */
         for (int diode=0; diode<4; diode++) {
