@@ -806,6 +806,7 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
   double * pUCOORD  = cpl_table_get_data_double (oi_vis, "UCOORD");
   double * pVCOORD  = cpl_table_get_data_double (oi_vis, "VCOORD");
   cpl_array ** pPHASEREF = use_exp_phase?cpl_table_get_data_array (oi_vis, "PHASE_REF"):NULL;
+  cpl_array ** pVISPHI = use_exp_phase?NULL:cpl_table_get_data_array (oi_vis, "VISPHI");
   cpl_array ** pVFACTOR = use_vFactor?cpl_table_get_data_array (oi_vis, "V_FACTOR"):NULL;
   double * pPFACTOR = use_pFactor?cpl_table_get_data_double (oi_vis, "P_FACTOR"):NULL;
   CPLCHECK_MSG ("Cannot get the data");
@@ -897,6 +898,7 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
     	  for (int w = 0; w < nwave; w++) {
             double VFACTOR = use_vFactor?cpl_array_get (pVFACTOR[rbase], w, NULL):1.0;
             double PHASEREF = pPHASEREF?cpl_array_get (pPHASEREF[rbase], w, NULL):0.0;
+            double VISPHI = pVISPHI?cpl_array_get(pVISPHI[rbase], w, NULL):0.0;
             double FNORM = cpl_array_get (pFNORM[rbase], w, NULL);
             double complex Vis  = cpl_array_get_complex (pVISDATA[rbase], w, NULL);
             double complex VErr = cpl_array_get_complex (pVISERR[rbase], w, NULL);
@@ -913,10 +915,18 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
 			  mI += 2 * eI * gravi_randn();
 			}
     
-    		/* Integrate <R> and <I> rephased by exp_phase if needed 
-    		 * The phase is exp{R,I} * exp_phase */
+	  if (use_exp_phase) {
+            /* When S_OBJ = 0.0
+             * Integrate <R> and <I> rephased by exp_phase if needed 
+             * The phase is exp{R,I} * exp_phase */
             tR[w] += cos(PHASEREF) * mR - sin(PHASEREF) * mI;
             tI[w] += cos(PHASEREF) * mI + sin(PHASEREF) * mR;
+	  } else {
+            /* When S_OBJ > 0.0
+             * The phase is directly the phase-referenced phase in VISPHI */
+            tR[w] += sqrt(mR*mR + mI*mI) * cos(VISPHI);
+            tI[w] += sqrt(mR*mR + mI*mI) * sin(VISPHI);
+	  }
     
     		/* Compute the flux <F1F2> and <sqrt(|F1F2|)> x sign(F1F2)
     		 * corrected by the vFactor if needed */
@@ -1302,14 +1312,18 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
     }
     else {
 		/* Reduction parameters */
-		int exp_phase_flag_sc = 1;
+	double SOBJ_X = cpl_propertylist_get_double (p2vmred_header, "ESO INS SOBJ X");
+	double SOBJ_Y = cpl_propertylist_get_double (p2vmred_header, "ESO INS SOBJ Y");
+	double SOBJ_R = sqrt(SOBJ_X*SOBJ_X + SOBJ_Y*SOBJ_Y);
+	int exp_phase_flag_sc = (SOBJ_R > 0.001)?0:1;
+
 		int v_factor_flag_sc = strstr (gravi_param_get_string (parlist, "gravity.vis.vis-correction-sc"),"VFACTOR") ? 1 : 0;
 		int p_factor_flag_sc = strstr (gravi_param_get_string (parlist, "gravity.vis.vis-correction-sc"),"PFACTOR") ? 1 : 0;
 		int debiasing_flag_sc = gravi_param_get_bool (parlist, "gravity.vis.debias-sc");
 		int nboot_sc = gravi_param_get_int (parlist, "gravity.vis.nboot");
 		
 		cpl_msg_info (cpl_func, "Bias subtraction of V2 for SC is %s",debiasing_flag_sc?"ENABLE":"DISABLE");
-		cpl_msg_info (cpl_func, "reference_phase for SC is %s",exp_phase_flag_sc?"ENABLE":"DISABLE");
+		cpl_msg_info (cpl_func, "reference_phase for SC is using %s (SOBJ_R = %f)",exp_phase_flag_sc?"PHASE_REF":"VISPHI",SOBJ_R);
 		cpl_msg_info (cpl_func, "vFactor correction for SC is %s",v_factor_flag_sc?"ENABLE":"DISABLE");
 		cpl_msg_info (cpl_func, "pFactor correction for SC is %s",p_factor_flag_sc?"ENABLE":"DISABLE");
 
@@ -1387,6 +1401,7 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
             gravi_vis_compute_column_mean (oi_vis_SC, vis_SC, "E_ZD", 6);
             CPLCHECK_NUL("Cannot compute means.");
                 
+            if (exp_phase_flag_sc == 1) {
             /* Re compute the astrometric phase from VISDATA to deal with absolute phase
              * VISDATA as well as (R,I) remains unchanged. The goal is to split
              * the differential phase, calibratable so far, from the absolute phase */
@@ -1426,7 +1441,7 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
                 CPLCHECK_NUL("when computing the astrometric phase");
 
             } /* End loop on base */
-            
+            }
             /* 
              * Compute OIT3 for SC
              */

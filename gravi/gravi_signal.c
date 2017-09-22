@@ -99,9 +99,14 @@ cpl_error_code gravi_vis_create_phaseref_sc (cpl_table * vis_SC,
 
 
 cpl_error_code gravi_vis_create_opddisp_sc (cpl_table * vis_SC,
-											cpl_table * flux_SC,
-											cpl_table * wave_table,
-											cpl_table * disp_table);
+					    cpl_table * flux_SC,
+					    cpl_table * wave_table,
+					    cpl_table * disp_table,
+					    cpl_propertylist * header);
+
+cpl_error_code gravi_vis_create_imaging_phase (cpl_table * vis_SC,
+                                               cpl_table * wave_table,
+                                               cpl_propertylist * header);
 
 /*-----------------------------------------------------------------------------
                                  Function code
@@ -1141,6 +1146,14 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
   cpl_array ** opd_met_tel      = cpl_table_get_data_array (vis_MET, "OPD_TEL");
   cpl_array ** phasor_met_telfc = cpl_table_get_data_array (vis_MET, "PHASOR_TELFC");
 
+
+  /* FE: Start */
+  double * opd_met_fc_corr        = cpl_table_get_data_double (vis_MET, "OPD_FC_CORR");
+  double * opd_met_telfc_mcorr    = cpl_table_get_data_double (vis_MET, "OPD_TELFC_MCORR");
+  cpl_array ** opd_met_telfc_corr = cpl_table_get_data_array (vis_MET, "OPD_TELFC_CORR");
+  /* FE: End */
+
+
   CPLCHECK_MSG("Cannot get direct pointer to data");
 
   /* New columns */
@@ -1158,6 +1171,18 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
 
   gravi_table_new_column_array (vis_SC, "PHASOR_MET_TELFC", "V^4", CPL_TYPE_DOUBLE_COMPLEX, ndiode);
   cpl_array ** phasor_metdit_telfc = cpl_table_get_data_array (vis_SC, "PHASOR_MET_TELFC");
+
+  /* FE: Start */
+  gravi_table_new_column (vis_SC, "OPD_MET_FC_CORR", "m", CPL_TYPE_DOUBLE);
+  double * opd_metdit_fc_corr = cpl_table_get_data_double (vis_SC, "OPD_MET_FC_CORR");
+
+  gravi_table_new_column (vis_SC, "OPD_MET_TELFC_MCORR", "m", CPL_TYPE_DOUBLE);
+  double * opd_metdit_telfc_mcorr = cpl_table_get_data_double (vis_SC, "OPD_MET_TELFC_MCORR");
+
+  gravi_table_new_column_array (vis_SC, "OPD_MET_TELFC_CORR", "m", CPL_TYPE_DOUBLE, ndiode);
+  cpl_array ** opd_metdit_telfc_corr = cpl_table_get_data_array (vis_SC, "OPD_MET_TELFC_CORR");
+  /* FE: End */
+
 		
   CPLCHECK_MSG("Cannot create columns");
 
@@ -1167,46 +1192,65 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
 	  cpl_size nsc = row_sc * nbase + base;
 
 	  opd_metdit_tel[nsc]      = gravi_array_init_double (ndiode, 0.0);
-      phasor_metdit_telfc[nsc] = gravi_array_init_double_complex (ndiode, 0.0+I*0.0);
+	  phasor_metdit_telfc[nsc] = gravi_array_init_double_complex (ndiode, 0.0+I*0.0);
+ 
+	  /* FE: Start */
+	  opd_metdit_telfc_corr[nsc] = gravi_array_init_double (ndiode, 0.0);
+	  /* FE: End */
 
 	  /* Sum over synch MET frames */
 	  for (cpl_size row_met = first_met[nsc] ; row_met < last_met[nsc]; row_met++) {
-        cpl_size nmet0 = row_met * ntel + GRAVI_BASE_TEL[base][0];
-        cpl_size nmet1 = row_met * ntel + GRAVI_BASE_TEL[base][1];
-		
-        /* Mean OPD_MET at Telescope (each diode) */
-        cpl_array_add (opd_metdit_tel[nsc], opd_met_tel[nmet0]);
-        cpl_array_subtract (opd_metdit_tel[nsc], opd_met_tel[nmet1]);
+	    cpl_size nmet0 = row_met * ntel + GRAVI_BASE_TEL[base][0];
+	    cpl_size nmet1 = row_met * ntel + GRAVI_BASE_TEL[base][1];
+	    
+	    /* FE: Start */
+	    /* Mean OPD_FC_CORR and OPD_TELFC_MCORR for each BASELINE */
+	    opd_metdit_fc_corr[nsc] += opd_met_fc_corr[nmet0] - opd_met_fc_corr[nmet1];
+	    opd_metdit_telfc_mcorr[nsc] += opd_met_telfc_mcorr[nmet0] - opd_met_telfc_mcorr[nmet1];
 
-		/* Mean PHASE_MET at Telescope (mean of 4 diodes) */
-        phase_metdit_tel[nsc] += cpl_array_get_mean (phase_met_tel[nmet0]) -
-                                 cpl_array_get_mean (phase_met_tel[nmet1]);
-		
-		/* Mean PHASE_MET_FC at Beam Combiner */
-		phase_metdit_fc[nsc] += phase_met_fc[nmet0] - phase_met_fc[nmet1];
+	    /* Mean OPD_TELFC_CORR for each BASELINE and diode */
+	    cpl_array_add (opd_metdit_telfc_corr[nsc], opd_met_telfc_corr[nmet0]);
+	    cpl_array_subtract (opd_metdit_telfc_corr[nsc], opd_met_telfc_corr[nmet1]);
+	    /* FE: End */
 
-		/* Mean OPD_MET_FC at Beam Combiner */
-		opd_metdit_fc[nsc] += opd_met_fc[nmet0] - opd_met_fc[nmet1];
-
-        /* Mean PHASOR_MET_TELFC */
-        gravi_array_add_phasors (phasor_metdit_telfc[nsc],
-                                 phasor_met_telfc[nmet0],
-                                 phasor_met_telfc[nmet1]);
-		
-		CPLCHECK_MSG ("Fail to integrate the metrology");
+	    /* Mean OPD_MET at Telescope (each diode) */
+	    cpl_array_add (opd_metdit_tel[nsc], opd_met_tel[nmet0]);
+	    cpl_array_subtract (opd_metdit_tel[nsc], opd_met_tel[nmet1]);
+	    
+	    /* Mean PHASE_MET at Telescope (mean of 4 diodes) */
+	    phase_metdit_tel[nsc] += cpl_array_get_mean (phase_met_tel[nmet0]) -
+	      cpl_array_get_mean (phase_met_tel[nmet1]);
+	    
+	    /* Mean PHASE_MET_FC at Beam Combiner */
+	    phase_metdit_fc[nsc] += phase_met_fc[nmet0] - phase_met_fc[nmet1];
+	    
+	    /* Mean OPD_MET_FC at Beam Combiner */
+	    opd_metdit_fc[nsc] += opd_met_fc[nmet0] - opd_met_fc[nmet1];
+	    
+	    /* Mean PHASOR_MET_TELFC */
+	    gravi_array_add_phasors (phasor_metdit_telfc[nsc],
+				     phasor_met_telfc[nmet0],
+				     phasor_met_telfc[nmet1]);
+	    
+	    CPLCHECK_MSG ("Fail to integrate the metrology");
 	  }
-
+	  
 	  /* Normalize the means  (if nframe == 0, values are zero) */
 	  cpl_size nframe = last_met[nsc] - first_met[nsc];
 	  if (nframe != 0 ){
-		  cpl_array_divide_scalar (opd_metdit_tel[nsc], (double)nframe);
-		  phase_metdit_tel[nsc] /= nframe;
-		  phase_metdit_fc[nsc]  /= nframe;
-		  opd_metdit_fc[nsc]  /= nframe;
-		  cpl_array_divide_scalar (phasor_metdit_telfc[nsc], (double)nframe);
+	    /* FE: Start */
+	    opd_metdit_fc_corr[nsc] /= nframe;
+	    opd_metdit_telfc_mcorr[nsc] /= nframe;
+	    cpl_array_divide_scalar (opd_metdit_telfc_corr[nsc], (double)nframe);
+	    /* FE: End */
+	    cpl_array_divide_scalar (opd_metdit_tel[nsc], (double)nframe);
+	    phase_metdit_tel[nsc] /= nframe;
+	    phase_metdit_fc[nsc]  /= nframe;
+	    opd_metdit_fc[nsc]  /= nframe;
+	    cpl_array_divide_scalar (phasor_metdit_telfc[nsc], (double)nframe);
 	  }
 	  CPLCHECK_MSG ("Fail to compute metrology per base from metrology per tel");
-
+	  
 	} /* End loop on SC frames */
   }/* End loop on bases */
 
@@ -2101,13 +2145,15 @@ cpl_error_code gravi_flux_create_fddllin_sc (cpl_table * flux_SC,
 /* -------------------------------------------------------------------------- */
 
 cpl_error_code gravi_vis_create_opddisp_sc (cpl_table * vis_SC,
-											cpl_table * flux_SC,
-											cpl_table * wave_table,
-											cpl_table * disp_table)
+					    cpl_table * flux_SC,
+					    cpl_table * wave_table,
+					    cpl_table * disp_table,
+					    cpl_propertylist * header)
 {
   gravi_msg_function_start(1);
   cpl_ensure_code (vis_SC,     CPL_ERROR_NULL_INPUT);
   cpl_ensure_code (wave_table, CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (header,     CPL_ERROR_NULL_INPUT);  
   
   cpl_size nwave_sc = cpl_table_get_column_depth (vis_SC, "VISDATA");
 
@@ -2187,6 +2233,45 @@ cpl_error_code gravi_vis_create_opddisp_sc (cpl_table * vis_SC,
 	wavenumber_sc[wave] = 1. / cpl_table_get (wave_table, "EFF_WAVE", wave, NULL);
   }
 
+  /* Determine OPD_MET_ZERO_FC, based on the content of the header */
+  int t;
+  char name[100];
+  double * opl_zero_fc = cpl_malloc (4 * sizeof(double));
+  double gd_zero_fc;
+  // Initialise opl_zero_fc to zero
+  for (t = 0; t < ntel; t++) {
+    opl_zero_fc[t] = 0.0;
+  }
+  // Replace by OCS MET OPL_ZERO_FC, if available
+  for (t = 0; t < ntel; t++) {
+    sprintf (name, "ESO OCS MET OPL_ZERO_FC%i", t+1); 
+    if (cpl_propertylist_has (header, name)) {
+      opl_zero_fc[t] = cpl_propertylist_get_double (header, name)*1e-3;
+      sprintf (name, "ESO FDDL MET OFFSET%i", t+1);
+      opl_zero_fc[t] += cpl_propertylist_get_double (header, name)*1e-3;
+      cpl_msg_info (cpl_func, "Updating metrology zero with OCS MET OPL_ZERO_FC%i and FDDL MET OFFSET%i: %f [mm]", t+1, t+1, opl_zero_fc[t]);
+    }
+  }
+  // Replace by PRO MET GD_ZERO_FC, if available
+  for (t = 0; t < ntel; t++) {
+    sprintf (name, "ESO PRO MET GD_ZERO_FC%i", t+1); 
+    if (cpl_propertylist_has (header, name)) {
+      opl_zero_fc[t] =
+	cpl_propertylist_get_double (header, name)*1e-3
+	* (wavenumber_sc[nwave_sc/2-1] - wavenumber_sc[nwave_sc/2+1])
+	/ (n_mean[t][nwave_sc/2-1] * wavenumber_sc[nwave_sc/2-1] - n_mean[t][nwave_sc/2+1] * wavenumber_sc[nwave_sc/2+1]);
+      cpl_msg_info (cpl_func, "Updating metrology zero with PRO MET GD_ZERO_FC%i: %f [mm]", t+1, opl_zero_fc[t]);
+    }
+  }
+  // Replace by PRO MET OPL_ZERO_FC, if available
+  for (t = 0; t < ntel; t++) {
+    sprintf (name, "ESO PRO MET OPL_ZERO_FC%i", t+1); 
+    if (cpl_propertylist_has (header, name)) {
+      opl_zero_fc[t] = cpl_propertylist_get_double (header, name)*1e-3;
+      cpl_msg_info (cpl_func, "Updating metrology zero with PRO MET OPL_ZERO_FC%i: %f [mm]", t+1, opl_zero_fc[t]);
+    }
+  }
+
   /* Loop on tel and frames */
   for (cpl_size base = 0; base < nbase; base++) {
 	for (cpl_size row_sc = 0; row_sc < nrow_sc; row_sc ++) {
@@ -2201,11 +2286,11 @@ cpl_error_code gravi_vis_create_opddisp_sc (cpl_table * vis_SC,
 	  double s1 = wavenumber_sc[wave-1];
 	  double s2 = wavenumber_sc[wave+1];
 	  double o1 =
-		(n_mean[t0][wave-1] * opd_met[t0f] + n_diff[t0][wave-1] * fddl[t0f]) -
-		(n_mean[t1][wave-1] * opd_met[t1f] + n_diff[t1][wave-1] * fddl[t1f]);
+	    (n_mean[t0][wave-1] * (opd_met[t0f]-opl_zero_fc[t0]) + n_diff[t0][wave-1] * fddl[t0f]) -
+	    (n_mean[t1][wave-1] * (opd_met[t1f]-opl_zero_fc[t1]) + n_diff[t1][wave-1] * fddl[t1f]);
 	  double o2 =
-		(n_mean[t0][wave+1] * opd_met[t0f] + n_diff[t0][wave+1] * fddl[t0f]) -
-		(n_mean[t1][wave+1] * opd_met[t1f] + n_diff[t1][wave+1] * fddl[t1f]);
+	    (n_mean[t0][wave+1] * (opd_met[t0f]-opl_zero_fc[t0]) + n_diff[t0][wave+1] * fddl[t0f]) -
+	    (n_mean[t1][wave+1] * (opd_met[t1f]-opl_zero_fc[t1]) + n_diff[t1][wave+1] * fddl[t1f]);
 				  
 	  gd_disp[nsc] = (o1*s1 - o2*s2) / (s1-s2);
 
@@ -2215,8 +2300,8 @@ cpl_error_code gravi_vis_create_opddisp_sc (cpl_table * vis_SC,
 				
 	  for (int w = 0; w < nwave_sc ; w++) {
 		cpl_array_set (phase_disp[nsc], w,
-					   ((n_mean[t0][w] * opd_met[t0f] + n_diff[t0][w] * fddl[t0f]) -
-						(n_mean[t1][w] * opd_met[t1f] + n_diff[t1][w] * fddl[t1f]) -
+			       ((n_mean[t0][w] * (opd_met[t0f]-opl_zero_fc[t0]) + n_diff[t0][w] * fddl[t0f]) -
+				(n_mean[t1][w] * (opd_met[t1f]-opl_zero_fc[t1]) + n_diff[t1][w] * fddl[t1f]) -
 						gd_disp[nsc]) * wavenumber_sc[w] * CPL_MATH_2PI);
 	  }
 
@@ -2229,8 +2314,8 @@ cpl_error_code gravi_vis_create_opddisp_sc (cpl_table * vis_SC,
 				
 	  for (int w = 0; w < nwave_sc ; w++) {
 		cpl_array_set (opd_disp[nsc], w,
-					   (n_mean[t0][w] * opd_met[t0f] + n_diff[t0][w] * fddl[t0f]) -
-					   (n_mean[t1][w] * opd_met[t1f] + n_diff[t1][w] * fddl[t1f]) );
+			       (n_mean[t0][w] * (opd_met[t0f]-opl_zero_fc[t0]) + n_diff[t0][w] * fddl[t0f]) -
+			       (n_mean[t1][w] * (opd_met[t1f]-opl_zero_fc[t1]) + n_diff[t1][w] * fddl[t1f]) );
 	  }
 
 	} /* End loop on rows */
@@ -2240,9 +2325,79 @@ cpl_error_code gravi_vis_create_opddisp_sc (cpl_table * vis_SC,
   FREELOOP (cpl_free, n_mean, 4);
   FREELOOP (cpl_free, n_diff, 4);
   FREE (cpl_free, wavenumber_sc);
+  FREE (cpl_free, opl_zero_fc);
 		  
   gravi_msg_function_exit(1);
   return CPL_ERROR_NONE;
+}
+
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Create phase-referenced imaging data in the P2VMREDUCED file
+ *
+ * @param vis_SC:      input/output OI_VIS table of the SC
+ * @param wave_table:  wavelength table corresponding to the OI_VIS above
+ * @param header:      main header
+ *
+ * Create VISPHI column in vis_SC based on the following:
+ *   VISPHI = arg(VISDATA)
+ *               + PHASE_REF
+ *               - OPD_DISP * (2pi/EFF_WAVE)
+ *               + (UCOORD * SOBJ_X + VCOORD * SOBJ_Y) * (2pi/EFF_WAVE)
+ */
+/*----------------------------------------------------------------------------*/
+cpl_error_code gravi_vis_create_imaging_phase (cpl_table * vis_SC,
+                                               cpl_table * wave_table,
+                                               cpl_propertylist * header)
+{
+    gravi_msg_function_start(1);
+    cpl_ensure_code (vis_SC,     CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (wave_table, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (header,     CPL_ERROR_NULL_INPUT);
+
+    /* Get from OI_VIS the number of wavelength channels and rows */
+    cpl_size nwave = cpl_table_get_column_depth (vis_SC, "VISDATA");
+    cpl_size nrow  = cpl_table_get_nrow (vis_SC);
+
+    /* Get from OI_VIS the data needed for the calculation */
+    double * ucoord        = cpl_table_get_data_double (vis_SC, "UCOORD");
+    double * vcoord        = cpl_table_get_data_double (vis_SC, "VCOORD");
+    cpl_array ** phase_ref = cpl_table_get_data_array  (vis_SC, "PHASE_REF");
+    cpl_array ** visdata   = cpl_table_get_data_array  (vis_SC, "VISDATA");
+    cpl_array ** opd_disp  = cpl_table_get_data_array  (vis_SC, "OPD_DISP");
+
+    /* Get from header the separation, converted from mas to radian */
+    double sep_U = cpl_propertylist_get_double (header, "ESO INS SOBJ X")*1e-3/3600.0/CPL_MATH_DEG_RAD;
+    double sep_V = cpl_propertylist_get_double (header, "ESO INS SOBJ Y")*1e-3/3600.0/CPL_MATH_DEG_RAD;
+
+    /* Create new VISPHI column array */
+    gravi_table_new_column_array (vis_SC, "VISPHI", "rad", CPL_TYPE_DOUBLE, nwave);
+    cpl_array ** visphi = cpl_table_get_data_array (vis_SC, "VISPHI");
+
+    /* Compute VISPHI for each row */
+    for (cpl_size row = 0; row < nrow; row ++) {
+
+	visphi[row] = cpl_array_new (nwave, CPL_TYPE_DOUBLE);
+
+	/* Compute VISPHI for each wavelength */
+	for (int w = 0; w < nwave; w++) {
+
+	    double wavelength = cpl_table_get (wave_table, "EFF_WAVE", w, NULL);
+
+	    /* VISPHI = arg(VISDATA) + PHASE_REF - OPD_DISP * (2PI/EFF_WAVE) + (UCOORD*SOBJ_X + VCOORD*SOBJ_Y) * (2PI/EFF_WAVE) */
+	    cpl_array_set (visphi[row], w,
+  			      carg(cpl_array_get_double_complex (visdata[row],   w, NULL))
+			         + cpl_array_get_double         (phase_ref[row], w, NULL)
+			         - cpl_array_get_double         (opd_disp[row],  w, NULL)  * CPL_MATH_2PI / wavelength
+			         +      (ucoord[row] * sep_U + vcoord[row] * sep_V)        * CPL_MATH_2PI / wavelength);
+
+	}
+
+	gravi_array_phase_wrap (visphi[row]);
+    }
+
+    gravi_msg_function_exit(1);
+    return CPL_ERROR_NONE;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -2409,7 +2564,7 @@ cpl_error_code gravi_compute_signals (gravi_data * p2vmred_data,
 	cpl_table * disp_table =  disp_data ? gravi_data_get_table (disp_data, "DISP_MODEL") : NULL;
     
     gravi_flux_create_fddllin_sc (flux_SC, disp_table);
-	gravi_vis_create_opddisp_sc (vis_SC, flux_SC, oi_wavelengthsc, disp_table);
+	gravi_vis_create_opddisp_sc (vis_SC, flux_SC, oi_wavelengthsc, disp_table, p2vmred_header);
 
 	CPLCHECK_MSG ("Cannot compute the OPD_DISP");
 
@@ -2441,6 +2596,9 @@ cpl_error_code gravi_compute_signals (gravi_data * p2vmred_data,
         gravi_vis_create_phaseref_sc (vis_SC, oi_wavelengthsc, oi_wavelengthft);
     }
 	
+	/* Create the imaging phase */
+	gravi_vis_create_imaging_phase (vis_SC, oi_wavelengthsc, p2vmred_header);
+
 	CPLCHECK_MSG ("Cannot compute the PHASE_REF");
   } /* End loop on pol */
   
