@@ -1801,6 +1801,7 @@ cpl_error_code gravi_data_add_table (gravi_data * self,
 	if (plist_name && !(strcmp(plist_name,  GRAVI_OI_ARRAY_EXT) &&
 						strcmp (plist_name, GRAVI_OI_TARGET_EXT) &&
 						strcmp (plist_name, GRAVI_OI_WAVELENGTH_EXT) &&
+						strcmp (plist_name, GRAVI_OI_FLUX_EXT) &&
 						strcmp (plist_name, GRAVI_OI_T3_EXT) &&
 						strcmp (plist_name, GRAVI_OI_VIS2_EXT) &&
 						strcmp (plist_name, GRAVI_OI_VIS_EXT))) {
