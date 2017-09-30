@@ -1411,12 +1411,12 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
 
         sprintf (qc_name, "ESO QC ACQ PUP%i UPOS", tel+1);
         cpl_msg_info (cpl_func, "%s = %f", qc_name, upos);
-        cpl_propertylist_update_double (o_header, qc_name, xpos);
+        cpl_propertylist_update_double (o_header, qc_name, upos);
         cpl_propertylist_set_comment (o_header, qc_name, "[m] pupil u-shift in ACQ");
         
         sprintf (qc_name, "ESO QC ACQ PUP%i VPOS", tel+1);
         cpl_msg_info (cpl_func, "%s = %f", qc_name, vpos);
-        cpl_propertylist_update_double (o_header, qc_name, ypos);
+        cpl_propertylist_update_double (o_header, qc_name, vpos);
         cpl_propertylist_set_comment (o_header, qc_name, "[m] pupil v-shift in ACQ");
 
         /* Loop on all images */
