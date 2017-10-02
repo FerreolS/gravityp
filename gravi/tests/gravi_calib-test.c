@@ -766,7 +766,8 @@ int gravi_calib_test(void){
     
 	cpl_msg_info (cpl_func, "Average the VIS averaged output");
 	gravi_data * oi_vis = NULL;
-	test_data(oi_vis, gravi_compute_vis (p2vm_reduced, parlist),
+    cpl_size current_frame = 0;
+	test_data(oi_vis, gravi_compute_vis (p2vm_reduced, parlist, &current_frame),
 				"gravi_vis_reduce in the SINGLE mode: Compute the squared, complex visibilities "
 												   "and the cloture phase...", flag);
 
