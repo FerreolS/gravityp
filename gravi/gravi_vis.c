@@ -1140,7 +1140,8 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
 /*----------------------------------------------------------------------------*/
 
 gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
-                                const cpl_parameterlist * parlist)
+                                const cpl_parameterlist * parlist,
+                                cpl_size * current_frame)
 {
 	gravi_msg_function_start(1);
 	cpl_ensure (p2vmred_data, CPL_ERROR_NULL_INPUT, NULL);
@@ -1148,8 +1149,43 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
 	
 	int nv, nbase = 6, ntel = 4;
 
-    double start_time = gravi_param_get_double (parlist, "gravity.vis.start-time");
-    double end_time = gravi_param_get_double (parlist, "gravity.vis.end-time");
+    /* 
+     * Compute the limit of integration
+     */
+
+    /* Get the current position and the maximum nb to integrate */
+    cpl_size max_frame = gravi_param_get_int (parlist, "gravity.vis.max-frame");
+    cpl_msg_info (cpl_func,"Average %lli frames starting from %lli",
+                  max_frame, *current_frame);
+    
+    
+
+    /* Get the SC DIT */
+	cpl_propertylist * p2vmred_header = gravi_data_get_header (p2vmred_data);
+    double dit_sc = gravi_pfits_get_dit_sc (p2vmred_header) * 1e6;
+    
+    /* Get the vis_SC table for first polarisation */
+    int npol_sc = gravi_pfits_get_pola_num (p2vmred_header, GRAVI_SC);
+    cpl_table * vis_SC = gravi_data_get_oi_vis (p2vmred_data, GRAVI_SC, 0, npol_sc);
+    cpl_size nrow = cpl_table_get_nrow (vis_SC) / nbase;
+    
+    /* Get first and last frame for this integration */
+    cpl_size sframe = *current_frame;
+    cpl_size eframe = CPL_MIN (*current_frame + max_frame - 1, nrow-1);
+    
+    /* Check if we reached the end of the file, or increment */
+    if (eframe >= nrow-1)  *current_frame = -1;
+    else                   *current_frame += max_frame;
+    
+    /* Compute start and end-time */
+    double start_time, end_time;
+    start_time  = cpl_table_get (vis_SC, "TIME", sframe*nbase, &nv) - dit_sc/2;
+    end_time    = cpl_table_get (vis_SC, "TIME", eframe*nbase, &nv) + dit_sc/2;
+    
+    /* Compute verbose */
+    cpl_msg_info (cpl_func,"Integrate frames: first = %lli  last = %lli", sframe, eframe);
+    cpl_msg_info (cpl_func,"start = %f  end = %f [s]", start_time*1e-6, end_time*1e-6);
+    
 
 	/* 
 	 * Prepare the output 
@@ -1158,7 +1194,6 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
     cpl_msg_info(cpl_func, "Construction of the averaged output data");
 
     gravi_data * vis_data = gravi_data_new (0);
-	cpl_propertylist * p2vmred_header = gravi_data_get_header (p2vmred_data);
     cpl_propertylist * vis_header = gravi_data_get_header (vis_data);
     cpl_propertylist_append (vis_header, p2vmred_header);
 		

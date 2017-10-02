@@ -389,12 +389,24 @@ static int gravity_vis_from_p2vmred(cpl_frameset * frameset,
             gravi_compute_rejection (p2vmred_data, parlist);
             CPLCHECK_MSG ("Cannot recompute rejection flags signals");
         }
-		
+
+        /* Loop on the wanted sub-integration */
+        cpl_size current_frame = 0;
+        while (current_frame >= 0)
+        {
+            
 		/* Visibility and flux are averaged and the followings
 		 * are saved in Visibility data in tables VIS, VIS2 and T3 */
-		tmpvis_data = gravi_compute_vis (p2vmred_data, parlist);
+		tmpvis_data = gravi_compute_vis (p2vmred_data, parlist, &current_frame);
 		CPLCHECK_CLEAN ("Cannot average the P2VMRED frames into VIS");
 
+        /* Set the mean TIME and mean MJD if required */
+        if (gravi_param_get_bool (parlist, "gravity.vis.force-same-time") ) {
+            cpl_msg_info (cpl_func,"Force same time for all quantities/baselines");
+            gravi_vis_force_time (tmpvis_data);
+            CPLCHECK_CLEAN ("Cannot average the TIME in OI_VIS");
+        }
+            
         /* Merge with already existing */
         if (vis_data == NULL) {
             vis_data = tmpvis_data; tmpvis_data = NULL;
@@ -406,6 +418,7 @@ static int gravity_vis_from_p2vmred(cpl_frameset * frameset,
         }
         CPLCHECK_CLEAN ("Cannot merge the visibilities");
 
+        }
 
 		cpl_msg_info (cpl_func,"Free the p2vmreduced");
 		FREE (gravi_data_delete, p2vmred_data);

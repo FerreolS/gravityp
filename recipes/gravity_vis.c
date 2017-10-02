@@ -758,9 +758,14 @@ static int gravity_vis(cpl_frameset * frameset,
 			CPLCHECK_CLEAN ("Cannot save the P2VMREDUCED product");
 		}
 
+        /* Loop on the wanted sub-integration */
+        cpl_size current_frame = 0;
+        while (current_frame >= 0)
+        {
+            
 		/* Visibility and flux are averaged and the followings
 		 * are saved in tables VIS, VIS2 and T3 */
-		tmpvis_data = gravi_compute_vis (p2vmred_data, parlist);
+		tmpvis_data = gravi_compute_vis (p2vmred_data, parlist, &current_frame);
 		CPLCHECK_CLEAN ("Cannot average the P2VMRED frames into VIS");
 
         /* Set the mean TIME and mean MJD if required */
@@ -778,6 +783,8 @@ static int gravity_vis(cpl_frameset * frameset,
             cpl_msg_info (cpl_func,"Merge with previous OI_VIS");
             gravi_data_append (vis_data, tmpvis_data, 1);
             FREE (gravi_data_delete, tmpvis_data);
+        }
+
         }
 
         

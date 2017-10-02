@@ -507,9 +507,14 @@ static int gravity_disp(cpl_frameset            * frameset,
 			}
 
 
-			/* Visibility and flux are averaged and the followings
+            /* Loop on the wanted sub-integration */
+            cpl_size current_frame = 0;
+            while (current_frame >= 0)
+            {
+            
+            /* Visibility and flux are averaged and the followings
 			 * are saved in Visibility data in tables VIS, VIS2 and T3 */
-			tmpvis_data = gravi_compute_vis (p2vmred_data, parlist);
+			tmpvis_data = gravi_compute_vis (p2vmred_data, parlist, &current_frame);
 			CPLCHECK_CLEAN ("Cannot average the visibilities");
 
             /* Compute QC parameters */
@@ -534,7 +539,9 @@ static int gravity_disp(cpl_frameset            * frameset,
                 gravi_data_append (vis_data, tmpvis_data, 1);
                 FREE (gravi_data_delete, tmpvis_data);
             }
-			CPLCHECK_CLEAN ("Cannot merge the visibilities");			
+			CPLCHECK_CLEAN ("Cannot merge the visibilities");
+
+            }
 
 			cpl_msg_info (cpl_func,"Free the p2vmreduced");
 			FREE (cpl_frameset_delete, current_frameset);

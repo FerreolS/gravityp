@@ -38,7 +38,10 @@
                                        Prototypes
  -----------------------------------------------------------------------------*/
 
-gravi_data * gravi_compute_vis (gravi_data *p2vmred_data, const cpl_parameterlist *);
+gravi_data * gravi_compute_vis (gravi_data *p2vmred_data,
+                                const cpl_parameterlist *,
+                                cpl_size * current_frame);
+
 cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data);
 
 cpl_error_code gravi_vis_mjd_to_time (gravi_data * vis_data);
