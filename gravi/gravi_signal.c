@@ -2450,25 +2450,30 @@ cpl_error_code gravi_compute_signals (gravi_data * p2vmred_data,
 	
 	/* verbose */
 	cpl_msg_info (cpl_func, "Start polarisation %d over %d",pol+1, CPL_MAX(npol_sc,npol_ft));
-	cpl_msg_info(cpl_func, "Insname FT : %s, pol %d npol %d", GRAVI_INSNAME(GRAVI_FT,pol,npol_ft), pol, npol_ft);
-	cpl_msg_info(cpl_func, "Insname SC : %s, pol %d npol %d", GRAVI_INSNAME(GRAVI_SC,pol,npol_sc), pol, npol_sc);
+	cpl_msg_info(cpl_func, "Insname FT : %s, pol %d npol %d",
+                 GRAVI_INSNAME(GRAVI_FT,pol,npol_ft), pol, npol_ft);
+	cpl_msg_info(cpl_func, "Insname SC : %s, pol %d npol %d",
+                 GRAVI_INSNAME(GRAVI_SC,pol,npol_sc), pol, npol_sc);
 
 	/* Get the table of reduced data from FT */
 	cpl_table * vis_FT = gravi_data_get_oi_vis (p2vmred_data, GRAVI_FT, pol, npol_ft);
 	cpl_table * flux_FT = gravi_data_get_oi_flux (p2vmred_data, GRAVI_FT, pol, npol_ft);
+	CPLCHECK_MSG ("Cannot get the FT tables");
 	
 	/* Get the table of reduced data from SC */
 	cpl_table * vis_SC = gravi_data_get_oi_vis (p2vmred_data, GRAVI_SC, pol, npol_sc);
 	cpl_table * flux_SC = gravi_data_get_oi_flux (p2vmred_data, GRAVI_SC, pol, npol_sc);
+	CPLCHECK_MSG ("Cannot get the SC tables");
 	
 	/* Get the metrology and FDDL */
 	cpl_table * vis_met = gravi_data_get_table (p2vmred_data, GRAVI_OI_VIS_MET_EXT);
 	cpl_table * fddl_table = gravi_data_get_table (p2vmred_data, GRAVI_FDDL_EXT);
+	CPLCHECK_MSG ("Cannot get the VIS_MET and FDDL tables");
 	
 	/* Get the OIFITS tables that are alredy in the data */
 	cpl_table * oi_wavelengthft = gravi_data_get_oi_wave (p2vmred_data, GRAVI_FT, pol, npol_ft);
 	cpl_table * oi_wavelengthsc = gravi_data_get_oi_wave (p2vmred_data, GRAVI_SC, pol, npol_sc);
-	CPLCHECK_MSG ("Cannot get the tables");
+	CPLCHECK_MSG ("Cannot get the OI_WAVELENGTH tables");
 
 
 	/* 
@@ -2718,6 +2723,7 @@ cpl_error_code gravi_compute_rejection (gravi_data * p2vmred_data,
           cpl_table * vis_SC = gravi_data_get_oi_vis (p2vmred_data, GRAVI_SC, pol, npol_sc);
           cpl_table * vis_FT = gravi_data_get_oi_vis (p2vmred_data, GRAVI_FT, CPL_MIN(pol,npol_ft), npol_ft);
           gravi_vis_create_lockratio_sc (vis_SC, vis_FT);
+          CPLCHECK_MSG ("Cannot compute lockratio_sc");
       }
   }
 
