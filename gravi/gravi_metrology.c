@@ -2209,7 +2209,8 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
        
 	cpl_msg_info (cpl_func,"FE: deproject telescope diodes to center of telescope in OPD_TEL_CORR.");
 
-	/* Create array in OI_VIS_MET table, fill with zeros, and get pointer */
+	/* Create array in OI_VIS_MET table, fill with zeros, and get list of pointer. 
+     * Note that this list has to be free */
 	gravi_table_init_column_array (vismet_table, "OPD_TEL_CORR", "m", CPL_TYPE_DOUBLE, ndiode);
 	double ** opd_tel_corr = gravi_table_get_data_array_double (vismet_table, "OPD_TEL_CORR");
 
@@ -2540,6 +2541,8 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
 	FREE (cpl_free, flag_tel);
 	FREE (cpl_free, coher_tel_ft);
 	FREE (cpl_free, coher_tel_sc);
+    FREE (cpl_free, opd_tel_corr);
+    FREE (cpl_free, opd_telfc_corr);
 
     /* Free the TAC data */
     FREE (cpl_free, tacConfiguration);
