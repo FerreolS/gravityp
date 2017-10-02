@@ -104,9 +104,9 @@ cpl_error_code gravi_vis_create_opddisp_sc (cpl_table * vis_SC,
 					    cpl_table * disp_table,
 					    cpl_propertylist * header);
 
-cpl_error_code gravi_vis_create_imaging_phase (cpl_table * vis_SC,
-                                               cpl_table * wave_table,
-                                               cpl_propertylist * header);
+cpl_error_code gravi_vis_create_imaging_phase_sc (cpl_table * vis_SC,
+                                                  cpl_table * wave_table,
+                                                  cpl_propertylist * header);
 
 /*-----------------------------------------------------------------------------
                                  Function code
@@ -2346,9 +2346,9 @@ cpl_error_code gravi_vis_create_opddisp_sc (cpl_table * vis_SC,
  *               + (UCOORD * SOBJ_X + VCOORD * SOBJ_Y) * (2pi/EFF_WAVE)
  */
 /*----------------------------------------------------------------------------*/
-cpl_error_code gravi_vis_create_imaging_phase (cpl_table * vis_SC,
-                                               cpl_table * wave_table,
-                                               cpl_propertylist * header)
+cpl_error_code gravi_vis_create_imaging_phase_sc (cpl_table * vis_SC,
+                                                  cpl_table * wave_table,
+                                                  cpl_propertylist * header)
 {
     gravi_msg_function_start(1);
     cpl_ensure_code (vis_SC,     CPL_ERROR_NULL_INPUT);
@@ -2363,37 +2363,41 @@ cpl_error_code gravi_vis_create_imaging_phase (cpl_table * vis_SC,
     double * ucoord        = cpl_table_get_data_double (vis_SC, "UCOORD");
     double * vcoord        = cpl_table_get_data_double (vis_SC, "VCOORD");
     cpl_array ** phase_ref = cpl_table_get_data_array  (vis_SC, "PHASE_REF");
-    cpl_array ** visdata   = cpl_table_get_data_array  (vis_SC, "VISDATA");
+    CPLCHECK_MSG ("Cannot get input data");
+    
     cpl_array ** opd_disp  = cpl_table_get_data_array  (vis_SC, "OPD_DISP");
+    CPLCHECK_MSG ("Cannot get OPD_DISP data");
 
     /* Get from header the separation, converted from mas to radian */
-    double sep_U = cpl_propertylist_get_double (header, "ESO INS SOBJ X")*1e-3/3600.0/CPL_MATH_DEG_RAD;
-    double sep_V = cpl_propertylist_get_double (header, "ESO INS SOBJ Y")*1e-3/3600.0/CPL_MATH_DEG_RAD;
+	double sep_U = gravi_pfits_get_sobj_x (header)*1e-3/3600.0/CPL_MATH_DEG_RAD;
+	double sep_V = gravi_pfits_get_sobj_y (header)*1e-3/3600.0/CPL_MATH_DEG_RAD;
 
-    /* Create new VISPHI column array */
-    gravi_table_new_column_array (vis_SC, "VISPHI", "rad", CPL_TYPE_DOUBLE, nwave);
-    cpl_array ** visphi = cpl_table_get_data_array (vis_SC, "VISPHI");
+    /* Create new PHASE_REF_IMG column array */
+    gravi_table_new_column_array (vis_SC, "PHASE_REF_IMG", "rad", CPL_TYPE_DOUBLE, nwave);
+    cpl_array ** phaseref = cpl_table_get_data_array (vis_SC, "PHASE_REF_IMG");
+    CPLCHECK_MSG ("Cannot create column");
 
-    /* Compute VISPHI for each row */
+    /* Compute the reference phase for each row */
     for (cpl_size row = 0; row < nrow; row ++) {
 
-	visphi[row] = cpl_array_new (nwave, CPL_TYPE_DOUBLE);
+        /* New array */
+        phaseref[row] = cpl_array_new (nwave, CPL_TYPE_DOUBLE);
 
-	/* Compute VISPHI for each wavelength */
-	for (int w = 0; w < nwave; w++) {
-
-	    double wavelength = cpl_table_get (wave_table, "EFF_WAVE", w, NULL);
-
-	    /* VISPHI = arg(VISDATA) + PHASE_REF - OPD_DISP * (2PI/EFF_WAVE) + (UCOORD*SOBJ_X + VCOORD*SOBJ_Y) * (2PI/EFF_WAVE) */
-	    cpl_array_set (visphi[row], w,
-  			      carg(cpl_array_get_double_complex (visdata[row],   w, NULL))
-			         + cpl_array_get_double         (phase_ref[row], w, NULL)
-			         - cpl_array_get_double         (opd_disp[row],  w, NULL)  * CPL_MATH_2PI / wavelength
-			         +      (ucoord[row] * sep_U + vcoord[row] * sep_V)        * CPL_MATH_2PI / wavelength);
-
-	}
-
-	gravi_array_phase_wrap (visphi[row]);
+        /* Compute VISPHI for each wavelength */
+        for (int w = 0; w < nwave; w++) {
+            
+            double wavelength = cpl_table_get (wave_table, "EFF_WAVE", w, NULL);
+            
+            /* PHASEREF = PHASE_REF - OPD_DISP * (2PI/EFF_WAVE) + 
+               (UCOORD*SOBJ_X + VCOORD*SOBJ_Y) * (2PI/EFF_WAVE) */
+            cpl_array_set (phaseref[row], w,
+                           cpl_array_get (phase_ref[row], w, NULL)
+                           - cpl_array_get (opd_disp[row],  w, NULL)  * CPL_MATH_2PI / wavelength
+                           + (ucoord[row] * sep_U + vcoord[row] * sep_V) * CPL_MATH_2PI / wavelength);
+            CPLCHECK_MSG ("Cannot compute the imaging phase");
+        }
+        
+        gravi_array_phase_wrap (phaseref[row]);
     }
 
     gravi_msg_function_exit(1);
@@ -2601,8 +2605,9 @@ cpl_error_code gravi_compute_signals (gravi_data * p2vmred_data,
         gravi_vis_create_phaseref_sc (vis_SC, oi_wavelengthsc, oi_wavelengthft);
     }
 	
-	/* Create the imaging phase */
-	gravi_vis_create_imaging_phase (vis_SC, oi_wavelengthsc, p2vmred_header);
+	/* Create the imaging phase: FIXME: what
+     * is the purpose of this at that stage ?? */
+	gravi_vis_create_imaging_phase_sc (vis_SC, oi_wavelengthsc, p2vmred_header);
 
 	CPLCHECK_MSG ("Cannot compute the PHASE_REF");
   } /* End loop on pol */
