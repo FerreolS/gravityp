@@ -483,20 +483,6 @@ cpl_error_code gravi_parameter_add_compute_snr (cpl_parameterlist *self, int isC
 cpl_error_code gravi_parameter_add_compute_signal (cpl_parameterlist *self, int isCalib)
 {
     cpl_ensure_code (self, CPL_ERROR_NULL_INPUT);
-    cpl_parameter *p;
-    
-    /* Phase reference for SC */
-	p = cpl_parameter_new_enum ("gravity.signal.reference-phase-sc", CPL_TYPE_STRING,
-                                "Compute the reference phase of the SC. The normal behavior "
-                                "is to use the phase of the FT (reference-phase-sc=FT).\n "
-                                "Alternatively, one can use a self-reference built from\n "
-                                "a fit of the SC phase itself for each DIT (reference-phase-sc=SC)",
-                                "gravity.signal",
-								"FT", 2, "SC", "FT");
-	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "reference-phase-sc");
-	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
-	cpl_parameterlist_append (self, p);
-
     return CPL_ERROR_NONE;
 }
 
@@ -567,7 +553,7 @@ cpl_error_code gravi_parameter_add_compute_vis (cpl_parameterlist *self, int isC
     cpl_ensure_code (self, CPL_ERROR_NULL_INPUT);
     cpl_parameter *p;
     
-    /* max-frame */
+    /* Max-frame */
 	p = cpl_parameter_new_value ("gravity.vis.max-frame", CPL_TYPE_INT,
                                  "Maximum number of frames to integrate \n "
                                  "coherently into an OIFITS entry",
@@ -615,14 +601,38 @@ cpl_error_code gravi_parameter_add_compute_vis (cpl_parameterlist *self, int isC
                                 "using the measured visibility losses with the FT (VFACTOR\n "
                                 "and/or PFACTOR) or by forcing\n "
                                 "the SC visibilities to match those of the FT (FORCE). Possible\n "
-                                "choices are",
+                                "choices are:",
                                 "gravity.vis",
 								isCalib ? "NONE" : "VFACTOR", 5, "VFACTOR", "PFACTOR",
                                 "VFACTOR_PFACTOR","FORCE", "NONE");
 	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "vis-correction-sc");
 	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
 	cpl_parameterlist_append (self, p);
-	
+
+    /* Phase referencing */
+    p = cpl_parameter_new_enum ("gravity.vis.phase-ref-sc", CPL_TYPE_STRING,
+                                "Reference phase used to integrate the SC frames.\n "
+                                "Use a self-estimate of the phase, fitted by poly. (SELF_REF)\n "
+                                "Use the FT phase only, interpolated in lbd (PHASE_REF)\n "
+                                "Use the FT+MET-SEP.UV phase (IMAGING_REF).",
+                                "gravity.vis", "AUTO", 5,
+                                "SELF_REF","PHASE_REF","IMAGING_REF","AUTO","NONE");
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "phase-ref-sc");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (self, p);
+  
+    /* Phase cleaning in the final OIFITS */
+    p = cpl_parameter_new_enum ("gravity.vis.output-phase-sc", CPL_TYPE_STRING,
+                                "With DIFFERENTIAL, the mean group-delay and mean\n "
+                                "phases are removed from the output VISPHI in the\n "
+                                "final OIFITS file. With ABSOLUTE, the VISPHI is\n "
+                                "kept unmodified.",
+                                "gravity.vis", "AUTO", 3,
+                                "DIFFERENTIAL","ABSOLUTE","AUTO");
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "output-phase-sc");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (self, p);
+    
     return CPL_ERROR_NONE;
 }
 

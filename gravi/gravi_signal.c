@@ -104,9 +104,9 @@ cpl_error_code gravi_vis_create_opddisp_sc (cpl_table * vis_SC,
 					    cpl_table * disp_table,
 					    cpl_propertylist * header);
 
-cpl_error_code gravi_vis_create_imaging_phase_sc (cpl_table * vis_SC,
-                                                  cpl_table * wave_table,
-                                                  cpl_propertylist * header);
+cpl_error_code gravi_vis_create_imagingref_sc (cpl_table * vis_SC,
+                                               cpl_table * wave_table,
+                                               cpl_propertylist * header);
 
 /*-----------------------------------------------------------------------------
                                  Function code
@@ -992,8 +992,8 @@ cpl_error_code gravi_vis_create_phaseref_ft (cpl_table * vis_FT)
   CPLCHECK_MSG ("Cannot get data");
   
   /* Create the column */
-  gravi_table_new_column_array (vis_FT, "PHASE_REF", "rad", CPL_TYPE_DOUBLE, nwave_ft);
-  cpl_array ** phaseref_ft = cpl_table_get_data_array (vis_FT, "PHASE_REF");
+  gravi_table_new_column_array (vis_FT, "SELF_REF", "rad", CPL_TYPE_DOUBLE, nwave_ft);
+  cpl_array ** phaseref_ft = cpl_table_get_data_array (vis_FT, "SELF_REF");
   
   CPLCHECK_MSG ("Cannot create columns");
   
@@ -1946,23 +1946,23 @@ cpl_error_code gravi_vis_create_phaseref_sc (cpl_table * vis_SC,
   gravi_msg_function_start(1);
   cpl_ensure_code (vis_SC,        CPL_ERROR_NULL_INPUT);
   cpl_ensure_code (wavesc_table, CPL_ERROR_NULL_INPUT);
-  // cpl_ensure_code (waveft_table, CPL_ERROR_NULL_INPUT);
-
-  /* Get SC and FT data */
-  // cpl_array ** visData_ftdit = cpl_table_get_data_array (vis_SC, "VISDATA_FT");
-  // double * gdelay_ftdit = cpl_table_get_data_double (vis_SC, "GDELAY_FT");
 
   cpl_array ** visData_ftdit;
   double * gdelay_ftdit;
+  const char * output_name = NULL, * coeff_name = NULL;
   if (waveft_table != NULL) {
       cpl_msg_info (cpl_func, "Compute reference phase of SC from the FT data");
       visData_ftdit = cpl_table_get_data_array (vis_SC, "VISDATA_FT");
       gdelay_ftdit  = cpl_table_get_data_double (vis_SC, "GDELAY_FT");
+      output_name = "PHASE_REF";
+      coeff_name  = "PHASE_REF_COEFF";
   } else {
-      gravi_msg_warning (cpl_func, "Compute reference phase of SC from the SC !!!");
+      cpl_msg_info (cpl_func, "Compute reference phase of SC from the SC");
       visData_ftdit = cpl_table_get_data_array (vis_SC, "VISDATA");
       gdelay_ftdit  = cpl_table_get_data_double (vis_SC, "GDELAY");
       waveft_table  = wavesc_table;
+      output_name = "SELF_REF";
+      coeff_name  = "SELF_REF_COEFF";
   }
   
   /* Get general data */
@@ -1997,12 +1997,12 @@ cpl_error_code gravi_vis_create_phaseref_sc (cpl_table * vis_SC,
   CPLCHECK_MSG ("Cannot create wave arrays");
 
   /* Create columns */
-  gravi_table_new_column_array (vis_SC, "PHASE_REF", "rad", CPL_TYPE_DOUBLE, nwave_sc);
-  cpl_array ** phaseref = cpl_table_get_data_array (vis_SC, "PHASE_REF");
+  gravi_table_new_column_array (vis_SC, output_name, "rad", CPL_TYPE_DOUBLE, nwave_sc);
+  cpl_array ** phaseref = cpl_table_get_data_array (vis_SC, output_name);
 
   /* Create columns */
-  gravi_table_new_column_array (vis_SC, "PHASE_REF_COEFF", NULL, CPL_TYPE_DOUBLE, maxdeg+1);
-  cpl_array ** phase_coeff = cpl_table_get_data_array (vis_SC, "PHASE_REF_COEFF");
+  gravi_table_new_column_array (vis_SC, coeff_name, NULL, CPL_TYPE_DOUBLE, maxdeg+1);
+  cpl_array ** phase_coeff = cpl_table_get_data_array (vis_SC, coeff_name);
   
   CPLCHECK_MSG ("Cannot create column");
 		
@@ -2339,16 +2339,15 @@ cpl_error_code gravi_vis_create_opddisp_sc (cpl_table * vis_SC,
  * @param wave_table:  wavelength table corresponding to the OI_VIS above
  * @param header:      main header
  *
- * Create VISPHI column in vis_SC based on the following:
- *   VISPHI = arg(VISDATA)
- *               + PHASE_REF
- *               - OPD_DISP * (2pi/EFF_WAVE)
- *               + (UCOORD * SOBJ_X + VCOORD * SOBJ_Y) * (2pi/EFF_WAVE)
+ * Create IMAGING_REF column in vis_SC based on the following:
+ * IMAGING_REF = PHASE_REF - OPD_DISP * (2pi/EFF_WAVE)
+ *         + (UCOORD * SOBJ_X + VCOORD * SOBJ_Y) * (2pi/EFF_WAVE)
  */
 /*----------------------------------------------------------------------------*/
-cpl_error_code gravi_vis_create_imaging_phase_sc (cpl_table * vis_SC,
-                                                  cpl_table * wave_table,
-                                                  cpl_propertylist * header)
+
+cpl_error_code gravi_vis_create_imagingref_sc (cpl_table * vis_SC,
+                                                cpl_table * wave_table,
+                                                cpl_propertylist * header)
 {
     gravi_msg_function_start(1);
     cpl_ensure_code (vis_SC,     CPL_ERROR_NULL_INPUT);
@@ -2373,8 +2372,8 @@ cpl_error_code gravi_vis_create_imaging_phase_sc (cpl_table * vis_SC,
 	double sep_V = gravi_pfits_get_sobj_y (header)*1e-3/3600.0/CPL_MATH_DEG_RAD;
 
     /* Create new PHASE_REF_IMG column array */
-    gravi_table_new_column_array (vis_SC, "PHASE_REF_IMG", "rad", CPL_TYPE_DOUBLE, nwave);
-    cpl_array ** phaseref = cpl_table_get_data_array (vis_SC, "PHASE_REF_IMG");
+    gravi_table_new_column_array (vis_SC, "IMAGING_REF", "rad", CPL_TYPE_DOUBLE, nwave);
+    cpl_array ** phaseref = cpl_table_get_data_array (vis_SC, "IMAGING_REF");
     CPLCHECK_MSG ("Cannot create column");
 
     /* Compute the reference phase for each row */
@@ -2388,7 +2387,7 @@ cpl_error_code gravi_vis_create_imaging_phase_sc (cpl_table * vis_SC,
             
             double wavelength = cpl_table_get (wave_table, "EFF_WAVE", w, NULL);
             
-            /* PHASEREF = PHASE_REF - OPD_DISP * (2PI/EFF_WAVE) + 
+            /* IMAGING_REF = PHASE_REF - OPD_DISP * (2PI/EFF_WAVE) + 
                (UCOORD*SOBJ_X + VCOORD*SOBJ_Y) * (2PI/EFF_WAVE) */
             cpl_array_set (phaseref[row], w,
                            cpl_array_get (phase_ref[row], w, NULL)
@@ -2396,7 +2395,8 @@ cpl_error_code gravi_vis_create_imaging_phase_sc (cpl_table * vis_SC,
                            + (ucoord[row] * sep_U + vcoord[row] * sep_V) * CPL_MATH_2PI / wavelength);
             CPLCHECK_MSG ("Cannot compute the imaging phase");
         }
-        
+
+        /* Wrap this phase in [rad] */
         gravi_array_phase_wrap (phaseref[row]);
     }
 
@@ -2594,20 +2594,14 @@ cpl_error_code gravi_compute_signals (gravi_data * p2vmred_data,
 	
 	CPLCHECK_MSG ("Cannot compute the GDELAYs");
 
-	/* 
-	 * Compute the phase ref, need VISDATA_FT and GDELAY_FT
-     * If the FT table is NULL, the routine will compute a
-     * self-reference phase instead of using the FT
-	 */
-    if ( !strcmp (gravi_param_get_string (parlist, "gravity.signal.reference-phase-sc"), "SC")) {
-        gravi_vis_create_phaseref_sc (vis_SC, oi_wavelengthsc, NULL);
-    } else {
-        gravi_vis_create_phaseref_sc (vis_SC, oi_wavelengthsc, oi_wavelengthft);
-    }
+    /* Compute the SELF_REF phase reference for SC (first) */
+    gravi_vis_create_phaseref_sc (vis_SC, oi_wavelengthsc, NULL);
 	
-	/* Create the imaging phase: FIXME: what
-     * is the purpose of this at that stage ?? */
-	gravi_vis_create_imaging_phase_sc (vis_SC, oi_wavelengthsc, p2vmred_header);
+	/* Compute the PHASE_REF reference for SC */
+    gravi_vis_create_phaseref_sc (vis_SC, oi_wavelengthsc, oi_wavelengthft);
+
+	/* Create the IMAGING_REF phase ref, need PHASE_REF */
+	gravi_vis_create_imagingref_sc (vis_SC, oi_wavelengthsc, p2vmred_header);
 
 	CPLCHECK_MSG ("Cannot compute the PHASE_REF");
   } /* End loop on pol */

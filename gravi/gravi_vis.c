@@ -72,7 +72,7 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
 											cpl_table * oi_vis2_avg,
 											cpl_table * oi_vis,
 											int nboot, 
-											int phase_ref,
+											const char * phase_ref,
 											int use_vFactor,
                                             int use_pFactor,
 											int use_debiasing);
@@ -768,8 +768,7 @@ cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
  * @param nseg:           number of segment for the boostrap
  * @param nboot:          number of boostrap
  * @param base:           base to consider (0..5)
- * @param exp_phase:      phase used to rephase the DITs (0=NONE, 1=PHASE_REF,
- *                        2=PHASE_REF_IMG)
+ * @param phase_ref:      phase used to rephase the DITs
  * @param use_vFactor:    use the VFACTOR to compensate for vis. losses
  *
  * Average the coherent flux and photometric fluex, then normalize and
@@ -782,7 +781,7 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
 											cpl_table * oi_vis2_avg,
 											cpl_table * oi_vis,
 											int nboot,
-											int phase_ref,
+											const char * phase_ref,
 											int use_vFactor,
                                             int use_pFactor,
 											int use_debiasing)
@@ -806,13 +805,16 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
   double * pMJD     = cpl_table_get_data_double (oi_vis, "MJD");
   double * pUCOORD  = cpl_table_get_data_double (oi_vis, "UCOORD");
   double * pVCOORD  = cpl_table_get_data_double (oi_vis, "VCOORD");
-  cpl_array ** pPHASEREF = NULL;
-  if (phase_ref == 1) pPHASEREF = cpl_table_get_data_array (oi_vis, "PHASE_REF");
-  if (phase_ref == 2) pPHASEREF = cpl_table_get_data_array (oi_vis, "PHASE_REF_IMG");
   cpl_array ** pVFACTOR = use_vFactor?cpl_table_get_data_array (oi_vis, "V_FACTOR"):NULL;
   double * pPFACTOR = use_pFactor?cpl_table_get_data_double (oi_vis, "P_FACTOR"):NULL;
   CPLCHECK_MSG ("Cannot get the data");
 
+  /* Get the reference phase */
+  cpl_array ** pPHASEREF = NULL;
+  if (phase_ref && strcmp (phase_ref, "NONE"))
+      pPHASEREF = cpl_table_get_data_array (oi_vis, phase_ref);
+  CPLCHECK_MSG ("Cannot get the reference phase data");
+  
   /* Loop on base */
   for (cpl_size base = 0; base < nbase; base ++) {
 
@@ -916,7 +918,7 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
 			  mI += 2 * eI * gravi_randn();
 			}
     
-            if (phase_ref) {
+            if (PHASEREF) {
                 /* Integrate <R> and <I> rephased */
                 tR[w] += cos(PHASEREF) * mR - sin(PHASEREF) * mI;
                 tI[w] += cos(PHASEREF) * mI + sin(PHASEREF) * mR;
@@ -1212,16 +1214,16 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
     }
     else {
 		/* Reduction parameters */
-		int phase_ref_flag_ft = 1;
 		int v_factor_flag_ft = 0;
 		int p_factor_flag_ft = 0;
 		int debiasing_flag_ft = gravi_param_get_bool (parlist, "gravity.vis.debias-ft");
         int nboot_ft = gravi_param_get_int (parlist, "gravity.vis.nboot");
+        const char * phase_ref_ft = "SELF_REF";
+		CPLCHECK_NUL("Cannot get parameters");
 
         cpl_msg_info (cpl_func, "Bias subtraction of V2 for FT is %s",debiasing_flag_ft?"ENABLE":"DISABLE");
-		cpl_msg_info (cpl_func, "reference_phase for FT is %i (1=REF, 2=IMG_REF)",phase_ref_flag_ft);
+		cpl_msg_info (cpl_func, "Reference phase for FT is %s",phase_ref_ft);
 
-		CPLCHECK_NUL("Cannot get parameters");
 
         /*
          * Loop on polarisations 
@@ -1265,7 +1267,7 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
             
             gravi_vis_average_bootstrap (oi_vis_FT, oi_vis2_FT, vis_FT,
                                          nboot_ft,
-                                         phase_ref_flag_ft,
+                                         phase_ref_ft,
                                          v_factor_flag_ft,
                                          p_factor_flag_ft,
                                          debiasing_flag_ft);
@@ -1344,16 +1346,34 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
 		cpl_msg_info (cpl_func, "P2VMRED data has no SC extensions");
     }
     else {
-		/* Select the reference phase */
+
+        /* Read the object separation. Actually should
+         * be the mode maybe more than the separation */
         double SOBJ_X = gravi_pfits_get_sobj_x (p2vmred_header);
         double SOBJ_Y = gravi_pfits_get_sobj_y (p2vmred_header);
         double SOBJ_R = sqrt(SOBJ_X*SOBJ_X + SOBJ_Y*SOBJ_Y);
-        int phase_ref_flag_sc = (SOBJ_R > 0.001)?2:1;
 
-		cpl_msg_info (cpl_func, "reference_phase for SC is %i (1=REF, 2=REF_IMG, SOBJ_R = %fmas)",
-                      phase_ref_flag_sc,SOBJ_R);
+        /* Reference phase requested by user, deal with AUTO */
+        const char * phase_ref_sc = gravi_param_get_string (parlist, "gravity.vis.phase-ref-sc");
+
+        if ( !strcmp (phase_ref_sc,"AUTO") && SOBJ_R > 0.001)
+            phase_ref_sc = "IMAGING_REF";
+        else if ( !strcmp (phase_ref_sc,"AUTO") && SOBJ_R < 0.001) 
+            phase_ref_sc = "PHASE_REF";
         
-		/* Reduction parameters */
+        cpl_msg_info (cpl_func, "Reference phase for SC is %s",phase_ref_sc);
+
+        /* Output phase requested by user, deal with AUTO */
+        const char * output_phase_sc = gravi_param_get_string (parlist, "gravity.vis.output-phase-sc");
+        
+        if ( !strcmp (output_phase_sc,"AUTO") && SOBJ_R > 0.001)
+            output_phase_sc = "ABSOLUTE";
+        else if ( !strcmp (output_phase_sc,"AUTO") && SOBJ_R < 0.001) 
+            output_phase_sc = "DIFFERENTIAL";
+        
+        cpl_msg_info (cpl_func, "Output phase for SC is %s",output_phase_sc);
+        
+		/* Other reduction parameters */
 		int v_factor_flag_sc = strstr (gravi_param_get_string (parlist, "gravity.vis.vis-correction-sc"),"VFACTOR") ? 1 : 0;
 		int p_factor_flag_sc = strstr (gravi_param_get_string (parlist, "gravity.vis.vis-correction-sc"),"PFACTOR") ? 1 : 0;
 		int debiasing_flag_sc = gravi_param_get_bool (parlist, "gravity.vis.debias-sc");
@@ -1421,7 +1441,7 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
             
             gravi_vis_average_bootstrap (oi_vis_SC, oi_vis2_SC, vis_SC,
                                          nboot_sc,
-                                         phase_ref_flag_sc,
+                                         phase_ref_sc,
                                          v_factor_flag_sc,
                                          p_factor_flag_sc,
                                          debiasing_flag_sc);            
@@ -1437,10 +1457,10 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
             gravi_vis_compute_column_mean (oi_vis_SC, vis_SC, "E_ZD", 6);
             CPLCHECK_NUL("Cannot compute means.");
                 
-            if (phase_ref_flag_sc == 1) {
             /* Re compute the astrometric phase from VISDATA to deal with absolute phase
              * VISDATA as well as (R,I) remains unchanged. The goal is to split
              * the differential phase, calibratable so far, from the absolute phase */
+            if ( !strcmp (output_phase_sc,"DIFFERENTIAL") ) {
             for (int base = 0; base < nbase; base++) {
                 
                 /* We duplicate VISDATA, to keep the value untouched in the table */
@@ -1478,6 +1498,7 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
 
             } /* End loop on base */
             }
+            
             /* 
              * Compute OIT3 for SC
              */
