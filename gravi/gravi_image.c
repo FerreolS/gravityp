@@ -61,7 +61,8 @@ const int GRAVI_ERROR_TIMEOUT  = 0 + CPL_ERROR_EOL;
 
 #ifdef YORICK_BIN
 cpl_image * gravi_image(const cpl_frame * input_frame,
-						const cpl_parameterlist * input_param)
+						const cpl_parameterlist * input_param,
+						char* target_name)
 {
     //cpl_errorstate prestate = cpl_errorstate_get();
     cpl_image * reconstruct_image;
@@ -77,7 +78,7 @@ cpl_image * gravi_image(const cpl_frame * input_frame,
 	const cpl_parameter * param;
 	double val;
 	int i;
-	char *yorick_argv[20];
+	char *yorick_argv[21];
 	int argv_i;
 	double timeout;
 	char * s;
@@ -161,7 +162,8 @@ cpl_image * gravi_image(const cpl_frame * input_frame,
 	yorick_argv[argv_i++]  = cpl_sprintf("-gtol=0");
 	yorick_argv[argv_i++] = cpl_sprintf("-overwrite");
 	yorick_argv[argv_i++] = cpl_sprintf("-normalization=1.0");
-	yorick_argv[argv_i++] = cpl_sprintf("-xmin=0.0");
+    yorick_argv[argv_i++] = cpl_sprintf("-xmin=0.0");
+    yorick_argv[argv_i++] = cpl_sprintf("-target=%s", target_name);
 	yorick_argv[argv_i++] = cpl_sprintf("%s",input_filename);
 	yorick_argv[argv_i++] = cpl_sprintf("./output_temp.fits"); // not used by mira-script.i
 	yorick_argv[argv_i++] = NULL;

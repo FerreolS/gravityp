@@ -34,6 +34,7 @@
  -----------------------------------------------------------------------------*/
 
 #include <cpl.h>
+#include <ctype.h>
 
 #include "gravi_utils.h"
 #include "gravi_pfits.h"
@@ -255,6 +256,7 @@ static int gravity_image_destroy(cpl_plugin * plugin)
   @return   0 if everything is ok
  */
 /*----------------------------------------------------------------------------*/
+//#define YORICK_BIN 1
 static int gravity_image(cpl_frameset            * frameset,
                     const cpl_parameterlist * parlist)
 {
@@ -298,67 +300,107 @@ static int gravity_image(cpl_frameset            * frameset,
 
     cpl_msg_set_component_on();
 
-    /* NOW PERFORMING THE DATA REDUCTION */
-    /* Execute the gravi_image function */
-    image=gravi_image(rawframe, parlist);
-    if (image == NULL) {
-        /* cpl_frameset_find_const() does not set an error code, when a frame
-           is not found, so we will set one here. */
-        return (int)cpl_error_set_message(cpl_func, CPL_ERROR_NULL_INPUT,
-                                          "The gravi_image function return NULL pointer");
-    }
-
-    applist = cpl_propertylist_new();
-
-    /* Add the product category  */
-    cpl_propertylist_append_string(applist, CPL_DFS_PRO_CATG,
-							GRAVI_MIRA_OUTPUT_PROCATG);
-
-    /* Add a QC parameter  */
-    cpl_propertylist_append_double(applist, "ESO QC QCPARAM", qc_param);
+    /* get file information */
+    const char * filename = cpl_frame_get_filename(rawframe);
+    gravi_data * input_data = gravi_data_load_ext(filename, "OI_TARGET");
+    cpl_table * oi_target_table = gravi_data_get_table(input_data, "OI_TARGET");
+    int n_target = cpl_table_get_nrow(oi_target_table);
     
-    /* SAVE A DFS-COMPLIANT PRODUCT TO DISK*/
-     gravi_dfs_set_groups(frameset);
+    /* loop on targets */
+    for (int i_target = 0; i_target < n_target; i_target++) {
 
-    /* create product */
-    usedframes = cpl_frameset_new();
-    cpl_frameset_insert(usedframes, cpl_frame_duplicate(rawframe));
+        /* NOW PERFORMING THE DATA REDUCTION */
+        /* Execute the gravi_image function */
+        char *target_name = cpl_table_get_string(oi_target_table, "TARGET", i_target);
+        //char *target_name = cpl_sprintf("%s", "IRS16C");
+        image=gravi_image(rawframe, parlist, target_name);
+        if (image == NULL) {
+            /* cpl_frameset_find_const() does not set an error code, when a frame
+               is not found, so we will set one here. */
+            return (int)cpl_error_set_message(cpl_func, CPL_ERROR_NULL_INPUT,
+                                              "The gravi_image function return NULL pointer");
+        }
 
-	cpl_msg_info(cpl_func, "Writing image_out.fits");
+        applist = cpl_propertylist_new();
 
-/*	if (cpl_dfs_save_propertylist (frameset, NULL, parlist,	usedframes,
-			rawframe, "gravity_image", applist, NULL,
-			PACKAGE "/" PACKAGE_VERSION , "image_out.fits" ) != CPL_ERROR_NONE){
-		cpl_error_set_message(cpl_func, cpl_error_get_code(),
-				          "Cannot save the first extension primary header");
-	    cpl_image_delete(image);
-	    cpl_propertylist_delete(applist);
-	    cpl_frameset_delete(usedframes);
-		return cpl_error_get_code();
-	}
-*/
-	/* Save the image extensions */
-/*	if (cpl_image_save(image, "image_out.fits", CPL_BPP_IEEE_DOUBLE,
-							applist, CPL_IO_EXTEND) != CPL_ERROR_NONE){
-		cpl_error_set_message(cpl_func, cpl_error_get_code(),
-				          "Cannot save the image extension");
-	    cpl_image_delete(image);
-	    cpl_propertylist_delete(applist);
-	    cpl_frameset_delete(usedframes);
-		return cpl_error_get_code();
-	}
-*/
+        /* Add the product category  */
+        char proCatg[100];
+        sprintf(proCatg, "%s", GRAVI_MIRA_OUTPUT_PROCATG);
+        cpl_propertylist_append_string(applist, CPL_DFS_PRO_CATG, proCatg);
+        /* Select the name extension depending on this catg */
+        char catg_ext[100];
+        int i, j=0;
+        for(i = 0; proCatg[i]; i++) if (proCatg[i]!='_') { catg_ext[j] = tolower(proCatg[i]); j++; }
+        catg_ext[j] = '\0';
 
-	cpl_dfs_save_image(frameset, NULL, parlist, usedframes,
-			rawframe, image, CPL_BPP_IEEE_DOUBLE,
-			"gravity_image", applist, NULL,
-			PACKAGE "/" PACKAGE_VERSION , "image_out.fits" );
-	cpl_msg_info(cpl_func, "Reconstructed image saved in image_out.fits");
+        /* Add a QC parameter  */
+        cpl_propertylist_append_double(applist, "ESO QC QCPARAM", qc_param);
 
-	/* free memory */
-    cpl_image_delete(image);
-    cpl_propertylist_delete(applist);
-    cpl_frameset_delete(usedframes);
+        /* SAVE A DFS-COMPLIANT PRODUCT TO DISK*/
+         gravi_dfs_set_groups(frameset);
+
+        /* create product */
+        usedframes = cpl_frameset_new();
+        cpl_frameset_insert(usedframes, cpl_frame_duplicate(rawframe));
+
+        cpl_msg_info(cpl_func, "Writing image_out.fits");
+
+        /*	if (cpl_dfs_save_propertylist (frameset, NULL, parlist,	usedframes,
+                rawframe, "gravity_image", applist, NULL,
+                PACKAGE "/" PACKAGE_VERSION , "image_out.fits" ) != CPL_ERROR_NONE){
+            cpl_error_set_message(cpl_func, cpl_error_get_code(),
+                              "Cannot save the first extension primary header");
+            cpl_image_delete(image);
+            cpl_propertylist_delete(applist);
+            cpl_frameset_delete(usedframes);
+            return cpl_error_get_code();
+        }
+        */
+        /* Save the image extensions */
+        /*	if (cpl_image_save(image, "image_out.fits", CPL_BPP_IEEE_DOUBLE,
+                                applist, CPL_IO_EXTEND) != CPL_ERROR_NONE){
+            cpl_error_set_message(cpl_func, cpl_error_get_code(),
+                              "Cannot save the image extension");
+            cpl_image_delete(image);
+            cpl_propertylist_delete(applist);
+            cpl_frameset_delete(usedframes);
+            return cpl_error_get_code();
+        }
+        */
+
+        /* Use either the input filename or a name based on recipe */
+        char * product_name = NULL;
+
+        if ( cpl_parameterlist_find_const (parlist,"gravity.dfs.static-name") &&
+             gravi_param_get_bool (parlist,"gravity.dfs.static-name")) {
+
+          /* Use the recipe name and add the selected catg_ext */
+          product_name = cpl_sprintf ("%s_%s_%s.fits", "gravity_image", catg_ext, target_name);
+        }
+        else {
+
+          /* Remove the extension (last '.') and add the selected catg_ext */
+          char * filenoext = cpl_strdup (FILESHORT(filename));
+          char * lastdot = strrchr (filenoext, '.');
+          if (lastdot != NULL) *lastdot = '\0';
+          product_name = cpl_sprintf ("%s_%s_%s.fits", filenoext, catg_ext, target_name);
+          FREE (cpl_free, filenoext);
+        }
+
+        cpl_dfs_save_image(frameset, NULL, parlist, usedframes,
+                rawframe, image, CPL_BPP_IEEE_DOUBLE,
+                "gravity_image", applist, NULL,
+                PACKAGE "/" PACKAGE_VERSION , product_name);
+        cpl_msg_info(cpl_func, "Reconstructed image saved in image_out.fits");
+
+        /* free memory */
+        cpl_image_delete(image);
+        cpl_propertylist_delete(applist);
+        cpl_frameset_delete(usedframes);
+        FREE (cpl_free, product_name);
+    } // end loop on target
+    gravi_data_delete(input_data);
+
 
     return (int)cpl_error_get_code();
 #else

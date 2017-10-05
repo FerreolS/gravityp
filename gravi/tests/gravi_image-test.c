@@ -92,7 +92,7 @@ static void test_image(void)
     cpl_image * image;
 
     /* Test with invalid input */
-   image=gravi_image(NULL, NULL);
+   image=gravi_image(NULL, NULL, "");
 
     if (cpl_errorstate_is_equal(prestate)) {
     	cpl_msg_error(fctid, "Function %s did not fail on NULL input",
@@ -116,7 +116,7 @@ static void test_image(void)
         gravi_parameter_add_image (parlist);
 
         /* Call the function */
-        image=gravi_image(frame, parlist);
+        image=gravi_image(frame, parlist, "FKV0497");
         if (!cpl_errorstate_is_equal(prestate)) {
         	cpl_msg_error(fctid, "Function %s failed",
         	                      test_subject);
