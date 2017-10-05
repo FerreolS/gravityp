@@ -2254,21 +2254,19 @@ cpl_error_code gravi_vis_create_opddisp_sc (cpl_table * vis_SC,
   }
   // Replace by PRO MET GD_ZERO_FC, if available
   for (t = 0; t < ntel; t++) {
-    sprintf (name, "ESO PRO MET GD_ZERO_FC%i", t+1); 
-    if (cpl_propertylist_has (header, name)) {
-      opl_zero_fc[t] =
-	cpl_propertylist_get_double (header, name)*1e-3
-	* (wavenumber_sc[nwave_sc/2-1] - wavenumber_sc[nwave_sc/2+1])
-	/ (n_mean[t][nwave_sc/2-1] * wavenumber_sc[nwave_sc/2-1] - n_mean[t][nwave_sc/2+1] * wavenumber_sc[nwave_sc/2+1]);
-      cpl_msg_info (cpl_func, "Updating metrology zero with PRO MET GD_ZERO_FC%i: %f [mm]", t+1, opl_zero_fc[t]);
+    if ( gravi_pfits_has_gdzero (header, t+1) ) {
+        opl_zero_fc[t] =
+                gravi_pfits_get_gdzero (header, t+1)*1e-3
+                * (wavenumber_sc[nwave_sc/2-1] - wavenumber_sc[nwave_sc/2+1])
+                / (n_mean[t][nwave_sc/2-1] * wavenumber_sc[nwave_sc/2-1] - n_mean[t][nwave_sc/2+1] * wavenumber_sc[nwave_sc/2+1]);
+        cpl_msg_info (cpl_func, "Updating metrology zero with QC/PRO MET GD_ZERO_FC%i: %f [mm]", t+1, opl_zero_fc[t]);
     }
   }
   // Replace by PRO MET OPL_ZERO_FC, if available
   for (t = 0; t < ntel; t++) {
-    sprintf (name, "ESO PRO MET OPL_ZERO_FC%i", t+1); 
-    if (cpl_propertylist_has (header, name)) {
-      opl_zero_fc[t] = cpl_propertylist_get_double (header, name)*1e-3;
-      cpl_msg_info (cpl_func, "Updating metrology zero with PRO MET OPL_ZERO_FC%i: %f [mm]", t+1, opl_zero_fc[t]);
+    if ( gravi_pfits_get_oplzero (header, t+1) ){
+        opl_zero_fc[t] = gravi_pfits_get_oplzero (header, t+1)*1e-3;
+        cpl_msg_info (cpl_func, "Updating metrology zero with QC/PRO MET OPL_ZERO_FC%i: %f [mm]", t+1, opl_zero_fc[t]);
     }
   }
 

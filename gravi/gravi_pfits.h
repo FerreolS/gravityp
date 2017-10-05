@@ -184,6 +184,10 @@ enum gravi_detector_type
 
 
 const char * gravi_pfits_get_met_ph(const cpl_propertylist * );
+int gravi_pfits_has_gdzero (const cpl_propertylist * plist, int tel);
+double gravi_pfits_get_gdzero (const cpl_propertylist * plist, int tel);
+int gravi_pfits_has_oplzero (const cpl_propertylist * plist, int tel);
+double gravi_pfits_get_oplzero (const cpl_propertylist * plist, int tel);
 double gravi_pfits_get_metfc_lockmjd (const cpl_propertylist * plist, int tel);
 double gravi_pfits_get_met_wavelength (const cpl_propertylist * plist);
 double gravi_pfits_get_met_wavelength_mean (const cpl_propertylist * plist, cpl_table * met_table);
