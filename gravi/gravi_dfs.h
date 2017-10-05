@@ -57,6 +57,7 @@
 #define GRAVI_P2VMRED_DUAL_CALIB            "DUAL_CAL_P2VMRED"
 #define GRAVI_P2VMRED_DUAL_SCIENCE          "DUAL_SCI_P2VMRED"
 #define GRAVI_ASTROREDUCED                  "ASTROREDUCED"
+#define GRAVI_KEY_PATCH                     "KEY_PATCH"
 
 /* PRO.CATG / DO.CATG for calibration product */
 #define GRAVI_BAD_MAP                       "BAD"
@@ -167,7 +168,7 @@ cpl_frameset * gravi_frameset_extract_p2vmred_data (cpl_frameset * frameset);
 cpl_frameset * gravi_frameset_extract_piezotf_data (cpl_frameset * frameset);
 cpl_frameset * gravi_frameset_extract_diamcat_map (cpl_frameset * frameset);
 cpl_frameset * gravi_frameset_extract_eop_map (cpl_frameset * frameset);
-
+cpl_frameset * gravi_frameset_extract_patch (cpl_frameset * frameset);
 
 const char * gravi_param_get_string (const cpl_parameterlist * parlist, const char * name);
 double gravi_param_get_double (const cpl_parameterlist *, const char *);

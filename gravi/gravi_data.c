@@ -578,6 +578,85 @@ gravi_data * gravi_data_load_frame (cpl_frame * frame,
  */
 /*----------------------------------------------------------------------------*/
 
+int gravi_data_patch (gravi_data * file_to_patch,
+                                       cpl_frameset * patch_frameset)
+{
+  cpl_ensure (file_to_patch, CPL_ERROR_NULL_INPUT, 0);
+
+  cpl_frame * patch_frame = NULL;
+
+  if ( !cpl_frameset_is_empty (patch_frameset) )
+      patch_frame = cpl_frameset_get_position(patch_frameset, 0);
+
+  if (patch_frame) {
+      const char * filename = cpl_frame_get_filename (patch_frame);
+      CPLCHECK_INT("Cannot get finelame");
+      cpl_msg_info (cpl_func, "Patch the input file with %s", FILESHORT(filename));
+      cpl_propertylist * plist_patch = cpl_propertylist_load (filename, 0);
+      CPLCHECK_INT("Cannot load patch");
+      cpl_propertylist * plist_file_to_patch = gravi_data_get_plist_x(file_to_patch, 0);
+      CPLCHECK_INT("Cannot load data");
+
+      for (int i=0; i<cpl_propertylist_get_size(plist_patch); i++){
+          cpl_property * keyword = cpl_propertylist_get(plist_patch, i);
+          cpl_type type = cpl_property_get_type(keyword);
+          const char * p_name = cpl_property_get_name (keyword);
+          if ( (strstr(p_name, " QC ") != NULL) ||
+                  (strstr(p_name, " TPL ") != NULL) ||
+                  (strstr(p_name, " OCS ") != NULL) ||
+                  (strstr(p_name, " OBS ") != NULL) ||
+                  (strstr(p_name, " MET ") != NULL) ||
+                  (strstr(p_name, " ISS ") != NULL) ||
+                  (strstr(p_name, " INS ") != NULL) ||
+                  (strstr(p_name, " FT ") != NULL) ||
+                  (strstr(p_name, " FDDL ") != NULL) ||
+                  (strstr(p_name, " ACQ ") != NULL) ) {
+              cpl_msg_info (cpl_func, "Patch the keyword %s", p_name);
+              switch (type) {
+                case CPL_TYPE_FLOAT :
+                    cpl_propertylist_update_float(plist_file_to_patch, p_name, cpl_property_get_float(keyword));
+                    break;
+                case CPL_TYPE_DOUBLE :
+                    cpl_propertylist_update_double(plist_file_to_patch, p_name, cpl_property_get_double(keyword));
+                    break;
+                case CPL_TYPE_INT :
+                    cpl_propertylist_update_int(plist_file_to_patch, p_name, cpl_property_get_int(keyword));
+                    break;
+                case CPL_TYPE_STRING :
+                    cpl_propertylist_update_string(plist_file_to_patch, p_name, cpl_property_get_string(keyword));
+                    break;
+                case CPL_TYPE_CHAR :
+                    cpl_propertylist_update_char(plist_file_to_patch, p_name, cpl_property_get_char(keyword));
+                    break;
+                case CPL_TYPE_BOOL :
+                    cpl_propertylist_update_bool(plist_file_to_patch, p_name, cpl_property_get_bool(keyword));
+                    break;
+                default :
+                    cpl_msg_error (cpl_func,"'%s' is an invalid type of property",p_name);
+                    cpl_error_set_message(cpl_func, CPL_ERROR_INVALID_TYPE,
+                                                       "invalid type of property");
+                    return 0;
+                }
+          }
+
+      }
+  }
+return 1;
+}
+
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Load a RAW FITS file and create a gravi_data
+ *
+ * @param filename        Name of the input file.
+ * @param used_frameset   If not NULL, this frameset is append with frame
+ * @return gravi_data
+ *
+ * Load and create a gravi data type from input RAW frame.
+ * Data integrity is verified.
+ */
+/*----------------------------------------------------------------------------*/
+
 gravi_data * gravi_data_load_rawframe (cpl_frame * frame,
 									   cpl_frameset * used_frameset)
 {

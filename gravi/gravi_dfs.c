@@ -124,7 +124,8 @@ cpl_error_code gravi_dfs_set_groups(cpl_frameset * set)
         	cpl_frame_set_group(frame, CPL_FRAME_GROUP_CALIB);
         }else if (
         		(!strcmp(tag, GRAVI_MIRA_OUTPUT_PROCATG)) ||
-        		(!strcmp(tag, GRAVI_NAB_CAL)) ){
+                (!strcmp(tag, GRAVI_NAB_CAL)) ||
+                (!strcmp(tag, GRAVI_KEY_PATCH)) ){
         	/* PRODUCT frames */
         	cpl_frame_set_group(frame, CPL_FRAME_GROUP_PRODUCT);
         }
@@ -837,6 +838,10 @@ cpl_frameset * gravi_frameset_extract_biasmask_map (cpl_frameset * frameset) {
 }
 cpl_frameset * gravi_frameset_extract_eop_map (cpl_frameset * frameset) {
   const char *tags[] = {GRAVI_EOP_MAP};
+  return gravi_frameset_extract (frameset, tags, 1);
+}
+cpl_frameset * gravi_frameset_extract_patch (cpl_frameset * frameset) {
+  const char *tags[] = {GRAVI_KEY_PATCH};
   return gravi_frameset_extract (frameset, tags, 1);
 }
 

@@ -103,6 +103,7 @@ gravi_data * gravi_data_load(const char * filename);
 gravi_data * gravi_data_load_ext(const char * filename, 
                                  const char * extensions_regexp);
 gravi_data * gravi_data_load_frame (cpl_frame * frame, cpl_frameset * used_frameset);
+int gravi_data_patch (gravi_data * file_to_patch, cpl_frameset * patch_frameset);
 gravi_data * gravi_data_load_rawframe (cpl_frame * frame, cpl_frameset * used_frameset);
 gravi_data * gravi_data_load_rawframe_ext (cpl_frame * frame,
                                            cpl_frameset * used_frameset,

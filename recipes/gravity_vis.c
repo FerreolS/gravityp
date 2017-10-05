@@ -363,7 +363,7 @@ static int gravity_vis(cpl_frameset * frameset,
     cpl_frameset * recipe_frameset=NULL, * wavecalib_frameset=NULL, * dark_frameset=NULL,
 	  * darkcalib_frameset=NULL, * sky_frameset=NULL, * flatcalib_frameset=NULL, * p2vmcalib_frameset=NULL,
 	  * badcalib_frameset=NULL, *used_frameset=NULL, * current_frameset=NULL, * dispcalib_frameset=NULL,
-	  * metpos_frameset=NULL, * diamcat_frameset = NULL, *eop_frameset = NULL;
+	  * metpos_frameset=NULL, * diamcat_frameset = NULL, *eop_frameset = NULL, *patch_frameset = NULL;
 	
 	cpl_frame * frame=NULL;
 	
@@ -397,7 +397,8 @@ static int gravity_vis(cpl_frameset * frameset,
 	metpos_frameset = gravi_frameset_extract_met_pos (frameset);
 	diamcat_frameset = gravi_frameset_extract_diamcat_map (frameset);
 	eop_frameset = gravi_frameset_extract_eop_map (frameset);
-	
+	patch_frameset = gravi_frameset_extract_patch (frameset);
+
     recipe_frameset = gravi_frameset_extract_fringe_data (frameset);
     sky_frameset = gravi_frameset_extract_sky_data (frameset);
     
@@ -429,7 +430,8 @@ static int gravity_vis(cpl_frameset * frameset,
 	  
     	frame = cpl_frameset_get_position (dark_frameset, 0);
 		data = gravi_data_load_rawframe (frame, used_frameset);
-        gravi_data_detector_cleanup (data, parlist);
+        gravi_data_patch (data, patch_frameset);
+		gravi_data_detector_cleanup (data, parlist);
 
 		/* Compute dark */
 		dark_map = gravi_compute_dark (data);
@@ -560,7 +562,8 @@ static int gravity_vis(cpl_frameset * frameset,
 		  cpl_msg_info (cpl_func, " ***** SKY %d over %d ***** ", isky+1, nb_sky);
 		  frame = cpl_frameset_get_position (sky_frameset, isky);
 		  data = gravi_data_load_rawframe (frame, used_frameset);
-          gravi_data_detector_cleanup (data, parlist);
+	      gravi_data_patch (data, patch_frameset);
+		  gravi_data_detector_cleanup (data, parlist);
 
 		  /* Compute the SKY map */
 		  sky_maps[isky] = gravi_compute_dark (data);
@@ -641,6 +644,7 @@ static int gravity_vis(cpl_frameset * frameset,
 		
 		frame = cpl_frameset_get_position (recipe_frameset, ivis);
 		data = gravi_data_load_rawframe (frame, current_frameset);
+		gravi_data_patch (data, patch_frameset);
         gravi_data_detector_cleanup (data, parlist);
 
 		/* Option save the preproc file */
