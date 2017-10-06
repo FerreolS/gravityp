@@ -974,31 +974,35 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
     }
 
     /* Compute separation */
-    /* Current FT --> SC vector */ 
-    double sobj_x = cpl_propertylist_get_double(header, "ESO INS SOBJ X");
-    double sobj_y = cpl_propertylist_get_double(header, "ESO INS SOBJ Y");
+    double sobj_x = gravi_pfits_get_sobj_x (header);
+    double sobj_y = gravi_pfits_get_sobj_y (header);
+    double sobj_sep = sqrt(sobj_x*sobj_x + sobj_y*sobj_y);
+    
     /* Accumulated mapping offsets */
     double sobj_offx=0., sobj_offy=0, sobj_drho=0., sobj_dth=0.;
     if (cpl_propertylist_has(header, "ESO INS SOBJ OFFX")) {
       /* mapping / mosaicing blind offsets from otiginal acquisition
-	 to current position */
-      sobj_offx = cpl_propertylist_get_double(header, "ESO INS SOBJ OFFX");
-      sobj_offy = cpl_propertylist_get_double(header, "ESO INS SOBJ OFFY");
-      /* distance from acquired SC position to current SC position in mas */
-      sobj_drho = sqrt(sobj_offx*sobj_offx+sobj_offy*sobj_offy);
-      /* position angle on sky from acquired SC position to
-	 current SC position, neglecting anamorphism variations */
+         to current position */
+        sobj_offx = cpl_propertylist_get_double (header, "ESO INS SOBJ OFFX");
+        sobj_offy = cpl_propertylist_get_double (header, "ESO INS SOBJ OFFY");
+        
+        /* distance from acquired SC position to current SC position in mas */
+        sobj_drho = sqrt(sobj_offx*sobj_offx+sobj_offy*sobj_offy);
+        
+        /* position angle on sky from acquired SC position to
+           current SC position, neglecting anamorphism variations */
       sobj_dth = atan2(sobj_offx, sobj_offy)*180./M_PI;
     }
+    CPLCHECK_MSG ("Cannot get separation");
+    
     /* Recover position of originally acquired star, before any blind offset */
     double dx_in = sobj_x - sobj_offx;
     double dy_in = sobj_y - sobj_offy;
-
     double rho_in = sqrt(dx_in*dx_in + dy_in*dy_in);
-    CPLCHECK_MSG ("Cannot get separation");
-    char const * dpr_type = cpl_propertylist_get_string(header, "ESO DPR TYPE");
-    CPLCHECK("Error reading header information");
-    if (!strcmp(dpr_type, "OBJECT,SINGLE")) rho_in = 0.;
+
+    /* Force zero separation for SINGLE mode */
+    if ( gravi_pfits_get_mode (header) == MODE_SINGLE) rho_in = 0.;
+    CPLCHECK_MSG ("Error reading header information");
 
     /* Loop on tel */
     for (int tel = 0; tel < ntel; tel++) {
@@ -1465,7 +1469,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
                 cpl_table_set (acqcam_table, "PUPIL_W", row*ntel+tel, w_shift);
 
                 /* Compute the OPD_PUPIL */
-                double opd_pupil = rho_in * GRAVI_MATH_RAD_MAS / scale * 
+                double opd_pupil = sobj_sep * GRAVI_MATH_RAD_MAS / scale * 
                                    (x_shift * cdrotoff + y_shift * sdrotoff);
                 cpl_table_set (acqcam_table, "OPD_PUPIL", row*ntel+tel, opd_pupil);
             }
