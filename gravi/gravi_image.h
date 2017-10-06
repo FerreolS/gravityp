@@ -34,6 +34,8 @@
                                 Public prototypes
  -----------------------------------------------------------------------------*/
 
-cpl_image * gravi_image( const cpl_frame * input_frame, const cpl_parameterlist * input_param, char * target_name);
+cpl_image * gravi_image (const cpl_frame * input_frame,
+                         const cpl_parameterlist * input_param,
+                         const char * target_name);
 
 #endif

@@ -311,9 +311,9 @@ static int gravity_image(cpl_frameset            * frameset,
 
         /* NOW PERFORMING THE DATA REDUCTION */
         /* Execute the gravi_image function */
-        char *target_name = cpl_table_get_string(oi_target_table, "TARGET", i_target);
-        //char *target_name = cpl_sprintf("%s", "IRS16C");
-        image=gravi_image(rawframe, parlist, target_name);
+        const char *target_name = cpl_table_get_string(oi_target_table, "TARGET", i_target);
+        image = gravi_image(rawframe, parlist, target_name);
+        
         if (image == NULL) {
             /* cpl_frameset_find_const() does not set an error code, when a frame
                is not found, so we will set one here. */
