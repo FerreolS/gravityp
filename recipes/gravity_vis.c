@@ -892,7 +892,8 @@ cleanup:
 	FREE (cpl_frameset_delete,diamcat_frameset);
 	FREE (cpl_frameset_delete,sky_frameset);
 	FREE (cpl_frameset_delete,dispcalib_frameset);
-	FREE (cpl_frameset_delete,eop_frameset);
+    FREE (cpl_frameset_delete,eop_frameset);
+    FREE (cpl_frameset_delete,patch_frameset);
 	FREE (cpl_frameset_delete,recipe_frameset);
 	FREE (cpl_frameset_delete,current_frameset);
 	FREE (cpl_frameset_delete,used_frameset);

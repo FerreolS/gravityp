@@ -638,8 +638,8 @@ int gravi_data_patch (gravi_data * file_to_patch,
                     return 0;
                 }
           }
-
       }
+  FREE (cpl_propertylist_delete, plist_patch);
   }
 return 1;
 }

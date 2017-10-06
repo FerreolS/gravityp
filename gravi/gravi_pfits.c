@@ -417,21 +417,20 @@ int gravi_pfits_has_gdzero (const cpl_propertylist * plist,
   cpl_ensure (plist, CPL_ERROR_NULL_INPUT, 0);
 
   int return_val = 0;
-  char * name;
+  char name[100];
 
-  name = cpl_sprintf ("ESO QC MET GD_ZERO_FC%i", tel);
+  sprintf (name, "ESO QC MET GD_ZERO_FC%i", tel);
   if (cpl_propertylist_has(plist, name))
   {
       return_val = 1;
   }
   else
   {
-    name = cpl_sprintf ("ESO PRO MET GD_ZERO_FC%i", tel);
+    sprintf (name, "ESO PRO MET GD_ZERO_FC%i", tel);
     if (cpl_propertylist_has(plist, name))
         return_val = 1;
   }
 
-  cpl_free(name);
   return return_val;
 }
 
@@ -441,9 +440,9 @@ double gravi_pfits_get_gdzero (const cpl_propertylist * plist,
   cpl_ensure (plist, CPL_ERROR_NULL_INPUT, 0);
 
   double output;
-  char * name;
+  char name[100];
 
-  name = cpl_sprintf ("ESO QC MET GD_ZERO_FC%i", tel);
+  sprintf (name, "ESO QC MET GD_ZERO_FC%i", tel);
   if (cpl_propertylist_has(plist, name))
   {
     /* Try to read this keyword as a double */
@@ -451,7 +450,7 @@ double gravi_pfits_get_gdzero (const cpl_propertylist * plist,
   }
   else
   {
-    name = cpl_sprintf ("ESO PRO MET GD_ZERO_FC%i", tel);
+    sprintf (name, "ESO PRO MET GD_ZERO_FC%i", tel);
     if (cpl_propertylist_has(plist, name))
       {
       /* Try to read this keyword as a double */
@@ -461,7 +460,6 @@ double gravi_pfits_get_gdzero (const cpl_propertylist * plist,
       output = 0;
   }
 
-  cpl_free(name);
   return output;
 }
 
@@ -471,21 +469,20 @@ int gravi_pfits_has_oplzero (const cpl_propertylist * plist,
   cpl_ensure (plist, CPL_ERROR_NULL_INPUT, 0);
 
   int return_val = 0;
-  char * name;
+  char name[100];
 
-  name = cpl_sprintf ("ESO QC MET OPL_ZERO_FC%i", tel);
+  sprintf (name, "ESO QC MET OPL_ZERO_FC%i", tel);
   if (cpl_propertylist_has(plist, name))
   {
       return_val = 1;
   }
   else
   {
-    name = cpl_sprintf ("ESO PRO MET OPL_ZERO_FC%i", tel);
+    sprintf (name,"ESO PRO MET OPL_ZERO_FC%i", tel);
     if (cpl_propertylist_has(plist, name))
         return_val = 1;
   }
 
-  cpl_free(name);
   return return_val;
 }
 
@@ -495,9 +492,9 @@ double gravi_pfits_get_oplzero (const cpl_propertylist * plist,
   cpl_ensure (plist, CPL_ERROR_NULL_INPUT, 0);
 
   double output;
-  char * name;
+  char name[100];
 
-  name = cpl_sprintf ("ESO QC MET OPL_ZERO_FC%i", tel);
+  sprintf (name, "ESO QC MET OPL_ZERO_FC%i", tel);
   if (cpl_propertylist_has(plist, name))
   {
     /* Try to read this keyword as a double */
@@ -505,7 +502,7 @@ double gravi_pfits_get_oplzero (const cpl_propertylist * plist,
   }
   else
   {
-    name = cpl_sprintf ("ESO PRO MET OPL_ZERO_FC%i", tel);
+    sprintf (name, "ESO PRO MET OPL_ZERO_FC%i", tel);
     if (cpl_propertylist_has(plist, name))
       {
       /* Try to read this keyword as a double */
@@ -515,7 +512,6 @@ double gravi_pfits_get_oplzero (const cpl_propertylist * plist,
       output = 0;
   }
 
-  cpl_free(name);
   return output;
 }
 
