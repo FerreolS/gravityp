@@ -72,12 +72,25 @@ static int gravi_acqcam_spot_dfda (const double x_in[], const double v[], double
 
 cpl_error_code gravi_acqcam_fit_spot (cpl_image * img, cpl_size ntry,
                                       cpl_vector * a, 
-				      int fitAll,
-				      int * nspot);
+                                      int fitAll,
+                                      int * nspot);
 
 double gravi_acqcam_z2meter (double PositionPixels);
 
-cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y, double *ex, double *ey, cpl_size size);
+cpl_error_code gravi_acqcam_pupil (cpl_image * mean_img,
+                                   cpl_imagelist * acqcam_imglist,
+                                   cpl_propertylist * header,
+                                   cpl_table * acqcam_table,
+                                   cpl_propertylist * o_header);
+
+cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
+                                   cpl_imagelist * acqcam_imglist,
+                                   cpl_propertylist * header,
+                                   cpl_table * acqcam_table,
+                                   cpl_propertylist * o_header);
+
+cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y,
+                                       double *ex, double *ey, cpl_size size);
 
 /* This global variable optimises the computation
  * of partial derivative on fitted parameters */
@@ -388,6 +401,13 @@ static int gravi_acqcam_spot_dfda (const double x_in[], const double v[], double
 }
 
 /*----------------------------------------------------------------------------*/
+/**
+ * @brief Imprint a cross (pixel=0) in the image of the pupil spot
+ * 
+ * @param img:    input/output img
+ * @param a:      paramters for spot position
+ */
+/*----------------------------------------------------------------------------*/
 
 cpl_error_code gravi_acqcam_spot_imprint (cpl_image * img, cpl_vector * a)
 {
@@ -656,9 +676,15 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
         /* Move starting point in position (+-10pix) and angle (entire circle) */
         cpl_vector_copy (a_tmp, a_start);
         if (try > 0) {
-            cpl_vector_set (a_tmp, GRAVI_SPOT_SUB+0, cpl_vector_get (a_tmp, GRAVI_SPOT_SUB+0) + (rand()%20) - 10);
-            cpl_vector_set (a_tmp, GRAVI_SPOT_SUB+4, cpl_vector_get (a_tmp, GRAVI_SPOT_SUB+4) + (rand()%20) - 10);
-            cpl_vector_set (a_tmp, GRAVI_SPOT_ANGLE, cpl_vector_get (a_tmp, GRAVI_SPOT_ANGLE) + (rand()%180));
+            cpl_vector_set (a_tmp, GRAVI_SPOT_SUB+0,
+                            cpl_vector_get (a_tmp, GRAVI_SPOT_SUB+0) +
+                            (rand()%20) - 10);
+            cpl_vector_set (a_tmp, GRAVI_SPOT_SUB+4,
+                            cpl_vector_get (a_tmp, GRAVI_SPOT_SUB+4) +
+                            (rand()%20) - 10);
+            cpl_vector_set (a_tmp, GRAVI_SPOT_ANGLE,
+                            cpl_vector_get (a_tmp, GRAVI_SPOT_ANGLE) +
+                            (rand()%180));
         }
 
         /* Fit from this starting point */
@@ -791,7 +817,8 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
  */
 /*----------------------------------------------------------------------------*/
 
-cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y, double *ex, double *ey, cpl_size size)
+cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y,
+                                       double *ex, double *ey, cpl_size size)
 {
     gravi_msg_function_start(0);
     cpl_ensure_code (img, CPL_ERROR_NULL_INPUT);
@@ -867,77 +894,247 @@ cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y, do
 
 /*----------------------------------------------------------------------------*/
 /**
- * @brief Reduce the ACQ camera images
- *  
- * @param output_data:  The output gravi_data where the OI_VIS_ACQ table
- *                      will be created, with ndit * ntel rows.
- * @param input_data:   The input gravi_data here the ACQ imagelist is
- *                      read.
+ * @brief Reduce the images of pupil from ACQ
  * 
- * The routine only process the PUPIL sensor so far. It creates a table with
- * the columns PUPIL_NSPOT (number of detected spots), PUPIL_R (rotation angle)
- * of telescope diode, PUPIL_X, PUPIL_Y, PUPIL_Z (shifts in [m]).
- * The TIME in [us] is also stored.
+ * @param mean_img:          input mean image
+ * @param acqcam_imglist:    input image list
+ * @param header:            input header
+ * @param acqcam_table:      output table
+ * @param o_header:          output header
+ * 
+ * The routine analyse the pupil from ACQ and create QC parameters in the
+ * header, as well as columns in the acqcam_table.
  */
 /*----------------------------------------------------------------------------*/
 
-cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
-                                    gravi_data * input_data)
+cpl_error_code gravi_acqcam_pupil (cpl_image * mean_img,
+                                   cpl_imagelist * acqcam_imglist,
+                                   cpl_propertylist * header,
+                                   cpl_table * acqcam_table,
+                                   cpl_propertylist * o_header)
 {
     gravi_msg_function_start(1);
-    cpl_ensure_code (output_data, CPL_ERROR_NULL_INPUT);
-    cpl_ensure_code (input_data,  CPL_ERROR_NULL_INPUT);
-    
-    char qc_name[100];
+    cpl_ensure_code (mean_img,       CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (acqcam_imglist, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (header,         CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (acqcam_table,   CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (o_header,       CPL_ERROR_NULL_INPUT);
 
-    /* Check if extension exist */
-    if (!gravi_data_has_extension (input_data, GRAVI_IMAGING_DATA_ACQ_EXT)) {
-        gravi_msg_warning (cpl_func, "Cannot reduce the ACQCAM, not data");
-        return CPL_ERROR_NONE;
-    }
-
-    /* Get the data and header */
-    cpl_propertylist * header, * o_header;
-    header = gravi_data_get_header (input_data);
-    o_header = gravi_data_get_header (output_data);
-    
-    cpl_imagelist * acqcam_imglist;
-    acqcam_imglist = gravi_data_get_cube (input_data, GRAVI_IMAGING_DATA_ACQ_EXT);
-    CPLCHECK_MSG ("Cannot get data or header");
-
-    /* Build the table */
-    cpl_size ntel = 4;
+    /* Number of row */
     cpl_size nrow = cpl_imagelist_get_size (acqcam_imglist);
-    
-    cpl_table * acqcam_table;
-    acqcam_table = cpl_table_new (nrow * ntel);
-    
-    /* 
-     * Compute TIME column
-     */
 
-    /* Time column shall contain the time from PCR.ACQ.START in [us] */
-    cpl_table_new_column (acqcam_table, "TIME", CPL_TYPE_INT);
-    cpl_table_set_column_unit (acqcam_table, "TIME", "us");
+    /* Compute separation */
+    double sobj_x = gravi_pfits_get_sobj_x (header);
+    double sobj_y = gravi_pfits_get_sobj_y (header);
+    double sobj_sep = sqrt(sobj_x*sobj_x + sobj_y*sobj_y);
 
-    /* Loop on DIT in cube to fill the TIME column 
-     * same value for all 4 beams*/
-    for (cpl_size row = 0; row < nrow; row++) {
-        double time = gravi_pfits_get_time_acqcam (header, row);
-        for (int tel = 0; tel < ntel; tel ++)
-            cpl_table_set (acqcam_table, "TIME", row*ntel+tel, time);
-    }
+    /* Pupil positions (or we use array of 3)  */
+    gravi_table_new_column (acqcam_table, "PUPIL_NSPOT", NULL, CPL_TYPE_INT);
+    gravi_table_new_column (acqcam_table, "PUPIL_X", "pix", CPL_TYPE_DOUBLE);
+    gravi_table_new_column (acqcam_table, "PUPIL_Y", "pix", CPL_TYPE_DOUBLE);
+    gravi_table_new_column (acqcam_table, "PUPIL_Z", "pix", CPL_TYPE_DOUBLE);
+    gravi_table_new_column (acqcam_table, "PUPIL_R", "deg", CPL_TYPE_DOUBLE);
+    gravi_table_new_column (acqcam_table, "PUPIL_U", "m", CPL_TYPE_DOUBLE);
+    gravi_table_new_column (acqcam_table, "PUPIL_V", "m", CPL_TYPE_DOUBLE);
+    gravi_table_new_column (acqcam_table, "PUPIL_W", "m", CPL_TYPE_DOUBLE);
+    gravi_table_new_column (acqcam_table, "OPD_PUPIL", "m", CPL_TYPE_DOUBLE);
     
-    /* 
-     * Compute mean image 
-     */
+    int nspot = 0, ntel = 4;
     
-    cpl_image * mean_img = cpl_imagelist_collapse_create (acqcam_imglist);
+    /* Loop on tel */
+    for (int tel = 0; tel < ntel; tel++) {
+        cpl_msg_info (cpl_func, "Compute pupil position for beam %i", tel+1);
 
-    /* 
-     * Compute FIELD columns
-     */
+        /* Get the conversion angle xy to uv in [rad] */
+        double fangle = gravi_pfits_get_fangle_acqcam (header, tel);
+        double cfangle = cos(fangle * CPL_MATH_RAD_DEG);
+        double sfangle = sin(fangle * CPL_MATH_RAD_DEG);
+        CPLCHECK_MSG ("Cannot read ESO INS DROTOFF#");
+        
+        /* Get the orientation of star */
+        double drotoff = gravi_pfits_get_drotoff (header, tel);
+        double cdrotoff = cos(drotoff * CPL_MATH_RAD_DEG);
+        double sdrotoff = sin(drotoff * CPL_MATH_RAD_DEG);
+        CPLCHECK_MSG ("Cannot read ESO INS DROTOFF#");
+
+        /* Allocate memory */
+        cpl_vector * a_start = cpl_vector_new (GRAVI_SPOT_NA);
+        cpl_vector_fill (a_start, 0.0);
+        
+        /* Read the sub-apperture reference positions 
+         * Converted to accound for sub-windowing 
+         * In vector convention (start at 0,0) */
+        gravi_acqcam_get_pup_ref (header, tel, a_start);
+        gravi_acqcam_get_diode_ref (header, tel, a_start);
+        CPLCHECK_MSG ("Cannot read ACQ data for pupil in header");
+
+        cpl_vector * a_final = cpl_vector_duplicate (a_start);
+        CPLCHECK_MSG ("Cannot prepare parameters");
+                
+        /* Fit pupil sensor spots in this image, with various
+         * starting points to converge to the global minimum */
+        gravi_acqcam_fit_spot (mean_img, 30, a_final, 1, &nspot);
+        CPLCHECK_MSG ("Cannot fit rotation and center");
+
+        /* Offsets in pixels */
+        double xpos = cpl_vector_get (a_final,GRAVI_SPOT_SUB+0) -
+                      cpl_vector_get (a_start,GRAVI_SPOT_SUB+0);
+        double ypos = cpl_vector_get (a_final,GRAVI_SPOT_SUB+4) -
+                      cpl_vector_get (a_start,GRAVI_SPOT_SUB+4);
+
+        /* Scale and rotation in deg (rectangle, thus 180deg symetrie) */
+        double scale = cpl_vector_get (a_final,GRAVI_SPOT_SCALE);
+        double angle = cpl_vector_get (a_final,GRAVI_SPOT_ANGLE);
+        if (angle < 0)   angle += 180;
+        if (angle > 180) angle -= 180;
+        cpl_vector_set (a_final,GRAVI_SPOT_ANGLE,angle);
+
+        /* In UV [m] */
+        double upos = (cfangle * xpos - sfangle * ypos) / scale;
+        double vpos = (sfangle * xpos + cfangle * ypos) / scale;
+        
+        /* Add best position as a cross in image */
+        gravi_acqcam_spot_imprint (mean_img, a_final);
+        
+        /* Add QC parameters */
+        char qc_name[100];
+        
+        sprintf (qc_name, "ESO QC ACQ FIELD%i NORTH_ANGLE", tel+1);
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, fangle);
+        cpl_propertylist_update_double (o_header, qc_name, fangle);
+        cpl_propertylist_set_comment (o_header, qc_name, "[deg] y->x, predicted North direction on ACQ");
+        
+        sprintf (qc_name, "ESO QC ACQ PUP%i NSPOT", tel+1);
+        cpl_msg_info (cpl_func, "%s = %i", qc_name, nspot);
+        cpl_propertylist_update_int (o_header, qc_name, nspot);
+        cpl_propertylist_set_comment (o_header, qc_name, "nb. of pupil spot in ACQ");
+
+        sprintf (qc_name, "ESO QC ACQ PUP%i ANGLE", tel+1);
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, angle);
+        cpl_propertylist_update_double (o_header, qc_name, angle);
+        cpl_propertylist_set_comment (o_header, qc_name, "[deg] y->x, diode angle on ACQ");
+
+        sprintf (qc_name, "ESO QC ACQ PUP%i SCALE", tel+1);
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, scale);
+        cpl_propertylist_update_double (o_header, qc_name, scale);
+        cpl_propertylist_set_comment (o_header, qc_name, "[pix/m] diode scale on ACQ");
+
+        sprintf (qc_name, "ESO QC ACQ PUP%i XPOS", tel+1);
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, xpos);
+        cpl_propertylist_update_double (o_header, qc_name, xpos);
+        cpl_propertylist_set_comment (o_header, qc_name, "[pix] pupil x-shift in ACQ");
+        
+        sprintf (qc_name, "ESO QC ACQ PUP%i YPOS", tel+1);
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, ypos);
+        cpl_propertylist_update_double (o_header, qc_name, ypos);
+        cpl_propertylist_set_comment (o_header, qc_name, "[pix] pupil y-shift in ACQ");
+
+        sprintf (qc_name, "ESO QC ACQ PUP%i UPOS", tel+1);
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, upos);
+        cpl_propertylist_update_double (o_header, qc_name, upos);
+        cpl_propertylist_set_comment (o_header, qc_name, "[m] pupil u-shift in ACQ");
+        
+        sprintf (qc_name, "ESO QC ACQ PUP%i VPOS", tel+1);
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, vpos);
+        cpl_propertylist_update_double (o_header, qc_name, vpos);
+        cpl_propertylist_set_comment (o_header, qc_name, "[m] pupil v-shift in ACQ");
+
+        /* Loop on all images */
+        for (cpl_size row = 0; row < nrow; row++) {
+            if (row %10 == 0 || row == (nrow-1))
+                cpl_msg_info_overwritable (cpl_func, "Fit image %lld over %lld", row+1, nrow);
+            
+            /* Get data and first guess */
+            cpl_image * img = cpl_imagelist_get (acqcam_imglist, row);
+            cpl_vector * a_row = cpl_vector_duplicate (a_final);
+
+            /* Fit pupil sensor spots in this image. */
+            gravi_acqcam_fit_spot (img, 1, a_row, 0, &nspot);
+            CPLCHECK_MSG ("Cannot fit sub-appertures of image");
+
+            /* If spot detected */
+            if (nspot < 4) {
+                cpl_table_set (acqcam_table, "PUPIL_NSPOT", row*ntel+tel, 0);
+            }
+            else {
+                /* Add best position as a cross in image */
+                gravi_acqcam_spot_imprint (img, a_row);
+
+                /* Remove reference */
+                cpl_vector_subtract (a_row, a_start);
+                
+                /* Get rotation [deg] and shift [pix]*/
+                double r_shift = cpl_vector_get (a_row, GRAVI_SPOT_ANGLE);
+                double x_shift = cpl_vector_get (a_row, GRAVI_SPOT_SUB+0);
+                double y_shift = cpl_vector_get (a_row, GRAVI_SPOT_SUB+4);
+                double z_shift = -0.5 * ( cpl_vector_get (a_row, GRAVI_SPOT_SUB+2) +
+                                          cpl_vector_get (a_row, GRAVI_SPOT_SUB+5));
+                
+                /* In UV [m] */
+                double u_shift = (cfangle * x_shift - sfangle * y_shift) / scale;
+                double v_shift = (sfangle * x_shift + cfangle * y_shift) / scale;               
+                double w_shift = gravi_acqcam_z2meter (z_shift);
+                
+                cpl_table_set (acqcam_table, "PUPIL_NSPOT", row*ntel+tel, nspot);
+                cpl_table_set (acqcam_table, "PUPIL_X", row*ntel+tel, x_shift);
+                cpl_table_set (acqcam_table, "PUPIL_Y", row*ntel+tel, y_shift);
+                cpl_table_set (acqcam_table, "PUPIL_Z", row*ntel+tel, z_shift);
+                cpl_table_set (acqcam_table, "PUPIL_R", row*ntel+tel, r_shift);
+                cpl_table_set (acqcam_table, "PUPIL_U", row*ntel+tel, u_shift);
+                cpl_table_set (acqcam_table, "PUPIL_V", row*ntel+tel, v_shift);
+                cpl_table_set (acqcam_table, "PUPIL_W", row*ntel+tel, w_shift);
+
+                /* Compute the OPD_PUPIL */
+                double opd_pupil = sobj_sep * GRAVI_MATH_RAD_MAS / scale * 
+                                   (x_shift * cdrotoff + y_shift * sdrotoff);
+                cpl_table_set (acqcam_table, "OPD_PUPIL", row*ntel+tel, opd_pupil);
+            }
+            
+            FREE (cpl_vector_delete, a_row);
+        }
+
+        FREE (cpl_vector_delete, a_start);
+        FREE (cpl_vector_delete, a_final);
+    } /* End loop on tel */
+        
+    gravi_msg_function_exit(1);
+    return CPL_ERROR_NONE;
+}
+
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Reduce the images of field from ACQ
+ * 
+ * @param mean_img:          input mean image
+ * @param acqcam_imglist:    input image list
+ * @param header:            input header
+ * @param acqcam_table:      output table
+ * @param o_header:          output header
+ * 
+ * The routine analyse the field from ACQ and create QC parameters in the
+ * header, as well as columns in the acqcam_table.
+ */
+/*----------------------------------------------------------------------------*/
+
+cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
+                                   cpl_imagelist * acqcam_imglist,
+                                   cpl_propertylist * header,
+                                   cpl_table * acqcam_table,
+                                   cpl_propertylist * o_header)
+{
+    gravi_msg_function_start(1);
+    cpl_ensure_code (mean_img,       CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (acqcam_imglist, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (header,         CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (acqcam_table,   CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (o_header,       CPL_ERROR_NULL_INPUT);
+
+    char qc_name[100];
+    int ntel = 4;
     
+    /* Number of row */
+    cpl_size nrow = cpl_imagelist_get_size (acqcam_imglist);
+
     /* Create columns */
     gravi_table_new_column (acqcam_table, "FIELD_SC_X", "pix", CPL_TYPE_DOUBLE);
     gravi_table_new_column (acqcam_table, "FIELD_SC_Y", "pix", CPL_TYPE_DOUBLE);
@@ -976,7 +1173,6 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
     /* Compute separation */
     double sobj_x = gravi_pfits_get_sobj_x (header);
     double sobj_y = gravi_pfits_get_sobj_y (header);
-    double sobj_sep = sqrt(sobj_x*sobj_x + sobj_y*sobj_y);
     
     /* Accumulated mapping offsets */
     double sobj_offx=0., sobj_offy=0, sobj_drho=0., sobj_dth=0.;
@@ -1309,181 +1505,82 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
 
     } /* End loop on tel */
     
+    gravi_msg_function_exit(1);
+    return CPL_ERROR_NONE;
+}
+
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Reduce the ACQ camera images
+ *  
+ * @param output_data:  The output gravi_data where the OI_VIS_ACQ table
+ *                      will be created, with ndit * ntel rows.
+ * @param input_data:   The input gravi_data here the ACQ imagelist is
+ *                      read.
+ * 
+ * The routine only process the PUPIL sensor so far. It creates a table with
+ * the columns PUPIL_NSPOT (number of detected spots), PUPIL_R (rotation angle)
+ * of telescope diode, PUPIL_X, PUPIL_Y, PUPIL_Z (shifts in [m]).
+ * The TIME in [us] is also stored.
+ */
+/*----------------------------------------------------------------------------*/
+
+cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
+                                    gravi_data * input_data)
+{
+    gravi_msg_function_start(1);
+    cpl_ensure_code (output_data, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (input_data,  CPL_ERROR_NULL_INPUT);
     
-    /* 
-     * Compute PUPIL columns
-     */
+    /* Check if extension exist */
+    if (!gravi_data_has_extension (input_data, GRAVI_IMAGING_DATA_ACQ_EXT)) {
+        gravi_msg_warning (cpl_func, "Cannot reduce the ACQCAM, not data");
+        return CPL_ERROR_NONE;
+    }
 
-    /* Pupil positions (or we use array of 3)  */
-    gravi_table_new_column (acqcam_table, "PUPIL_NSPOT", NULL, CPL_TYPE_INT);
-    gravi_table_new_column (acqcam_table, "PUPIL_X", "pix", CPL_TYPE_DOUBLE);
-    gravi_table_new_column (acqcam_table, "PUPIL_Y", "pix", CPL_TYPE_DOUBLE);
-    gravi_table_new_column (acqcam_table, "PUPIL_Z", "pix", CPL_TYPE_DOUBLE);
-    gravi_table_new_column (acqcam_table, "PUPIL_R", "deg", CPL_TYPE_DOUBLE);
-    gravi_table_new_column (acqcam_table, "PUPIL_U", "m", CPL_TYPE_DOUBLE);
-    gravi_table_new_column (acqcam_table, "PUPIL_V", "m", CPL_TYPE_DOUBLE);
-    gravi_table_new_column (acqcam_table, "PUPIL_W", "m", CPL_TYPE_DOUBLE);
-    gravi_table_new_column (acqcam_table, "OPD_PUPIL", "m", CPL_TYPE_DOUBLE);
+    /* Get the data and header */
+    cpl_propertylist * header, * o_header;
+    header = gravi_data_get_header (input_data);
+    o_header = gravi_data_get_header (output_data);
     
-    int nspot = 0;
+    cpl_imagelist * acqcam_imglist;
+    acqcam_imglist = gravi_data_get_cube (input_data, GRAVI_IMAGING_DATA_ACQ_EXT);
+    CPLCHECK_MSG ("Cannot get data or header");
+
+    /* Build the table */
+    cpl_size ntel = 4;
+    cpl_size nrow = cpl_imagelist_get_size (acqcam_imglist);
     
-    /* Loop on tel */
-    for (int tel = 0; tel < ntel; tel++) {
-        cpl_msg_info (cpl_func, "Compute pupil position for beam %i", tel+1);
+    cpl_table * acqcam_table;
+    acqcam_table = cpl_table_new (nrow * ntel);
 
-        /* Get the conversion angle xy to uv in [rad] */
-        double fangle = gravi_pfits_get_fangle_acqcam (header, tel);
-        double cfangle = cos(fangle * CPL_MATH_RAD_DEG);
-        double sfangle = sin(fangle * CPL_MATH_RAD_DEG);
-        CPLCHECK_MSG ("Cannot read ESO INS DROTOFF#");
-        
-        /* Get the orientation of star */
-        double drotoff = gravi_pfits_get_drotoff (header, tel);
-        double cdrotoff = cos(drotoff * CPL_MATH_RAD_DEG);
-        double sdrotoff = sin(drotoff * CPL_MATH_RAD_DEG);
-        CPLCHECK_MSG ("Cannot read ESO INS DROTOFF#");
+    /* Time column shall contain the time from PCR.ACQ.START in [us] */
+    cpl_table_new_column (acqcam_table, "TIME", CPL_TYPE_INT);
+    cpl_table_set_column_unit (acqcam_table, "TIME", "us");
 
-        /* Allocate memory */
-        cpl_vector * a_start = cpl_vector_new (GRAVI_SPOT_NA);
-        cpl_vector_fill (a_start, 0.0);
-        
-        /* Read the sub-apperture reference positions 
-         * Converted to accound for sub-windowing 
-         * In vector convention (start at 0,0) */
-        gravi_acqcam_get_pup_ref (header, tel, a_start);
-        gravi_acqcam_get_diode_ref (header, tel, a_start);
-        CPLCHECK_MSG ("Cannot read ACQ data for pupil in header");
-
-        cpl_vector * a_final = cpl_vector_duplicate (a_start);
-        CPLCHECK_MSG ("Cannot prepare parameters");
-                
-        /* Fit pupil sensor spots in this image, with various
-         * starting points to converge to the global minimum */
-        gravi_acqcam_fit_spot (mean_img, 30, a_final, 1, &nspot);
-        CPLCHECK_MSG ("Cannot fit rotation and center");
-
-        /* Offsets in pixels */
-        double xpos = cpl_vector_get (a_final,GRAVI_SPOT_SUB+0) -
-                      cpl_vector_get (a_start,GRAVI_SPOT_SUB+0);
-        double ypos = cpl_vector_get (a_final,GRAVI_SPOT_SUB+4) -
-                      cpl_vector_get (a_start,GRAVI_SPOT_SUB+4);
-
-        /* Scale and rotation in deg (rectangle, thus 180deg symetrie) */
-        double scale = cpl_vector_get (a_final,GRAVI_SPOT_SCALE);
-        double angle = cpl_vector_get (a_final,GRAVI_SPOT_ANGLE);
-        if (angle < 0)   angle += 180;
-        if (angle > 180) angle -= 180;
-        cpl_vector_set (a_final,GRAVI_SPOT_ANGLE,angle);
-
-        /* In UV [m] */
-        double upos = (cfangle * xpos - sfangle * ypos) / scale;
-        double vpos = (sfangle * xpos + cfangle * ypos) / scale;
-        
-        /* Add best position as a cross in image */
-        gravi_acqcam_spot_imprint (mean_img, a_final);
-        
-        /* Add QC parameters */
-        sprintf (qc_name, "ESO QC ACQ FIELD%i NORTH_ANGLE", tel+1);
-        cpl_msg_info (cpl_func, "%s = %f", qc_name, fangle);
-        cpl_propertylist_update_double (o_header, qc_name, fangle);
-        cpl_propertylist_set_comment (o_header, qc_name, "[deg] y->x, predicted North direction on ACQ");
-        
-        sprintf (qc_name, "ESO QC ACQ PUP%i NSPOT", tel+1);
-        cpl_msg_info (cpl_func, "%s = %i", qc_name, nspot);
-        cpl_propertylist_update_int (o_header, qc_name, nspot);
-        cpl_propertylist_set_comment (o_header, qc_name, "nb. of pupil spot in ACQ");
-
-        sprintf (qc_name, "ESO QC ACQ PUP%i ANGLE", tel+1);
-        cpl_msg_info (cpl_func, "%s = %f", qc_name, angle);
-        cpl_propertylist_update_double (o_header, qc_name, angle);
-        cpl_propertylist_set_comment (o_header, qc_name, "[deg] y->x, diode angle on ACQ");
-
-        sprintf (qc_name, "ESO QC ACQ PUP%i SCALE", tel+1);
-        cpl_msg_info (cpl_func, "%s = %f", qc_name, scale);
-        cpl_propertylist_update_double (o_header, qc_name, scale);
-        cpl_propertylist_set_comment (o_header, qc_name, "[pix/m] diode scale on ACQ");
-
-        sprintf (qc_name, "ESO QC ACQ PUP%i XPOS", tel+1);
-        cpl_msg_info (cpl_func, "%s = %f", qc_name, xpos);
-        cpl_propertylist_update_double (o_header, qc_name, xpos);
-        cpl_propertylist_set_comment (o_header, qc_name, "[pix] pupil x-shift in ACQ");
-        
-        sprintf (qc_name, "ESO QC ACQ PUP%i YPOS", tel+1);
-        cpl_msg_info (cpl_func, "%s = %f", qc_name, ypos);
-        cpl_propertylist_update_double (o_header, qc_name, ypos);
-        cpl_propertylist_set_comment (o_header, qc_name, "[pix] pupil y-shift in ACQ");
-
-        sprintf (qc_name, "ESO QC ACQ PUP%i UPOS", tel+1);
-        cpl_msg_info (cpl_func, "%s = %f", qc_name, upos);
-        cpl_propertylist_update_double (o_header, qc_name, upos);
-        cpl_propertylist_set_comment (o_header, qc_name, "[m] pupil u-shift in ACQ");
-        
-        sprintf (qc_name, "ESO QC ACQ PUP%i VPOS", tel+1);
-        cpl_msg_info (cpl_func, "%s = %f", qc_name, vpos);
-        cpl_propertylist_update_double (o_header, qc_name, vpos);
-        cpl_propertylist_set_comment (o_header, qc_name, "[m] pupil v-shift in ACQ");
-
-        /* Loop on all images */
-        for (cpl_size row = 0; row < nrow; row++) {
-            if (row %10 == 0 || row == (nrow-1))
-                cpl_msg_info_overwritable (cpl_func, "Fit image %lld over %lld", row+1, nrow);
-            
-            /* Get data and first guess */
-            cpl_image * img = cpl_imagelist_get (acqcam_imglist, row);
-            cpl_vector * a_row = cpl_vector_duplicate (a_final);
-
-            /* Fit pupil sensor spots in this image. */
-            gravi_acqcam_fit_spot (img, 1, a_row, 0, &nspot);
-            CPLCHECK_MSG ("Cannot fit sub-appertures of image");
-
-            /* If spot detected */
-            if (nspot < 4) {
-                cpl_table_set (acqcam_table, "PUPIL_NSPOT", row*ntel+tel, 0);
-            }
-            else {
-                /* Add best position as a cross in image */
-                gravi_acqcam_spot_imprint (img, a_row);
-
-                /* Remove reference */
-                cpl_vector_subtract (a_row, a_start);
-                
-                /* Get rotation [deg] and shift [pix]*/
-                double r_shift = cpl_vector_get (a_row, GRAVI_SPOT_ANGLE);
-                double x_shift = cpl_vector_get (a_row, GRAVI_SPOT_SUB+0);
-                double y_shift = cpl_vector_get (a_row, GRAVI_SPOT_SUB+4);
-                double z_shift = -0.5 * ( cpl_vector_get (a_row, GRAVI_SPOT_SUB+2) +
-                                          cpl_vector_get (a_row, GRAVI_SPOT_SUB+5));
-                
-                /* In UV [m] */
-                double u_shift = (cfangle * x_shift - sfangle * y_shift) / scale;
-                double v_shift = (sfangle * x_shift + cfangle * y_shift) / scale;               
-                double w_shift = gravi_acqcam_z2meter (z_shift);
-                
-                cpl_table_set (acqcam_table, "PUPIL_NSPOT", row*ntel+tel, nspot);
-                cpl_table_set (acqcam_table, "PUPIL_X", row*ntel+tel, x_shift);
-                cpl_table_set (acqcam_table, "PUPIL_Y", row*ntel+tel, y_shift);
-                cpl_table_set (acqcam_table, "PUPIL_Z", row*ntel+tel, z_shift);
-                cpl_table_set (acqcam_table, "PUPIL_R", row*ntel+tel, r_shift);
-                cpl_table_set (acqcam_table, "PUPIL_U", row*ntel+tel, u_shift);
-                cpl_table_set (acqcam_table, "PUPIL_V", row*ntel+tel, v_shift);
-                cpl_table_set (acqcam_table, "PUPIL_W", row*ntel+tel, w_shift);
-
-                /* Compute the OPD_PUPIL */
-                double opd_pupil = sobj_sep * GRAVI_MATH_RAD_MAS / scale * 
-                                   (x_shift * cdrotoff + y_shift * sdrotoff);
-                cpl_table_set (acqcam_table, "OPD_PUPIL", row*ntel+tel, opd_pupil);
-            }
-            
-            FREE (cpl_vector_delete, a_row);
-        }
-
-        FREE (cpl_vector_delete, a_start);
-        FREE (cpl_vector_delete, a_final);
-    } /* End loop on tel */
+    /* Loop on DIT in cube to fill the TIME column 
+     * same value for all 4 beams*/
+    for (cpl_size row = 0; row < nrow; row++) {
+        double time = gravi_pfits_get_time_acqcam (header, row);
+        for (int tel = 0; tel < ntel; tel ++)
+            cpl_table_set (acqcam_table, "TIME", row*ntel+tel, time);
+    }
     
-    /* 
-     * Add this output table in the gravi_data 
-     */
+    /* Compute mean image */
+    cpl_image * mean_img = cpl_imagelist_collapse_create (acqcam_imglist);
+
+    /* Compute FIELD columns */
+    gravi_acqcam_field (mean_img, acqcam_imglist, header,
+                        acqcam_table, o_header);
+	CPLCHECK_MSG ("Cannot reduce field images");
+    
+    
+    /* Compute PUPIL columns */
+    gravi_acqcam_pupil (mean_img, acqcam_imglist, header,
+                        acqcam_table, o_header);
+	CPLCHECK_MSG ("Cannot reduce pupil images");
+    
+    /* Add this output table in the gravi_data */
 	gravi_data_add_img (output_data, NULL, GRAVI_IMAGING_DATA_ACQ_EXT, mean_img);
 	CPLCHECK_MSG ("Cannot add acqcam_table in data");
     
@@ -1511,13 +1608,12 @@ double gravi_acqcam_z2meter (double PositionPixels)
     double D_AT      = 1.8;      /* m */
     double D_lenslet = 2 * 1.015e-3;
     
-    double LongitudinalDefocusShift = 8 * (f_PT / D_lenslet) * (f_PT / D_lenslet) * 3.5 * D_pixel *
-                                      D_beam / (f_PT * D_lenslet) * Llambda / CPL_MATH_2PI * PositionPixels;
+    double longDef;
+    longDef = 8 * (f_PT / D_lenslet) * (f_PT / D_lenslet) * 3.5 * D_pixel *
+        D_beam / (f_PT * D_lenslet) * Llambda / CPL_MATH_2PI * PositionPixels;
     
-    return f_lens * f_lens * LongitudinalDefocusShift / (f_PT + LongitudinalDefocusShift) / f_PT * (D_AT / D_lenslet);
+    return f_lens * f_lens * longDef / (f_PT + longDef) / f_PT * (D_AT / D_lenslet);
 }
-
-
 
 /**@}*/
 
