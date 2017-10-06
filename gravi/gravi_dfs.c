@@ -119,13 +119,13 @@ cpl_error_code gravi_dfs_set_groups(cpl_frameset * set)
 				  (!strcmp(tag, GRAVI_DISP_VIS)) ||
 				  (!strcmp(tag, GRAVI_DIAMETER_CAT)) ||
 				  (!strcmp(tag, GRAVI_DISP_MODEL)) ||
-				  (!strcmp(tag, GRAVI_DIODE_POSITION))){
+				  (!strcmp(tag, GRAVI_DIODE_POSITION))||
+	              (!strcmp(tag, GRAVI_KEY_PATCH))){
         	/* CALIB frames */
         	cpl_frame_set_group(frame, CPL_FRAME_GROUP_CALIB);
         }else if (
         		(!strcmp(tag, GRAVI_MIRA_OUTPUT_PROCATG)) ||
-                (!strcmp(tag, GRAVI_NAB_CAL)) ||
-                (!strcmp(tag, GRAVI_KEY_PATCH)) ){
+                (!strcmp(tag, GRAVI_NAB_CAL)) ){
         	/* PRODUCT frames */
         	cpl_frame_set_group(frame, CPL_FRAME_GROUP_PRODUCT);
         }
