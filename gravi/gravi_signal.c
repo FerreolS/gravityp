@@ -2160,13 +2160,11 @@ cpl_error_code gravi_vis_create_opddisp_sc (cpl_table * vis_SC,
   
   cpl_size nwave_sc = cpl_table_get_column_depth (vis_SC, "VISDATA");
 
-  /* If not DISP_DATA, we just create the columns */
+  /* If not DISP_DATA, we cannot create these columns */
   if (disp_table == NULL) {
-	gravi_table_new_column_array (vis_SC, "OPD_DISP", "m", CPL_TYPE_DOUBLE, nwave_sc);
-	gravi_table_new_column (vis_SC, "GDELAY_DISP", "m", CPL_TYPE_DOUBLE);
-	gravi_table_new_column_array (vis_SC, "PHASE_DISP", "rad", CPL_TYPE_DOUBLE, nwave_sc);
-	gravi_msg_function_exit(1);
-	return CPL_ERROR_NONE;
+      cpl_msg_info (cpl_func,"Cannot create OPD_DISP, not DISP_MODEL table");
+      gravi_msg_function_exit(1);
+      return CPL_ERROR_NONE;
   }
 
 		  
@@ -2369,7 +2367,14 @@ cpl_error_code gravi_vis_create_imagingref_sc (cpl_table * vis_SC,
     double * vcoord        = cpl_table_get_data_double (vis_SC, "VCOORD");
     cpl_array ** phase_ref = cpl_table_get_data_array  (vis_SC, "PHASE_REF");
     CPLCHECK_MSG ("Cannot get input data");
-    
+
+    /* If OPD_DISP is not computed, we cannot compute IMAGING_REF neither */
+    if ( !cpl_table_has_column (vis_SC, "OPD_DISP") ) {
+        cpl_msg_info (cpl_func,"Cannot compute IMAGING_REF, not column OPD_DISP");
+        gravi_msg_function_exit(1);
+        return CPL_ERROR_NONE;
+    }
+
     cpl_array ** opd_disp  = cpl_table_get_data_array  (vis_SC, "OPD_DISP");
     CPLCHECK_MSG ("Cannot get OPD_DISP data");
 

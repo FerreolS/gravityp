@@ -813,7 +813,7 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
   cpl_array ** pPHASEREF = NULL;
   if (phase_ref && strcmp (phase_ref, "NONE"))
       pPHASEREF = cpl_table_get_data_array (oi_vis, phase_ref);
-  CPLCHECK_MSG ("Cannot get the reference phase data");
+  CPLCHECK_MSG ("Cannot get the reference phase data (column missing?)");
   
   /* Loop on base */
   for (cpl_size base = 0; base < nbase; base ++) {
