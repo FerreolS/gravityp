@@ -102,7 +102,8 @@ cpl_error_code gravi_vis_create_opddisp_sc (cpl_table * vis_SC,
 					    cpl_table * flux_SC,
 					    cpl_table * wave_table,
 					    cpl_table * disp_table,
-					    cpl_propertylist * header);
+					    cpl_propertylist * header,
+					    const cpl_parameterlist * parlist);
 
 cpl_error_code gravi_vis_create_imagingref_sc (cpl_table * vis_SC,
                                                cpl_table * wave_table,
@@ -2137,6 +2138,7 @@ cpl_error_code gravi_flux_create_fddllin_sc (cpl_table * flux_SC,
  * @param flux_SC:     input/output OI_FLUX table of the SC
  * @param wave_table:  wavelength table corresponding to OI_VIS
  * @param disp_table:  FDDL dispersion model
+ * @param parlist:     parameter list of the recipe
  *
  * Create new columns in vis_SC (OPD per base) and flux_SC (OPD per beam)
  * by combining the already computed MET and FDDL signals averaged inside
@@ -2148,7 +2150,8 @@ cpl_error_code gravi_vis_create_opddisp_sc (cpl_table * vis_SC,
 					    cpl_table * flux_SC,
 					    cpl_table * wave_table,
 					    cpl_table * disp_table,
-					    cpl_propertylist * header)
+					    cpl_propertylist * header,
+					    const cpl_parameterlist * parlist)
 {
   gravi_msg_function_start(1);
   cpl_ensure_code (vis_SC,     CPL_ERROR_NULL_INPUT);
@@ -2242,32 +2245,37 @@ cpl_error_code gravi_vis_create_opddisp_sc (cpl_table * vis_SC,
   for (t = 0; t < ntel; t++) {
     opl_zero_fc[t] = 0.0;
   }
-  // Replace by OCS MET OPL_ZERO_FC, if available
-  for (t = 0; t < ntel; t++) {
-    sprintf (name, "ESO OCS MET OPL_ZERO_FC%i", t+1); 
-    if (cpl_propertylist_has (header, name)) {
-      opl_zero_fc[t] = cpl_propertylist_get_double (header, name)*1e-3;
-      sprintf (name, "ESO FDDL MET OFFSET%i", t+1);
-      opl_zero_fc[t] += cpl_propertylist_get_double (header, name)*1e-3;
-      cpl_msg_info (cpl_func, "Updating metrology zero with OCS MET OPL_ZERO_FC%i and FDDL MET OFFSET%i: %f [mm]", t+1, t+1, opl_zero_fc[t]);
+  if ( gravi_param_get_bool (parlist, "gravity.signal.use-met-zero") ) {
+    cpl_msg_info (cpl_func, "Metrology zero calculation is enabled!");
+    // Replace by OCS MET OPL_ZERO_FC, if available
+    for (t = 0; t < ntel; t++) {
+      sprintf (name, "ESO OCS MET OPL_ZERO_FC%i", t+1); 
+      if (cpl_propertylist_has (header, name)) {
+        opl_zero_fc[t] = cpl_propertylist_get_double (header, name)*1e-3;
+        sprintf (name, "ESO FDDL MET OFFSET%i", t+1);
+        opl_zero_fc[t] += cpl_propertylist_get_double (header, name)*1e-3;
+        cpl_msg_info (cpl_func, "Updating metrology zero with OCS MET OPL_ZERO_FC%i and FDDL MET OFFSET%i: %f [mm]", t+1, t+1, opl_zero_fc[t]);
+      }
     }
-  }
-  // Replace by PRO MET GD_ZERO_FC, if available
-  for (t = 0; t < ntel; t++) {
-    if ( gravi_pfits_has_gdzero (header, t+1) ) {
-        opl_zero_fc[t] =
-                gravi_pfits_get_gdzero (header, t+1)*1e-3
-                * (wavenumber_sc[nwave_sc/2-1] - wavenumber_sc[nwave_sc/2+1])
-                / (n_mean[t][nwave_sc/2-1] * wavenumber_sc[nwave_sc/2-1] - n_mean[t][nwave_sc/2+1] * wavenumber_sc[nwave_sc/2+1]);
-        cpl_msg_info (cpl_func, "Updating metrology zero with QC/PRO MET GD_ZERO_FC%i: %f [mm]", t+1, opl_zero_fc[t]);
+    // Replace by PRO MET GD_ZERO_FC, if available
+    for (t = 0; t < ntel; t++) {
+      if ( gravi_pfits_has_gdzero (header, t+1) ) {
+          opl_zero_fc[t] =
+                  gravi_pfits_get_gdzero (header, t+1)*1e-3
+                  * (wavenumber_sc[nwave_sc/2-1] - wavenumber_sc[nwave_sc/2+1])
+                  / (n_mean[t][nwave_sc/2-1] * wavenumber_sc[nwave_sc/2-1] - n_mean[t][nwave_sc/2+1] * wavenumber_sc[nwave_sc/2+1]);
+          cpl_msg_info (cpl_func, "Updating metrology zero with QC/PRO MET GD_ZERO_FC%i: %f [mm]", t+1, opl_zero_fc[t]);
+      }
     }
-  }
-  // Replace by PRO MET OPL_ZERO_FC, if available
-  for (t = 0; t < ntel; t++) {
-    if ( gravi_pfits_get_oplzero (header, t+1) ){
-        opl_zero_fc[t] = gravi_pfits_get_oplzero (header, t+1)*1e-3;
-        cpl_msg_info (cpl_func, "Updating metrology zero with QC/PRO MET OPL_ZERO_FC%i: %f [mm]", t+1, opl_zero_fc[t]);
+    // Replace by PRO MET OPL_ZERO_FC, if available
+    for (t = 0; t < ntel; t++) {
+      if ( gravi_pfits_get_oplzero (header, t+1) ){
+          opl_zero_fc[t] = gravi_pfits_get_oplzero (header, t+1)*1e-3;
+          cpl_msg_info (cpl_func, "Updating metrology zero with QC/PRO MET OPL_ZERO_FC%i: %f [mm]", t+1, opl_zero_fc[t]);
+      }
     }
+  } else {
+    cpl_msg_info (cpl_func, "Metrology zero calculation is disabled!");
   }
 
   /* Loop on tel and frames */
@@ -2565,43 +2573,43 @@ cpl_error_code gravi_compute_signals (gravi_data * p2vmred_data,
      * Compute FDDL = (FDDL_SC + FDDL_FT)/2 in [m]
      * from the POS_SC, POS_FT and the linearity coeficients 
      *
-	 * Compute the OPD_DISP = n(lbd) * ODD_MET 
-	 * from the OPD_MET and the dispersion coeficients 
-	 */
-	cpl_table * disp_table =  disp_data ? gravi_data_get_table (disp_data, "DISP_MODEL") : NULL;
+     * Compute the OPD_DISP = n(lbd) * ODD_MET 
+     * from the OPD_MET and the dispersion coeficients 
+     */
+     cpl_table * disp_table =  disp_data ? gravi_data_get_table (disp_data, "DISP_MODEL") : NULL;
+     
+     gravi_flux_create_fddllin_sc (flux_SC, disp_table);
+     gravi_vis_create_opddisp_sc (vis_SC, flux_SC, oi_wavelengthsc, disp_table, p2vmred_header, parlist);
+
+     CPLCHECK_MSG ("Cannot compute the OPD_DISP");
+
+	
+     /* 
+      * Compute the GDELAY of the FT and SC with the proper algorithm.
+      * Critical since these quantities are used for debuging astrometry 
+      */
     
-    gravi_flux_create_fddllin_sc (flux_SC, disp_table);
-	gravi_vis_create_opddisp_sc (vis_SC, flux_SC, oi_wavelengthsc, disp_table, p2vmred_header);
-
-	CPLCHECK_MSG ("Cannot compute the OPD_DISP");
-
+     /* Recompute the GDELAY of the FT (probably useless since one use GDELAY_FT) */
+     gravi_table_compute_group_delay (vis_FT, "VISDATA", "GDELAY", oi_wavelengthft);
 	
-	/* 
-	 * Compute the GDELAY of the FT and SC with the proper algorithm.
-	 * Critical since these quantities are used for debuging astrometry 
-	 */
-    
-	/* Recompute the GDELAY of the FT (probably useless since one use GDELAY_FT) */
-	gravi_table_compute_group_delay (vis_FT, "VISDATA", "GDELAY", oi_wavelengthft);
+     /* Recompute the GDELAY of the SC (probably usefull) */
+     gravi_table_compute_group_delay (vis_SC, "VISDATA", "GDELAY", oi_wavelengthsc);
+
+     /* Compute the GDELAY_FT of VISDATA_FT in SC table (critical) */
+     gravi_table_compute_group_delay (vis_SC, "VISDATA_FT", "GDELAY_FT", oi_wavelengthft);
 	
-	/* Recompute the GDELAY of the SC (probably usefull) */
-	gravi_table_compute_group_delay (vis_SC, "VISDATA", "GDELAY", oi_wavelengthsc);
+     CPLCHECK_MSG ("Cannot compute the GDELAYs");
 
-	/* Compute the GDELAY_FT of VISDATA_FT in SC table (critical) */
-	gravi_table_compute_group_delay (vis_SC, "VISDATA_FT", "GDELAY_FT", oi_wavelengthft);
+     /* Compute the SELF_REF phase reference for SC (first) */
+     gravi_vis_create_phaseref_sc (vis_SC, oi_wavelengthsc, NULL);
 	
-	CPLCHECK_MSG ("Cannot compute the GDELAYs");
+     /* Compute the PHASE_REF reference for SC */
+     gravi_vis_create_phaseref_sc (vis_SC, oi_wavelengthsc, oi_wavelengthft);
 
-    /* Compute the SELF_REF phase reference for SC (first) */
-    gravi_vis_create_phaseref_sc (vis_SC, oi_wavelengthsc, NULL);
-	
-	/* Compute the PHASE_REF reference for SC */
-    gravi_vis_create_phaseref_sc (vis_SC, oi_wavelengthsc, oi_wavelengthft);
+     /* Create the IMAGING_REF phase ref, need PHASE_REF */
+     gravi_vis_create_imagingref_sc (vis_SC, oi_wavelengthsc, p2vmred_header);
 
-	/* Create the IMAGING_REF phase ref, need PHASE_REF */
-	gravi_vis_create_imagingref_sc (vis_SC, oi_wavelengthsc, p2vmred_header);
-
-	CPLCHECK_MSG ("Cannot compute the PHASE_REF");
+     CPLCHECK_MSG ("Cannot compute the PHASE_REF");
   } /* End loop on pol */
   
 
