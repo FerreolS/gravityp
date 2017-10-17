@@ -470,9 +470,11 @@ cpl_error_code gravi_acqcam_get_diode_ref (cpl_propertylist * header,
 
     /* Get the telescope name and ID */
     const char * telname = gravi_conf_get_telname (tel, header);
-    // int telid = atoi (telname+2) - 1;
-    CPLCHECK ("Cannot get telescope name");
 
+    /* Check telescope name */
+    if (!telname) cpl_msg_error (cpl_func, "Cannot read the telescope name");
+    cpl_ensure_code (telname, CPL_ERROR_ILLEGAL_INPUT);
+    
     /* Hardcoded theoretical positions in mm */
 
     /* If UTs or ATs, select scaling, rotation, and spacing */
@@ -822,8 +824,10 @@ cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y,
 {
     gravi_msg_function_start(0);
     cpl_ensure_code (img, CPL_ERROR_NULL_INPUT);
-    cpl_ensure_code (x, CPL_ERROR_NULL_INPUT);
-    cpl_ensure_code (y, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (x,  CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (y,  CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (ex, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (ey, CPL_ERROR_NULL_INPUT);
 
     /* Fill first guess */
     cpl_array * parameters = cpl_array_new (7, CPL_TYPE_DOUBLE);
@@ -833,13 +837,13 @@ cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y,
     cpl_array_set (parameters, 4, *y);
     cpl_array_set (parameters, 5, 3);
     cpl_array_set (parameters, 6, 3);
-    CPLCHECK_MSG("Error creating parameter table");
+    CPLCHECK_MSG ("Error creating parameter table");
     
     double med = cpl_image_get_median_window (img,
                      (cpl_size)(*x)-size, (cpl_size)(*y)-size,
                      (cpl_size)(*x)+size, (cpl_size)(*y)+size);
     cpl_array_set (parameters, 0, med);
-    CPLCHECK_MSG("Error getting median");
+    CPLCHECK_MSG ("Error getting median");
     
     /* Fit Gaussian */
     double rms=0.;
@@ -847,12 +851,12 @@ cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y,
                             size, size, parameters,
                             NULL, NULL, &rms, NULL, NULL,
                             NULL, NULL, NULL, NULL);
-    CPLCHECK_MSG("Error fitting Gaussian");
+    CPLCHECK_MSG ("Error fitting Gaussian");
 
     /* Set back */
     *x = cpl_array_get (parameters,3,NULL);
     *y = cpl_array_get (parameters,4,NULL);
-    CPLCHECK_MSG("Error reading fit result");
+    CPLCHECK_MSG ("Error reading fit result");
 
     /* Check errors */
     /* reject result if either:       */
@@ -866,7 +870,8 @@ cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y,
 
     if ( A < 0. ) {
       // detection is just not significant
-      cpl_msg_info (cpl_func, "rejecting fit: x=%g, y=%g, SNR=%g, sx=%g, sy=%g", *x, *y, A/(rms * 2.*M_PI*sx*sy*sqrt(1-rho*rho)), sx, sy);
+      cpl_msg_info (cpl_func, "rejecting fit: x=%g, y=%g, SNR=%g, sx=%g, sy=%g",
+                    *x, *y, A/(rms * 2.*M_PI*sx*sy*sqrt(1-rho*rho)), sx, sy);
       *x = 0.;
       *y = 0.;
       *ex = -1.;
@@ -1220,17 +1225,17 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
 
 	/* Get the telescope name and ID */
 	const char * telname = gravi_conf_get_telname (tel, header);
-	// int telid = atoi (telname+2) - 1;
-	CPLCHECK ("Cannot get telescope name");
 
-	/* Hardcoded approx. plate-scale in mas/pix */
+    /* Check telescope name */
+    if (!telname) cpl_msg_error (cpl_func, "Cannot read the telescope name");
+    cpl_ensure_code (telname, CPL_ERROR_ILLEGAL_INPUT);
+
+	/* Hardcoded approx. plate-scale in mas/pix. */
 	if (telname[0] == 'U') {
 	  scale = 18.;
 	} else if (telname[0] == 'A') {
 	  scale = 80.;
-	} else 
-	  return cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
-					"Cannot determine scale");
+	}
 
 	/* Position of the fibres */
 	double fiber_xft=0.;

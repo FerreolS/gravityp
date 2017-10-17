@@ -1189,17 +1189,21 @@ const char * gravi_conf_get_telname (int gravi_beam, cpl_propertylist * header)
     char name[100];
 
     for (int iss = 1; iss<=4; iss++) {
+        
         sprintf (name, "ESO ISS CONF INPUT%i", iss);
+        if ( !cpl_propertylist_has (header, name)) continue;
+        
         if ( cpl_propertylist_get_int (header, name) ==
              GRAVI_LABINPUT[gravi_beam]) {
+
             sprintf (name, "ESO ISS CONF T%iNAME", iss);
+            if ( !cpl_propertylist_has (header, name)) continue;
+            
             return cpl_propertylist_get_string (header, name);
         }
     }
     
-    cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
-                          "Could not find CONF INPUT for beam %i",
-                          gravi_beam);
+    cpl_msg_debug (cpl_func,"Telscope name cannot be find in header");
     return NULL;
 }
 

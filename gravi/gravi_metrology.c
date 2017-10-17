@@ -1309,7 +1309,12 @@ cpl_error_code gravi_metrology_update_receiverpos (cpl_propertylist * header,
 
     /* Loop on telescope */
     for (int tel=0; tel<4; tel++) {
+        
         const char * telname = gravi_conf_get_telname (tel, header);
+        if (telname == NULL) {
+            cpl_msg_warning (cpl_func,"Cannot update receiver position for tel %i", tel);
+            continue;
+        }
 
         /* Get row */
         cpl_size row;
@@ -1360,9 +1365,17 @@ double  gravi_metrology_get_posx (cpl_propertylist * header,
     gravi_msg_function_start(0);
 	cpl_ensure (header, CPL_ERROR_NULL_INPUT, 0);
     
+    /* Get telname */
+    const char * telname = gravi_conf_get_telname (tel, header);
+    
+    if (telname == NULL) {
+        cpl_msg_warning (cpl_func,"Cannot read receiver x-position for tel %i (set 0.0)", tel);
+        return 0.0;
+    }
+    
     /* Read from header */
     char name[100];
-    sprintf (name, "ESO MET %s REC%iX", gravi_conf_get_telname (tel, header), diode+1);
+    sprintf (name, "ESO MET %s REC%iX", telname, diode+1);
     double pos = cpl_propertylist_get_double (header, name);
     
     gravi_msg_function_exit(0);
@@ -1375,9 +1388,17 @@ double  gravi_metrology_get_posy (cpl_propertylist * header,
     gravi_msg_function_start(0);
 	cpl_ensure (header, CPL_ERROR_NULL_INPUT, 0);
     
+    /* Get telname */
+    const char * telname = gravi_conf_get_telname (tel, header);
+    
+    if (telname == NULL) {
+        cpl_msg_warning (cpl_func,"Cannot read receiver y-position for tel %i", tel);
+        return 0.0;
+    }
+    
     /* Read from header */
     char name[100];
-    sprintf (name, "ESO MET %s REC%iY", gravi_conf_get_telname (tel, header), diode+1);
+    sprintf (name, "ESO MET %s REC%iY", telname, diode+1);
     double pos = cpl_propertylist_get_double (header, name);
         
     gravi_msg_function_exit(0);
@@ -2195,10 +2216,13 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
 	/* The effect is by factor 1.8m/8m smaller for ATs */
 	/* get name of first telescope and decide accordingly */
 	const char * telname = gravi_conf_get_telname (0, header);
-	CPLCHECK ("Cannot get telescope name");
-	if (telname[0] == 'A') {
+
+    if (telname == NULL || telname[0] == 'U') {
+	  cpl_msg_info (cpl_func,"Scaling pickup offsets to UTs.");
+    }
+	else {
 	  cpl_vector_multiply_scalar(opd_pickup_offset, 1.8/8.0);
-	  cpl_msg_info (cpl_func,"FE: scaling pickup offsets to ATs.");
+	  cpl_msg_info (cpl_func,"Scaling pickup offsets to ATs.");
 	}
 
 	/* Apply pupil, focus and pickup offsets */
@@ -2383,23 +2407,26 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
 	double diodeang;
 	double astang;
 	double astradius;
-	/* select astigm calibration and rmax according to AT or UT */
-	if (telname[0] == 'A') {
-	  cpl_msg_info (cpl_func,"FE: applying AT astigmatism correction");
-	  rmax = 900; /* in mm */
-	  for (int i = 0; i < 4; i++) {
-	    AstigmAmplitude[i] = AstigmAmplitudeAT[3-i] * 1e-6; /* in order GV1,2,3,4 */
-	    AstigmTheta[i] = AstigmThetaAT[3-i] / 360. * TWOPI; /* in order GV1,2,3,4 */
-	  }
-	} else {
-	  cpl_msg_info (cpl_func,"FE: applying UT astigmatism correction");
-	  rmax = 4000; /* in mm */
-	  for (int i = 0; i < 4; i++) {
-	    AstigmAmplitude[i] = AstigmAmplitudeUT[3-i] * 1e-6; /* in order GV1,2,3,4 */
-	    AstigmTheta[i] = AstigmThetaUT[3-i] / 360. * TWOPI; /* in order GV1,2,3,4 */
-	  }
+    
+	/* Select astigm calibration and rmax according to AT or UT */
+    if (telname == NULL || telname[0] == 'U') {
+        cpl_msg_info (cpl_func,"FE: applying UT astigmatism correction");
+        rmax = 4000; /* in mm */
+        for (int i = 0; i < 4; i++) {
+            AstigmAmplitude[i] = AstigmAmplitudeUT[3-i] * 1e-6; /* in order GV1,2,3,4 */
+            AstigmTheta[i] = AstigmThetaUT[3-i] / 360. * TWOPI; /* in order GV1,2,3,4 */
+        }
 	}
-        /* loop over all diodes and beams */
+    else {
+        cpl_msg_info (cpl_func,"FE: applying AT astigmatism correction");
+        rmax = 900; /* in mm */
+        for (int i = 0; i < 4; i++) {
+            AstigmAmplitude[i] = AstigmAmplitudeAT[3-i] * 1e-6; /* in order GV1,2,3,4 */
+            AstigmTheta[i] = AstigmThetaAT[3-i] / 360. * TWOPI; /* in order GV1,2,3,4 */
+        }
+	}
+    
+    /* loop over all diodes and beams */
 	for (int tel = 0; tel < ntel; tel++) {
           for (cpl_size row = 0; row < nrow_met; row++) {
 	    for (int diode = 0; diode < ndiode; diode++) {
