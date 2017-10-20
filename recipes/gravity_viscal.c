@@ -217,6 +217,13 @@ static int gravity_viscal_create(cpl_plugin * plugin)
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
     cpl_parameterlist_append (recipe->parameters, p);
     
+    p = cpl_parameter_new_value ("gravity.viscal.calib-flux", CPL_TYPE_BOOL,
+                                 "Normalize the FLUX by the calibrator.",
+                                 "gravity.viscal", FALSE);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "calib-flux");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (recipe->parameters, p);
+
     return 0;
 }
 

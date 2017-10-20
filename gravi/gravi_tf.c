@@ -631,12 +631,14 @@ gravi_data * gravi_calibrate_vis(gravi_data * vis_data, gravi_data ** tf_data, i
 		CPLCHECK_NUL("Cannot apply tf to T3PHI");
 		
 		/* Calibrate the FLUX as a real quantity  --> not calibrated */
-		// gravi_apply_tf_amp (vis_calib, tf_science, used_tf_data, num_used_tf,
-		// 					GRAVI_OI_FLUX_EXT,
-		// 					GRAVI_INSNAME(type_data, pol, npol),
-		// 					"FLUX", "FLUXERR", 4, delta_t);
-		
-		// CPLCHECK_NUL("Cannot apply tf to FLUX");
+		if (gravi_param_get_bool (parlist, "gravity.viscal.calib-flux")){
+	        gravi_apply_tf_amp (vis_calib, tf_science, used_tf_data, num_used_tf,
+	                            GRAVI_OI_FLUX_EXT,
+	                            GRAVI_INSNAME(type_data, pol, npol),
+	                            "FLUX", "FLUXERR", 4, delta_t);
+
+	        CPLCHECK_NUL("Cannot apply tf to FLUX");
+		}
 
 	  }
 	  /* End loop on polarisation */
