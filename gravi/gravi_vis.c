@@ -1542,7 +1542,10 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
             cpl_propertylist_copy_property (oivis_plist, vis_plist, "ARRNAME");
             cpl_propertylist_copy_property (oivis_plist, vis_plist, "INSNAME");
             cpl_propertylist_update_string (oivis_plist, "AMPTYP","absolute");
-            cpl_propertylist_update_string (oivis_plist, "PHITYP","differential");
+            if ( !strcmp (output_phase_sc,"DIFFERENTIAL") )
+                cpl_propertylist_update_string (oivis_plist, "PHITYP","differential");
+            if ( !strcmp (output_phase_sc,"ABSOLUTE") )
+                cpl_propertylist_update_string (oivis_plist, "PHITYP","absolute");
             cpl_propertylist_update_int (oivis_plist, "PHIORDER",1);
             gravi_data_add_table (vis_data, oivis_plist, GRAVI_OI_VIS_EXT, oi_vis_SC);
             
