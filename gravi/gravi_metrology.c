@@ -2431,7 +2431,7 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
           for (cpl_size row = 0; row < nrow_met; row++) {
 	    for (int diode = 0; diode < ndiode; diode++) {
 	      diodeang = myAtan(-recy[tel][diode],-recx[tel][diode], &flag);  /* in radian */
-	      astang = metang - diodeang - AstigmTheta[tel] ; /* in radian */
+	      astang = metang - diodeang + AstigmTheta[tel] ; /* in radian */
 	      astradius = sqrt(recx[tel][diode]*recx[tel][diode] + recy[tel][diode]*recy[tel][diode]) / rmax; /* normalized */
 	      astigm = AstigmAmplitude[tel] * sqrt(6) * astradius * astradius * sin(2. * astang); /* in meter */
 	      if (row == 0 && tel == 0 && diode == 0) { 
