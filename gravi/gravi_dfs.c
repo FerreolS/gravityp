@@ -231,6 +231,14 @@ cpl_parameter * gravi_parameter_add_wave (cpl_parameterlist *self)
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
 	cpl_parameterlist_append (self, p);
 
+    /* Spectral order of 2D wave fit */
+    p = cpl_parameter_new_value ("gravity.calib.wave-spectral-order", CPL_TYPE_INT,
+                                "Set the spatial order of the wavelength 2D fit for SC.",
+                                 "gravity.calib", 3);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "wave-spectral-order");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (self, p);
+
     return p;
 }
 

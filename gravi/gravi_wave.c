@@ -90,6 +90,7 @@ cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
                                cpl_table * detector_table,
                                cpl_size fullstartx,
                                int spatial_order,
+                               int spectral_order,
                                double * rms_residuals);
 
 cpl_error_code gravi_wave_correct_dispersion (cpl_table * wave_fibre,
@@ -1149,6 +1150,7 @@ cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
                                cpl_table * detector_table,
                                cpl_size fullstartx,
                                int spatial_order,
+                               int spectral_order,
                                double * rms_residuals)
 {
 	gravi_msg_function_start(1);
@@ -1278,8 +1280,9 @@ cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
 		 * between the position and the wavelength = F(y, x)
 		 */  
 		cpl_size  deg2d[2] = {2, 3};
-        if (nwave < 1000) {deg2d[0] = 2; deg2d[1] = 3;} // FIXME Useless line ?
+        if ( (nwave < 20) && (nwave > 8) ) {deg2d[0] = 2; deg2d[1] = 7;} // FIXME Useless line ?
         deg2d[0] = spatial_order;
+        deg2d[1] = spectral_order;
         
 		cpl_msg_info (cpl_func, "Fit a 2d polynomial {%lli..%lli} to the wavelengths map", deg2d[0], deg2d[1]);
         
@@ -1296,8 +1299,9 @@ cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
 		cpl_vector * residuals = cpl_vector_new (nvalid);
 		cpl_vector_fill_polynomial_fit_residual	(residuals, vector, NULL, fit2d, matrix, &rechisq);
 		*rms_residuals += cpl_vector_get_stdev(residuals)/npol;
-		FREE (cpl_vector_delete, residuals);
+        FREE (cpl_vector_delete, residuals);
 		CPLCHECK_NUL ("Cannot compute residuals");
+
         
 		FREE (cpl_matrix_delete, matrix);
 		FREE (cpl_vector_delete, vector);
@@ -1321,7 +1325,6 @@ cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
     for (cpl_size region = 0 ; region < n_region; region ++) {
         
 		int pol = gravi_region_get_pol (detector_table, region);
-	
 		/* Loop on wave to evaluate the 2D polynome */
 		for (cpl_size wave = 0; wave < nwave; wave ++) {
             
@@ -1331,8 +1334,23 @@ cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
             
             double result = cpl_polynomial_eval (coef_poly[pol], pos);
             cpl_array_set (value, wave, result);
+
+            }
+		/* ensure cresent wavelength */
+		double previous_wave = cpl_array_get(value, nwave/2, NULL);
+		for (cpl_size wave_loop = nwave/2 ; wave_loop >= 0 ; wave_loop --){
+            if (previous_wave < cpl_array_get(value, wave_loop, NULL))
+                cpl_array_set(value, wave_loop, previous_wave);
+            else previous_wave = cpl_array_get(value, wave_loop, NULL);
 		}
-        
+
+        previous_wave = cpl_array_get(value, nwave/2, NULL);
+        for (cpl_size wave_loop = nwave/2 ; wave_loop < nwave ; wave_loop ++){
+            if (previous_wave > cpl_array_get(value, wave_loop, NULL))
+                cpl_array_set(value, wave_loop, previous_wave);
+            else previous_wave = cpl_array_get(value, wave_loop, NULL);
+        }
+
 		/* Add column */
 		char * data_x = GRAVI_DATA[region];
 		cpl_table_new_column_array (wavedata_table, data_x, CPL_TYPE_DOUBLE, nwave);
@@ -1722,14 +1740,20 @@ cpl_error_code  gravi_compute_wave (gravi_data * wave_map,
     /* Interpolate table 2D */
     cpl_table * wavedata_table;
     int spatial_order=2; // default spatial order
+    int spectral_order=3; // default spectral order
     double rms_residuals;
     if (type_data == GRAVI_FT && gravi_param_get_bool(parlist, "gravity.calib.force-wave-ft-equal")) {
     	spatial_order = 0;
     	cpl_msg_info (cpl_func, "Option force-waveFT-equal applied");
     }
+    if (type_data == GRAVI_SC) {
+        spectral_order = gravi_param_get_int(parlist, "gravity.calib.wave-spectral-order");
+        cpl_msg_info (cpl_func, "Option set_spectral order to %d", spectral_order);
+    }
+
     wavedata_table = gravi_wave_fit_2d (wavefibre_table,
                                         detector_table,
-                                        fullstartx, spatial_order, &rms_residuals);
+                                        fullstartx, spatial_order, spectral_order,  &rms_residuals);
 	cpl_propertylist_update_double (wave_header, QC_RMS_RESIDUALS(type_data), rms_residuals);
 
     CPLCHECK_MSG ("Cannot fit 2d data");
