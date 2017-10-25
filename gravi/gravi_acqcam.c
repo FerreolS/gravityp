@@ -1471,16 +1471,16 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
 	    CPLCHECK_MSG("Error setting FT column");
 
 	    /* Compute plate-scale */
-	    double ft_sc_x= xsc - xft;
-	    double ft_sc_y= ysc - yft;
-	    double eft_sc_x=sqrt(exsc*exsc+exft*exft);
-	    double eft_sc_y=sqrt(eysc*eysc+eyft*eyft);
+	    double ft_sc_x = xsc - xft;
+	    double ft_sc_y = ysc - yft;
+	    double eft_sc_x = sqrt(exsc*exsc+exft*exft);
+	    double eft_sc_y = sqrt(eysc*eysc+eyft*eyft);
 	    double sep = sqrt(ft_sc_x*ft_sc_x+ft_sc_y*ft_sc_y);
 	    double pscale = sep ? rho_in/sep : 0.;
 	    double escale = 0.;
 	    if (sep) {
-	      escale = rho_in/(sep*sep*sep)*
-		(ft_sc_x*eft_sc_x+ft_sc_y*eft_sc_y) ;
+            escale = rho_in/(sep*sep*sep)*
+                (ft_sc_x*eft_sc_x+ft_sc_y*eft_sc_y) ;
 	    }
 	    cpl_table_set (acqcam_table, "FIELD_SCALE", row*ntel+tel, pscale);
 	    cpl_table_set (acqcam_table, "FIELD_SCALEERR", row*ntel+tel, escale);
@@ -1494,17 +1494,18 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
 	       - offset from FT fiber to SC fiber. */
 	    double corrx=0, corry=0., ecorrx=0.;
 	    if (pscale) {
-	      corrx = ft_sc_x + sobj_offx_cam/pscale - fiber_ft_sc_x;	
-	      corry = ft_sc_y + sobj_offy_cam/pscale - fiber_ft_sc_y;
-	      double tmp=escale/(pscale*pscale);
-	      tmp *= tmp;
-	      ecorrx = sqrt(eft_sc_x*eft_sc_x + eft_sc_y*eft_sc_y + sobj_offx_cam*sobj_offx_cam*tmp);
-	      ecorrx = sqrt(eft_sc_x*eft_sc_x + eft_sc_y*eft_sc_y + sobj_offy_cam*sobj_offy_cam*tmp);
+            corrx = ft_sc_x + sobj_offx_cam/pscale - fiber_ft_sc_x;	
+            corry = ft_sc_y + sobj_offy_cam/pscale - fiber_ft_sc_y;
+            double tmp = escale/(pscale*pscale);
+            tmp *= tmp;
+            ecorrx = sqrt(eft_sc_x*eft_sc_x + eft_sc_y*eft_sc_y + sobj_offx_cam*sobj_offx_cam*tmp);
+            ecorrx = sqrt(eft_sc_x*eft_sc_x + eft_sc_y*eft_sc_y + sobj_offy_cam*sobj_offy_cam*tmp);
 	    }
-            cpl_table_set (acqcam_table, "FIELD_SC_FIBER_DX", row*ntel+tel, corrx);
-            cpl_table_set (acqcam_table, "FIELD_SC_FIBER_DY", row*ntel+tel, corry);
-            cpl_table_set (acqcam_table, "FIELD_SC_FIBER_DXERR", row*ntel+tel, corrx);
-            cpl_table_set (acqcam_table, "FIELD_SC_FIBER_DYERR", row*ntel+tel, corry);
+        
+        cpl_table_set (acqcam_table, "FIELD_SC_FIBER_DX", row*ntel+tel, corrx);
+        cpl_table_set (acqcam_table, "FIELD_SC_FIBER_DY", row*ntel+tel, corry);
+        cpl_table_set (acqcam_table, "FIELD_SC_FIBER_DXERR", row*ntel+tel, ecorrx);
+        cpl_table_set (acqcam_table, "FIELD_SC_FIBER_DYERR", row*ntel+tel, ecorry);
 
         } /* End loop on images */
 
