@@ -1492,16 +1492,23 @@ cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
 	cpl_size nrow_met = cpl_table_get_nrow (vismet_table) / ntel;
 	cpl_size nrow_acq = cpl_table_get_nrow (visacq_table) / ntel;
 
-    /* Create a temporary table */
+    /* Create a temporary table with the time shifted
+     * by the delta in [s] */
     cpl_table * visacq_tmp = cpl_table_new (nrow_acq * ntel);
-    cpl_table_duplicate_column (visacq_tmp, "TIME", visacq_table, "TIME");
-    cpl_table_duplicate_column (visacq_tmp, "OPD_PUPIL", visacq_table, "OPD_PUPIL");
-    cpl_table_duplicate_column (visacq_tmp, "PUPIL_NSPOT", visacq_table, "PUPIL_NSPOT");
-
-    /* Move the time of the temporary table 
-     * delta is in [s] */
+    
+    cpl_table_duplicate_column (visacq_tmp, "TIME", visacq_table, "TIME");    
     cpl_table_add_scalar (visacq_tmp, "TIME", 1e6 * delay);
     
+    /* Copy necessary data */
+    cpl_table_duplicate_column (visacq_tmp, "OPD_PUPIL",
+                                visacq_table, "OPD_PUPIL");
+    cpl_table_duplicate_column (visacq_tmp, "PUPIL_NSPOT",
+                                visacq_table, "PUPIL_NSPOT");
+    cpl_table_duplicate_column (visacq_tmp, "FIELD_SC_FIBER_DX",
+                                visacq_table, "FIELD_SC_FIBER_DX");
+    cpl_table_duplicate_column (visacq_tmp, "FIELD_SC_FIBER_DY",
+                                visacq_table, "FIELD_SC_FIBER_DY");
+
     /* Get the ACQ DIT in [us] */
     double dit_acq = gravi_pfits_get_dit_acqcam (header) * 1e6;
     cpl_msg_info (cpl_func,"dit_acq = %g [us]", dit_acq);
@@ -1513,9 +1520,17 @@ cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
     /* Create column in output table */
 	gravi_table_new_column (vismet_table, "OPD_PUPIL", "m", CPL_TYPE_DOUBLE);
     double * opd_met = cpl_table_get_data_double (vismet_table, "OPD_PUPIL");
+
+	gravi_table_new_column (vismet_table, "FIELD_SC_FIBER_DX", "pix", CPL_TYPE_DOUBLE);
+    double * fdx_met = cpl_table_get_data_double (vismet_table, "FIELD_SC_FIBER_DX");
+
+	gravi_table_new_column (vismet_table, "FIELD_SC_FIBER_DY", "pix", CPL_TYPE_DOUBLE);
+    double * fdy_met = cpl_table_get_data_double (vismet_table, "FIELD_SC_FIBER_DY");
     
     /* Get data from input table */
     double * opd_acq = cpl_table_get_data_double (visacq_tmp, "OPD_PUPIL");
+    double * fdx_acq = cpl_table_get_data_double (visacq_tmp, "FIELD_SC_FIBER_DX");
+    double * fdy_acq = cpl_table_get_data_double (visacq_tmp, "FIELD_SC_FIBER_DY");
     int * nspot = cpl_table_get_data_int (visacq_tmp, "PUPIL_NSPOT");
     int * first = cpl_table_get_data_int (visacq_tmp, "FIRST_MET");
     int * last  = cpl_table_get_data_int (visacq_tmp, "LAST_MET");
@@ -1540,21 +1555,35 @@ cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
         for (cpl_size row = 0; row < nrow_acq; row++) {            
             for (cpl_size row_met = first[row*ntel+tel]; row_met < last[row*ntel+tel]; row_met++) {
                 opd_met[row_met*ntel+tel] = opd_acq[row*ntel+tel];
+                fdx_met[row_met*ntel+tel] = fdx_acq[row*ntel+tel];
+                fdy_met[row_met*ntel+tel] = fdy_acq[row*ntel+tel];
             }
         }
 
         /* Loop on MET rows, to fill the empty by the closet futur value */
         double opd = opd_met[nrow_acq*ntel+tel];
+        double fdx = fdx_met[nrow_acq*ntel+tel];
+        double fdy = fdy_met[nrow_acq*ntel+tel];
         for (cpl_size row = nrow_met-1; row >= 0; row--) {
             if (opd_met[row*ntel+tel] != 0 ) opd = opd_met[row*ntel+tel];
             else opd_met[row*ntel+tel] = opd;
+            if (fdx_met[row*ntel+tel] != 0 ) fdx = fdx_met[row*ntel+tel];
+            else fdx_met[row*ntel+tel] = fdx;
+            if (fdy_met[row*ntel+tel] != 0 ) fdy = fdy_met[row*ntel+tel];
+            else fdy_met[row*ntel+tel] = fdy;
         }
 
         /* Loop on MET rows, to fill the empty by the closet past value */
         opd = opd_met[0*ntel+tel];
+        fdx = fdx_met[0*ntel+tel];
+        fdy = fdy_met[0*ntel+tel];
         for (cpl_size row = 0; row < nrow_met; row++) {
             if (opd_met[row*ntel+tel] != 0) opd = opd_met[row*ntel+tel];
             else opd_met[row*ntel+tel] = opd;
+            if (fdx_met[row*ntel+tel] != 0) fdx = fdx_met[row*ntel+tel];
+            else fdx_met[row*ntel+tel] = fdx;
+            if (fdy_met[row*ntel+tel] != 0) fdy = fdy_met[row*ntel+tel];
+            else fdy_met[row*ntel+tel] = fdy;
         }
         
     }/* End loop on beam */

@@ -1147,13 +1147,12 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
   cpl_array ** opd_met_tel      = cpl_table_get_data_array (vis_MET, "OPD_TEL");
   cpl_array ** phasor_met_telfc = cpl_table_get_data_array (vis_MET, "PHASOR_TELFC");
 
-
-  /* FE: Start */
   double * opd_met_fc_corr        = cpl_table_get_data_double (vis_MET, "OPD_FC_CORR");
   double * opd_met_telfc_mcorr    = cpl_table_get_data_double (vis_MET, "OPD_TELFC_MCORR");
   cpl_array ** opd_met_telfc_corr = cpl_table_get_data_array (vis_MET, "OPD_TELFC_CORR");
-  /* FE: End */
 
+  double * fdx_met = cpl_table_get_data_double (vis_MET, "FIELD_SC_FIBER_DX");
+  double * fdy_met = cpl_table_get_data_double (vis_MET, "FIELD_SC_FIBER_DY");
 
   CPLCHECK_MSG("Cannot get direct pointer to data");
 
@@ -1173,7 +1172,6 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
   gravi_table_new_column_array (vis_SC, "PHASOR_MET_TELFC", "V^4", CPL_TYPE_DOUBLE_COMPLEX, ndiode);
   cpl_array ** phasor_metdit_telfc = cpl_table_get_data_array (vis_SC, "PHASOR_MET_TELFC");
 
-  /* FE: Start */
   gravi_table_new_column (vis_SC, "OPD_MET_FC_CORR", "m", CPL_TYPE_DOUBLE);
   double * opd_metdit_fc_corr = cpl_table_get_data_double (vis_SC, "OPD_MET_FC_CORR");
 
@@ -1182,9 +1180,13 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
 
   gravi_table_new_column_array (vis_SC, "OPD_MET_TELFC_CORR", "m", CPL_TYPE_DOUBLE, ndiode);
   cpl_array ** opd_metdit_telfc_corr = cpl_table_get_data_array (vis_SC, "OPD_MET_TELFC_CORR");
-  /* FE: End */
 
-		
+  gravi_table_new_column (vis_SC, "FIELD_SC_FIBER_DX", "pix", CPL_TYPE_DOUBLE);
+  double * fdx_metdit = cpl_table_get_data_double (vis_SC, "FIELD_SC_FIBER_DX");
+
+  gravi_table_new_column (vis_SC, "FIELD_SC_FIBER_DY", "pix", CPL_TYPE_DOUBLE);
+  double * fdy_metdit = cpl_table_get_data_double (vis_SC, "FIELD_SC_FIBER_DY");
+  
   CPLCHECK_MSG("Cannot create columns");
 
   /* Loop on base and rows */
@@ -1194,17 +1196,13 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
 
 	  opd_metdit_tel[nsc]      = gravi_array_init_double (ndiode, 0.0);
 	  phasor_metdit_telfc[nsc] = gravi_array_init_double_complex (ndiode, 0.0+I*0.0);
- 
-	  /* FE: Start */
 	  opd_metdit_telfc_corr[nsc] = gravi_array_init_double (ndiode, 0.0);
-	  /* FE: End */
 
 	  /* Sum over synch MET frames */
 	  for (cpl_size row_met = first_met[nsc] ; row_met < last_met[nsc]; row_met++) {
 	    cpl_size nmet0 = row_met * ntel + GRAVI_BASE_TEL[base][0];
 	    cpl_size nmet1 = row_met * ntel + GRAVI_BASE_TEL[base][1];
 	    
-	    /* FE: Start */
 	    /* Mean OPD_FC_CORR and OPD_TELFC_MCORR for each BASELINE */
 	    opd_metdit_fc_corr[nsc] += opd_met_fc_corr[nmet0] - opd_met_fc_corr[nmet1];
 	    opd_metdit_telfc_mcorr[nsc] += opd_met_telfc_mcorr[nmet0] - opd_met_telfc_mcorr[nmet1];
@@ -1212,7 +1210,6 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
 	    /* Mean OPD_TELFC_CORR for each BASELINE and diode */
 	    cpl_array_add (opd_metdit_telfc_corr[nsc], opd_met_telfc_corr[nmet0]);
 	    cpl_array_subtract (opd_metdit_telfc_corr[nsc], opd_met_telfc_corr[nmet1]);
-	    /* FE: End */
 
 	    /* Mean OPD_MET at Telescope (each diode) */
 	    cpl_array_add (opd_metdit_tel[nsc], opd_met_tel[nmet0]);
@@ -1232,23 +1229,29 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
 	    gravi_array_add_phasors (phasor_metdit_telfc[nsc],
 				     phasor_met_telfc[nmet0],
 				     phasor_met_telfc[nmet1]);
-	    
+
+        /* Mean FIELD_SC_FIBER */
+	    fdx_metdit[nsc] += fdx_met[nmet0] - fdx_met[nmet1];
+	    fdy_metdit[nsc] += fdy_met[nmet0] - fdy_met[nmet1];
+        
 	    CPLCHECK_MSG ("Fail to integrate the metrology");
 	  }
 	  
 	  /* Normalize the means  (if nframe == 0, values are zero) */
 	  cpl_size nframe = last_met[nsc] - first_met[nsc];
 	  if (nframe != 0 ){
-	    /* FE: Start */
 	    opd_metdit_fc_corr[nsc] /= nframe;
 	    opd_metdit_telfc_mcorr[nsc] /= nframe;
 	    cpl_array_divide_scalar (opd_metdit_telfc_corr[nsc], (double)nframe);
-	    /* FE: End */
+        
 	    cpl_array_divide_scalar (opd_metdit_tel[nsc], (double)nframe);
 	    phase_metdit_tel[nsc] /= nframe;
 	    phase_metdit_fc[nsc]  /= nframe;
 	    opd_metdit_fc[nsc]  /= nframe;
 	    cpl_array_divide_scalar (phasor_metdit_telfc[nsc], (double)nframe);
+        
+	    fdx_metdit[nsc]  /= nframe;
+	    fdy_metdit[nsc]  /= nframe;
 	  }
 	  CPLCHECK_MSG ("Fail to compute metrology per base from metrology per tel");
 	  
