@@ -1504,10 +1504,10 @@ cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
                                 visacq_table, "OPD_PUPIL");
     cpl_table_duplicate_column (visacq_tmp, "PUPIL_NSPOT",
                                 visacq_table, "PUPIL_NSPOT");
-    cpl_table_duplicate_column (visacq_tmp, "FIELD_SC_FIBER_DX",
-                                visacq_table, "FIELD_SC_FIBER_DX");
-    cpl_table_duplicate_column (visacq_tmp, "FIELD_SC_FIBER_DY",
-                                visacq_table, "FIELD_SC_FIBER_DY");
+    cpl_table_duplicate_column (visacq_tmp, "FIELD_FIBER_DX",
+                                visacq_table, "FIELD_FIBER_DX");
+    cpl_table_duplicate_column (visacq_tmp, "FIELD_FIBER_DY",
+                                visacq_table, "FIELD_FIBER_DY");
 
     /* Get the ACQ DIT in [us] */
     double dit_acq = gravi_pfits_get_dit_acqcam (header) * 1e6;
@@ -1521,16 +1521,16 @@ cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
 	gravi_table_new_column (vismet_table, "OPD_PUPIL", "m", CPL_TYPE_DOUBLE);
     double * opd_met = cpl_table_get_data_double (vismet_table, "OPD_PUPIL");
 
-	gravi_table_new_column (vismet_table, "FIELD_SC_FIBER_DX", "pix", CPL_TYPE_DOUBLE);
-    double * fdx_met = cpl_table_get_data_double (vismet_table, "FIELD_SC_FIBER_DX");
+	gravi_table_new_column (vismet_table, "FIELD_FIBER_DX", "pix", CPL_TYPE_DOUBLE);
+    double * fdx_met = cpl_table_get_data_double (vismet_table, "FIELD_FIBER_DX");
 
-	gravi_table_new_column (vismet_table, "FIELD_SC_FIBER_DY", "pix", CPL_TYPE_DOUBLE);
-    double * fdy_met = cpl_table_get_data_double (vismet_table, "FIELD_SC_FIBER_DY");
+	gravi_table_new_column (vismet_table, "FIELD_FIBER_DY", "pix", CPL_TYPE_DOUBLE);
+    double * fdy_met = cpl_table_get_data_double (vismet_table, "FIELD_FIBER_DY");
     
     /* Get data from input table */
     double * opd_acq = cpl_table_get_data_double (visacq_tmp, "OPD_PUPIL");
-    double * fdx_acq = cpl_table_get_data_double (visacq_tmp, "FIELD_SC_FIBER_DX");
-    double * fdy_acq = cpl_table_get_data_double (visacq_tmp, "FIELD_SC_FIBER_DY");
+    double * fdx_acq = cpl_table_get_data_double (visacq_tmp, "FIELD_FIBER_DX");
+    double * fdy_acq = cpl_table_get_data_double (visacq_tmp, "FIELD_FIBER_DY");
     int * nspot = cpl_table_get_data_int (visacq_tmp, "PUPIL_NSPOT");
     int * first = cpl_table_get_data_int (visacq_tmp, "FIRST_MET");
     int * last  = cpl_table_get_data_int (visacq_tmp, "LAST_MET");

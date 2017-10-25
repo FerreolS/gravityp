@@ -1151,8 +1151,8 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
   double * opd_met_telfc_mcorr    = cpl_table_get_data_double (vis_MET, "OPD_TELFC_MCORR");
   cpl_array ** opd_met_telfc_corr = cpl_table_get_data_array (vis_MET, "OPD_TELFC_CORR");
 
-  double * fdx_met = cpl_table_get_data_double (vis_MET, "FIELD_SC_FIBER_DX");
-  double * fdy_met = cpl_table_get_data_double (vis_MET, "FIELD_SC_FIBER_DY");
+  double * fdx_met = cpl_table_get_data_double (vis_MET, "FIELD_FIBER_DX");
+  double * fdy_met = cpl_table_get_data_double (vis_MET, "FIELD_FIBER_DY");
 
   CPLCHECK_MSG("Cannot get direct pointer to data");
 
@@ -1181,11 +1181,11 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
   gravi_table_new_column_array (vis_SC, "OPD_MET_TELFC_CORR", "m", CPL_TYPE_DOUBLE, ndiode);
   cpl_array ** opd_metdit_telfc_corr = cpl_table_get_data_array (vis_SC, "OPD_MET_TELFC_CORR");
 
-  gravi_table_new_column (vis_SC, "FIELD_SC_FIBER_DX", "pix", CPL_TYPE_DOUBLE);
-  double * fdx_metdit = cpl_table_get_data_double (vis_SC, "FIELD_SC_FIBER_DX");
+  gravi_table_new_column (vis_SC, "FIELD_FIBER_DX", "pix", CPL_TYPE_DOUBLE);
+  double * fdx_metdit = cpl_table_get_data_double (vis_SC, "FIELD_FIBER_DX");
 
-  gravi_table_new_column (vis_SC, "FIELD_SC_FIBER_DY", "pix", CPL_TYPE_DOUBLE);
-  double * fdy_metdit = cpl_table_get_data_double (vis_SC, "FIELD_SC_FIBER_DY");
+  gravi_table_new_column (vis_SC, "FIELD_FIBER_DY", "pix", CPL_TYPE_DOUBLE);
+  double * fdy_metdit = cpl_table_get_data_double (vis_SC, "FIELD_FIBER_DY");
   
   CPLCHECK_MSG("Cannot create columns");
 
@@ -1230,7 +1230,7 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
 				     phasor_met_telfc[nmet0],
 				     phasor_met_telfc[nmet1]);
 
-        /* Mean FIELD_SC_FIBER */
+        /* Mean FIELD_FIBER */
 	    fdx_metdit[nsc] += fdx_met[nmet0] - fdx_met[nmet1];
 	    fdy_metdit[nsc] += fdy_met[nmet0] - fdy_met[nmet1];
         
