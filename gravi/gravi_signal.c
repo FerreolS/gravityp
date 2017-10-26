@@ -1151,9 +1151,6 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
   double * opd_met_telfc_mcorr    = cpl_table_get_data_double (vis_MET, "OPD_TELFC_MCORR");
   cpl_array ** opd_met_telfc_corr = cpl_table_get_data_array (vis_MET, "OPD_TELFC_CORR");
 
-  double * fdx_met = cpl_table_get_data_double (vis_MET, "FIELD_FIBER_DX");
-  double * fdy_met = cpl_table_get_data_double (vis_MET, "FIELD_FIBER_DY");
-
   CPLCHECK_MSG("Cannot get direct pointer to data");
 
   /* New columns */
@@ -1180,12 +1177,6 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
 
   gravi_table_new_column_array (vis_SC, "OPD_MET_TELFC_CORR", "m", CPL_TYPE_DOUBLE, ndiode);
   cpl_array ** opd_metdit_telfc_corr = cpl_table_get_data_array (vis_SC, "OPD_MET_TELFC_CORR");
-
-  gravi_table_new_column (vis_SC, "FIELD_FIBER_DX", "pix", CPL_TYPE_DOUBLE);
-  double * fdx_metdit = cpl_table_get_data_double (vis_SC, "FIELD_FIBER_DX");
-
-  gravi_table_new_column (vis_SC, "FIELD_FIBER_DY", "pix", CPL_TYPE_DOUBLE);
-  double * fdy_metdit = cpl_table_get_data_double (vis_SC, "FIELD_FIBER_DY");
   
   CPLCHECK_MSG("Cannot create columns");
 
@@ -1230,10 +1221,6 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
 				     phasor_met_telfc[nmet0],
 				     phasor_met_telfc[nmet1]);
 
-        /* Mean FIELD_FIBER */
-	    fdx_metdit[nsc] += fdx_met[nmet0] - fdx_met[nmet1];
-	    fdy_metdit[nsc] += fdy_met[nmet0] - fdy_met[nmet1];
-        
 	    CPLCHECK_MSG ("Fail to integrate the metrology");
 	  }
 	  
@@ -1249,14 +1236,53 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
 	    phase_metdit_fc[nsc]  /= nframe;
 	    opd_metdit_fc[nsc]  /= nframe;
 	    cpl_array_divide_scalar (phasor_metdit_telfc[nsc], (double)nframe);
-        
-	    fdx_metdit[nsc]  /= nframe;
-	    fdy_metdit[nsc]  /= nframe;
 	  }
 	  CPLCHECK_MSG ("Fail to compute metrology per base from metrology per tel");
 	  
 	} /* End loop on SC frames */
   }/* End loop on bases */
+
+
+  /* Compute the information comming from VIS_ACQ
+   * camera... through the VIS_MET */
+  if (cpl_table_has_column (vis_MET,"FIELD_FIBER_DX")) {
+      
+      double * fdx_met = cpl_table_get_data_double (vis_MET, "FIELD_FIBER_DX");
+      double * fdy_met = cpl_table_get_data_double (vis_MET, "FIELD_FIBER_DY");
+
+      gravi_table_new_column (vis_SC, "FIELD_FIBER_DX", "pix", CPL_TYPE_DOUBLE);
+      double * fdx_metdit = cpl_table_get_data_double (vis_SC, "FIELD_FIBER_DX");
+
+      gravi_table_new_column (vis_SC, "FIELD_FIBER_DY", "pix", CPL_TYPE_DOUBLE);
+      double * fdy_metdit = cpl_table_get_data_double (vis_SC, "FIELD_FIBER_DY");
+
+      /* Loop on base and rows */
+      for (cpl_size base = 0; base < nbase; base++) {
+          for (cpl_size row_sc = 0; row_sc < nrow_sc; row_sc ++) {
+              cpl_size nsc = row_sc * nbase + base;
+              
+              /* Sum over synch MET frames */
+              for (cpl_size row_met = first_met[nsc] ; row_met < last_met[nsc]; row_met++) {
+                  cpl_size nmet0 = row_met * ntel + GRAVI_BASE_TEL[base][0];
+                  cpl_size nmet1 = row_met * ntel + GRAVI_BASE_TEL[base][1];
+                  
+                  /* Mean FIELD_FIBER */
+                  fdx_metdit[nsc] += fdx_met[nmet0] - fdx_met[nmet1];
+                  fdy_metdit[nsc] += fdy_met[nmet0] - fdy_met[nmet1];
+              }
+              CPLCHECK_MSG ("Fail to compute metrology per base from metrology per tel");
+
+              /* Normalize the means  (if nframe == 0, values are zero) */
+              cpl_size nframe = last_met[nsc] - first_met[nsc];
+              if (nframe != 0 ){
+                  fdx_metdit[nsc]  /= nframe;
+                  fdy_metdit[nsc]  /= nframe;
+              }
+              
+          } /* End loop on SC frames */
+      }/* End loop on bases */
+  }
+
 
   gravi_msg_function_exit(1);
   return CPL_ERROR_NONE;
