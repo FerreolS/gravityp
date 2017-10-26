@@ -3134,7 +3134,7 @@ cpl_error_code gravi_vis_compute_column_mean (cpl_table * out_table,
 
     /* Check if column exist */
     if ( !cpl_table_has_column (in_table, name)) {
-        cpl_msg_info (cpl_func, "Cannot average column %s (not eixsting)", name);
+        cpl_msg_info (cpl_func, "Cannot average column %s (not existing)", name);
         return CPL_ERROR_NONE;
     }
 
