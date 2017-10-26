@@ -1504,6 +1504,7 @@ cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
                                 visacq_table, "OPD_PUPIL");
     cpl_table_duplicate_column (visacq_tmp, "PUPIL_NSPOT",
                                 visacq_table, "PUPIL_NSPOT");
+    
     cpl_table_duplicate_column (visacq_tmp, "FIELD_FIBER_DX",
                                 visacq_table, "FIELD_FIBER_DX");
     cpl_table_duplicate_column (visacq_tmp, "FIELD_FIBER_DY",
