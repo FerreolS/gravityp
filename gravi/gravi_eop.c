@@ -298,14 +298,14 @@ cpl_error_code gravi_eop_pointing_uv (cpl_table * input_table,
 	    p_w = cpl_table_get_data_array (input_table,"E_W");
 	    p_az = cpl_table_get_data_array (input_table,"E_AZ");
 	    p_zd = cpl_table_get_data_array (input_table,"E_ZD");
-        CPLCHECK_MSG ("Cannot create data");
+        CPLCHECK_MSG ("Cannot create [E_U, E_V, E_W, E_AZ, E_ZD]");
     }
 
 	/* Get the location of the observer from the header */
 	double elev = gravi_pfits_get_geoelev (header); // Height in [m]
 	double lon = gravi_pfits_get_geolon (header) * CPL_MATH_RAD_DEG; // Lat in [rad]
 	double lat = gravi_pfits_get_geolat (header) * CPL_MATH_RAD_DEG; // Lon in [rad], East positive
-	CPLCHECK_MSG ("Cannot get the data");
+	CPLCHECK_MSG ("Cannot get the observer location");
 
 	/* If EOP are supplied, interpolate to the mean MJD */
 	double dut1 = 0, pmx = 0, pmy = 0;
@@ -491,7 +491,7 @@ cpl_error_code gravi_compute_pointing_uv (gravi_data * p2vmred_data, gravi_data 
     
 	/* If second polarisation, for SC only, duplicate [E_U,E_V,E_V,E_AZ,E_ZD] */
 	if ((npol > 1) && (type_data==GRAVI_SC)) {
-	  cpl_msg_debug (cpl_func,"Duplicate in the 2sd polarisation");
+	  cpl_msg_debug (cpl_func,"Duplicate in the 2nd polarisation");
 
 	  cpl_table * oi_vis_1 =  gravi_data_get_oi_vis (p2vmred_data, type_data, 1, npol);
 	  cpl_table_duplicate_column (oi_vis_1, "E_U", oi_vis, "E_U");
@@ -505,7 +505,7 @@ cpl_error_code gravi_compute_pointing_uv (gravi_data * p2vmred_data, gravi_data 
 
 	/* If second polarisation, duplicate [UCOORD,VCOORD] */
 	if (npol > 1) {
-	  cpl_msg_info (cpl_func,"Duplicate in the 2sd polarisation");
+	  cpl_msg_info (cpl_func,"Duplicate in the 2nd polarisation");
 
 	  cpl_table * oi_vis_1 =  gravi_data_get_oi_vis (p2vmred_data, type_data, 1, npol);
 	  cpl_table_copy_data_double (oi_vis_1, "UCOORD", cpl_table_get_data_double (oi_vis, "UCOORD"));
