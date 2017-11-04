@@ -226,12 +226,12 @@ void rotate_vector(double in[3], double angle, double axis[3], double out[3])
  */
 /*----------------------------------------------------------------------------*/
 
-cpl_error_code gravi_eop_pointing (cpl_table * input_table,
-                                   cpl_propertylist * header,
-                                   cpl_table * eop_table,
-                                   cpl_propertylist * eop_header,
-							       int save_pointing,
-							       cpl_table * array_table)
+cpl_error_code gravi_eop_pointing_uv (cpl_table * input_table,
+                                      cpl_propertylist * header,
+                                      cpl_table * eop_table,
+                                      cpl_propertylist * eop_header,
+							          int save_pointing,
+							          cpl_table * array_table)
 {
     gravi_msg_function_start(1);
     cpl_ensure_code (input_table, CPL_ERROR_NULL_INPUT);
@@ -443,7 +443,7 @@ cpl_error_code gravi_eop_pointing (cpl_table * input_table,
  */
 /*----------------------------------------------------------------------------*/
 
-cpl_error_code gravi_compute_pointing (gravi_data * p2vmred_data, gravi_data * eop_data)
+cpl_error_code gravi_compute_pointing_uv (gravi_data * p2vmred_data, gravi_data * eop_data)
 {
   gravi_msg_function_start(1);
   cpl_ensure_code (p2vmred_data, CPL_ERROR_NULL_INPUT);
@@ -465,11 +465,11 @@ cpl_error_code gravi_compute_pointing (gravi_data * p2vmred_data, gravi_data * e
 	cpl_msg_info(cpl_func, "Compute pointing for %s ",type_data==GRAVI_FT?"FT":"SC");
 
     /* Compute for this polarisation */
-    gravi_eop_pointing (oi_vis, hdr_data,
-                        (eop_data ? gravi_data_get_table_x (eop_data, 0) : NULL),
-                        (eop_data ? gravi_data_get_header (eop_data) : NULL),
-					    type_data==GRAVI_FT?0:1,
-					    oi_array);
+    gravi_eop_pointing_uv (oi_vis, hdr_data,
+                          (eop_data ? gravi_data_get_table_x (eop_data, 0) : NULL),
+                          (eop_data ? gravi_data_get_header (eop_data) : NULL),
+					      type_data==GRAVI_FT?0:1,
+					      oi_array);
 	CPLCHECK_MSG ("Cannot compute pointing");
     
 	/* Fill second polarisation */

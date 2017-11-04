@@ -31,15 +31,15 @@
                                Public prototypes
  -----------------------------------------------------------------------------*/
 
-cpl_error_code gravi_eop_pointing (cpl_table * input_table,
-                                   cpl_propertylist * header,
-                                   cpl_table * eop_table,
-                                   cpl_propertylist * eop_header,
-							       int save_pointing,
-							       cpl_table * array_table);
+cpl_error_code gravi_eop_pointing_uv (cpl_table * input_table,
+                                      cpl_propertylist * header,
+                                      cpl_table * eop_table,
+                                      cpl_propertylist * eop_header,
+							          int save_pointing,
+							          cpl_table * array_table);
     
-cpl_error_code gravi_compute_pointing (gravi_data * p2vmred_data, 
-                                       gravi_data * eop_data);
+cpl_error_code gravi_compute_pointing_uv (gravi_data * p2vmred_data, 
+                                          gravi_data * eop_data);
 
 char * gravity_eop_download_finals2000A (const char * eop_host, 
                                          const char * eop_urlpath, 
