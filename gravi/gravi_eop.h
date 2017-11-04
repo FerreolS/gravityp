@@ -39,12 +39,6 @@ cpl_error_code gravi_eop_pointing (cpl_table * input_table,
 cpl_error_code gravi_compute_pointing (gravi_data * p2vmred_data, 
                                        gravi_data * eop_data);
 
-cpl_error_code gravi_eop_uv (cpl_table * oi_vis,
-                             cpl_table * oi_array,
-                             cpl_propertylist * hdr_data,
-                             cpl_table * eop_table,
-                             cpl_propertylist * eop_header);
-
 cpl_error_code gravi_compute_uv (gravi_data * p2vmred_data, 
                                  gravi_data * eop_data);
 
