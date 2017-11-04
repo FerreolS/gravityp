@@ -242,6 +242,18 @@ cpl_error_code gravi_eop_pointing_uv (cpl_table * input_table,
     cpl_ensure_code (input_table, CPL_ERROR_NULL_INPUT);
     cpl_ensure_code (header,      CPL_ERROR_NULL_INPUT);
     
+	/* Check and announce the optional parameters */
+	if (save_pointing > 0) {
+	  cpl_msg_info (cpl_func, "Will save [E_U,E_V,E_W,E_AZ,E_ZD]");
+	}
+	int compute_uv;
+	if (array_table > 0) {
+	  cpl_msg_info (cpl_func, "Will compute [UCOORD,VCOORD]");
+	  compute_uv = 1;
+    } else {
+	  compute_uv = 0;
+    }
+	
     double t_skip = 1./24/3600, mjd0 = -1.0, mjd1 = -1.0;
     cpl_msg_info (cpl_func, "Compute pointing with full ERFA every %.2f s",t_skip*24*3600.0);
     
@@ -250,7 +262,9 @@ cpl_error_code gravi_eop_pointing_uv (cpl_table * input_table,
 	 * frame (ESO convention), whereas the UVW, calculated later on, are in
 	 * the [East,North,Up] frame. Hence the sign changes below on X and Y. */
 	double baseline[6][3];
-	if (array_table) {
+	double * uCoord;
+	double * vCoord;
+	if (compute_uv) {
       for ( int base = 0; base < 6; base ++) {
       	int tel1=0; while ( cpl_table_get (array_table, "STA_INDEX", tel1, NULL) != gravi_table_get_value (input_table, "STA_INDEX", base, 0) ) tel1++;
       	int tel2=0; while ( cpl_table_get (array_table, "STA_INDEX", tel2, NULL) != gravi_table_get_value (input_table, "STA_INDEX", base, 1) ) tel2++;
@@ -258,11 +272,6 @@ cpl_error_code gravi_eop_pointing_uv (cpl_table * input_table,
       	baseline[base][1] = -(gravi_table_get_value (array_table, "STAXYZ", tel2, 1) - gravi_table_get_value (array_table, "STAXYZ", tel1, 1));
       	baseline[base][2] = +(gravi_table_get_value (array_table, "STAXYZ", tel2, 2) - gravi_table_get_value (array_table, "STAXYZ", tel1, 2));
       }
-    }
-	
-	double * uCoord;
-	double * vCoord;
-	if (array_table) {
       uCoord = cpl_table_get_data_double (input_table, "UCOORD");
 	  vCoord = cpl_table_get_data_double (input_table, "VCOORD");
     }
@@ -344,6 +353,10 @@ cpl_error_code gravi_eop_pointing_uv (cpl_table * input_table,
 	double eWo_up[3], eWo_um[3], eWo_vp[3], eWo_vm[3];
 	double eUo[3], eVo[3], eWo[3], eAZo[3], eZDo[3];
 	double ez[3] = {0.0, 0.0, 1.0}; // Zenith direction in ENU frame
+	double pressure = 0.0; // Pressure at zero to disable atmospheric refraction
+	double temperature = 0.0;
+	double humidity = 0.0;
+	double wavelength = 0.0;
 
 	/* Loop on rows. the baselines are not assumed to share the
 	 * same MJD since this function is called after the averaging */
@@ -357,8 +370,10 @@ cpl_error_code gravi_eop_pointing_uv (cpl_table * input_table,
 	  if (mjd[row] != mjd1 ) {
 
 		if ( fabs (mjd[row]-mjd0) > t_skip ) {
-		  eraApco13 (2400000.5, mjd[row], dut1, lon, lat, elev, pmx/3600.0*CPL_MATH_RAD_DEG,
-                     pmy/3600.0*CPL_MATH_RAD_DEG, 0.0, 0.0, 0.0, 0.0, &astrom, &eo);
+		  eraApco13 (2400000.5, mjd[row], dut1, lon, lat, elev,
+			         pmx/3600.0*CPL_MATH_RAD_DEG, pmy/3600.0*CPL_MATH_RAD_DEG,
+					 pressure, temperature, humidity, wavelength,
+					 &astrom, &eo);
 		  mjd0 = mjd[row];
 		}
 		else
@@ -418,8 +433,8 @@ cpl_error_code gravi_eop_pointing_uv (cpl_table * input_table,
 	    }
       }
 	  
-	  if (array_table) {
- 	    /* Project physical baseline into u,v */
+	  /* If requested, compute the projected baseline [UCOORD,VCOORD] */
+	  if (compute_uv) {
 	    int base = row % 6;
 	    uCoord[row] = eUo[0] * baseline[base][0] + eUo[1] * baseline[base][1] + eUo[2] * baseline[base][2];
 	    vCoord[row] = eVo[0] * baseline[base][0] + eVo[1] * baseline[base][1] + eVo[2] * baseline[base][2];  
