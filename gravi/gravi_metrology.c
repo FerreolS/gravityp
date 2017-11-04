@@ -2290,8 +2290,8 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
 	}
 
 	/* implementation of Julien's formula */
-	/* met_pos_az = - [HIERARCH ESO MET AT<tel> REC<diode>X] */
-	/* met_pos_zd = + [HIERARCH ESO MET AT<tel> REC<diode>Y] */
+	/* met_pos_az = [HIERARCH ESO MET AT<tel> REC<diode>X] */
+	/* met_pos_zd = [HIERARCH ESO MET AT<tel> REC<diode>Y] */
 	/* sep_U = [ESO INS SOBJ X] */
 	/* sep_V = [ESO INS SOBJ Y] */
 	/* The de-projection is the following scalar product: */
@@ -2336,8 +2336,8 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
 	for (int tel = 0; tel < ntel; tel++) {
         for (cpl_size row = 0; row < nrow_met; row++) {
           for (int diode = 0; diode < ndiode; diode++) {
-	      met_pos_az = - recx[tel][diode]; /* in mm */
-	      met_pos_zd = + recy[tel][diode]; /* in mm */
+	      met_pos_az = recx[tel][diode]; /* in mm */
+	      met_pos_zd = recy[tel][diode]; /* in mm */
           
 	      /* Filling vectors of Juliens formula */
 	      cpl_vector_set (vector1, 0, met_pos_az * cpl_array_get (E_AZ[row*ntel+tel], 0, NULL));
