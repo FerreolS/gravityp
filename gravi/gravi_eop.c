@@ -191,52 +191,21 @@ void eraAtcoq(double rc, double dc, double pmr, double pmd, double px, double rv
     /* Transform from Celestial to Intermediate */
     eraAtciq (rc, dc, pmr, pmd, px, rv, astrom, &ri, &di);
 
-    /* Transform Intermediate to Observed. */
+    /* Transform from Intermediate to Observed. */
     eraAtioq (ri, di, astrom, &aob, &zob, &hob, &dob, &rob);
 
     /* Convert from equatorial to cartesian */
-    enuob[0] = sin(zob) * sin(aob);
-    enuob[1] = sin(zob) * cos(aob);
-    enuob[2] = cos(zob);
+	eraS2c(CPL_MATH_PI/2.0-aob, CPL_MATH_PI/2.0-zob, enuob);
 }
 
-void dtp2s(double xi, double eta, double raz, double decz, double *ra, double *dec)
+void rotate_vector(double in[3], double angle, double axis[3], double out[3])
 {
-    double sdecz = sin(decz);
-    double cdecz = cos(decz);
-    double denom = cdecz - eta * sdecz;
-    double d = atan2(xi, denom) + raz;
-    *ra = fmod(d, 2.0 * CPL_MATH_PI);
-    *dec = atan2(sdecz + eta * cdecz, sqrt(xi * xi + denom * denom));
+	double rv[3];
+	double rm[3][3];
+	eraSxp(angle, axis, rv);
+	eraRv2m(rv, rm);
+	eraRxp(rm, in, out);
 }
-
-void difference(double x[3], double y[3], double z[3])
-{
-    for (int i=0; i<3; i++) {
-	  z[i] = x[i] - y[i];
-    }
-}
-
-void multiply(double xyz[3], double factor)
-{
-    xyz[0] *= factor;
-    xyz[1] *= factor;
-    xyz[2] *= factor;
-}
-
-void normalize(double xyz[3])
-{
-    double norm = sqrt(xyz[0]*xyz[0] + xyz[1]*xyz[1] + xyz[2]*xyz[2]);
-    multiply (xyz, 1.0/norm);
-}
-
-void cross(double x[3], double y[3], double z[3])
-{
-    z[0] = x[1] * y[2] - x[2] * y[1];
-    z[1] = x[2] * y[0] - x[0] * y[2];
-    z[2] = x[0] * y[1] - x[1] * y[0];
-}
-
 
 /*----------------------------------------------------------------------------*/
 /**
@@ -247,11 +216,13 @@ void cross(double x[3], double y[3], double z[3])
  * @param eop_table:    table containing the EOP pameters
  * @param eop_header:   header of EOP table
  * 
- * Compute the pointing direction in Observed coordinate for every frames of
- * the SC, so that the real-time projected baseline can be recomputed easily
- * off-line. [e_u, e_v, e_w] are the unitary vectors of the uv-plane
- * on the local coordinates. These quantities are stored as new column in the
- * OI_VIS tables of the SC.
+ * For each DIT of the input table, compute [E_U,E_V,E_W]_Obs as the
+ * transformation into Observed reference frame of the orthonormal
+ * [E_U,E_V,E_W]_ICRS defined in the ICRS.
+ * This way, the real-time projected baseline can be recomputed easily off-line.
+ * [E_U,E_V,E_W]_Obs does not form an orthonormal basis, due to the effects of
+ * precession, nutation, aberration...
+ * The quantities [E_U,E_V,E_W]_Obs are stored as new column in input table.
  */
 /*----------------------------------------------------------------------------*/
 
@@ -300,49 +271,59 @@ cpl_error_code gravi_eop_pointing (cpl_table * input_table,
         cpl_msg_warning (cpl_func, "No EOP_PARAM. Use EOP and DUT=0.0s");
     }
 
-	/* We use the FT coordinate for all uv coordinates */
-	double raep = gravi_pfits_get_mid_raep (header); // [rad]
-	double decp = gravi_pfits_get_mid_decep (header); // [rad]
-	double pmra   = gravi_pfits_get_pmra (header) * CPL_MATH_RAD_DEG / 3600.0 / cos(decp); // dRA/dt, not cos(Dec)xdRA/dt [rad/year]
-	double pmdec  = gravi_pfits_get_pmdec (header) * CPL_MATH_RAD_DEG / 3600.0; // dDec/dt [rad/year]
+	/* We use the mid-point between FT and SC to compute the UV coordinates */
+	double rc  = gravi_pfits_get_mid_raep  (header); // [rad]
+	double dc  = gravi_pfits_get_mid_decep (header); // [rad]
+	double pmr = gravi_pfits_get_pmra  (header) * CPL_MATH_RAD_DEG / 3600.0 / cos(dc); // dRA/dt, not cos(Dec)xdRA/dt [rad/year]
+	double pmd = gravi_pfits_get_pmdec (header) * CPL_MATH_RAD_DEG / 3600.0; // dDec/dt [rad/year]
 	double parallax = gravi_pfits_get_plx (header); // [as]
 	double sysvel = 0.0;
 	CPLCHECK_MSG ("Cannot get the header data");
 
+	/* Create (eU,eV,eW) in the ICRS */
+	double eUc[3], eVc[3], eWc[3], eZc[3], norm;
+	eraS2c(rc, dc, eWc);  // eW is the cartesian unit vector associated to the (rc,dc) coordinates
+	eraS2c(0.0, CPL_MATH_PI/2.0, eZc);  // eZc is the unit vector to the ICRS pole
+	eraPxp(eZc, eWc, eUc);  // eUc is the cross product of eZc and eWc
+	eraPn(eUc, &norm, eUc);  // eUc is normalized to a unit vector
+	eraPxp(eWc, eUc, eVc);  // eWc is the cross product of eWc and eUc
+	
+	/* Create 10 arcsec cardinal asterism around eWc */
+	double eps = 10.0 / 3600.0 * CPL_MATH_RAD_DEG; // 10 arcsec has been chosen for optimal accuracy
+	double eWc_up[3], eWc_um[3], eWc_vp[3], eWc_vm[3];
+	rotate_vector(eWc, -eps, eVc, eWc_up);
+	rotate_vector(eWc, +eps, eVc, eWc_um);
+	rotate_vector(eWc, +eps, eUc, eWc_vp);
+	rotate_vector(eWc, -eps, eUc, eWc_vm);
+	double rc_up, dc_up, rc_um, dc_um, rc_vp, dc_vp, rc_vm, dc_vm;
+	eraC2s(eWc_up, &rc_up, &dc_up);
+	eraC2s(eWc_um, &rc_um, &dc_um);
+	eraC2s(eWc_vp, &rc_vp, &dc_vp);
+	eraC2s(eWc_vm, &rc_vm, &dc_vm);
+
 	/* Allocate memory for the tmp computations */
 	eraASTROM astrom;
-	double eo, rcUp, dcUp, rcUm, dcUm, rcVp, dcVp, rcVm, dcVm;
-	double enuobUp[3], enuobUm[3], enuobVp[3], enuobVm[3];
+	double eo;
+	double eWo_up[3], eWo_um[3], eWo_vp[3], eWo_vm[3];
 	double ez[3] = {0.0, 0.0, 1.0}; // Zenith direction in ENU frame
-
-	/* Step for finite difference, 10 arcsec chosen for optimal accuracy */
-	double eps = 10.0 / 3600.0 * CPL_MATH_RAD_DEG; // [rad]
-
-	/* Prepare centered finite differences
-	 * eU corresponds to +RA
-	 * eV corresponds to +DEC */
-	dtp2s (+eps, 0.0, raep, decp, &rcUp, &dcUp);
-	dtp2s (-eps, 0.0, raep, decp, &rcUm, &dcUm);
-	dtp2s (0.0, +eps, raep, decp, &rcVp, &dcVp);
-	dtp2s (0.0, -eps, raep, decp, &rcVm, &dcVm);
 
 	/* Loop on rows. the baselines are not assumed to share the
 	 * same MJD since this function is called after the averaging */
 	cpl_size n_row = cpl_table_get_nrow (input_table);
 	for (cpl_size row = 0 ; row < n_row ; row++) {
 
-	  /* Transformation from ICRS to Observed (neglect refraction, all at zero)
-	   * Update precession/nudation every t_skip, otherwise rotate earth only
+	  /* Transformation from ICRS to Observed (neglecting refraction with atmospheric pressure at zero)
+	   * Full transformation update every t_skip, otherwise rotate earth only
 	   * If the time is strickly the same as previous row, we skip this computation */
 
 	  if (mjd[row] != mjd1 ) {
 
 		/* Allocate memory */
-		double * eu = cpl_malloc (sizeof(double) * 3);
-		double * ev = cpl_malloc (sizeof(double) * 3);
-		double * ew = cpl_malloc (sizeof(double) * 3);
-		double * eaz = cpl_malloc (sizeof(double) * 3);
-		double * ezd = cpl_malloc (sizeof(double) * 3);
+		double * eUo  = cpl_malloc (sizeof(double) * 3);
+		double * eVo  = cpl_malloc (sizeof(double) * 3);
+		double * eWo  = cpl_malloc (sizeof(double) * 3);
+		double * eAZo = cpl_malloc (sizeof(double) * 3);
+		double * eZDo = cpl_malloc (sizeof(double) * 3);
 
 		if ( fabs (mjd[row]-mjd0) > t_skip ) {
 		  eraApco13 (2400000.5, mjd[row], dut1, lon, lat, elev, pmx/3600.0*CPL_MATH_RAD_DEG,
@@ -352,37 +333,36 @@ cpl_error_code gravi_eop_pointing (cpl_table * input_table,
 		else
 		  eraAper13 (2400000.5, mjd[row] + dut1/(24.0*3600.0), &astrom);
 
-		/* Transform from celestial to intermediate, compute eU */
-		eraAtcoq (rcUp, dcUp, pmra, pmdec, parallax, sysvel, &astrom, enuobUp);
-		eraAtcoq (rcUm, dcUm, pmra, pmdec, parallax, sysvel, &astrom, enuobUm);
-		difference (enuobUp, enuobUm, eu);
-		normalize (eu);
+		/* Transform from celestial to observed the pointing direction and the cardinal asterism */
+		eraAtcoq (rc   , dc   , pmr, pmd, parallax, sysvel, &astrom, eWo   );
+		eraAtcoq (rc_up, dc_up, pmr, pmd, parallax, sysvel, &astrom, eWo_up);
+		eraAtcoq (rc_um, dc_um, pmr, pmd, parallax, sysvel, &astrom, eWo_um);
+		eraAtcoq (rc_vp, dc_vp, pmr, pmd, parallax, sysvel, &astrom, eWo_vp);
+		eraAtcoq (rc_vm, dc_vm, pmr, pmd, parallax, sysvel, &astrom, eWo_vm);
 
-		/* Transform from celestial to intermediate, compute eV */
-		eraAtcoq (rcVp, dcVp, pmra, pmdec, parallax, sysvel, &astrom, enuobVp);
-		eraAtcoq (rcVm, dcVm, pmra, pmdec, parallax, sysvel, &astrom, enuobVm);
-		difference (enuobVp, enuobVm, ev);
-		normalize (ev);
-
-		/* Transform from celestial to intermediate, compute eW */
-		eraAtcoq (raep, decp, pmra, pmdec, parallax, sysvel, &astrom, ew);
-		multiply (ew, -1.0);
-
+		/* Compute the observed (eUo,eVo,eWo) reference frame */
+		eraPxp(eWo_up, eWo_um, eUo);
+		eraPxp(eWo, eUo, eUo);
+		eraSxp(1./(2.0*eps), eUo, eUo);
+		eraPxp(eWo_vp, eWo_vm, eVo);
+		eraPxp(eWo, eVo, eVo);
+		eraSxp(1./(2.0*eps), eVo, eVo);
+		
 		/* Using pointing and zenith directions, compute eAz */
-		cross (ew, ez, eaz);
-		normalize (eaz);
+		eraPxp(eWo, ez, eAZo);
+		eraPn(eAZo, &norm, eAZo);
 
 		/* Using pointing and azimuth directions, compute eZd */
-		cross (ew, eaz, ezd);
-		normalize (ezd);
+		eraPxp(eWo, eAZo, eZDo);
+		eraPn(eZDo, &norm, eZDo);
 
 		/* Wrap into vectors. It makes the data valid, and is the fastest
 		 * This and the duplication take most of the time of this function */
-		p_u[row] = cpl_array_wrap_double (eu, 3);
-		p_v[row] = cpl_array_wrap_double (ev, 3);
-		p_w[row] = cpl_array_wrap_double (ew, 3);
-		p_az[row] = cpl_array_wrap_double (eaz, 3);
-		p_zd[row] = cpl_array_wrap_double (ezd, 3);
+		p_u[row] = cpl_array_wrap_double (eUo, 3);
+		p_v[row] = cpl_array_wrap_double (eVo, 3);
+		p_w[row] = cpl_array_wrap_double (eWo, 3);
+		p_az[row] = cpl_array_wrap_double (eAZo, 3);
+		p_zd[row] = cpl_array_wrap_double (eZDo, 3);
 
 	  } else {
 		p_u[row] = cpl_array_duplicate (p_u[row-1]);
