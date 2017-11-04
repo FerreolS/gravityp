@@ -433,11 +433,15 @@ cpl_error_code gravi_eop_pointing_uv (cpl_table * input_table,
 	    }
       }
 	  
-	  /* If requested, compute the projected baseline [UCOORD,VCOORD] */
+	  /* If requested, compute the projected baseline [UCOORD,VCOORD]
+	   * Note: The baseline length is corrected by the air refractive index
+	   *       at the HeNe wavelength and Paranal pressure. We want to use
+	   *       the vacuum baseline. */
+	  double n_air = 1.0002028;
 	  if (compute_uv) {
 	    int base = row % 6;
-	    uCoord[row] = eUo[0] * baseline[base][0] + eUo[1] * baseline[base][1] + eUo[2] * baseline[base][2];
-	    vCoord[row] = eVo[0] * baseline[base][0] + eVo[1] * baseline[base][1] + eVo[2] * baseline[base][2];  
+	    uCoord[row] = (eUo[0] * baseline[base][0] + eUo[1] * baseline[base][1] + eUo[2] * baseline[base][2])/n_air;
+	    vCoord[row] = (eVo[0] * baseline[base][0] + eVo[1] * baseline[base][1] + eVo[2] * baseline[base][2])/n_air;
       }
 
 	  mjd1 = mjd[row];
