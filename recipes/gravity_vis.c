@@ -735,9 +735,6 @@ static int gravity_vis(cpl_frameset * frameset,
         gravi_compute_pointing (p2vmred_data, eop_map);
 		CPLCHECK_CLEAN ("Cannot compute pointing");
 
-		gravi_compute_uv (p2vmred_data, eop_map);
-		CPLCHECK_CLEAN ("Cannot compute uv");
-
 		/* Compute the QC0 about tau0 from piezo signals */
 		gravi_compute_tau0 (p2vmred_data);
 

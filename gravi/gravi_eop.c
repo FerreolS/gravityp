@@ -229,7 +229,9 @@ void rotate_vector(double in[3], double angle, double axis[3], double out[3])
 cpl_error_code gravi_eop_pointing (cpl_table * input_table,
                                    cpl_propertylist * header,
                                    cpl_table * eop_table,
-                                   cpl_propertylist * eop_header)
+                                   cpl_propertylist * eop_header,
+							       int save_pointing,
+							       cpl_table * array_table)
 {
     gravi_msg_function_start(1);
     cpl_ensure_code (input_table, CPL_ERROR_NULL_INPUT);
@@ -238,22 +240,52 @@ cpl_error_code gravi_eop_pointing (cpl_table * input_table,
     double t_skip = 1./24/3600, mjd0 = -1.0, mjd1 = -1.0;
     cpl_msg_info (cpl_func, "Compute pointing with full ERFA every %.2f s",t_skip*24*3600.0);
     
+	/* Loop on bases to compute the physical 3D baseline as T2-T1 [m]
+	 * Note: The telescope locations STAXYZ are given in the [West,South,Up]
+	 * frame (ESO convention), whereas the UVW, calculated later on, are in
+	 * the [East,North,Up] frame. Hence the sign changes below on X and Y. */
+	double baseline[6][3];
+	if (array_table) {
+      for ( int base = 0; base < 6; base ++) {
+      	int tel1=0; while ( cpl_table_get (array_table, "STA_INDEX", tel1, NULL) != gravi_table_get_value (input_table, "STA_INDEX", base, 0) ) tel1++;
+      	int tel2=0; while ( cpl_table_get (array_table, "STA_INDEX", tel2, NULL) != gravi_table_get_value (input_table, "STA_INDEX", base, 1) ) tel2++;
+      	baseline[base][0] = -(gravi_table_get_value (array_table, "STAXYZ", tel2, 0) - gravi_table_get_value (array_table, "STAXYZ", tel1, 0));
+      	baseline[base][1] = -(gravi_table_get_value (array_table, "STAXYZ", tel2, 1) - gravi_table_get_value (array_table, "STAXYZ", tel1, 1));
+      	baseline[base][2] = +(gravi_table_get_value (array_table, "STAXYZ", tel2, 2) - gravi_table_get_value (array_table, "STAXYZ", tel1, 2));
+      }
+    }
+	
+	double * uCoord;
+	double * vCoord;
+	if (array_table) {
+      uCoord = cpl_table_get_data_double (input_table, "UCOORD");
+	  vCoord = cpl_table_get_data_double (input_table, "VCOORD");
+    }
+  
     /* Read UTC as MJD */
     double *mjd = cpl_table_get_data_double (input_table, "MJD");
     double mean_mjd = cpl_table_get_column_mean (input_table, "MJD");
     
 	/* Create new columns */
-	cpl_table_new_column_array (input_table, "E_U", CPL_TYPE_DOUBLE, 3);
-	cpl_table_new_column_array (input_table, "E_V", CPL_TYPE_DOUBLE, 3);
-	cpl_table_new_column_array (input_table, "E_W", CPL_TYPE_DOUBLE, 3);
-	cpl_table_new_column_array (input_table, "E_AZ", CPL_TYPE_DOUBLE, 3);
-	cpl_table_new_column_array (input_table, "E_ZD", CPL_TYPE_DOUBLE, 3);
-	cpl_array ** p_u = cpl_table_get_data_array (input_table,"E_U");
-	cpl_array ** p_v = cpl_table_get_data_array (input_table,"E_V");
-	cpl_array ** p_w = cpl_table_get_data_array (input_table,"E_W");
-	cpl_array ** p_az = cpl_table_get_data_array (input_table,"E_AZ");
-	cpl_array ** p_zd = cpl_table_get_data_array (input_table,"E_ZD");
-    CPLCHECK_MSG ("Cannot create data");
+	cpl_array ** p_u;
+	cpl_array ** p_v;
+	cpl_array ** p_w;
+	cpl_array ** p_az;
+	cpl_array ** p_zd;
+	if (save_pointing) {
+		cpl_msg_info (cpl_func, "Saving E_U, E_V, E_W, E_AZ, E_ZD");
+	    cpl_table_new_column_array (input_table, "E_U", CPL_TYPE_DOUBLE, 3);
+	    cpl_table_new_column_array (input_table, "E_V", CPL_TYPE_DOUBLE, 3);
+	    cpl_table_new_column_array (input_table, "E_W", CPL_TYPE_DOUBLE, 3);
+	    cpl_table_new_column_array (input_table, "E_AZ", CPL_TYPE_DOUBLE, 3);
+	    cpl_table_new_column_array (input_table, "E_ZD", CPL_TYPE_DOUBLE, 3);
+	    p_u = cpl_table_get_data_array (input_table,"E_U");
+	    p_v = cpl_table_get_data_array (input_table,"E_V");
+	    p_w = cpl_table_get_data_array (input_table,"E_W");
+	    p_az = cpl_table_get_data_array (input_table,"E_AZ");
+	    p_zd = cpl_table_get_data_array (input_table,"E_ZD");
+        CPLCHECK_MSG ("Cannot create data");
+    }
 
 	/* Checked by J. Woillez */
 	double elev = gravi_pfits_get_geoelev (header); // Height in [m]
@@ -305,6 +337,7 @@ cpl_error_code gravi_eop_pointing (cpl_table * input_table,
 	eraASTROM astrom;
 	double eo;
 	double eWo_up[3], eWo_um[3], eWo_vp[3], eWo_vm[3];
+	double eUo[3], eVo[3], eWo[3], eAZo[3], eZDo[3];
 	double ez[3] = {0.0, 0.0, 1.0}; // Zenith direction in ENU frame
 
 	/* Loop on rows. the baselines are not assumed to share the
@@ -317,13 +350,6 @@ cpl_error_code gravi_eop_pointing (cpl_table * input_table,
 	   * If the time is strickly the same as previous row, we skip this computation */
 
 	  if (mjd[row] != mjd1 ) {
-
-		/* Allocate memory */
-		double * eUo  = cpl_malloc (sizeof(double) * 3);
-		double * eVo  = cpl_malloc (sizeof(double) * 3);
-		double * eWo  = cpl_malloc (sizeof(double) * 3);
-		double * eAZo = cpl_malloc (sizeof(double) * 3);
-		double * eZDo = cpl_malloc (sizeof(double) * 3);
 
 		if ( fabs (mjd[row]-mjd0) > t_skip ) {
 		  eraApco13 (2400000.5, mjd[row], dut1, lon, lat, elev, pmx/3600.0*CPL_MATH_RAD_DEG,
@@ -355,22 +381,44 @@ cpl_error_code gravi_eop_pointing (cpl_table * input_table,
 		/* Using pointing and azimuth directions, compute eZd */
 		eraPxp(eWo, eAZo, eZDo);
 		eraPn(eZDo, &norm, eZDo);
-
-		/* Wrap into vectors. It makes the data valid, and is the fastest
-		 * This and the duplication take most of the time of this function */
-		p_u[row] = cpl_array_wrap_double (eUo, 3);
-		p_v[row] = cpl_array_wrap_double (eVo, 3);
-		p_w[row] = cpl_array_wrap_double (eWo, 3);
-		p_az[row] = cpl_array_wrap_double (eAZo, 3);
-		p_zd[row] = cpl_array_wrap_double (eZDo, 3);
-
-	  } else {
-		p_u[row] = cpl_array_duplicate (p_u[row-1]);
-		p_v[row] = cpl_array_duplicate (p_v[row-1]);
-		p_w[row] = cpl_array_duplicate (p_w[row-1]);
-		p_az[row] = cpl_array_duplicate (p_az[row-1]);
-		p_zd[row] = cpl_array_duplicate (p_zd[row-1]);
 	  }
+
+      if (save_pointing) {
+	    if (mjd[row] != mjd1 ) {
+		  double * eU = cpl_malloc (sizeof(double) * 3);
+		  double * eV = cpl_malloc (sizeof(double) * 3);
+		  double * eW = cpl_malloc (sizeof(double) * 3);
+		  double * eAZ = cpl_malloc (sizeof(double) * 3);
+		  double * eZD = cpl_malloc (sizeof(double) * 3);
+		  for ( cpl_size c = 0; c < 3; c++) {
+			eU[c] = eUo[c];
+			eV[c] = eVo[c];
+			eW[c] = eWo[c];
+			eAZ[c] = eAZo[c];
+			eZD[c] = eZDo[c];
+		  }
+          /* Wrap into vectors. It makes the data valid, and is the fastest
+		   * This and the duplication take most of the time of this function */
+          p_u[row]  = cpl_array_wrap_double (eU,  3);
+          p_v[row]  = cpl_array_wrap_double (eV,  3);
+          p_w[row]  = cpl_array_wrap_double (eW,  3);
+          p_az[row] = cpl_array_wrap_double (eAZ, 3);
+          p_zd[row] = cpl_array_wrap_double (eZD, 3);
+	    } else {
+          p_u[row]  = cpl_array_duplicate (p_u [row-1]);
+          p_v[row]  = cpl_array_duplicate (p_v [row-1]);
+          p_w[row]  = cpl_array_duplicate (p_w [row-1]);
+          p_az[row] = cpl_array_duplicate (p_az[row-1]);
+          p_zd[row] = cpl_array_duplicate (p_zd[row-1]);
+	    }
+      }
+	  
+	  if (array_table) {
+ 	    /* Project physical baseline into u,v */
+	    int base = row % 6;
+	    uCoord[row] = eUo[0] * baseline[base][0] + eUo[1] * baseline[base][1] + eUo[2] * baseline[base][2];
+	    vCoord[row] = eVo[0] * baseline[base][0] + eVo[1] * baseline[base][1] + eVo[2] * baseline[base][2];  
+      }
 
 	  mjd1 = mjd[row];
 	  CPLCHECK_MSG ("Cannot run the ERFA transform");
@@ -403,6 +451,9 @@ cpl_error_code gravi_compute_pointing (gravi_data * p2vmred_data, gravi_data * e
   /* Get the header */
   cpl_propertylist * hdr_data = gravi_data_get_header (p2vmred_data);
 
+  /* Get the OI_ARRAY table */
+  cpl_table * oi_array = gravi_data_get_table (p2vmred_data, GRAVI_OI_ARRAY_EXT);
+
   /* For each type of data SC / FT */
   int type_data, ntype_data = 2;
   for (type_data = 0; type_data < ntype_data ; type_data ++) {
@@ -416,11 +467,13 @@ cpl_error_code gravi_compute_pointing (gravi_data * p2vmred_data, gravi_data * e
     /* Compute for this polarisation */
     gravi_eop_pointing (oi_vis, hdr_data,
                         (eop_data ? gravi_data_get_table_x (eop_data, 0) : NULL),
-                        (eop_data ? gravi_data_get_header (eop_data) : NULL));
+                        (eop_data ? gravi_data_get_header (eop_data) : NULL),
+					    type_data==GRAVI_FT?0:1,
+					    oi_array);
 	CPLCHECK_MSG ("Cannot compute pointing");
     
 	/* Fill second polarisation */
-	if (npol > 1) {
+	if ((npol > 1) && (type_data==GRAVI_SC)) {
 	  cpl_msg_debug (cpl_func,"Duplicate in the 2sd polarisation");
 
 	  cpl_table * oi_vis_1 =  gravi_data_get_oi_vis (p2vmred_data, type_data, 1, npol);
@@ -432,77 +485,6 @@ cpl_error_code gravi_compute_pointing (gravi_data * p2vmred_data, gravi_data * e
 
 	  CPLCHECK_MSG ("Cannot duplicate");
 	}
-
-  } /* End loop on FT/SC */
-
-  gravi_msg_function_exit(1);
-  return CPL_ERROR_NONE;
-}
-
-/*----------------------------------------------------------------------------*/
-/**
- * @brief Compute the UCOORD and VCOORD (uv)
- * 
- * @param p2vmred_data:   input/output data
- * @param eop_data:       data containing the EOP pameters
- * 
- * This function re-computes the UCOORD and VCOORD of the OI_VIS
- * tables of the SC and FT.
- */
-/*----------------------------------------------------------------------------*/
-
-cpl_error_code gravi_compute_uv (gravi_data * p2vmred_data, gravi_data * eop_data)
-{
-  gravi_msg_function_start(1);
-  cpl_ensure_code (p2vmred_data, CPL_ERROR_NULL_INPUT);
-
-  /* Get the header */
-  cpl_propertylist * hdr_data = gravi_data_get_header (p2vmred_data);
-  cpl_table * oi_array = gravi_data_get_table (p2vmred_data,GRAVI_OI_ARRAY_EXT);
-
-  /* For each type of data SC / FT */
-  int type_data, ntype_data = 2;
-  for (type_data = 0; type_data < ntype_data ; type_data ++) {
-
-	int pol = 0, npol = gravi_pfits_get_pola_num (hdr_data, type_data);
-	cpl_table * oi_vis =  gravi_data_get_oi_vis (p2vmred_data, type_data, pol, npol);
-
-	cpl_msg_info(cpl_func, "Compute uv for %s",type_data==GRAVI_FT?"FT":"SC");
-
-    /* Compute for this polarisation */
-	/* Loop on bases to compute the physical 3D baseline as T2-T1 [m]
-     * Note: The telescope locations STAXYZ are given in the [West,South,Up]
-     * frame (ESO convention), whereas the UVW, calculated later on, are in
-     * the [East,North,Up] frame. Hence the sign changes below on X and Y. */
-    double baseline[6][3];
-    for ( int base = 0; base < 6; base ++) {
-  	  int tel1=0; while ( cpl_table_get (oi_array, "STA_INDEX", tel1, NULL) != gravi_table_get_value (oi_vis, "STA_INDEX", base, 0) ) tel1++;
-  	  int tel2=0; while ( cpl_table_get (oi_array, "STA_INDEX", tel2, NULL) != gravi_table_get_value (oi_vis, "STA_INDEX", base, 1) ) tel2++;
-  	  baseline[base][0] = -(gravi_table_get_value (oi_array, "STAXYZ", tel2, 0) - gravi_table_get_value (oi_array, "STAXYZ", tel1, 0));
-  	  baseline[base][1] = -(gravi_table_get_value (oi_array, "STAXYZ", tel2, 1) - gravi_table_get_value (oi_array, "STAXYZ", tel1, 1));
-  	  baseline[base][2] = +(gravi_table_get_value (oi_array, "STAXYZ", tel2, 2) - gravi_table_get_value (oi_array, "STAXYZ", tel1, 2));
-    }
-    
-    double * uCoord = cpl_table_get_data_double (oi_vis, "UCOORD");
-    double * vCoord = cpl_table_get_data_double (oi_vis, "VCOORD");
-    cpl_array * eU;
-	cpl_array * eV;
-	
-    /* Loop on rows. */
-	int nv;
-    cpl_size n_row = cpl_table_get_nrow (oi_vis);
-    for (cpl_size row = 0 ; row < n_row ; row++) {
-        
-      const cpl_array * eU = cpl_table_get_array (oi_vis, "E_U", row);
-      const cpl_array * eV = cpl_table_get_array (oi_vis, "E_V", row);
-
-   	  /* Project physical baseline into u,v */
-  	  int base = row % 6;
-  	  uCoord[row] = cpl_array_get_double(eU,0,&nv) * baseline[base][0] + cpl_array_get_double(eU,1,&nv) * baseline[base][1] + cpl_array_get_double(eU,2,&nv) * baseline[base][2];
-  	  vCoord[row] = cpl_array_get_double(eV,0,&nv) * baseline[base][0] + cpl_array_get_double(eV,1,&nv) * baseline[base][1] + cpl_array_get_double(eV,2,&nv) * baseline[base][2];
-        
-    } /* End loop on rows */
-    
 
 	/* Copy second polarisation. Assume they have same uv-plane */
 	if (npol > 1) {
