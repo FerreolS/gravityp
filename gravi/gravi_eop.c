@@ -209,20 +209,25 @@ void rotate_vector(double in[3], double angle, double axis[3], double out[3])
 
 /*----------------------------------------------------------------------------*/
 /**
- * @brief Compute the pointing direction
+ * @brief Compute the pointing directions and projected baselines
  * 
- * @param input_table   input/output data
- * @param header        input header
- * @param eop_table:    table containing the EOP pameters
- * @param eop_header:   header of EOP table
+ * @param input_table    input/output data
+ * @param header         input header
+ * @param eop_table:     table containing the EOP pameters
+ * @param eop_header:    header of EOP table
+ * @param save_pointing: save (E_U,E_V,E_V,E_AZ,E_ZD) is specified
+ * @param array_table:   OI_ARRAY table (optional)
  * 
- * For each DIT of the input table, compute [E_U,E_V,E_W]_Obs as the
+ * For each DIT of the input table, compute [E_U,E_V,E_W,E_AZ,E_ZD]_Obs as the
  * transformation into Observed reference frame of the orthonormal
- * [E_U,E_V,E_W]_ICRS defined in the ICRS.
+ * [E_U,E_V,E_W,E_AZ,E_ZD]_ICRS defined in the ICRS.
  * This way, the real-time projected baseline can be recomputed easily off-line.
- * [E_U,E_V,E_W]_Obs does not form an orthonormal basis, due to the effects of
- * precession, nutation, aberration...
- * The quantities [E_U,E_V,E_W]_Obs are stored as new column in input table.
+ * [E_U,E_V,E_W,E_AZ,E_ZD]_Obs does not form an orthonormal basis,
+ * due to the effects of precession, nutation, aberration...
+ * The quantities [E_U,E_V,E_W,E_AZ,E_ZD]_Obs are stored as new columns
+ * in the input table, is save_pointing is specified.
+ * If the array_table is specified, the projected baseline [UCOORD,VCOORD]
+ * is calculated.
  */
 /*----------------------------------------------------------------------------*/
 
@@ -430,16 +435,13 @@ cpl_error_code gravi_eop_pointing_uv (cpl_table * input_table,
 
 /*----------------------------------------------------------------------------*/
 /**
- * @brief Compute the pointing direction
+ * @brief Compute the pointing directions and projected baselines in OI_VIS
  * 
  * @param p2vmred_data:   input/output data
  * @param eop_data:       data containing the EOP pameters
  * 
- * Compute the pointing direction in Observed coordinate for every frames of
- * the SC, so that the real-time projected baseline can be recomputed easily
- * off-line. [e_u, e_v, e_w] are the unitary vectors of the uv-plane
- * on the local coordinates. These quantities are stored as new column in the
- * OI_VIS tables of the SC.
+ * Compute the projected baselines [UCOORD,VCOORD] for FT and SC
+ * Save the pointing directions [E_U,E_V,E_V,E_AZ,E_ZD] for the SC only
  */
 /*----------------------------------------------------------------------------*/
 
