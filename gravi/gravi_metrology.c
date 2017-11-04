@@ -2840,7 +2840,7 @@ cpl_error_code gravi_metrology_reduce (gravi_data * data,
 	vismet_table = gravi_metrology_create (metrology_table, header);
 	CPLCHECK_MSG ("Cannot create vismet_table");
 
-    /* Compute the pointing */
+    /* Compute pointing directions, but do not calculate projected baseline */
     int save_pointing = 1;
     gravi_eop_pointing_uv (vismet_table, header,
                           (eop_data ? gravi_data_get_table_x (eop_data, 0) : NULL),

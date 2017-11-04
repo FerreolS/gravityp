@@ -257,10 +257,10 @@ cpl_error_code gravi_eop_pointing_uv (cpl_table * input_table,
     double t_skip = 1./24/3600, mjd0 = -1.0, mjd1 = -1.0;
     cpl_msg_info (cpl_func, "Compute pointing with full ERFA every %.2f s",t_skip*24*3600.0);
     
-	/* Loop on bases to compute the physical 3D baseline as T2-T1 [m]
+	/* If requested, loop on bases to compute the physical 3D baseline as T2-T1
 	 * Note: The telescope locations STAXYZ are given in the [West,South,Up]
-	 * frame (ESO convention), whereas the UVW, calculated later on, are in
-	 * the [East,North,Up] frame. Hence the sign changes below on X and Y. */
+	 *   frame (ESO convention), whereas the UVW, calculated later on, are in
+	 *   the [East,North,Up] frame. Hence the sign changes below on X and Y. */
 	double baseline[6][3];
 	double * uCoord;
 	double * vCoord;
@@ -280,7 +280,7 @@ cpl_error_code gravi_eop_pointing_uv (cpl_table * input_table,
     double *mjd = cpl_table_get_data_double (input_table, "MJD");
     double mean_mjd = cpl_table_get_column_mean (input_table, "MJD");
     
-	/* Create new columns */
+	/* If requested, create [E_U,E_V,E_V,E_AZ,E_ZD] columns */
 	cpl_array ** p_u;
 	cpl_array ** p_v;
 	cpl_array ** p_w;
@@ -301,13 +301,13 @@ cpl_error_code gravi_eop_pointing_uv (cpl_table * input_table,
         CPLCHECK_MSG ("Cannot create data");
     }
 
-	/* Checked by J. Woillez */
+	/* Get the location of the observer from the header */
 	double elev = gravi_pfits_get_geoelev (header); // Height in [m]
 	double lon = gravi_pfits_get_geolon (header) * CPL_MATH_RAD_DEG; // Lat in [rad]
 	double lat = gravi_pfits_get_geolat (header) * CPL_MATH_RAD_DEG; // Lon in [rad], East positive
 	CPLCHECK_MSG ("Cannot get the data");
 
-	/* Compute Earth Orientation Parameters for the mean MJD */
+	/* If EOP are supplied, interpolate to the mean MJD */
 	double dut1 = 0, pmx = 0, pmy = 0;
     if (eop_table != NULL) {
         gravi_eop_interpolate (1, &mean_mjd, &pmx, &pmy, &dut1,
@@ -334,7 +334,7 @@ cpl_error_code gravi_eop_pointing_uv (cpl_table * input_table,
 	eraPn(eUc, &norm, eUc);  // eUc is normalized to a unit vector
 	eraPxp(eWc, eUc, eVc);  // eWc is the cross product of eWc and eUc
 	
-	/* Create 10 arcsec cardinal asterism around eWc */
+	/* Create a 10 arcsec cardinal asterism around eWc */
 	double eps = 10.0 / 3600.0 * CPL_MATH_RAD_DEG; // 10 arcsec has been chosen for optimal accuracy
 	double eWc_up[3], eWc_um[3], eWc_vp[3], eWc_vm[3];
 	rotate_vector(eWc, -eps, eVc, eWc_up);
@@ -347,7 +347,7 @@ cpl_error_code gravi_eop_pointing_uv (cpl_table * input_table,
 	eraC2s(eWc_vp, &rc_vp, &dc_vp);
 	eraC2s(eWc_vm, &rc_vm, &dc_vm);
 
-	/* Allocate memory for the tmp computations */
+	/* Prepare the following loop computations */
 	eraASTROM astrom;
 	double eo;
 	double eWo_up[3], eWo_um[3], eWo_vp[3], eWo_vm[3];
@@ -358,17 +358,16 @@ cpl_error_code gravi_eop_pointing_uv (cpl_table * input_table,
 	double humidity = 0.0;
 	double wavelength = 0.0;
 
-	/* Loop on rows. the baselines are not assumed to share the
+	/* Loop on rows. The baselines are not assumed to share the
 	 * same MJD since this function is called after the averaging */
 	cpl_size n_row = cpl_table_get_nrow (input_table);
 	for (cpl_size row = 0 ; row < n_row ; row++) {
 
-	  /* Transformation from ICRS to Observed (neglecting refraction with atmospheric pressure at zero)
-	   * Full transformation update every t_skip, otherwise rotate earth only
-	   * If the time is strickly the same as previous row, we skip this computation */
-
+      /* If the time is strickly the same as previous row, we skip this computation */
 	  if (mjd[row] != mjd1 ) {
 
+		/* Full transformation from ICRS to Observed
+		 * update every t_skip, otherwise rotate earth only */
 		if ( fabs (mjd[row]-mjd0) > t_skip ) {
 		  eraApco13 (2400000.5, mjd[row], dut1, lon, lat, elev,
 			         pmx/3600.0*CPL_MATH_RAD_DEG, pmy/3600.0*CPL_MATH_RAD_DEG,
@@ -394,15 +393,16 @@ cpl_error_code gravi_eop_pointing_uv (cpl_table * input_table,
 		eraPxp(eWo, eVo, eVo);
 		eraSxp(1./(2.0*eps), eVo, eVo);
 		
-		/* Using pointing and zenith directions, compute eAz */
+		/* Using eWo and zenith directions, compute eAz */
 		eraPxp(eWo, ez, eAZo);
 		eraPn(eAZo, &norm, eAZo);
 
-		/* Using pointing and azimuth directions, compute eZd */
+		/* Using eWo and azimuth directions, compute eZd */
 		eraPxp(eWo, eAZo, eZDo);
 		eraPn(eZDo, &norm, eZDo);
 	  }
 
+	  /* If requested, store [E_U,E_V,E_V,E_AZ,E_ZD] columns */
       if (save_pointing) {
 	    if (mjd[row] != mjd1 ) {
 		  double * eU = cpl_malloc (sizeof(double) * 3);
@@ -489,7 +489,7 @@ cpl_error_code gravi_compute_pointing_uv (gravi_data * p2vmred_data, gravi_data 
 					      oi_array);
 	CPLCHECK_MSG ("Cannot compute pointing");
     
-	/* Fill second polarisation */
+	/* If second polarisation, for SC only, duplicate [E_U,E_V,E_V,E_AZ,E_ZD] */
 	if ((npol > 1) && (type_data==GRAVI_SC)) {
 	  cpl_msg_debug (cpl_func,"Duplicate in the 2sd polarisation");
 
@@ -503,7 +503,7 @@ cpl_error_code gravi_compute_pointing_uv (gravi_data * p2vmred_data, gravi_data 
 	  CPLCHECK_MSG ("Cannot duplicate");
 	}
 
-	/* Copy second polarisation. Assume they have same uv-plane */
+	/* If second polarisation, duplicate [UCOORD,VCOORD] */
 	if (npol > 1) {
 	  cpl_msg_info (cpl_func,"Duplicate in the 2sd polarisation");
 
