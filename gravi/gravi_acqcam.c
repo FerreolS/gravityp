@@ -1299,13 +1299,13 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             
             /* Approx pixel offset from SC to FT, divided by 2 */
             double approx_dx=0.5*rho_in*sin(approx_PA*M_PI/180.)/scale;
-            /* double approx_dy=0.5*rho_in*cos(approx_PA*M_PI/180.)/scale; */
+            double approx_dy=0.5*rho_in*cos(approx_PA*M_PI/180.)/scale;
             
             /* Expected position of the two stars */
             xFT = cutout_roof_x - approx_dx ;
-            yFT = cutout_roof_y - approx_dx ;
+            yFT = cutout_roof_y - approx_dy ;
             xSC = cutout_roof_x + approx_dx ;
-            ySC = cutout_roof_y + approx_dx ;
+            ySC = cutout_roof_y + approx_dy ;
         }
         
         cpl_msg_info (cpl_func, "guess SC_X = %f", xSC);
