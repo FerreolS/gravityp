@@ -1294,6 +1294,9 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             double cutout_roof_x = roof_x[tel] - sx + nsx*tel + 1;
             double cutout_roof_y = roof_y[tel] - sy + 1;
             
+            cpl_msg_info (cpl_func, "    ROOF_X = %f", cutout_roof_x);
+            cpl_msg_info (cpl_func, "    ROOF_Y = %f", cutout_roof_y);
+            
             /* Approx pixel offset from SC to FT, divided by 2 */
             double approx_dx=0.5*rho_in*sin(approx_PA*M_PI/180.)/scale;
             /* double approx_dy=0.5*rho_in*cos(approx_PA*M_PI/180.)/scale; */
@@ -1304,6 +1307,11 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             xSC = cutout_roof_x + approx_dx ;
             ySC = cutout_roof_y + approx_dx ;
         }
+        
+        cpl_msg_info (cpl_func, "guess SC_X = %f", xSC);
+        cpl_msg_info (cpl_func, "guess SC_Y = %f", ySC);
+        cpl_msg_info (cpl_func, "guess FT_X = %f", xFT);
+        cpl_msg_info (cpl_func, "guess FT_Y = %f", yFT);
         
         /* Box size */
         /* Optimal size has been determined empirically. */
