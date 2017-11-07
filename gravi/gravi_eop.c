@@ -176,20 +176,16 @@ cpl_error_code gravi_eop_interpolate (cpl_size n, double *mjd,
 }
 
 /*
- * Quick transform from Celestial to Observed
+ * Quick transform from BCRS to Observed
  *     rc,dc  double   ICRS right ascension at J2000.0 (radians)
- *     pr     double   RA proper motion dRA/dt, not cos(Dec) x dRA/dt (radians/year)
- *     pd     double   Dec proper motion dDec/dt (radians/year)
- *     px     double   parallax (arcsec)
- *     rv     double   radial velocity (km/s, +ve if receding)
  */
-void eraAtcoq(double rc, double dc, double pmr, double pmd, double px, double rv, eraASTROM *astrom, double enuob[3])
+void eraAtboq(double rc, double dc, eraASTROM *astrom, double enuob[3])
 {
     double ri, di;
     double aob, zob, hob, dob, rob;
 
-    /* Transform from Celestial to Intermediate */
-    eraAtciq (rc, dc, pmr, pmd, px, rv, astrom, &ri, &di);
+    /* Transform from BCRS to Intermediate */
+    eraAtciq (rc, dc, 0.0, 0.0, 0.0, 0.0, astrom, &ri, &di);
 
     /* Transform from Intermediate to Observed. */
     eraAtioq (ri, di, astrom, &aob, &zob, &hob, &dob, &rob);
@@ -326,33 +322,18 @@ cpl_error_code gravi_eop_pointing_uv (cpl_table * input_table,
     double sysvel = 0.0;
     CPLCHECK_MSG ("Cannot get the header data");
     
-    /* Create (eU,eV,eW) in the ICRS */
-    double eUc[3], eVc[3], eWc[3], eZc[3], norm;
-    eraS2c(rc, dc, eWc);  // eW is the cartesian unit vector associated to the (rc,dc) coordinates
-    eraS2c(0.0, CPL_MATH_PI/2.0, eZc);  // eZc is the unit vector to the ICRS pole
-    eraPxp(eZc, eWc, eUc);  // eUc is the cross product of eZc and eWc
-    eraPn(eUc, &norm, eUc);  // eUc is normalized to a unit vector
-    eraPxp(eWc, eUc, eVc);  // eWc is the cross product of eWc and eUc
-    
-    /* Create a 10 arcsec cardinal asterism around eWc */
-    double eps = 10.0 / 3600.0 * CPL_MATH_RAD_DEG; // 10 arcsec has been chosen for optimal accuracy
-    double eWc_up[3], eWc_um[3], eWc_vp[3], eWc_vm[3];
-    rotate_vector(eWc, -eps, eVc, eWc_up);
-    rotate_vector(eWc, +eps, eVc, eWc_um);
-    rotate_vector(eWc, +eps, eUc, eWc_vp);
-    rotate_vector(eWc, -eps, eUc, eWc_vm);
-    double rc_up, dc_up, rc_um, dc_um, rc_vp, dc_vp, rc_vm, dc_vm;
-    eraC2s(eWc_up, &rc_up, &dc_up);
-    eraC2s(eWc_um, &rc_um, &dc_um);
-    eraC2s(eWc_vp, &rc_vp, &dc_vp);
-    eraC2s(eWc_vm, &rc_vm, &dc_vm);
-    
     /* Prepare the following loop computations */
     eraASTROM astrom;
     double eo;
+    double eps = 10.0 / 3600.0 * CPL_MATH_RAD_DEG; // 10 arcsec has been chosen for optimal accuracy
+    double rb, db;
+    double eUb[3], eVb[3], eWb[3], eZb[3];
     double eWo_up[3], eWo_um[3], eWo_vp[3], eWo_vm[3];
+    double eWb_up[3], eWb_um[3], eWb_vp[3], eWb_vm[3];
+    double rb_up, db_up, rb_um, db_um, rb_vp, db_vp, rb_vm, db_vm;
     double eUo[3], eVo[3], eWo[3], eAZo[3], eZDo[3];
     double ez[3] = {0.0, 0.0, 1.0}; // Zenith direction in ENU frame
+    double norm;
     double pressure = 0.0; // Pressure at zero to disable atmospheric refraction
     double temperature = 0.0;
     double humidity = 0.0;
@@ -378,12 +359,32 @@ cpl_error_code gravi_eop_pointing_uv (cpl_table * input_table,
             else
                 eraAper13 (2400000.5, mjd[row] + dut1/(24.0*3600.0), &astrom);
             
-            /* Transform from celestial to observed the pointing direction and the cardinal asterism */
-            eraAtcoq (rc   , dc   , pmr, pmd, parallax, sysvel, &astrom, eWo   );
-            eraAtcoq (rc_up, dc_up, pmr, pmd, parallax, sysvel, &astrom, eWo_up);
-            eraAtcoq (rc_um, dc_um, pmr, pmd, parallax, sysvel, &astrom, eWo_um);
-            eraAtcoq (rc_vp, dc_vp, pmr, pmd, parallax, sysvel, &astrom, eWo_vp);
-            eraAtcoq (rc_vm, dc_vm, pmr, pmd, parallax, sysvel, &astrom, eWo_vm);
+            /* Apply proper motion (ICRS->BCRS) */
+            eraPmpx(rc, dc, pmr, pmd, parallax, sysvel, astrom.pmt, astrom.eb, eWb);
+            eraC2s(eWb, &rb, &db);
+            
+            /* Create (eU,eV,eW) in the BCRS */
+            eraS2c(0.0, CPL_MATH_PI/2.0, eZb);  // eZc is the unit vector to the ICRS pole
+            eraPxp(eZb, eWb, eUb);  // eUc is the cross product of eZc and eWc
+            eraPn(eUb, &norm, eUb);  // eUc is normalized to a unit vector
+            eraPxp(eWb, eUb, eVb);  // eWc is the cross product of eWc and eUc
+            
+            /* Create a 10 arcsec cardinal asterism around eWb in the BCRS */
+            rotate_vector(eWb, -eps, eVb, eWb_up);
+            rotate_vector(eWb, +eps, eVb, eWb_um);
+            rotate_vector(eWb, +eps, eUb, eWb_vp);
+            rotate_vector(eWb, -eps, eUb, eWb_vm);
+            eraC2s(eWb_up, &rb_up, &db_up);
+            eraC2s(eWb_um, &rb_um, &db_um);
+            eraC2s(eWb_vp, &rb_vp, &db_vp);
+            eraC2s(eWb_vm, &rb_vm, &db_vm);
+            
+            /* Transform the pointing direction and the cardinal asterism from BCRS to observed */
+            eraAtboq (rb   , db   , &astrom, eWo   );
+            eraAtboq (rb_up, db_up, &astrom, eWo_up);
+            eraAtboq (rb_um, db_um, &astrom, eWo_um);
+            eraAtboq (rb_vp, db_vp, &astrom, eWo_vp);
+            eraAtboq (rb_vm, db_vm, &astrom, eWo_vm);
             
             /* Compute the observed (eUo,eVo,eWo) reference frame */
             eraPxp(eWo_up, eWo_um, eUo);
