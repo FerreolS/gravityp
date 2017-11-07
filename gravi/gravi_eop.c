@@ -235,221 +235,221 @@ cpl_error_code gravi_eop_pointing_uv (cpl_table * input_table,
                                       cpl_propertylist * header,
                                       cpl_table * eop_table,
                                       cpl_propertylist * eop_header,
-							          int save_pointing,
-							          cpl_table * array_table)
+                                      int save_pointing,
+                                      cpl_table * array_table)
 {
     gravi_msg_function_start(1);
     cpl_ensure_code (input_table, CPL_ERROR_NULL_INPUT);
     cpl_ensure_code (header,      CPL_ERROR_NULL_INPUT);
     
-	/* Check and announce the optional parameters */
-	if (save_pointing > 0) {
-	  cpl_msg_info (cpl_func, "Will save [E_U,E_V,E_W,E_AZ,E_ZD]");
-	}
-	int compute_uv;
-	if (array_table > 0) {
-	  cpl_msg_info (cpl_func, "Will compute [UCOORD,VCOORD]");
-	  compute_uv = 1;
-    } else {
-	  compute_uv = 0;
+    /* Check and announce the optional parameters */
+    if (save_pointing > 0) {
+        cpl_msg_info (cpl_func, "Will save [E_U,E_V,E_W,E_AZ,E_ZD]");
     }
-	
+    int compute_uv;
+    if (array_table > 0) {
+        cpl_msg_info (cpl_func, "Will compute [UCOORD,VCOORD]");
+        compute_uv = 1;
+    } else {
+        compute_uv = 0;
+    }
+    
     double t_skip = 1./24/3600, mjd0 = -1.0, mjd1 = -1.0;
     cpl_msg_info (cpl_func, "Compute pointing with full ERFA every %.2f s",t_skip*24*3600.0);
     
-	/* If requested, loop on bases to compute the physical 3D baseline as T2-T1
-	 * Note: The telescope locations STAXYZ are given in the [West,South,Up]
-	 *   frame (ESO convention), whereas the UVW, calculated later on, are in
-	 *   the [East,North,Up] frame. Hence the sign changes below on X and Y. */
-	double baseline[6][3];
-	double * uCoord;
-	double * vCoord;
-	if (compute_uv) {
-      for ( int base = 0; base < 6; base ++) {
-      	int tel1=0; while ( cpl_table_get (array_table, "STA_INDEX", tel1, NULL) != gravi_table_get_value (input_table, "STA_INDEX", base, 0) ) tel1++;
-      	int tel2=0; while ( cpl_table_get (array_table, "STA_INDEX", tel2, NULL) != gravi_table_get_value (input_table, "STA_INDEX", base, 1) ) tel2++;
-      	baseline[base][0] = -(gravi_table_get_value (array_table, "STAXYZ", tel2, 0) - gravi_table_get_value (array_table, "STAXYZ", tel1, 0));
-      	baseline[base][1] = -(gravi_table_get_value (array_table, "STAXYZ", tel2, 1) - gravi_table_get_value (array_table, "STAXYZ", tel1, 1));
-      	baseline[base][2] = +(gravi_table_get_value (array_table, "STAXYZ", tel2, 2) - gravi_table_get_value (array_table, "STAXYZ", tel1, 2));
-      }
-      uCoord = cpl_table_get_data_double (input_table, "UCOORD");
-	  vCoord = cpl_table_get_data_double (input_table, "VCOORD");
+    /* If requested, loop on bases to compute the physical 3D baseline as T2-T1
+    * Note: The telescope locations STAXYZ are given in the [West,South,Up]
+    *   frame (ESO convention), whereas the UVW, calculated later on, are in
+    *   the [East,North,Up] frame. Hence the sign changes below on X and Y. */
+    double baseline[6][3];
+    double * uCoord;
+    double * vCoord;
+    if (compute_uv) {
+        for ( int base = 0; base < 6; base ++) {
+           int tel1=0; while ( cpl_table_get (array_table, "STA_INDEX", tel1, NULL) != gravi_table_get_value (input_table, "STA_INDEX", base, 0) ) tel1++;
+           int tel2=0; while ( cpl_table_get (array_table, "STA_INDEX", tel2, NULL) != gravi_table_get_value (input_table, "STA_INDEX", base, 1) ) tel2++;
+           baseline[base][0] = -(gravi_table_get_value (array_table, "STAXYZ", tel2, 0) - gravi_table_get_value (array_table, "STAXYZ", tel1, 0));
+           baseline[base][1] = -(gravi_table_get_value (array_table, "STAXYZ", tel2, 1) - gravi_table_get_value (array_table, "STAXYZ", tel1, 1));
+           baseline[base][2] = +(gravi_table_get_value (array_table, "STAXYZ", tel2, 2) - gravi_table_get_value (array_table, "STAXYZ", tel1, 2));
+        }
+        uCoord = cpl_table_get_data_double (input_table, "UCOORD");
+        vCoord = cpl_table_get_data_double (input_table, "VCOORD");
     }
-  
+    
     /* Read UTC as MJD */
     double *mjd = cpl_table_get_data_double (input_table, "MJD");
     double mean_mjd = cpl_table_get_column_mean (input_table, "MJD");
     
-	/* If requested, create [E_U,E_V,E_V,E_AZ,E_ZD] columns */
-	cpl_array ** p_u;
-	cpl_array ** p_v;
-	cpl_array ** p_w;
-	cpl_array ** p_az;
-	cpl_array ** p_zd;
-	if (save_pointing) {
-		cpl_msg_info (cpl_func, "Saving E_U, E_V, E_W, E_AZ, E_ZD");
-	    cpl_table_new_column_array (input_table, "E_U", CPL_TYPE_DOUBLE, 3);
-	    cpl_table_new_column_array (input_table, "E_V", CPL_TYPE_DOUBLE, 3);
-	    cpl_table_new_column_array (input_table, "E_W", CPL_TYPE_DOUBLE, 3);
-	    cpl_table_new_column_array (input_table, "E_AZ", CPL_TYPE_DOUBLE, 3);
-	    cpl_table_new_column_array (input_table, "E_ZD", CPL_TYPE_DOUBLE, 3);
-	    p_u = cpl_table_get_data_array (input_table,"E_U");
-	    p_v = cpl_table_get_data_array (input_table,"E_V");
-	    p_w = cpl_table_get_data_array (input_table,"E_W");
-	    p_az = cpl_table_get_data_array (input_table,"E_AZ");
-	    p_zd = cpl_table_get_data_array (input_table,"E_ZD");
+    /* If requested, create [E_U,E_V,E_V,E_AZ,E_ZD] columns */
+    cpl_array ** p_u;
+    cpl_array ** p_v;
+    cpl_array ** p_w;
+    cpl_array ** p_az;
+    cpl_array ** p_zd;
+    if (save_pointing) {
+        cpl_msg_info (cpl_func, "Saving E_U, E_V, E_W, E_AZ, E_ZD");
+        cpl_table_new_column_array (input_table, "E_U", CPL_TYPE_DOUBLE, 3);
+        cpl_table_new_column_array (input_table, "E_V", CPL_TYPE_DOUBLE, 3);
+        cpl_table_new_column_array (input_table, "E_W", CPL_TYPE_DOUBLE, 3);
+        cpl_table_new_column_array (input_table, "E_AZ", CPL_TYPE_DOUBLE, 3);
+        cpl_table_new_column_array (input_table, "E_ZD", CPL_TYPE_DOUBLE, 3);
+        p_u = cpl_table_get_data_array (input_table,"E_U");
+        p_v = cpl_table_get_data_array (input_table,"E_V");
+        p_w = cpl_table_get_data_array (input_table,"E_W");
+        p_az = cpl_table_get_data_array (input_table,"E_AZ");
+        p_zd = cpl_table_get_data_array (input_table,"E_ZD");
         CPLCHECK_MSG ("Cannot create [E_U, E_V, E_W, E_AZ, E_ZD]");
     }
-
-	/* Get the location of the observer from the header */
-	double elev = gravi_pfits_get_geoelev (header); // Height in [m]
-	double lon = gravi_pfits_get_geolon (header) * CPL_MATH_RAD_DEG; // Lat in [rad]
-	double lat = gravi_pfits_get_geolat (header) * CPL_MATH_RAD_DEG; // Lon in [rad], East positive
-	CPLCHECK_MSG ("Cannot get the observer location");
-
-	/* If EOP are supplied, interpolate to the mean MJD */
-	double dut1 = 0, pmx = 0, pmy = 0;
+    
+    /* Get the location of the observer from the header */
+    double elev = gravi_pfits_get_geoelev (header); // Height in [m]
+    double lon = gravi_pfits_get_geolon (header) * CPL_MATH_RAD_DEG; // Lat in [rad]
+    double lat = gravi_pfits_get_geolat (header) * CPL_MATH_RAD_DEG; // Lon in [rad], East positive
+    CPLCHECK_MSG ("Cannot get the observer location");
+    
+    /* If EOP are supplied, interpolate to the mean MJD */
+    double dut1 = 0, pmx = 0, pmy = 0;
     if (eop_table != NULL) {
         gravi_eop_interpolate (1, &mean_mjd, &pmx, &pmy, &dut1,
-                               eop_table, eop_header);
-        CPLCHECK_MSG ("Cannot interpolate");
+                            eop_table, eop_header);
+                            CPLCHECK_MSG ("Cannot interpolate");
     } else {
         cpl_msg_warning (cpl_func, "No EOP_PARAM. Use EOP and DUT=0.0s");
     }
-
-	/* We use the mid-point between FT and SC to compute the UV coordinates */
-	double rc  = gravi_pfits_get_mid_raep  (header); // [rad]
-	double dc  = gravi_pfits_get_mid_decep (header); // [rad]
-	double pmr = gravi_pfits_get_pmra  (header) * CPL_MATH_RAD_DEG / 3600.0 / cos(dc); // dRA/dt, not cos(Dec)xdRA/dt [rad/year]
-	double pmd = gravi_pfits_get_pmdec (header) * CPL_MATH_RAD_DEG / 3600.0; // dDec/dt [rad/year]
-	double parallax = gravi_pfits_get_plx (header); // [as]
-	double sysvel = 0.0;
-	CPLCHECK_MSG ("Cannot get the header data");
-
-	/* Create (eU,eV,eW) in the ICRS */
-	double eUc[3], eVc[3], eWc[3], eZc[3], norm;
-	eraS2c(rc, dc, eWc);  // eW is the cartesian unit vector associated to the (rc,dc) coordinates
-	eraS2c(0.0, CPL_MATH_PI/2.0, eZc);  // eZc is the unit vector to the ICRS pole
-	eraPxp(eZc, eWc, eUc);  // eUc is the cross product of eZc and eWc
-	eraPn(eUc, &norm, eUc);  // eUc is normalized to a unit vector
-	eraPxp(eWc, eUc, eVc);  // eWc is the cross product of eWc and eUc
-	
-	/* Create a 10 arcsec cardinal asterism around eWc */
-	double eps = 10.0 / 3600.0 * CPL_MATH_RAD_DEG; // 10 arcsec has been chosen for optimal accuracy
-	double eWc_up[3], eWc_um[3], eWc_vp[3], eWc_vm[3];
-	rotate_vector(eWc, -eps, eVc, eWc_up);
-	rotate_vector(eWc, +eps, eVc, eWc_um);
-	rotate_vector(eWc, +eps, eUc, eWc_vp);
-	rotate_vector(eWc, -eps, eUc, eWc_vm);
-	double rc_up, dc_up, rc_um, dc_um, rc_vp, dc_vp, rc_vm, dc_vm;
-	eraC2s(eWc_up, &rc_up, &dc_up);
-	eraC2s(eWc_um, &rc_um, &dc_um);
-	eraC2s(eWc_vp, &rc_vp, &dc_vp);
-	eraC2s(eWc_vm, &rc_vm, &dc_vm);
-
-	/* Prepare the following loop computations */
-	eraASTROM astrom;
-	double eo;
-	double eWo_up[3], eWo_um[3], eWo_vp[3], eWo_vm[3];
-	double eUo[3], eVo[3], eWo[3], eAZo[3], eZDo[3];
-	double ez[3] = {0.0, 0.0, 1.0}; // Zenith direction in ENU frame
-	double pressure = 0.0; // Pressure at zero to disable atmospheric refraction
-	double temperature = 0.0;
-	double humidity = 0.0;
-	double wavelength = 0.0;
-
-	/* Loop on rows. The baselines are not assumed to share the
-	 * same MJD since this function is called after the averaging */
-	cpl_size n_row = cpl_table_get_nrow (input_table);
-	for (cpl_size row = 0 ; row < n_row ; row++) {
-
-      /* If the time is strickly the same as previous row, we skip this computation */
-	  if (mjd[row] != mjd1 ) {
-
-		/* Full transformation from ICRS to Observed
-		 * update every t_skip, otherwise rotate earth only */
-		if ( fabs (mjd[row]-mjd0) > t_skip ) {
-		  eraApco13 (2400000.5, mjd[row], dut1, lon, lat, elev,
-			         pmx/3600.0*CPL_MATH_RAD_DEG, pmy/3600.0*CPL_MATH_RAD_DEG,
-					 pressure, temperature, humidity, wavelength,
-					 &astrom, &eo);
-		  mjd0 = mjd[row];
-		}
-		else
-		  eraAper13 (2400000.5, mjd[row] + dut1/(24.0*3600.0), &astrom);
-
-		/* Transform from celestial to observed the pointing direction and the cardinal asterism */
-		eraAtcoq (rc   , dc   , pmr, pmd, parallax, sysvel, &astrom, eWo   );
-		eraAtcoq (rc_up, dc_up, pmr, pmd, parallax, sysvel, &astrom, eWo_up);
-		eraAtcoq (rc_um, dc_um, pmr, pmd, parallax, sysvel, &astrom, eWo_um);
-		eraAtcoq (rc_vp, dc_vp, pmr, pmd, parallax, sysvel, &astrom, eWo_vp);
-		eraAtcoq (rc_vm, dc_vm, pmr, pmd, parallax, sysvel, &astrom, eWo_vm);
-
-		/* Compute the observed (eUo,eVo,eWo) reference frame */
-		eraPxp(eWo_up, eWo_um, eUo);
-		eraPxp(eWo, eUo, eUo);
-		eraSxp(1./(2.0*eps), eUo, eUo);
-		eraPxp(eWo_vp, eWo_vm, eVo);
-		eraPxp(eWo, eVo, eVo);
-		eraSxp(1./(2.0*eps), eVo, eVo);
-		
-		/* Using eWo and zenith directions, compute eAz */
-		eraPxp(eWo, ez, eAZo);
-		eraPn(eAZo, &norm, eAZo);
-
-		/* Using eWo and azimuth directions, compute eZd */
-		eraPxp(eWo, eAZo, eZDo);
-		eraPn(eZDo, &norm, eZDo);
-	  }
-
-	  /* If requested, store [E_U,E_V,E_V,E_AZ,E_ZD] columns */
-      if (save_pointing) {
-	    if (mjd[row] != mjd1 ) {
-		  double * eU = cpl_malloc (sizeof(double) * 3);
-		  double * eV = cpl_malloc (sizeof(double) * 3);
-		  double * eW = cpl_malloc (sizeof(double) * 3);
-		  double * eAZ = cpl_malloc (sizeof(double) * 3);
-		  double * eZD = cpl_malloc (sizeof(double) * 3);
-		  for ( cpl_size c = 0; c < 3; c++) {
-			eU[c] = eUo[c];
-			eV[c] = eVo[c];
-			eW[c] = eWo[c];
-			eAZ[c] = eAZo[c];
-			eZD[c] = eZDo[c];
-		  }
-          /* Wrap into vectors. It makes the data valid, and is the fastest
-		   * This and the duplication take most of the time of this function */
-          p_u[row]  = cpl_array_wrap_double (eU,  3);
-          p_v[row]  = cpl_array_wrap_double (eV,  3);
-          p_w[row]  = cpl_array_wrap_double (eW,  3);
-          p_az[row] = cpl_array_wrap_double (eAZ, 3);
-          p_zd[row] = cpl_array_wrap_double (eZD, 3);
-	    } else {
-          p_u[row]  = cpl_array_duplicate (p_u [row-1]);
-          p_v[row]  = cpl_array_duplicate (p_v [row-1]);
-          p_w[row]  = cpl_array_duplicate (p_w [row-1]);
-          p_az[row] = cpl_array_duplicate (p_az[row-1]);
-          p_zd[row] = cpl_array_duplicate (p_zd[row-1]);
-	    }
-      }
-	  
-	  /* If requested, compute the projected baseline [UCOORD,VCOORD]
-	   * Note: The baseline length is corrected by the air refractive index
-	   *       at the HeNe wavelength and Paranal pressure. We want to use
-	   *       the vacuum baseline. */
-	  double n_air = 1.0002028;
-	  if (compute_uv) {
-	    int base = row % 6;
-	    uCoord[row] = (eUo[0] * baseline[base][0] + eUo[1] * baseline[base][1] + eUo[2] * baseline[base][2])/n_air;
-	    vCoord[row] = (eVo[0] * baseline[base][0] + eVo[1] * baseline[base][1] + eVo[2] * baseline[base][2])/n_air;
-      }
-
-	  mjd1 = mjd[row];
-	  CPLCHECK_MSG ("Cannot run the ERFA transform");
-	} /* End loop on rows */
-  
-  gravi_msg_function_exit(1);
-  return CPL_ERROR_NONE;
+    
+    /* We use the mid-point between FT and SC to compute the UV coordinates */
+    double rc  = gravi_pfits_get_mid_raep  (header); // [rad]
+    double dc  = gravi_pfits_get_mid_decep (header); // [rad]
+    double pmr = gravi_pfits_get_pmra  (header) * CPL_MATH_RAD_DEG / 3600.0 / cos(dc); // dRA/dt, not cos(Dec)xdRA/dt [rad/year]
+    double pmd = gravi_pfits_get_pmdec (header) * CPL_MATH_RAD_DEG / 3600.0; // dDec/dt [rad/year]
+    double parallax = gravi_pfits_get_plx (header); // [as]
+    double sysvel = 0.0;
+    CPLCHECK_MSG ("Cannot get the header data");
+    
+    /* Create (eU,eV,eW) in the ICRS */
+    double eUc[3], eVc[3], eWc[3], eZc[3], norm;
+    eraS2c(rc, dc, eWc);  // eW is the cartesian unit vector associated to the (rc,dc) coordinates
+    eraS2c(0.0, CPL_MATH_PI/2.0, eZc);  // eZc is the unit vector to the ICRS pole
+    eraPxp(eZc, eWc, eUc);  // eUc is the cross product of eZc and eWc
+    eraPn(eUc, &norm, eUc);  // eUc is normalized to a unit vector
+    eraPxp(eWc, eUc, eVc);  // eWc is the cross product of eWc and eUc
+    
+    /* Create a 10 arcsec cardinal asterism around eWc */
+    double eps = 10.0 / 3600.0 * CPL_MATH_RAD_DEG; // 10 arcsec has been chosen for optimal accuracy
+    double eWc_up[3], eWc_um[3], eWc_vp[3], eWc_vm[3];
+    rotate_vector(eWc, -eps, eVc, eWc_up);
+    rotate_vector(eWc, +eps, eVc, eWc_um);
+    rotate_vector(eWc, +eps, eUc, eWc_vp);
+    rotate_vector(eWc, -eps, eUc, eWc_vm);
+    double rc_up, dc_up, rc_um, dc_um, rc_vp, dc_vp, rc_vm, dc_vm;
+    eraC2s(eWc_up, &rc_up, &dc_up);
+    eraC2s(eWc_um, &rc_um, &dc_um);
+    eraC2s(eWc_vp, &rc_vp, &dc_vp);
+    eraC2s(eWc_vm, &rc_vm, &dc_vm);
+    
+    /* Prepare the following loop computations */
+    eraASTROM astrom;
+    double eo;
+    double eWo_up[3], eWo_um[3], eWo_vp[3], eWo_vm[3];
+    double eUo[3], eVo[3], eWo[3], eAZo[3], eZDo[3];
+    double ez[3] = {0.0, 0.0, 1.0}; // Zenith direction in ENU frame
+    double pressure = 0.0; // Pressure at zero to disable atmospheric refraction
+    double temperature = 0.0;
+    double humidity = 0.0;
+    double wavelength = 0.0;
+    
+    /* Loop on rows. The baselines are not assumed to share the
+     * same MJD since this function is called after the averaging */
+    cpl_size n_row = cpl_table_get_nrow (input_table);
+    for (cpl_size row = 0 ; row < n_row ; row++) {
+        
+        /* If the time is strickly the same as previous row, we skip this computation */
+        if (mjd[row] != mjd1 ) {
+            
+            /* Full transformation from ICRS to Observed
+             * update every t_skip, otherwise rotate earth only */
+            if ( fabs (mjd[row]-mjd0) > t_skip ) {
+                eraApco13 (2400000.5, mjd[row], dut1, lon, lat, elev,
+                            pmx/3600.0*CPL_MATH_RAD_DEG, pmy/3600.0*CPL_MATH_RAD_DEG,
+                            pressure, temperature, humidity, wavelength,
+                            &astrom, &eo);
+                mjd0 = mjd[row];
+            }
+            else
+                eraAper13 (2400000.5, mjd[row] + dut1/(24.0*3600.0), &astrom);
+            
+            /* Transform from celestial to observed the pointing direction and the cardinal asterism */
+            eraAtcoq (rc   , dc   , pmr, pmd, parallax, sysvel, &astrom, eWo   );
+            eraAtcoq (rc_up, dc_up, pmr, pmd, parallax, sysvel, &astrom, eWo_up);
+            eraAtcoq (rc_um, dc_um, pmr, pmd, parallax, sysvel, &astrom, eWo_um);
+            eraAtcoq (rc_vp, dc_vp, pmr, pmd, parallax, sysvel, &astrom, eWo_vp);
+            eraAtcoq (rc_vm, dc_vm, pmr, pmd, parallax, sysvel, &astrom, eWo_vm);
+            
+            /* Compute the observed (eUo,eVo,eWo) reference frame */
+            eraPxp(eWo_up, eWo_um, eUo);
+            eraPxp(eWo, eUo, eUo);
+            eraSxp(1./(2.0*eps), eUo, eUo);
+            eraPxp(eWo_vp, eWo_vm, eVo);
+            eraPxp(eWo, eVo, eVo);
+            eraSxp(1./(2.0*eps), eVo, eVo);
+            
+            /* Using eWo and zenith directions, compute eAz */
+            eraPxp(eWo, ez, eAZo);
+            eraPn(eAZo, &norm, eAZo);
+            
+            /* Using eWo and azimuth directions, compute eZd */
+            eraPxp(eWo, eAZo, eZDo);
+            eraPn(eZDo, &norm, eZDo);
+        }
+    
+        /* If requested, store [E_U,E_V,E_V,E_AZ,E_ZD] columns */
+        if (save_pointing) {
+            if (mjd[row] != mjd1 ) {
+                double * eU = cpl_malloc (sizeof(double) * 3);
+                double * eV = cpl_malloc (sizeof(double) * 3);
+                double * eW = cpl_malloc (sizeof(double) * 3);
+                double * eAZ = cpl_malloc (sizeof(double) * 3);
+                double * eZD = cpl_malloc (sizeof(double) * 3);
+                for ( cpl_size c = 0; c < 3; c++) {
+                    eU[c] = eUo[c];
+                    eV[c] = eVo[c];
+                    eW[c] = eWo[c];
+                    eAZ[c] = eAZo[c];
+                    eZD[c] = eZDo[c];
+                }
+                /* Wrap into vectors. It makes the data valid, and is the fastest
+                * This and the duplication take most of the time of this function */
+                p_u[row]  = cpl_array_wrap_double (eU,  3);
+                p_v[row]  = cpl_array_wrap_double (eV,  3);
+                p_w[row]  = cpl_array_wrap_double (eW,  3);
+                p_az[row] = cpl_array_wrap_double (eAZ, 3);
+                p_zd[row] = cpl_array_wrap_double (eZD, 3);
+            } else {
+                p_u[row]  = cpl_array_duplicate (p_u [row-1]);
+                p_v[row]  = cpl_array_duplicate (p_v [row-1]);
+                p_w[row]  = cpl_array_duplicate (p_w [row-1]);
+                p_az[row] = cpl_array_duplicate (p_az[row-1]);
+                p_zd[row] = cpl_array_duplicate (p_zd[row-1]);
+            }
+        }
+        
+        /* If requested, compute the projected baseline [UCOORD,VCOORD]
+        * Note: The baseline length is corrected by the air refractive index
+        *       at the HeNe wavelength and Paranal pressure. We want to use
+        *       the vacuum baseline. */
+        double n_air = 1.0002028;
+        if (compute_uv) {
+            int base = row % 6;
+            uCoord[row] = (eUo[0] * baseline[base][0] + eUo[1] * baseline[base][1] + eUo[2] * baseline[base][2])/n_air;
+            vCoord[row] = (eVo[0] * baseline[base][0] + eVo[1] * baseline[base][1] + eVo[2] * baseline[base][2])/n_air;
+        }
+        
+        mjd1 = mjd[row];
+        CPLCHECK_MSG ("Cannot run the ERFA transform");
+    } /* End loop on rows */
+    
+    gravi_msg_function_exit(1);
+    return CPL_ERROR_NONE;
 }
 
 /*----------------------------------------------------------------------------*/
