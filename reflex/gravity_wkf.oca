@@ -129,6 +129,14 @@ if DPR.CATG like "%CALIB%" and DPR.TECH like "%SPECTRUM%" and DPR.TYPE like "%SK
   RAW.TYPE = "DUAL_CAL_RAW";
 } 
 
+if DPR.CATG like "%CALIB%" and DPR.TECH like "%IMAGE%" and DPR.TYPE like "%DARK%" and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "DARK_RAW";
+  REFLEX.CATG = "DARK_RAW";
+  RAW.TYPE = "DARK_RAW";
+}
+
+//This classification is for the old DPR keywords, to be removed in the future once the archive contains only new headers
 if DPR.CATG like "%CALIB%" and DPR.TECH like "%INTERFEROMETRY%" and DPR.TYPE like "%DARK%" and INSTRUME=="GRAVITY" then
 {
   DO.CATG = "DARK_RAW";
@@ -136,6 +144,13 @@ if DPR.CATG like "%CALIB%" and DPR.TECH like "%INTERFEROMETRY%" and DPR.TYPE lik
   RAW.TYPE = "DARK_RAW";
 }
 
+if DPR.CATG like "%CALIB%" and DPR.TECH like "%SPECTRUM%" and DPR.TYPE like "%FLAT%" and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "FLAT_RAW";
+  REFLEX.CATG = "FLAT_RAW";
+}
+
+//This classification is for the old DPR keywords, to be removed in the future once the archive contains only new headers
 if DPR.CATG like "%CALIB%" and DPR.TECH like "%INTERFEROMETRY%" and DPR.TYPE like "%FLAT%" and INSTRUME=="GRAVITY" then
 {
   DO.CATG = "FLAT_RAW";
@@ -148,6 +163,14 @@ if DPR.CATG like "%CALIB%" and DPR.TECH like "%INTERFEROMETRY%" and DPR.TYPE lik
   REFLEX.CATG = "WAVE_RAW";
 }
 
+if DPR.CATG like "%CALIB%" and DPR.TECH like "%IMAGE%" and DPR.TYPE like "%DARK%" and TPL.NAME like "%P2VM%" and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "DARK_RAW";
+  RAW.TYPE = "P2VM_DARK";
+  REFLEX.CATG = "DARK_RAW";
+}
+
+//This classification is for the old DPR keywords, to be removed in the future once the archive contains only new headers
 if DPR.CATG like "%CALIB%" and DPR.TECH like "%INTERFEROMETRY%" and DPR.TYPE like "%DARK%" and TPL.NAME like "%P2VM%" and INSTRUME=="GRAVITY" then
 {
   DO.CATG = "DARK_RAW";
@@ -155,6 +178,14 @@ if DPR.CATG like "%CALIB%" and DPR.TECH like "%INTERFEROMETRY%" and DPR.TYPE lik
   REFLEX.CATG = "DARK_RAW";
 }
 
+if DPR.CATG like "%CALIB%" and DPR.TECH like "%SPECTRUM%" and DPR.TYPE like "%FLAT%" and TPL.NAME like "%P2VM%" and INSTRUME=="GRAVITY" then
+{
+  DO.CATG = "FLAT_RAW";
+  RAW.TYPE = "P2VM_CAL";
+  REFLEX.CATG = "FLAT_RAW";
+}
+
+//This classification is for the old DPR keywords, to be removed in the future once the archive contains only new headers
 if DPR.CATG like "%CALIB%" and DPR.TECH like "%INTERFEROMETRY%" and DPR.TYPE like "%FLAT%" and TPL.NAME like "%P2VM%" and INSTRUME=="GRAVITY" then
 {
   DO.CATG = "FLAT_RAW";
@@ -169,14 +200,15 @@ if DPR.CATG like "%CALIB%" and DPR.TECH like "%INTERFEROMETRY%" and DPR.TYPE=="W
   REFLEX.CATG = "WAVE_RAW";
 }
 
-if DPR.CATG like "%CALIB%" and DPR.TECH like "%INTERFEROMETRY%" and DPR.TYPE like "WAVESC" and TPL.NAME like "%P2VM%"and INSTRUME=="GRAVITY" then
+if DPR.CATG like "%CALIB%" and DPR.TECH like "%INTERFEROMETRY%" and DPR.TYPE like "WAVE,SC" and TPL.NAME like "%P2VM%"and INSTRUME=="GRAVITY" then
 {
   DO.CATG = "WAVESC_RAW";
   RAW.TYPE = "P2VM_CAL";
   REFLEX.CATG = "WAVESC_RAW";
 }
 
-if DPR.CATG like "%CALIB%" and DPR.TECH like "%INTERFEROMETRY%" and DPR.TYPE like "WAVE,SC" and TPL.NAME like "%P2VM%"and INSTRUME=="GRAVITY" then
+//This classification is for the old DPR keywords, to be removed in the future once the archive contains only new headers
+if DPR.CATG like "%CALIB%" and DPR.TECH like "%INTERFEROMETRY%" and DPR.TYPE like "WAVESC" and TPL.NAME like "%P2VM%"and INSTRUME=="GRAVITY" then
 {
   DO.CATG = "WAVESC_RAW";
   RAW.TYPE = "P2VM_CAL";
@@ -190,7 +222,18 @@ if DPR.CATG like "%CALIB%" and DPR.TECH like "%INTERFEROMETRY%" and DPR.TYPE lik
   REFLEX.CATG = "P2VM_RAW";
 }
 
+// Calibrations
+if PRO.CATG like "%DISP_MODEL%" then
+{
+  DO.CATG = "DISP_MODEL";
+}
+
 // Product
+if PRO.CATG like "%BAD%" then
+{
+  DO.CATG = "BAD";
+}
+
 if PRO.CATG like "%DARK%" then
 {
   DO.CATG = "DARK";
