@@ -5781,7 +5781,7 @@
         </property>
         <property name="_location" class="ptolemy.kernel.util.Location" value="[1470.0, 845.0]">
         </property>
-        <property name="RenameKeywords" class="ptolemy.data.expr.StringParameter" value="HIERARCH.ESO.OBS.NAME,'_',HIERARCH.ESO.PRO.CATG">
+        <property name="RenameKeywords" class="ptolemy.data.expr.StringParameter" value="HIERARCH.ESO.OBS.NAME,'_',HIERARCH.ESO.TPL.START,'_',HIERARCH.ESO.PRO.CATG">
         </property>
         <property name="FinalProductDirectory" class="ptolemy.data.expr.StringParameter" value="$END_PRODUCTS_DIR">
         </property>
