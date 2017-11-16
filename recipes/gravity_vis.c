@@ -212,6 +212,7 @@ static int gravity_vis_create(cpl_plugin * plugin)
     /* Extraction */
     gravi_parameter_add_extract (recipe->parameters);
     gravi_parameter_add_metrology (recipe->parameters);
+    gravi_parameter_add_preproc (recipe->parameters);
     
     /* Snr, signal, rejectio flags, vis */
     gravi_parameter_add_compute_snr (recipe->parameters, isCalib);
@@ -678,7 +679,7 @@ static int gravity_vis(cpl_frameset * frameset,
 		}
         
         /* Rescale to common wavelength */
-        gravi_align_spectrum (preproc_data, wave_map, p2vm_map, GRAVI_DET_ALL);
+        gravi_align_spectrum (preproc_data, wave_map, p2vm_map, GRAVI_DET_ALL, parlist);
 		CPLCHECK_CLEAN ("Cannot re-interpolate spectrum");
 
         /* Preproc the Acquisition Camera */

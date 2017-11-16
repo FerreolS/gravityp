@@ -193,6 +193,7 @@ static int gravity_p2vm_create(cpl_plugin * plugin)
     /* Badpix and profile */
     gravi_parameter_add_badpix (recipe->parameters);
     gravi_parameter_add_profile (recipe->parameters);
+    gravi_parameter_add_preproc (recipe->parameters);
 
     /* Wave option */
     gravi_parameter_add_wave (recipe->parameters);
@@ -788,7 +789,7 @@ static int gravity_p2vm(cpl_frameset            * frameset,
         FREE (gravi_data_delete, sc_data);
 
         /* Rescale SC to common wavelength */
-        gravi_align_spectrum (preproc_data, wave_map, p2vm_map, GRAVI_DET_SC);
+        gravi_align_spectrum (preproc_data, wave_map, p2vm_map, GRAVI_DET_SC, parlist);
         CPLCHECK_CLEAN ("Cannot re-interpolate spectrum");
 
         /* Compute the part of the p2vm associated to this file */
@@ -806,7 +807,7 @@ static int gravity_p2vm(cpl_frameset            * frameset,
         CPLCHECK_CLEAN ("Cannot extract spectrum");
 
         /* Rescale FT to common wavelength */
-        gravi_align_spectrum (ft_preproc_data, wave_map, p2vm_map, GRAVI_DET_FT);
+        gravi_align_spectrum (ft_preproc_data, wave_map, p2vm_map, GRAVI_DET_FT, parlist);
         CPLCHECK_CLEAN ("Cannot re-interpolate spectrum");
 
         /* Compute the part of the p2vm associated to this file */
@@ -872,7 +873,7 @@ static int gravity_p2vm(cpl_frameset            * frameset,
     CPLCHECK_CLEAN ("Cannot move ext");
 
     /* Rescale to common wavelength */
-    gravi_align_spectrum (preproc_data, wave_map, p2vm_map, GRAVI_DET_SC);
+    gravi_align_spectrum (preproc_data, wave_map, p2vm_map, GRAVI_DET_SC, parlist);
     CPLCHECK_CLEAN ("Cannot re-interpolate SC spectrum");
 
     /* Compute P2VMRED */
@@ -897,7 +898,7 @@ static int gravity_p2vm(cpl_frameset            * frameset,
     CPLCHECK_CLEAN ("Cannot move ext");
 
     /* Rescale to common wavelength */
-    gravi_align_spectrum (ft_preproc_data, wave_map, p2vm_map, GRAVI_DET_FT);
+    gravi_align_spectrum (ft_preproc_data, wave_map, p2vm_map, GRAVI_DET_FT, parlist);
     CPLCHECK_CLEAN ("Cannot re-interpolate FT spectrum");
 
     /* Compute P2VMRED */
