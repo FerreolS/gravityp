@@ -2258,7 +2258,7 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
 	/* Apply pupil, focus and pickup offsets */
 	for (int tel = 0; tel < ntel; tel++) {
 		for (cpl_size row = 0; row < nrow_met; row++) {
-			opd_fc_corr[row*ntel+tel] = opd_pupil?opd_pupil[row*ntel+tel]:0
+			opd_fc_corr[row*ntel+tel] = (opd_pupil?opd_pupil[row*ntel+tel]:0)
 					+ cpl_vector_get (opd_focus_offset, tel)
 					+ cpl_vector_get (opd_pickup_offset, tel) ;
 		}
