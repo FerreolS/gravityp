@@ -67,11 +67,12 @@ cpl_error_code gravi_eop_interpolate (cpl_size n, double *mjd,
                                       cpl_table * eop_table,
                                       cpl_propertylist * header);
 
+void eraAtboq (double rc, double dc, eraASTROM *astrom, double enuob[3]);
 void eraAtcoq (double rc, double dc, double pmr, double pmd, double px,
 			   double rv, eraASTROM *astrom, double enuob[3]);
 void dtp2s (double xi, double eta, double raz,
 			double decz, double *ra, double *dec);
-
+void rotate_vector (double in[3], double angle, double axis[3], double out[3]);
 void difference (double x[3], double y[3], double z[3]);
 void multiply (double xyz[3], double factor);
 void normalize (double xyz[3]);
@@ -179,7 +180,7 @@ cpl_error_code gravi_eop_interpolate (cpl_size n, double *mjd,
  * Quick transform from BCRS to Observed
  *     rc,dc  double   ICRS right ascension at J2000.0 (radians)
  */
-void eraAtboq(double rc, double dc, eraASTROM *astrom, double enuob[3])
+void eraAtboq (double rc, double dc, eraASTROM *astrom, double enuob[3])
 {
     double ri, di;
     double aob, zob, hob, dob, rob;
@@ -194,7 +195,7 @@ void eraAtboq(double rc, double dc, eraASTROM *astrom, double enuob[3])
 	eraS2c(CPL_MATH_PI/2.0-aob, CPL_MATH_PI/2.0-zob, enuob);
 }
 
-void rotate_vector(double in[3], double angle, double axis[3], double out[3])
+void rotate_vector (double in[3], double angle, double axis[3], double out[3])
 {
 	double rv[3];
 	double rm[3][3];
