@@ -2608,14 +2608,6 @@ cpl_error_code gravi_vis_fit_amp (cpl_table * oi_table, const char * name,
                           pow (cpl_array_get (e_array[row],wave,&nv), -2);
 		  double value = cpl_array_get (f_array[row],wave,&nv) ? 0.0 : 
                          cpl_array_get (v_array[row],wave,&nv);
-
-          if (isnan (weight)) {
-              cpl_msg_error (cpl_func,"%s weight is NaN (row=%lld, wave=%lld)",err,row,wave);
-          }
-          if (isnan (value)) {
-              cpl_msg_error (cpl_func,"%s value is NaN (row=%lld, wave=%lld)",name,row,wave);
-          }
-          
           cpl_matrix_set (rhs, wave, 0, value * weight);
           for (cpl_size deg = 0; deg <= maxdeg; deg++) 
               cpl_matrix_set (coeff, wave, deg, pow ((double)wave,(double)deg) * weight);
@@ -2630,7 +2622,7 @@ cpl_error_code gravi_vis_fit_amp (cpl_table * oi_table, const char * name,
       if ( !cpl_errorstate_is_equal (prev_state))
       {
           cpl_errorstate_dump (prev_state, 0, NULL);
-          cpl_msg_warning (cpl_func,"%s row=%lld",name,row);
+          cpl_msg_error (cpl_func,"%s row=%lld",name,row);
       }
       CPLCHECK_MSG ("Cannot solve matrix");
       
