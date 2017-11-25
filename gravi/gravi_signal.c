@@ -82,6 +82,8 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
 cpl_error_code gravi_flux_create_fddlpos_sc (cpl_table * flux_SC, cpl_table * fddl_table);
 cpl_error_code gravi_flux_create_totalflux_sc (cpl_table * flux_SC, cpl_table * flux_FT);
 cpl_error_code gravi_flux_create_met_sc (cpl_table * flux_SC, cpl_table * vis_MET);
+cpl_error_code gravi_flux_create_acq_sc (cpl_table * vis_SC,
+                                         cpl_table * vis_ACQ);
 
 cpl_error_code gravi_vis_create_acq_sc (cpl_table * vis_SC,
                                         cpl_table * vis_ACQ);
@@ -1111,6 +1113,82 @@ cpl_error_code gravi_vis_create_acq_sc (cpl_table * vis_SC,
   return CPL_ERROR_NONE;
 }
 
+/* -------------------------------------------------------------------------- */
+/**
+ * @brief Compute the averaged ACQ signal for each SC DIT per beam
+ * 
+ * @param flux_SC:  input/output OI_VIS table of the SC
+ * @param vis_ACQ:  input OI_VIS_ACQ table
+ *
+ * The averaged quantities are stored in new columns in the vis_SC table. The
+ * ACQ_CAM signals are averaged with flat weighting inside each SC DIT. The
+ * synchronisation info shall already be computed.
+ */
+/* -------------------------------------------------------------------------- */
+
+cpl_error_code gravi_flux_create_acq_sc (cpl_table * flux_SC,
+                                         cpl_table * vis_ACQ)
+{
+  gravi_msg_function_start(1);
+  cpl_ensure_code (flux_SC,  CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (vis_ACQ, CPL_ERROR_NULL_INPUT);
+  
+  cpl_size ntel = 4;
+  cpl_size nrow_sc  = cpl_table_get_nrow (flux_SC) / ntel;
+
+  /* Get SC data */
+  int * first = cpl_table_get_data_int (flux_SC, "FIRST_ACQ");
+  int * last  = cpl_table_get_data_int (flux_SC, "LAST_ACQ");
+  CPLCHECK_MSG ("Cannot get data");
+
+  /* Get ACQ data */
+  int * pup_n = cpl_table_get_data_int (vis_ACQ, "PUPIL_NSPOT");
+  double * pup_x = cpl_table_get_data_double (vis_ACQ, "PUPIL_X");
+  double * pup_y = cpl_table_get_data_double (vis_ACQ, "PUPIL_Y");
+  double * pup_z = cpl_table_get_data_double (vis_ACQ, "PUPIL_Z");
+  CPLCHECK_MSG ("Cannot get direct pointer to data");
+
+  /* New columns -- filled with zero */
+  gravi_table_new_column (flux_SC, "PUPIL_X", NULL, CPL_TYPE_DOUBLE);
+  double * pup_x_sc = cpl_table_get_data_double (flux_SC, "PUPIL_X");
+  gravi_table_new_column (flux_SC, "PUPIL_Y", NULL, CPL_TYPE_DOUBLE);
+  double * pup_y_sc = cpl_table_get_data_double (flux_SC, "PUPIL_Y");
+  gravi_table_new_column (flux_SC, "PUPIL_Z", NULL, CPL_TYPE_DOUBLE);
+  double * pup_z_sc = cpl_table_get_data_double (flux_SC, "PUPIL_Z");
+
+  /* Loop on base and rows */
+  for (cpl_size tel = 0; tel < ntel; tel++) {
+	for (cpl_size row_sc = 0; row_sc < nrow_sc; row_sc ++) {
+	  cpl_size nsc = row_sc * ntel + tel;
+  
+	  /* Sum over synch ACQ frames, only valid frames */
+      cpl_size nframe = 0;
+	  for (cpl_size row = first[nsc] ; row < last[nsc]; row++) {
+          cpl_size row0 = row * ntel + tel;
+
+          if (pup_n[row0] != 0) {
+              pup_x_sc[nsc] += pup_x[row0];
+              pup_y_sc[nsc] += pup_y[row0];
+              pup_z_sc[nsc] += pup_z[row0];
+              nframe ++;
+          }
+          
+          CPLCHECK_MSG ("Fail to integrate the ACQ frames");
+      }
+      
+	  /* Normalize the means  (if nframe == 0, values are zero) */
+	  if (nframe != 0 ){
+          pup_x_sc[nsc] /= (double)nframe;
+          pup_y_sc[nsc] /= (double)nframe;
+          pup_z_sc[nsc] /= (double)nframe;
+      }
+      
+	} /* End loop on SC frames */
+  }/* End loop on bases */
+
+  gravi_msg_function_exit(1);
+  return CPL_ERROR_NONE;
+}
 
 /* -------------------------------------------------------------------------- */
 /**
@@ -1532,6 +1610,10 @@ cpl_error_code gravi_flux_create_met_sc (cpl_table * flux_SC, cpl_table * vis_ME
   cpl_array ** opd_met_tel = cpl_table_get_data_array (vis_MET, "OPD_TEL");
   cpl_array ** phasor_met_telfc = cpl_table_get_data_array (vis_MET, "PHASOR_TELFC");
 
+  double * opd_met_fc_corr        = cpl_table_get_data_double (vis_MET, "OPD_FC_CORR");
+  double * opd_met_telfc_mcorr    = cpl_table_get_data_double (vis_MET, "OPD_TELFC_MCORR");
+  cpl_array ** opd_met_telfc_corr = cpl_table_get_data_array (vis_MET, "OPD_TELFC_CORR");
+
   CPLCHECK_MSG("Cannot get direct pointer to data");
 
   /* New columns */
@@ -1543,6 +1625,15 @@ cpl_error_code gravi_flux_create_met_sc (cpl_table * flux_SC, cpl_table * vis_ME
 
   gravi_table_new_column_array (flux_SC, "PHASOR_MET_TELFC", "V^4", CPL_TYPE_DOUBLE_COMPLEX, ndiode);
   cpl_array ** phasor_metdit_telfc = cpl_table_get_data_array (flux_SC, "PHASOR_MET_TELFC");
+
+  gravi_table_new_column (flux_SC, "OPD_MET_FC_CORR", "m", CPL_TYPE_DOUBLE);
+  double * opd_metdit_fc_corr = cpl_table_get_data_double (flux_SC, "OPD_MET_FC_CORR");
+
+  gravi_table_new_column (flux_SC, "OPD_MET_TELFC_MCORR", "m", CPL_TYPE_DOUBLE);
+  double * opd_metdit_telfc_mcorr = cpl_table_get_data_double (flux_SC, "OPD_MET_TELFC_MCORR");
+
+  gravi_table_new_column_array (flux_SC, "OPD_MET_TELFC_CORR", "m", CPL_TYPE_DOUBLE, ndiode);
+  cpl_array ** opd_metdit_telfc_corr = cpl_table_get_data_array (flux_SC, "OPD_MET_TELFC_CORR");
   
   CPLCHECK_MSG("Cannot create columns");
 
@@ -1553,6 +1644,7 @@ cpl_error_code gravi_flux_create_met_sc (cpl_table * flux_SC, cpl_table * vis_ME
 
 	  opd_metdit_tel[nsc] = gravi_array_init_double (ndiode, 0.0);
       phasor_metdit_telfc[nsc] = gravi_array_init_double_complex (ndiode, 0.0+I*0.0);
+	  opd_metdit_telfc_corr[nsc] = gravi_array_init_double (ndiode, 0.0);
 
 	  /* Sum over synch MET frames */
 	  for (cpl_size row_met = first_met[nsc] ; row_met < last_met[nsc]; row_met++) {
@@ -1566,6 +1658,13 @@ cpl_error_code gravi_flux_create_met_sc (cpl_table * flux_SC, cpl_table * vis_ME
 
         /* Mean PHASOR_MET_TELFC */
         cpl_array_add (phasor_metdit_telfc[nsc], phasor_met_telfc[nmet]);
+
+	    /* Mean OPD_FC_CORR and OPD_TELFC_MCORR for each BASELINE */
+	    opd_metdit_fc_corr[nsc] += opd_met_fc_corr[nmet];
+	    opd_metdit_telfc_mcorr[nsc] += opd_met_telfc_mcorr[nmet];
+        
+	    /* Mean OPD_TELFC_CORR for each BASELINE and diode */
+	    cpl_array_add (opd_metdit_telfc_corr[nsc], opd_met_telfc_corr[nmet]);
 		
 		CPLCHECK_MSG ("Fail to integrate the metrology");
 	  }
@@ -1573,6 +1672,10 @@ cpl_error_code gravi_flux_create_met_sc (cpl_table * flux_SC, cpl_table * vis_ME
 	  /* Normalize the means  (if nframe == 0, values are zero) */
 	  cpl_size nframe = last_met[nsc] - first_met[nsc];
 	  if (nframe != 0 ){
+          opd_metdit_fc_corr[nsc] /= nframe;
+          opd_metdit_telfc_mcorr[nsc] /= nframe;
+          cpl_array_divide_scalar (opd_metdit_telfc_corr[nsc], (double)nframe);
+          
 		  cpl_array_divide_scalar (opd_metdit_tel[nsc], (double)nframe);
 		  opd_metdit_fc[nsc] /= nframe;
 		  cpl_array_divide_scalar (phasor_metdit_telfc[nsc], (double)nframe);
@@ -2640,8 +2743,10 @@ cpl_error_code gravi_compute_signals (gravi_data * p2vmred_data,
         
         cpl_table * vis_ACQ = gravi_data_get_table (p2vmred_data, GRAVI_OI_VIS_ACQ_EXT);
         gravi_signal_create_sync (vis_SC, 6, dit_sc, vis_ACQ, 4, "ACQ");
+        gravi_signal_create_sync (flux_SC, 4, dit_sc, vis_ACQ, 4, "ACQ");
 
         gravi_vis_create_acq_sc (vis_SC, vis_ACQ);
+        gravi_flux_create_acq_sc (flux_SC, vis_ACQ);
     }
 
 	/* 
