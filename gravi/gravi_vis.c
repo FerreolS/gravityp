@@ -77,6 +77,8 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
                                             int use_pFactor,
 											int use_debiasing);
 
+cpl_error_code gravi_vis_flag_nan (cpl_table * oi_table);
+
 cpl_error_code gravi_vis_average_amp (cpl_table *oi_table, const char *name,  const char *err, int nbase);
 cpl_error_code gravi_vis_average_phi (cpl_table *oi_table, const char *name,  const char *err, int nbase);
 cpl_error_code gravi_vis_average_value (cpl_table *oi_table, const char *name,  const char *err, int nbase);
@@ -2428,7 +2430,7 @@ cpl_error_code gravi_vis_smooth_amp (cpl_table * oi_table, const char * name, co
   cpl_array ** v_array = cpl_table_get_data_array (oi_table, name);
   cpl_array ** e_array = cpl_table_get_data_array (oi_table, err);
   cpl_array ** f_array = cpl_table_get_data_array (oi_table, "FLAG");
-
+  CPLCHECK_MSG ("Cannot get data");
 
   /* Allocate output */
   cpl_array * smo_array = cpl_array_duplicate (v_array[0]);
@@ -2509,6 +2511,7 @@ cpl_error_code gravi_vis_smooth_phi (cpl_table * oi_table, const char * name, co
   cpl_array ** v_array = cpl_table_get_data_array (oi_table, name);
   cpl_array ** e_array = cpl_table_get_data_array (oi_table, err);
   cpl_array ** f_array = cpl_table_get_data_array (oi_table, "FLAG");
+  CPLCHECK_MSG ("Cannot get data");
   
   /* Allocate output */
   cpl_array * smo_array = cpl_array_duplicate (v_array[0]);
@@ -2549,7 +2552,7 @@ cpl_error_code gravi_vis_smooth_phi (cpl_table * oi_table, const char * name, co
     /* Set back */
     cpl_table_set_array (oi_table, name, row, smo_array);
     cpl_table_set_array (oi_table, err,  row, err_array);
-    CPLCHECK_MSG ("Cannot smooth amp");
+    CPLCHECK_MSG ("Cannot smooth phi");
 	
     FREE (cpl_vector_delete, i_vector);
     FREE (cpl_vector_delete, o_vector);
@@ -2560,12 +2563,11 @@ cpl_error_code gravi_vis_smooth_phi (cpl_table * oi_table, const char * name, co
 
   gravi_msg_function_exit(1);
   return CPL_ERROR_NONE;
-
 }
 
 /*----------------------------------------------------------------------------*/
 /**
- * @brief Smooth phase column of OIFITS table.
+ * @brief Smooth amp column of OIFITS table.
  * 
  * @param oi_table:   the table to update (column depth will be modified)
  * @param name:       name of column to rebin
@@ -2591,6 +2593,7 @@ cpl_error_code gravi_vis_fit_amp (cpl_table * oi_table, const char * name,
   cpl_array ** v_array = cpl_table_get_data_array (oi_table, name);
   cpl_array ** e_array = cpl_table_get_data_array (oi_table, err);
   cpl_array ** f_array = cpl_table_get_data_array (oi_table, "FLAG");
+  CPLCHECK_MSG ("Cannot get data");
   
   /* Loop on rows */
   for (cpl_size row = 0 ; row < nrow ; row ++) {
@@ -2605,6 +2608,14 @@ cpl_error_code gravi_vis_fit_amp (cpl_table * oi_table, const char * name,
                           pow (cpl_array_get (e_array[row],wave,&nv), -2);
 		  double value = cpl_array_get (f_array[row],wave,&nv) ? 0.0 : 
                          cpl_array_get (v_array[row],wave,&nv);
+
+          if (isnan (weight)) {
+              cpl_msg_error (cpl_func,"%s weight is NaN (row=%lld, wave=%lld)",err,row,wave);
+          }
+          if (isnan (value)) {
+              cpl_msg_error (cpl_func,"%s value is NaN (row=%lld, wave=%lld)",name,row,wave);
+          }
+          
           cpl_matrix_set (rhs, wave, 0, value * weight);
           for (cpl_size deg = 0; deg <= maxdeg; deg++) 
               cpl_matrix_set (coeff, wave, deg, pow ((double)wave,(double)deg) * weight);
@@ -2612,7 +2623,15 @@ cpl_error_code gravi_vis_fit_amp (cpl_table * oi_table, const char * name,
       }
 
       /* Solve */
+      cpl_errorstate prev_state = cpl_errorstate_get();
       cpl_matrix * solve = cpl_matrix_solve_normal (coeff, rhs);
+
+      /* Dump errors */
+      if ( !cpl_errorstate_is_equal (prev_state))
+      {
+          cpl_errorstate_dump (prev_state, 0, NULL);
+          cpl_msg_warning (cpl_func,"%s row=%lld",name,row);
+      }
       CPLCHECK_MSG ("Cannot solve matrix");
       
       /* Evaluate */
@@ -2639,7 +2658,7 @@ cpl_error_code gravi_vis_fit_amp (cpl_table * oi_table, const char * name,
  * 
  * @param oi_data      VIS data to process, in-place
  * @param nsamp_vis    integer, the number of consecutive bin to smooth
- * @param nsamp_phi    integer, the number of consecutive bin to smooth
+ * @param nsamp_flx    integer, the number of consecutive bin to smooth
  * @param maxdeg       integer, fit order
  * @param mindeg       integer, fit order    
  * 
@@ -2669,12 +2688,14 @@ cpl_error_code gravi_vis_smooth (gravi_data * oi_data,
 
 	/* OI_FLUX */
 	oi_table = gravi_data_get_oi_flux (oi_data, type_data, pol, npol);
+    gravi_vis_flag_nan (oi_table);
 	gravi_vis_smooth_amp (oi_table, "FLUX", "FLUXERR", nsamp_flx);
 	gravi_vis_flag_relative_threshold (oi_table, "FLUXERR", "FLUX", "FLAG", 1.0);
 	CPLCHECK_MSG ("Cannot resamp OI_FLUX");
 
 	/* OI_VIS2 */
 	oi_table = gravi_data_get_oi_vis2 (oi_data, type_data, pol, npol);
+    gravi_vis_flag_nan (oi_table);
     gravi_vis_flag_median (oi_table, "VIS2ERR", "FLAG", 5.0);    
 	gravi_vis_smooth_amp (oi_table, "VIS2DATA", "VIS2ERR", nsamp_vis);
     gravi_vis_fit_amp (oi_table, "VIS2DATA", "VIS2ERR", maxdeg);
@@ -2683,6 +2704,7 @@ cpl_error_code gravi_vis_smooth (gravi_data * oi_data,
 
 	/* OI_VIS */
 	oi_table = gravi_data_get_oi_vis (oi_data, type_data, pol, npol);
+    gravi_vis_flag_nan (oi_table);
     gravi_vis_flag_median (oi_table, "VISPHIERR", "FLAG", 5.0);
 	gravi_vis_smooth_amp (oi_table, "VISAMP", "VISAMPERR", nsamp_vis);
 	gravi_vis_smooth_phi (oi_table, "VISPHI", "VISPHIERR", nsamp_vis);
@@ -2697,6 +2719,7 @@ cpl_error_code gravi_vis_smooth (gravi_data * oi_data,
 	
 	/* OI_T3 */
 	oi_table = gravi_data_get_oi_t3 (oi_data, type_data, pol, npol);
+    gravi_vis_flag_nan (oi_table);
     gravi_vis_flag_median (oi_table, "T3PHIERR", "FLAG", 5.0);
 	gravi_vis_smooth_amp (oi_table, "T3AMP", "T3AMPERR", nsamp_vis);
 	gravi_vis_smooth_phi (oi_table, "T3PHI", "T3PHIERR", nsamp_vis);
@@ -2901,6 +2924,69 @@ cpl_error_code gravi_vis_resamp (gravi_data * oi_data, cpl_size nsamp)
 
   gravi_msg_function_exit(1);
   return CPL_ERROR_NONE;
+}
+
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Flag samples of OIFITS table which are NAN or NULL
+ * 
+ * @param oi_table:  the cpl_table to update, in-place
+ */
+/*----------------------------------------------------------------------------*/
+
+cpl_error_code gravi_vis_flag_nan (cpl_table * oi_table)
+{
+    gravi_msg_function_start(1);
+    cpl_ensure_code (oi_table, CPL_ERROR_NULL_INPUT);
+
+    cpl_size nrow = cpl_table_get_nrow (oi_table);
+    cpl_ensure_code (nrow > 0, CPL_ERROR_ILLEGAL_INPUT);
+    
+    int ncols = 10;
+    const char * names[] = {"VIS2DATA","VIS2ERR","VISAMP","VISAMPERR",
+                            "VISPHI","VISPHIERR","T3PHI","T3PHIERR",
+                            "T3AMP","T3AMPERR"};
+
+    /* Loop on columns */
+    for (int c = 0; c < ncols; c++) {
+        
+        if (!cpl_table_has_column (oi_table,names[c])) continue;
+        cpl_msg_info (cpl_func,"Check column %s",names[c]);
+
+        /* Get data of this columns */
+        cpl_size nwave = cpl_table_get_column_depth (oi_table, names[c]);
+        cpl_array ** v_array = cpl_table_get_data_array (oi_table, names[c]);
+        cpl_array ** f_array = cpl_table_get_data_array (oi_table, "FLAG");
+        CPLCHECK_MSG ("Cannot get data");
+
+        /* Loop on rows and waves */
+        cpl_size ninvalid = 0;
+        for (cpl_size row = 0; row < nrow ; row ++) {
+            for (cpl_size wave = 0 ; wave < nwave ; wave ++) {
+
+                /* Get value */
+                int nv = 0;
+                double value = cpl_array_get (v_array[row], wave, &nv);
+
+                /* Check value */
+                if (nv || isnan (value)) {
+                    cpl_array_set (f_array[row], wave, 1.0);
+                    cpl_array_set (v_array[row], wave, 0.0);
+                    ninvalid ++;
+                }
+                CPLCHECK_MSG ("Cannot check data");
+            }
+        } /* End loop on rows and waves */
+
+        /* Verbose */
+        if (ninvalid > 0) {
+            cpl_msg_warning (cpl_func, "Flag %lld invalid data (NAN or NULL) in %s", ninvalid, names[c]);
+        }
+        
+    } /* End loop on columns */
+     
+    gravi_msg_function_exit(1);
+    return CPL_ERROR_NONE;
 }
 
 /*----------------------------------------------------------------------------*/
