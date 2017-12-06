@@ -2211,11 +2211,11 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
 	/* independent from objects separation */
 	cpl_vector * opd_focus_offset;
 	opd_focus_offset = cpl_vector_new (4);
-	/* currently no evidence in data for significant focus term */
-	cpl_vector_set (opd_focus_offset, 0, 0.0e-6);
-	cpl_vector_set (opd_focus_offset, 1, 0.0e-6);
-	cpl_vector_set (opd_focus_offset, 2, 0.0e-6);
-	cpl_vector_set (opd_focus_offset, 3, 0.0e-6);
+	/* Focus offsets calibrated from AT measurements 17 November 2017 */
+	cpl_vector_set (opd_focus_offset, 0, -57e-9);
+	cpl_vector_set (opd_focus_offset, 1, -90e-9);
+	cpl_vector_set (opd_focus_offset, 2,  22e-9);
+	cpl_vector_set (opd_focus_offset, 3, -86e-9);
 
 	/* Mismatch between metrology FC pickup fiber position and pupil reference position */
 	/* correction proportional to object separation */
@@ -2237,12 +2237,11 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
 	cpl_msg_info (cpl_func,"FE: SOBJX, SOBJY in mas: %g, %g ", dx_in, dy_in );
 	cpl_msg_info (cpl_func,"FE: separation in mas: %g ", rho_in );
     
-	/* Separation dependent offsets were calibrated for UTs */
-	cpl_vector_set (opd_pickup_offset, 0, -365.e-9 * rho_in / 1000.);
-	cpl_vector_set (opd_pickup_offset, 1, -380.e-9 * rho_in / 1000.);
-	cpl_vector_set (opd_pickup_offset, 2, -105.e-9 * rho_in / 1000.);
-	cpl_vector_set (opd_pickup_offset, 3, -490.e-9 * rho_in / 1000.);
-    
+	/* Separation dependent offsets calibrated from AT measurements 17 November 2017 */
+	cpl_vector_set (opd_pickup_offset, 0,  -102e-9 * rho_in / 1000.);
+	cpl_vector_set (opd_pickup_offset, 1,    53e-9 * rho_in / 1000.);
+	cpl_vector_set (opd_pickup_offset, 2,   152e-9 * rho_in / 1000.);
+	cpl_vector_set (opd_pickup_offset, 3,  -107e-9 * rho_in / 1000.);
 	/* The effect is by factor 1.8m/8m smaller for ATs */
 	/* get name of first telescope and decide accordingly */
 	const char * telname = gravi_conf_get_telname (0, header);
