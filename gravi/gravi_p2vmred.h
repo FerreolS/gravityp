@@ -39,5 +39,6 @@ cpl_error_code gravi_compute_opdc_state (gravi_data * p2vmred_data);
 
 cpl_error_code gravi_compute_tau0 (gravi_data * data);
 
+cpl_error_code gravi_compute_qc_injection (gravi_data * data);
 
 #endif /* GRAVI_P2VMRED_H_ */

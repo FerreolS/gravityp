@@ -739,6 +739,9 @@ static int gravity_vis(cpl_frameset * frameset,
 		/* Compute the QC0 about tau0 from piezo signals */
 		gravi_compute_tau0 (p2vmred_data);
 
+    /* Compute QC for the Fringe Tracker injection */
+    gravi_compute_qc_injection (p2vmred_data);
+
 		/* Compute the SNR_BOOT and GDELAY_BOOT */
 		gravi_compute_snr (p2vmred_data, parlist);
 		CPLCHECK_MSG ("Cannot compute SNR");

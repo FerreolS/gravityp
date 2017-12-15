@@ -1144,4 +1144,69 @@ cpl_error_code gravi_compute_tau0 (gravi_data * data)
   return CPL_ERROR_NONE;
 }
 
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Compute the QC for the injection stability
+ * 
+ * @param data:   The input data, shall contain an OI_FLUX table
+ *
+ * For each telescope, the injection stability is calculated as the ratio
+ * between the polarisation-averaged 9 percentile and 95 percentile
+ * of the inejcted flux for each telescope.
+ */
+/*----------------------------------------------------------------------------*/
+
+cpl_error_code gravi_compute_qc_injection (gravi_data * data)
+{
+  gravi_msg_function_start(1);
+  cpl_ensure_code (data, CPL_ERROR_NULL_INPUT);
+  
+  char qc_name[100];
+  
+  cpl_propertylist * header = gravi_data_get_header (data);
+  int npol = gravi_pfits_get_pola_num (header, GRAVI_FT);
+  int ntel = 4;
+
+  /* For each telescope */
+  for (int tel = 0; tel<ntel; tel++) {
+    
+    double p05 = 0.0, p95 = 0.0;
+
+    /* For each polarisation */
+    for (int pol = 0; pol<npol; pol++) {
+      
+      /* Access the OI_FLUX table for the given polatisation */
+      cpl_table * table = gravi_data_get_oi_flux (data, GRAVI_FT, pol, npol);
+      
+      /* How many rows do we have per telescope */
+      cpl_size nrow = cpl_table_get_nrow (table) / ntel;
+
+      /* Create an empty vector to hold the data and be sorted later */
+      cpl_vector * flux = cpl_vector_new(nrow);
+
+      /* Fill the flux array with data */
+      for (int row = 0; row<nrow; row++)
+        cpl_vector_set (flux, row, cpl_array_get_mean(cpl_table_get_array (table, "FLUX", tel+row*ntel)));
+      
+      /* Sort the flux array */
+      cpl_vector_sort (flux, CPL_SORT_ASCENDING);
+        
+      /* Compute the 5 percentile and 95 percentile */
+      p05 += cpl_vector_get (flux, (cpl_size)(0.05*(nrow-1)));
+      p95 += cpl_vector_get (flux, (cpl_size)(0.95*(nrow-1)));
+      
+      /* Free the flux array */
+      cpl_vector_delete (flux);
+      
+    }
+    
+    /* Create the QC entry in the FITS header */
+    sprintf (qc_name, "ESO QC FLUX_FT%d P05P95", tel+1);
+    cpl_propertylist_update_double (header, qc_name, p05/p95);
+    cpl_propertylist_set_comment (header, qc_name, "injected flux 5 percentile over 95 percentile");
+  }
+  
+  gravi_msg_function_exit(1);
+  return CPL_ERROR_NONE;
+}
 /**@}*/
