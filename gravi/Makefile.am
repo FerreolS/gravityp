@@ -31,7 +31,8 @@ MAINTAINERCLEANFILES = Makefile.in
 endif
 
 
-AM_CPPFLAGS = -DMIRADIR=\"$(srcdir)/\" $(CPL_INCLUDES) $(GSL_CFLAGS) $(ERFA_CFLAGS)
+AM_CPPFLAGS = -DMIRADIR=\"$(srcdir)/\" $(CPL_INCLUDES) $(GSL_CFLAGS) $(ERFA_CFLAGS) $(HDRL_INCLUDES) -DHDRL_USE_EXPERIMENTAL
+
 
 INCLUDES = $(all_includes)
 
@@ -53,6 +54,7 @@ noinst_HEADERS =    gravi_calib.h \
                     gravi_p2vm.h \
                     gravi_preproc.h \
                     gravi_signal.h \
+                    gravi_strehl.h \
                     gravi_disp.h \
                     gravi_eop.h
 
@@ -78,9 +80,10 @@ libgravi_la_SOURCES =    gravi_calib.c \
                          gravi_p2vm.c \
                          gravi_preproc.c \
                          gravi_signal.c \
+                         gravi_strehl.c \
                          gravi_disp.c \
                          gravi_eop.c
 
-libgravi_la_LDFLAGS = $(CPL_LDFLAGS) $(GSL_LDFLAGS) -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE)
-libgravi_la_LIBADD = $(LIBIRPLIB) $(LIBCPLDFS) $(LIBCPLUI) $(LIBCPLDRS) $(LIBCPLCORE) $(GSL_LIBS) $(ERFA_LIBS)
-libgravi_la_DEPENDENCIES = $(LIBIRPLIB)
+libgravi_la_LDFLAGS = $(HDRL_LDFLAGS) $(CPL_LDFLAGS) $(GSL_LDFLAGS) -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE) 
+libgravi_la_LIBADD = $(HDRL_LIBS) $(LIBIRPLIB) $(LIBCPLDFS) $(LIBCPLUI) $(LIBCPLDRS) $(LIBCPLCORE) $(GSL_LIBS) $(ERFA_LIBS) 
+libgravi_la_DEPENDENCIES = $(LIBIRPLIB) $(LIBHDRL)

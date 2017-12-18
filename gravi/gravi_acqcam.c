@@ -38,6 +38,8 @@
 #include <math.h>
 #include <time.h>
 
+#include <hdrl_strehl.h>
+
 #include "gravi_dfs.h"
 #include "gravi_data.h"
 #include "gravi_pfits.h"
@@ -91,6 +93,9 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
 
 cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y,
                                        double *ex, double *ey, cpl_size size);
+
+cpl_error_code gravi_acq_measure_strehl(cpl_image * img, double x, double y, 
+                                        double pscale, double *SR, cpl_propertylist * header);
 
 /* This global variable optimises the computation
  * of partial derivative on fitted parameters */
@@ -806,6 +811,46 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
 }
 
 /*----------------------------------------------------------------------------*/
+/*
+ * @brief measure Strehl Ratio of the source at the given location
+ */
+/*----------------------------------------------------------------------------*/
+
+cpl_error_code gravi_acq_measure_strehl(cpl_image * img, double x, double y, 
+                                        double pscale, double *SR, cpl_propertylist * header)
+{
+    gravi_msg_function_start(0);
+    cpl_ensure_code (img, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (SR, CPL_ERROR_NULL_INPUT);
+
+    const char * telname = gravi_conf_get_telname (0, header);
+    CPLCHECK ("Cannot get telescope name");
+    hdrl_parameter * strehl_params;
+
+    /* Hardcoded Mirror diameters */
+    if (telname[0] == 'U') {
+        strehl_params = 
+            hdrl_strehl_parameter_create(1.8e-6, 8.0, 1.3, pscale*1e-3, pscale*1e-3, 0.8, 0.8, 1.0);
+    } else if (telname[0] == 'A') {
+        strehl_params = 
+            hdrl_strehl_parameter_create(1.8e-6, 1.8, 0.138, pscale*1e-3, pscale*1e-3, 0.8, 0.8, 1.0);
+    }
+
+    hdrl_strehl_result strehl;
+    cpl_image * sub_image = cpl_image_extract(img, x-50, y-50, x+50, y+50);
+    hdrl_image * sub_hdrl = hdrl_image_create(sub_image, NULL);
+
+    strehl = hdrl_strehl_compute(sub_hdrl, strehl_params);
+    *SR = (double) strehl.strehl_value.data;
+    FREE (hdrl_image_delete, sub_hdrl);
+    FREE (cpl_image_delete, sub_image);
+
+    gravi_msg_function_exit(0);
+    return CPL_ERROR_NONE;
+}
+
+
+/*----------------------------------------------------------------------------*/
 /**
  * @brief Fit a Gaussian into an image, and mark the position.
  * 
@@ -885,10 +930,10 @@ cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y,
     CPLCHECK_MSG("Error checking significance of fit result");
 
     /* Fill image with zero at the detected position */
-    if (*x > 0. && *y > 0.) {
-      cpl_image_set (img, (cpl_size)(*x), (cpl_size)(*y), 0.0);
-    }
-    CPLCHECK_MSG("Error setting peak to zero");
+    //if (*x > 0. && *y > 0.) {
+    //  cpl_image_set (img, (cpl_size)(*x), (cpl_size)(*y), 0.0);
+    //}
+    //CPLCHECK_MSG("Error setting peak to zero");
     
     /* Delete */
     FREE (cpl_array_delete, parameters);
@@ -1155,7 +1200,8 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
     gravi_table_new_column (acqcam_table, "FIELD_FIBER_DY", "pix", CPL_TYPE_DOUBLE);
     gravi_table_new_column (acqcam_table, "FIELD_FIBER_DXERR", "pix", CPL_TYPE_DOUBLE);
     gravi_table_new_column (acqcam_table, "FIELD_FIBER_DYERR", "pix", CPL_TYPE_DOUBLE);
-    
+    gravi_table_new_column (acqcam_table, "FIELD_STREHL", "ratio", CPL_TYPE_DOUBLE);
+
     /* Position of roof center on full frame */
     double roof_x[] = {274.4, 787.1, 1236.1, 1673.4};
     double roof_y[] = {242.3, 247.7, 225.8, 235.6};
@@ -1234,7 +1280,15 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         if (telname[0] == 'U') {
             scale = 18.;
         } else if (telname[0] == 'A') {
-            scale = 80.;
+            if (tel == 0) {
+                scale = 76.8;
+            } else if (tel == 1) {
+                scale = 78.0;
+            } else if (tel == 2) {
+                scale = 77.0;
+            } else if (tel == 3) {
+                scale = 84.6;
+            }
         }
         
         /* Position of the fibres */
@@ -1255,6 +1309,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         double fiber_ft_sc_x=fiber_xsc-fiber_xft;
         double fiber_ft_sc_y=fiber_ysc-fiber_yft;
         
+
         /* Get the North positin angle on the camera */
         double fangle = gravi_pfits_get_fangle_acqcam (header, tel);
         CPLCHECK ("Cannot get rotation");
@@ -1432,6 +1487,8 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
                                         "SC object");
         }
         
+        double total_Strehl =0.;
+        int nStrehl = 0;
         /* Loop on all images */
         for (cpl_size row = 0; row < nrow; row++) {
             if (row %10 == 0 || row == (nrow-1))
@@ -1471,6 +1528,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
                 eyft=eysc;
             }
             
+
             cpl_table_set (acqcam_table, "FIELD_FT_X", row*ntel+tel, xft);
             cpl_table_set (acqcam_table, "FIELD_FT_Y", row*ntel+tel, yft);
             cpl_table_set (acqcam_table, "FIELD_FT_XERR", row*ntel+tel, exft);
@@ -1492,6 +1550,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             cpl_table_set (acqcam_table, "FIELD_SCALE", row*ntel+tel, pscale);
             cpl_table_set (acqcam_table, "FIELD_SCALEERR", row*ntel+tel, escale);
             
+
             /* Error in SC fibre positioning */
             /* The three terms are */
             /*  - offset from FT target as detected to original SC */
@@ -1508,14 +1567,38 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
                 ecorrx = sqrt(eft_sc_x*eft_sc_x + eft_sc_y*eft_sc_y + sobj_offx_cam*sobj_offx_cam*tmp);
                 ecorry = sqrt(eft_sc_x*eft_sc_x + eft_sc_y*eft_sc_y + sobj_offy_cam*sobj_offy_cam*tmp);
             }
-            
+            double Strehl = 1.0;
+            if ((xFT != 0.0) && (pscale > 13.0)) {
+                gravi_acq_measure_strehl(img, xFT, yFT, pscale, &Strehl, header);
+                total_Strehl += Strehl;
+                nStrehl += 1;
+                cpl_table_set (acqcam_table, "FIELD_STREHL", row*ntel+tel, Strehl);
+            } else if (pscale == 0) {
+                gravi_acq_measure_strehl(img, xFT, yFT, scale, &Strehl, header);
+                total_Strehl += Strehl;
+                nStrehl += 1;
+                cpl_table_set (acqcam_table, "FIELD_STREHL", row*ntel+tel, Strehl);
+            } else {
+                cpl_table_set (acqcam_table, "FIELD_STREHL", row*ntel+tel, -1.0);
+            }
             cpl_table_set (acqcam_table, "FIELD_FIBER_DX", row*ntel+tel, corrx);
             cpl_table_set (acqcam_table, "FIELD_FIBER_DY", row*ntel+tel, corry);
             cpl_table_set (acqcam_table, "FIELD_FIBER_DXERR", row*ntel+tel, ecorrx);
             cpl_table_set (acqcam_table, "FIELD_FIBER_DYERR", row*ntel+tel, ecorry);
-            
+
         } /* End loop on images */
-        
+        sprintf (qc_name, "ESO QC ACQ FIELD%i STREHL", tel+1);
+	if (nStrehl==0.) {
+	  /* Fitting failed: put QC to 0., reset ySC to gues value */
+	  qc_val = 0.;
+	} else {
+	  /* Fiting succeeded: shift into full frame */
+	  qc_val =  total_Strehl/((double)nStrehl);
+	}
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, qc_val);
+        cpl_propertylist_update_double (o_header, qc_name, qc_val);
+        cpl_propertylist_set_comment (o_header, qc_name, "Average Strehl value from AcqCam images");
+
     } /* End loop on tel */
     
     gravi_msg_function_exit(1);

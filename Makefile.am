@@ -25,7 +25,7 @@ DISTCLEANFILES = *~
 
 COMPILE_FIRST = mira
 
-TOPSUBDIRS = irplib gravi recipes reflex
+TOPSUBDIRS = irplib hdrl gravi recipes reflex
 
 COMPILE_LAST =
 

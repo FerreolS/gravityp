@@ -66,6 +66,12 @@ AC_C_INLINE
 AC_CHECK_FUNCS([floor pow sqrt isinf isnan])
 ESO_FUNC_STRDUP
 
+# mark hdrl folder as containing a configurable package
+AC_CONFIG_SUBDIRS([hdrl])
+# check and define all required variables to build and
+# link hdrl external located in the hdrl folder
+HDRL_CHECK([hdrl])
+
 # Check for CPL presence and usability
 CPL_CHECK_LIBS
 
