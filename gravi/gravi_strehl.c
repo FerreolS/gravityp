@@ -33,6 +33,8 @@
 
 #include <hdrl_strehl.h>
 
+cpl_error_code gravi_strehl(double wavelength);
+
 /*----------------------------------------------------------------------------*/
 /**
   @brief    Compute the Strehl ratio
