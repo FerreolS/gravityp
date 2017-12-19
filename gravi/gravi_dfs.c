@@ -220,11 +220,11 @@ cpl_parameter * gravi_parameter_add_preproc (cpl_parameterlist *self)
 
     cpl_parameter *p;
 
-    /* Method for profile */
-    p = cpl_parameter_new_value ("gravity.preproc.interp_3pixels", CPL_TYPE_BOOL,
+    /* Method for interpolation */
+    p = cpl_parameter_new_value ("gravity.preproc.interp-3pixels", CPL_TYPE_BOOL,
                                 "Interpolate with 3 pixels",
                                  "gravity.calib", FALSE);
-    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "interp_3pixels");
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "interp-3pixels");
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
     cpl_parameterlist_append (self, p);
 
