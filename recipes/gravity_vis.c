@@ -249,6 +249,14 @@ static int gravity_vis_create(cpl_plugin * plugin)
 	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "reduce-acq-cam");
 	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
 	cpl_parameterlist_append (recipe->parameters, p);
+
+    /* Wave color correction */
+    p = cpl_parameter_new_value ("gravity.vis.color-wave-correction", CPL_TYPE_BOOL,
+                                 "If TRUE, creates a new OI_WAVELENGTH_EFF with corrected wavelength",
+                                 "gravity.vis", FALSE);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "color-wave-correction");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (recipe->parameters, p);
     
 	return 0;
 }
@@ -779,7 +787,7 @@ static int gravity_vis(cpl_frameset * frameset,
             gravi_vis_force_time (tmpvis_data);
             CPLCHECK_CLEAN ("Cannot average the TIME in OI_VIS");
         }
-            
+
         /* Merge with already existing */
         if (vis_data == NULL) {
             vis_data = tmpvis_data; tmpvis_data = NULL;
@@ -839,6 +847,15 @@ static int gravity_vis(cpl_frameset * frameset,
 	} else {
 	  cpl_msg_info (cpl_func, "Don't align the SC visibilities on the FT");
 	}
+
+    /* Correct the wavelength due to target color shifting */
+    if (gravi_param_get_bool (parlist, "gravity.vis.color-wave-correction") ) {
+        cpl_msg_info (cpl_func,"Compute the wavelength shift due to target color");
+        gravi_wave_correct_color (vis_data);
+        CPLCHECK_CLEAN ("Cannot compute the wavelength in OI_VIS");
+    } else {
+        cpl_msg_info (cpl_func, "Don't compute the wavelength shift due to target color");
+    }
 
 	/* Co-add the observations if requested */
     if (gravi_param_get_bool (parlist, "gravity.postprocess.average-vis")) {

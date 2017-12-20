@@ -1418,6 +1418,53 @@ cpl_error_code gravi_wave_correct_dispersion (cpl_table * wave_fibre,
 
 /*----------------------------------------------------------------------------*/
 /**
+ * @brief Create a OI_WAVELENGTH_CORR table with color corrected wavelength.
+ *
+ * @param vis_data      Input gravi_data, modified inplace
+ */
+/*----------------------------------------------------------------------------*/
+
+cpl_error_code gravi_wave_correct_color (gravi_data * vis_data)
+{
+    gravi_msg_function_start(1);
+    cpl_ensure_code (vis_data, CPL_ERROR_NULL_INPUT);
+
+    cpl_propertylist * primary_header = gravi_data_get_header (vis_data);
+    cpl_propertylist * oiwave_header = NULL;
+    cpl_table * oiwave_table = NULL;
+
+    /* For each type of data SC / FT */
+    int ntype_data = 2;
+    for (int type_data = 0; type_data < ntype_data ; type_data ++) {
+
+        /* Loop on polarisation */
+        int npol = gravi_pfits_get_pola_num (primary_header, type_data);
+        for (int pol = 0 ; pol<npol ; pol++) {
+            oiwave_table = cpl_table_duplicate ( gravi_data_get_oi_wave ( vis_data, type_data, pol, npol ) );
+            oiwave_header = cpl_propertylist_duplicate ( gravi_data_get_oi_wave_plist ( vis_data, type_data, pol, npol ) );
+
+            /* here you can do what you want on this duplicated oi_wave_table
+             * to get OI_FLUX table :
+             *     cpl_table * oiflux_table = gravi_data_get_oi_flux(vis_data, type_data, pol, npol)
+             * */
+
+
+            /* save the new extension with name OI_WAVELENGTH_CORR */
+            gravi_data_add_table(vis_data, oiwave_header, "OI_WAVELENGTH_CORR", oiwave_table);
+
+            CPLCHECK_MSG("Cannot apply color wave correction");
+        }
+        /* End loop on polarisation */
+    }
+    /* End loop on data_type */
+
+    gravi_msg_function_exit(1);
+    return CPL_ERROR_NONE;
+}
+
+
+/*----------------------------------------------------------------------------*/
+/**
  * @brief Compute the (useless) TEST_WAVE table from the WAVE_FIBRE
  *        and the PROFILE maps. 
  * 
