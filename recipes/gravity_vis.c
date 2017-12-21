@@ -45,6 +45,7 @@
 #include "gravi_utils.h"
 
 #include "gravi_calib.h"
+#include "gravi_wave.h"
 #include "gravi_p2vmred.h"
 #include "gravi_acqcam.h"
 #include "gravi_eop.h"

@@ -45,4 +45,6 @@ cpl_error_code  gravi_compute_wave (gravi_data * wave_map,
 cpl_error_code gravi_wave_qc (gravi_data * wave_map,
                               gravi_data * profile_map);
 
+cpl_error_code gravi_wave_correct_color (gravi_data * vis_data);
+
 #endif /* GRAVI_WAVE_H_ */
