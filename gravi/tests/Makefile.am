@@ -47,32 +47,32 @@ gravi_dfs_test_DEPENDENCY = $(LIBHDRL)
 gravi_data_test_SOURCES = gravi_data-test.c
 gravi_data_test_LDFLAGS = $(CPL_LDFLAGS) $(HDRL_LDFLAGS)
 gravi_data_test_LDADD = $(LIBCPLUI) $(LIBCPLCORE) $(LIBGRAVI) $(GSL_LIBS) $(HDRL_LIBS)
-gravi_dfs_test_DEPENDENCY = $(LIBHDRL)
+gravi_data_test_DEPENDENCY = $(LIBHDRL)
 
 gravi_calib_test_SOURCES = gravi_calib-test.c
 gravi_calib_test_LDFLAGS = $(CPL_LDFLAGS) $(GSL_LDFLAGS) $(HDRL_LDFLAGS)
 gravi_calib_test_LDADD = $(LIBCPLUI) $(LIBCPLCORE) $(LIBGRAVI) $(GSL_LIBS) $(HDRL_LIBS)
-gravi_dfs_test_DEPENDENCY = $(LIBHDRL)
+gravi_calib_test_DEPENDENCY = $(LIBHDRL)
 
 gravi_utils_test_SOURCES = gravi_utils-test.c
 gravi_utils_test_LDFLAGS = $(CPL_LDFLAGS) $(GSL_LDFLAGS) $(HDRL_LDFLAGS)
 gravi_utils_test_LDADD = $(LIBCPLUI) $(LIBCPLCORE) $(LIBGRAVI) $(GSL_LIBS) $(HDRL_LIBS)
-gravi_dfs_test_DEPENDENCY = $(LIBHDRL)
+gravi_utils_test_DEPENDENCY = $(LIBHDRL)
 
 gravi_strehl_test_SOURCES = gravi_strehl-test.c
 gravi_strehl_test_LDFLAGS = $(CPL_LDFLAGS) $(GSL_LDFLAGS) $(HDRL_LDFLAGS)
 gravi_strehl_test_LDADD = $(LIBCPLUI) $(LIBCPLCORE) $(LIBGRAVI) $(GSL_LIBS) $(HDRL_LIBS)
-gravi_dfs_test_DEPENDENCY = $(LIBHDRL)
+gravi_strehl_test_DEPENDENCY = $(LIBHDRL)
 
 gravi_image_test_SOURCES = gravi_image-test.c
 gravi_image_test_LDFLAGS = $(CPL_LDFLAGS) $(GSL_LDFLAGS) $(HDRL_LDFLAGS)
 gravi_image_test_LDADD = $(LIBCPLUI) $(LIBCPLCORE) $(LIBGRAVI) $(GSL_LIBS) $(HDRL_LIBS)
-gravi_dfs_test_DEPENDENCY = $(LIBHDRL)
+gravi_image_test_DEPENDENCY = $(LIBHDRL)
 
 gravi_eop_test_SOURCES = gravi_eop-test.c
 gravi_eop_test_LDFLAGS = $(CPL_LDFLAGS) $(GSL_LDFLAGS) $(HDRL_LDFLAGS)
 gravi_eop_test_LDADD = $(LIBCPLUI) $(LIBCPLCORE) $(LIBGRAVI) $(GSL_LIBS) $(HDRL_LIBS)
-gravi_dfs_test_DEPENDENCY = $(LIBHDRL)
+gravi_eop_test_DEPENDENCY = $(LIBHDRL)
 
 # Be sure to reexport important environment variables.
 TESTS_ENVIRONMENT = MAKE="$(MAKE)" CC="$(CC)" CFLAGS="$(CFLAGS)" \
