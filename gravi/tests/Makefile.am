@@ -28,8 +28,6 @@ MAINTAINERCLEANFILES = Makefile.in
 
 endif
 
-EXTRA_DIST = 
-
 
 AM_CPPFLAGS = -DDATADIR=\"$(srcdir)/\" $(all_includes)
 
