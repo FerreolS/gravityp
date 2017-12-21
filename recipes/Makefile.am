@@ -63,7 +63,7 @@ gravity_piezo_la_LIBADD = $(LIBGRAVI) $(HDRL_LIBS)
 gravity_piezo_la_LDFLAGS = -module -avoid-version $(HDRL_LDFLAGS)
 gravity_piezo_la_DEPENDENCIES = $(LIBGRAVI) $(LIBHDRL)
 
-cgravity_wavelamp_la_SOURCES = gravity_wavelamp.c 
+gravity_wavelamp_la_SOURCES = gravity_wavelamp.c 
 gravity_wavelamp_la_LIBADD = $(LIBGRAVI) $(HDRL_LIBS)
 gravity_wavelamp_la_LDFLAGS = -module -avoid-version $(HDRL_LDFLAGS)
 gravity_wavelamp_la_DEPENDENCIES = $(LIBGRAVI) $(LIBHDRL)
