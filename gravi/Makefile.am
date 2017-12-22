@@ -31,10 +31,8 @@ MAINTAINERCLEANFILES = Makefile.in
 endif
 
 
-AM_CPPFLAGS = -DMIRADIR=\"$(srcdir)/\" $(CPL_INCLUDES) $(GSL_CFLAGS) $(ERFA_CFLAGS) $(HDRL_INCLUDES) -DHDRL_USE_EXPERIMENTAL
+AM_CPPFLAGS = -DMIRADIR=\"$(srcdir)/\" $(CPL_INCLUDES) $(GSL_CFLAGS) $(ERFA_CFLAGS) $(HDRL_INCLUDES) $(GRAVI_INCLUDES) -DHDRL_USE_EXPERIMENTAL
 
-
-INCLUDES = $(all_includes)
 
 noinst_HEADERS =    gravi_calib.h \
                     gravi_wave.h \
