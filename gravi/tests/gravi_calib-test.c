@@ -495,7 +495,8 @@ int gravi_calib_test(void){
     /* Extraction */
     gravi_parameter_add_extract (parlist);
     gravi_parameter_add_metrology (parlist);
-    
+    gravi_parameter_add_preproc (parlist);
+
     /* Snr, signal, rejectio flags, vis */
     int isCalib = 0;
     gravi_parameter_add_compute_snr (parlist, isCalib);
@@ -554,7 +555,7 @@ int gravi_calib_test(void){
 							   "gravi_create_p2vm: create the p2vm table... ", flag);
 
 		/* Rescale to common wavelength */
-		gravi_align_spectrum (preproc_data, data_wave, p2vm_data, GRAVI_DET_ALL);
+		gravi_align_spectrum (preproc_data, data_wave, p2vm_data, GRAVI_DET_ALL, parlist);
 
 		}
 
@@ -711,7 +712,7 @@ int gravi_calib_test(void){
                                                       GRAVI_DET_ALL);
     
 	cpl_parameterlist_delete (paralist);
-    gravi_align_spectrum (preproc_data, data_wave, p2vm_data, GRAVI_DET_ALL);
+    gravi_align_spectrum (preproc_data, data_wave, p2vm_data, GRAVI_DET_ALL, parlist);
 
     /* Move extensions from raw_data and delete it */
     gravi_data_move_ext (preproc_data, data, GRAVI_ARRAY_GEOMETRY_EXT);

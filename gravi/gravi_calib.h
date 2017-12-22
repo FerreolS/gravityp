@@ -62,8 +62,6 @@ gravi_data * gravi_compute_biasmask (gravi_data * dark_map,
 
 gravi_data * gravi_compute_baseline (gravi_data * );
 
-gravi_data * gravi_compute_disp (gravi_data * vis_data);
-
 
 
 #endif /* GRAVI_PREPROC_H_ */
