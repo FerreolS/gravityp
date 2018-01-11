@@ -1568,6 +1568,11 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
                 ecorrx = sqrt(eft_sc_x*eft_sc_x + eft_sc_y*eft_sc_y + sobj_offx_cam*sobj_offx_cam*tmp);
                 ecorry = sqrt(eft_sc_x*eft_sc_x + eft_sc_y*eft_sc_y + sobj_offy_cam*sobj_offy_cam*tmp);
             }
+            cpl_table_set (acqcam_table, "FIELD_FIBER_DX", row*ntel+tel, corrx);
+            cpl_table_set (acqcam_table, "FIELD_FIBER_DY", row*ntel+tel, corry);
+            cpl_table_set (acqcam_table, "FIELD_FIBER_DXERR", row*ntel+tel, ecorrx);
+            cpl_table_set (acqcam_table, "FIELD_FIBER_DYERR", row*ntel+tel, ecorry);
+
             double Strehl = 1.0;
             if ((xFT != 0.0) && (pscale > 13.0)) {
                 gravi_acq_measure_strehl(img, xFT, yFT, pscale, &Strehl, header);
@@ -1582,10 +1587,6 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             } else {
                 cpl_table_set (acqcam_table, "FIELD_STREHL", row*ntel+tel, -1.0);
             }
-            cpl_table_set (acqcam_table, "FIELD_FIBER_DX", row*ntel+tel, corrx);
-            cpl_table_set (acqcam_table, "FIELD_FIBER_DY", row*ntel+tel, corry);
-            cpl_table_set (acqcam_table, "FIELD_FIBER_DXERR", row*ntel+tel, ecorrx);
-            cpl_table_set (acqcam_table, "FIELD_FIBER_DYERR", row*ntel+tel, ecorry);
 
         } /* End loop on images */
         sprintf (qc_name, "ESO QC ACQ FIELD%i STREHL", tel+1);
