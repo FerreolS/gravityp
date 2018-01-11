@@ -1499,22 +1499,24 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             cpl_image * img = cpl_imagelist_get (acqcam_imglist, row);
             CPLCHECK_MSG("Error getting image");
             
-            /* Detec SC */
+            /*-------------------------------------------------*/
+            /* SC target position computation of current frame */
+            /*-------------------------------------------------*/
             double xsc = xSC, ysc = ySC, exsc=0., eysc=0.;
             gravi_acq_fit_gaussian (img, &xsc, &ysc, &exsc, &eysc, size);
-            CPLCHECK_MSG("Error fitting SC");
-            
+            CPLCHECK_MSG("Error fitting SC");          
             /* Shift back positions to full frame */
             if (xsc != 0.) xsc += sx - 1 - nsx*tel;
             if (ysc != 0.) ysc += sy - 1;
-            
             cpl_table_set (acqcam_table, "FIELD_SC_X", row*ntel+tel, xsc);
             cpl_table_set (acqcam_table, "FIELD_SC_Y", row*ntel+tel, ysc);
             cpl_table_set (acqcam_table, "FIELD_SC_XERR", row*ntel+tel, exsc);
             cpl_table_set (acqcam_table, "FIELD_SC_YERR", row*ntel+tel, eysc);
             CPLCHECK_MSG("Error setting SC columns");
 
-            /* Detec FT */
+            /*-------------------------------------------------*/
+            /* FT target position computation of current frame */
+            /*-------------------------------------------------*/
             double xft = xFT, yft = yFT, exft=0., eyft=0.;
             if (rho_in != 0.) {
                 gravi_acq_fit_gaussian (img, &xft, &yft, &exft, &eyft, size);
@@ -1528,15 +1530,15 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
                 exft=exsc;
                 eyft=eysc;
             }
-            
-
             cpl_table_set (acqcam_table, "FIELD_FT_X", row*ntel+tel, xft);
             cpl_table_set (acqcam_table, "FIELD_FT_Y", row*ntel+tel, yft);
             cpl_table_set (acqcam_table, "FIELD_FT_XERR", row*ntel+tel, exft);
             cpl_table_set (acqcam_table, "FIELD_FT_YERR", row*ntel+tel, eyft);
             CPLCHECK_MSG("Error setting FT column");
 
-            /* Compute plate-scale */
+            /*------------------------------------------*/
+            /* Plate scale computation of current frame */
+            /*------------------------------------------*/
             double ft_sc_x = xsc - xft;
             double ft_sc_y = ysc - yft;
             double eft_sc_x = sqrt(exsc*exsc+exft*exft);
@@ -1551,8 +1553,9 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             cpl_table_set (acqcam_table, "FIELD_SCALE", row*ntel+tel, pscale);
             cpl_table_set (acqcam_table, "FIELD_SCALEERR", row*ntel+tel, escale);
             
-
-            /* Error in SC fibre positioning */
+            /*---------------------------------------------*/
+            /* Error in fibre positioning of current frame */
+            /*---------------------------------------------*/
             /* The three terms are */
             /*  - offset from FT target as detected to original SC */
             /*  target as detected; */
@@ -1573,6 +1576,9 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             cpl_table_set (acqcam_table, "FIELD_FIBER_DXERR", row*ntel+tel, ecorrx);
             cpl_table_set (acqcam_table, "FIELD_FIBER_DYERR", row*ntel+tel, ecorry);
 
+            /*-------------------------------------*/
+            /* Strehl computation of current frame */
+            /*-------------------------------------*/
             double Strehl = 1.0;
             if ((xFT != 0.0) && (pscale > 13.0)) {
                 gravi_acq_measure_strehl(img, xFT, yFT, pscale, &Strehl, header);
@@ -1714,4 +1720,3 @@ double gravi_acqcam_z2meter (double PositionPixels)
 }
 
 /**@}*/
-
