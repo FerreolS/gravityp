@@ -2222,7 +2222,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
 {
     gravi_msg_function_start(1);
     
-    int ndiode = 4, ntel = 4;
+    /* get size of arrays */
+    cpl_size ndiode = 4, ntel = 4;
     cpl_size nrow_met = cpl_table_get_nrow (metrology_table);
     
     /* get OPD_FC and OPD_TEL */
