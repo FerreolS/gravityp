@@ -2359,16 +2359,14 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     
     /*----- PART II.a.1: Separation deprojection (Julien's method) -----*/
     
-    /* (rec_az E_AZ + rec_zd E_ZD) . (sep_U E_U + sep_V E_V) */
+    /* (rec_az E_AZ + rec_zd E_ZD) . (sobj_U E_U + sobj_V E_V) */
     
     /* Declare projection in meter */
     double deproject;
     
     /* Vectors used in Julien's formula */
-    cpl_vector * vector1 = cpl_vector_new (3);
-    cpl_vector * vector2 = cpl_vector_new (3);	
-    cpl_vector * vector3 = cpl_vector_new (3);	
-    cpl_vector * vector4 = cpl_vector_new (3);
+    cpl_vector * rec = cpl_vector_new (3);
+    cpl_vector * sobj = cpl_vector_new (3);	
     
     /* read E_U,V,AZ,ZD from OI_VIS_MET table */
     cpl_array ** E_U = cpl_table_get_data_array (vismet_table,"E_U");
@@ -2399,27 +2397,23 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         for (cpl_size row = 0; row < nrow_met; row++) {
             for (int diode = 0; diode < ndiode; diode++) {
                 
-                /* Filling vectors of Juliens formula */
-                cpl_vector_set (vector1, 0, rec_az[tel][diode] * cpl_array_get (E_AZ[row*ntel+tel], 0, NULL));
-                cpl_vector_set (vector1, 1, rec_az[tel][diode] * cpl_array_get (E_AZ[row*ntel+tel], 1, NULL));
-                cpl_vector_set (vector1, 2, rec_az[tel][diode] * cpl_array_get (E_AZ[row*ntel+tel], 2, NULL));
-                cpl_vector_set (vector2, 0, rec_zd[tel][diode] * cpl_array_get (E_ZD[row*ntel+tel], 0, NULL));
-                cpl_vector_set (vector2, 1, rec_zd[tel][diode] * cpl_array_get (E_ZD[row*ntel+tel], 1, NULL));
-                cpl_vector_set (vector2, 2, rec_zd[tel][diode] * cpl_array_get (E_ZD[row*ntel+tel], 2, NULL));
-                cpl_vector_set (vector3, 0, dx_in * cpl_array_get (E_U[row*ntel+tel], 0, NULL));
-                cpl_vector_set (vector3, 1, dx_in * cpl_array_get (E_U[row*ntel+tel], 1, NULL));
-                cpl_vector_set (vector3, 2, dx_in * cpl_array_get (E_U[row*ntel+tel], 2, NULL));
-                cpl_vector_set (vector4, 0, dy_in * cpl_array_get (E_V[row*ntel+tel], 0, NULL));
-                cpl_vector_set (vector4, 1, dy_in * cpl_array_get (E_V[row*ntel+tel], 1, NULL));
-                cpl_vector_set (vector4, 2, dy_in * cpl_array_get (E_V[row*ntel+tel], 2, NULL));
+                /* Filling vectors of Julien's formula */
+                cpl_vector_set (rec, 0, rec_az[tel][diode] * cpl_array_get (E_AZ[row*ntel+tel], 0, NULL)
+                                       +rec_zd[tel][diode] * cpl_array_get (E_ZD[row*ntel+tel], 0, NULL));
+                cpl_vector_set (rec, 1, rec_az[tel][diode] * cpl_array_get (E_AZ[row*ntel+tel], 1, NULL)
+                                       +rec_zd[tel][diode] * cpl_array_get (E_ZD[row*ntel+tel], 1, NULL));
+                cpl_vector_set (rec, 2, rec_az[tel][diode] * cpl_array_get (E_AZ[row*ntel+tel], 2, NULL)
+                                       +rec_zd[tel][diode] * cpl_array_get (E_ZD[row*ntel+tel], 2, NULL));
+                cpl_vector_set (sobj, 0, dx_in * cpl_array_get (E_U[row*ntel+tel], 0, NULL)
+                                        +dy_in * cpl_array_get (E_V[row*ntel+tel], 0, NULL));
+                cpl_vector_set (sobj, 1, dx_in * cpl_array_get (E_U[row*ntel+tel], 1, NULL)
+                                        +dy_in * cpl_array_get (E_V[row*ntel+tel], 1, NULL));
+                cpl_vector_set (sobj, 2, dx_in * cpl_array_get (E_U[row*ntel+tel], 2, NULL)
+                                        +dy_in * cpl_array_get (E_V[row*ntel+tel], 2, NULL));
                 
-                /* Add first two vectors, result is in vector1 */
-                cpl_vector_add(vector1,vector2);
-                /* add second two vectors, result is in vector3 */
-                cpl_vector_add(vector3,vector4);
                 /* calculate deprojection */
-                deproject = cpl_vector_product(vector1, vector3);  /* in mm * mas */
-                deproject = deproject / 1000. / 1000. / 3600. / 360. * TWOPI; /* convert in meter */ 
+                deproject = cpl_vector_product(rec, sobj);  /* in mm * mas */
+                deproject = deproject / 1000. / 1000. / 3600. / 360. * TWOPI; /* convert in meter */
                 
                 /* some debug messages */
                 if (row == 0 && tel == 0 && diode == 0) { 
@@ -2442,10 +2436,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     }
     
     /* Free memory */
-    FREE (cpl_vector_delete, vector1);
-    FREE (cpl_vector_delete, vector2);
-    FREE (cpl_vector_delete, vector3);
-    FREE (cpl_vector_delete, vector4);
+    FREE (cpl_vector_delete, rec);
+    FREE (cpl_vector_delete, sobj);
     
     /*----- PART II.a.2: Separation deprojection (Stefan method) -----*/
     
