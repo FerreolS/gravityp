@@ -1256,7 +1256,6 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
     for (int tel = 0; tel < ntel; tel++) {
         char name[90];
         double rp=roof_pos[tel]; // default value of roof position angle
-        double scale;
         cpl_size sx=tel*512+1, sy=1;
         cpl_msg_info (cpl_func, "Compute field position for beam %i", tel+1);
         
@@ -1278,6 +1277,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         cpl_ensure_code (telname, CPL_ERROR_ILLEGAL_INPUT);
         
         /* Hardcoded approx. plate-scale in mas/pix. */
+        double scale = 0.0;
         if (telname[0] == 'U') {
             scale = 18.;
         } else if (telname[0] == 'A') {
@@ -1503,7 +1503,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             sprintf (qc_name, "ESO QC ACQ FIELD%i SC_FIBER_DY", tel+1);
             qc_val = 0;
             if (scale) {
-                qc_val = (ySC-yFT) + sobj_offy_cam/pscale - fiber_ft_sc_y;
+                qc_val = (ySC-yFT) + sobj_offy_cam/scale - fiber_ft_sc_y;
             }
             cpl_msg_info (cpl_func, "%s = %f", qc_name, qc_val);
             cpl_propertylist_update_double (o_header, qc_name, qc_val);
