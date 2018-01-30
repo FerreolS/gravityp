@@ -2362,7 +2362,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     /* (rec_az E_AZ + rec_zd E_ZD) . (sobj_U E_U + sobj_V E_V) */
     
     /* Declare some variables */
-    double deproject, northangle, field_dU, field_dV;
+    double deproject, northangle, field_dU, field_dV, scale;
+    char card[100];
     
     /* Vectors used in Julien's formula */
     cpl_vector * rec = cpl_vector_new (3);
@@ -2399,16 +2400,20 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     /* loop over all column and diodes */
     for (int tel = 0; tel < ntel; tel++) {
         
-        /* compute the north angle on acqcam */
+        /* compute the north angle on acqcam [deg] */
         northangle =  gravi_pfits_get_fangle_acqcam (header, tel);
+        
+        /* get average image scale on acqcam [mas/pix] */
+        sprintf (card,"ESO QC ACQ FIELD%d SCALE", tel+1);
+        scale = cpl_propertylist_get_double (header, card);
         
         for (cpl_size row = 0; row < nrow_met; row++) {
             
-            /* transform field fiber offset from acqcam (x,y) to sky (U,V) */
-            field_dU = field_dX[row*ntel+tel] * sin( (northangle+90.) * CPL_MATH_RAD_DEG )
-                     + field_dY[row*ntel+tel] * cos( (northangle+90.) * CPL_MATH_RAD_DEG );
-            field_dV = field_dX[row*ntel+tel] * sin( (northangle    ) * CPL_MATH_RAD_DEG )
-                     + field_dY[row*ntel+tel] * cos( (northangle    ) * CPL_MATH_RAD_DEG );
+            /* transform field fiber offset from (x,y) acqcam [pix] to (U,V) sky [mas] */
+            field_dU = (field_dX[row*ntel+tel] * sin( (northangle+90.) * CPL_MATH_RAD_DEG )
+                       +field_dY[row*ntel+tel] * cos( (northangle+90.) * CPL_MATH_RAD_DEG ))*scale;
+            field_dV = (field_dX[row*ntel+tel] * sin( (northangle    ) * CPL_MATH_RAD_DEG )
+                       +field_dY[row*ntel+tel] * cos( (northangle    ) * CPL_MATH_RAD_DEG ))*scale;
             
             for (int diode = 0; diode < ndiode; diode++) {
                 
