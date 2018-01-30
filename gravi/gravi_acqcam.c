@@ -1214,6 +1214,17 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
     /* Default position angle of roof */
     double roof_pos[] = {38.49, 38.54, 38.76, 39.80};
     
+    /* Static acqcam field calibration error */
+    /* calibration from Frank, March 2017, using Marcel      	
+    double calib_dx[] = {-0.3483, -1.0251, -0.5432, -0.2024} ;
+    double calib_dy[] = { 0.3089, -0.5221, -0.2686, -0.3843} ; */
+    /* calibration from Julien, using GJ65 observation with Sylvestre tracking on 2018-01-03, email 2018-01-10 
+    double calib_dx[] = {-0.61, -1.69, -0.97,  0.00} ;
+    double calib_dy[] = { 0.53, -1.07, -0.49, -0.47} ; */
+    /* calibration from Oli, using GJ65 observation with Sylvestre tracking on 2018-01-03, email 2018-01-19 */
+    double calib_dx[] = {-0.63, -1.67, -0.97,  0.02} ;
+    double calib_dy[] = { 0.55, -1.07, -0.49, -0.45} ;
+    
     /* If sub-windowing, we read the sub-window size */
     cpl_size nsx = 512;
     cpl_size nsy = 512;
@@ -1492,7 +1503,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             sprintf (qc_name, "ESO QC ACQ FIELD%i SC_FIBER_DX", tel+1);
             qc_val = 0;
             if (scale) {
-                qc_val = (xSC-xFT) + sobj_offx_cam/scale - fiber_ft_sc_x;
+                qc_val = (xSC-xFT) + sobj_offx_cam/scale - fiber_ft_sc_x - calib_dx[tel];
             }
             cpl_msg_info (cpl_func, "%s = %f", qc_name, qc_val);
             cpl_propertylist_update_double (o_header, qc_name, qc_val);
@@ -1503,7 +1514,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             sprintf (qc_name, "ESO QC ACQ FIELD%i SC_FIBER_DY", tel+1);
             qc_val = 0;
             if (scale) {
-                qc_val = (ySC-yFT) + sobj_offy_cam/scale - fiber_ft_sc_y;
+                qc_val = (ySC-yFT) + sobj_offy_cam/scale - fiber_ft_sc_y - calib_dy[tel];
             }
             cpl_msg_info (cpl_func, "%s = %f", qc_name, qc_val);
             cpl_propertylist_update_double (o_header, qc_name, qc_val);
@@ -1592,8 +1603,8 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             /*  - offset from FT fiber to SC fiber. */
             double corrx=0, corry=0., ecorrx=0., ecorry=0.;
             if (pscale) {
-                corrx = ft_sc_x + sobj_offx_cam/pscale - fiber_ft_sc_x;	
-                corry = ft_sc_y + sobj_offy_cam/pscale - fiber_ft_sc_y;
+                corrx = ft_sc_x + sobj_offx_cam/pscale - fiber_ft_sc_x - calib_dx[tel];
+                corry = ft_sc_y + sobj_offy_cam/pscale - fiber_ft_sc_y - calib_dy[tel];
                 double tmp = escale/(pscale*pscale);
                 tmp *= tmp;
                 ecorrx = sqrt(eft_sc_x*eft_sc_x + eft_sc_y*eft_sc_y + sobj_offx_cam*sobj_offx_cam*tmp);
