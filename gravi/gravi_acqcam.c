@@ -1640,13 +1640,13 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         /*-----------------------------*/
         
         sprintf (qc_name, "ESO QC ACQ FIELD%i STREHL", tel+1);
-	if (nStrehl==0.) {
-	  /* Fitting failed: put QC to 0., reset ySC to gues value */
-	  qc_val = 0.;
-	} else {
-	  /* Fiting succeeded: shift into full frame */
-	  qc_val =  total_Strehl/((double)nStrehl);
-	}
+        if (nStrehl == 0) {
+            /* Fitting failed: put QC to 0. */
+            qc_val = 0.;
+        } else {
+            /* Fiting succeeded: shift into full frame */
+            qc_val =  total_Strehl/((double)nStrehl);
+        }
         cpl_msg_info (cpl_func, "%s = %f", qc_name, qc_val);
         cpl_propertylist_update_double (o_header, qc_name, qc_val);
         cpl_propertylist_set_comment (o_header, qc_name, "Average Strehl value from AcqCam images");
