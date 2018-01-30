@@ -2265,8 +2265,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     
     /* Correction from differential focus */
     /* independent from objects separation */
-    cpl_vector * opd_focus_offset;
-    opd_focus_offset = cpl_vector_new (4);
+    cpl_vector * opd_focus_offset = cpl_vector_new (4);
+    
     /* Focus offsets calibrated from AT measurements 17 November 2017 */
     cpl_vector_set (opd_focus_offset, 0, -57e-9);
     cpl_vector_set (opd_focus_offset, 1, -90e-9);
@@ -2277,8 +2277,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     
     /* Mismatch between metrology FC pickup fiber position and pupil reference position */
     /* correction proportional to object separation */
-    cpl_vector * opd_pickup_offset;
-    opd_pickup_offset = cpl_vector_new (4);
+    cpl_vector * opd_pickup_offset = cpl_vector_new (4);
     
     /* Retrieve object separation */
     double dx_in = gravi_pfits_get_sobj_x (header);
@@ -2326,6 +2325,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         }
     }
     
+    FREE (cpl_vector_delete, opd_focus_offset);
+    FREE (cpl_vector_delete, opd_pickup_offset);
     
     
     /*****************************************************************/
@@ -2664,8 +2665,6 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         }
     }
     
-    FREE (cpl_vector_delete, opd_focus_offset);
-    FREE (cpl_vector_delete, opd_pickup_offset);
     FREE (cpl_vector_delete, tmp_vector);
     
     cpl_msg_info (cpl_func,"FE: end.");
