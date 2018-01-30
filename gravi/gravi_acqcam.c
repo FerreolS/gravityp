@@ -1310,8 +1310,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         double fiber_ft_sc_x=fiber_xsc-fiber_xft;
         double fiber_ft_sc_y=fiber_ysc-fiber_yft;
         
-
-        /* Get the North positin angle on the camera */
+        /* Get the North position angle on the camera */
         double fangle = gravi_pfits_get_fangle_acqcam (header, tel);
         CPLCHECK ("Cannot get rotation");
         
@@ -1333,7 +1332,10 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         
         cpl_msg_debug (cpl_func,"sub-window field %i sx= %lld sy = %lld", tel, sx, sy);
         
-        /*  Expected position of the two stars */
+        /*--------------------------------------------------*/
+        /* Guess position of SC and FT targes in mean image */
+        /*--------------------------------------------------*/
+        
         double xFT, yFT, xSC, ySC;
         
         if (rho_in == 0.) {
@@ -1369,6 +1371,10 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         cpl_msg_info (cpl_func, "guess FT_X = %f", xFT);
         cpl_msg_info (cpl_func, "guess FT_Y = %f", yFT);
         
+        /*------------------------------------------*/
+        /* Measure SC target position in mean image */
+        /*------------------------------------------*/
+        
         /* Box size */
         /* Optimal size has been determined empirically. */
         /* Too small value (15) will sometimes miss even a bright target. */
@@ -1379,11 +1385,13 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         double ex, ey;
         double qc_val=0.;
         
-        /* Detec SC */
         gravi_acq_fit_gaussian (mean_img, &xSC, &ySC, &ex, &ey, size);
         CPLCHECK_MSG("Error fitting SC");
         
-        /* Add QC parameters */
+        /*--------------------------------------------------------*/
+        /* Add QC parameters for SC target position in mean image */
+        /*--------------------------------------------------------*/
+        
         sprintf (qc_name, "ESO QC ACQ FIELD%i SC_X", tel+1);
         if (xSC==0.) {
             /* Fitting failed: put QC to 0., reset xSC to gues value */
@@ -1410,6 +1418,10 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         cpl_propertylist_update_double (o_header, qc_name, qc_val);
         cpl_propertylist_set_comment (o_header, qc_name, "[pixel] position in mean image");
         
+        /*------------------------------------------*/
+        /* Measure FT target position in mean image */
+        /*------------------------------------------*/
+        
         if (rho_in != 0.) {
             /* Detec FT */
             gravi_acq_fit_gaussian (mean_img, &xFT, &yFT, &ex, &ey, size);
@@ -1419,7 +1431,10 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             yFT=ySC;
         }
         
-        /* Add QC parameters */
+        /*--------------------------------------------------------*/
+        /* Add QC parameters for SC target position in mean image */
+        /*--------------------------------------------------------*/
+        
         sprintf (qc_name, "ESO QC ACQ FIELD%i FT_X", tel+1);
         if (xFT==0.) {
             /* Fitting failed: put QC to 0., reset xFT to gues value */
@@ -1446,8 +1461,11 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         cpl_propertylist_update_double (o_header, qc_name, qc_val);
         cpl_propertylist_set_comment (o_header, qc_name, "[pixel] position in mean image");
         
+        /*---------------------------------------*/
+        /* If in dual field, measure plate scale */
+        /*---------------------------------------*/
+        
         if (rho_in != 0.) {
-            /* Measure plate scale */
             sprintf (qc_name, "ESO QC ACQ FIELD%i SCALE", tel+1);
             double sep = sqrt((ySC-yFT)*(ySC-yFT)+(xSC-xFT)*(xSC-xFT));
             double pscale = sep ? rho_in/sep : 0.;
@@ -1457,7 +1475,13 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             cpl_propertylist_set_comment (o_header, qc_name,
                                         "[mas/pixel] plate-scale in the "
                                         "FT-SC direction");
-            
+        }
+        
+        /*------------------------------------------------*/
+        /* If in dual field, measure fibre position error */
+        /*------------------------------------------------*/
+        
+        if (rho_in != 0.) {
             /* Error in SC fibre positioning */
             /* The three terms are */
             /*  - offset from FT target as detected to original SC */
@@ -1488,6 +1512,10 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
                                         "SC object");
         }
         
+        /*----------------------------*/
+        /* Now process frame by frame */
+        /*----------------------------*/
+        
         double total_Strehl =0.;
         int nStrehl = 0;
         /* Loop on all images */
@@ -1513,7 +1541,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             cpl_table_set (acqcam_table, "FIELD_SC_XERR", row*ntel+tel, exsc);
             cpl_table_set (acqcam_table, "FIELD_SC_YERR", row*ntel+tel, eysc);
             CPLCHECK_MSG("Error setting SC columns");
-
+            
             /*-------------------------------------------------*/
             /* FT target position computation of current frame */
             /*-------------------------------------------------*/
@@ -1535,7 +1563,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             cpl_table_set (acqcam_table, "FIELD_FT_XERR", row*ntel+tel, exft);
             cpl_table_set (acqcam_table, "FIELD_FT_YERR", row*ntel+tel, eyft);
             CPLCHECK_MSG("Error setting FT column");
-
+            
             /*------------------------------------------*/
             /* Plate scale computation of current frame */
             /*------------------------------------------*/
@@ -1575,7 +1603,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             cpl_table_set (acqcam_table, "FIELD_FIBER_DY", row*ntel+tel, corry);
             cpl_table_set (acqcam_table, "FIELD_FIBER_DXERR", row*ntel+tel, ecorrx);
             cpl_table_set (acqcam_table, "FIELD_FIBER_DYERR", row*ntel+tel, ecorry);
-
+            
             /*-------------------------------------*/
             /* Strehl computation of current frame */
             /*-------------------------------------*/
@@ -1593,8 +1621,13 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             } else {
                 cpl_table_set (acqcam_table, "FIELD_STREHL", row*ntel+tel, -1.0);
             }
-
+            
         } /* End loop on images */
+        
+        /*-----------------------------*/
+        /* Average Strehl computation  */
+        /*-----------------------------*/
+        
         sprintf (qc_name, "ESO QC ACQ FIELD%i STREHL", tel+1);
 	if (nStrehl==0.) {
 	  /* Fitting failed: put QC to 0., reset ySC to gues value */
@@ -1606,7 +1639,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         cpl_msg_info (cpl_func, "%s = %f", qc_name, qc_val);
         cpl_propertylist_update_double (o_header, qc_name, qc_val);
         cpl_propertylist_set_comment (o_header, qc_name, "Average Strehl value from AcqCam images");
-
+        
     } /* End loop on tel */
     
     gravi_msg_function_exit(1);
