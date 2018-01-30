@@ -1964,6 +1964,7 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
 }
 
 
+
 /*----------------------------------------------------------------------------*/
 /**
  * @brief Compute the metrology signal from TAC algorithm
@@ -1977,82 +1978,79 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
  * OPD_MET_FC and OPD_MET_TEL, as well as FLAGs...
  */
 /*----------------------------------------------------------------------------*/
-
-
-
 cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
-				    cpl_table * vismet_table,
-				    cpl_propertylist * header)
+            cpl_table * vismet_table,
+            cpl_propertylist * header)
 {
     gravi_msg_function_start(1);
-	cpl_ensure_code (metrology_table, CPL_ERROR_NULL_INPUT);
-	cpl_ensure_code (header,     CPL_ERROR_NULL_INPUT);
-	cpl_ensure_code (vismet_table,    CPL_ERROR_NULL_INPUT);
-
+    cpl_ensure_code (metrology_table, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (header,     CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (vismet_table,    CPL_ERROR_NULL_INPUT);
+    
     char card_ft[100];
     char card_sc[100];
-	int ndiode = 4, ntel = 4;
-	cpl_size nrow_met = cpl_table_get_nrow (metrology_table);
-	
-	/* 
-	 * Copy data to ensure they are of type DOUBLE
-	 *    volts[nrow][ndiode] 
-	 */
+    int ndiode = 4, ntel = 4;
+    cpl_size nrow_met = cpl_table_get_nrow (metrology_table);
     
-	double** volts = cpl_malloc (nrow_met * sizeof(double*));
-	cpl_array ** volts_array = cpl_table_get_data_array (metrology_table,"VOLT");
-	for (cpl_size row = 0; row < nrow_met; row ++) {
-	  volts[row] = cpl_malloc (80 * sizeof(double));
-	  for (cpl_size diode = 0; diode < 80; diode ++) {
-		volts[row][diode] = cpl_array_get (volts_array[row], diode, NULL);
-	  }
-	}
-
-	CPLCHECK_MSG ("Cannot load metrology data");
-	
-	/* 
+    /* 
+     * Copy data to ensure they are of type DOUBLE
+     *    volts[nrow][ndiode] 
+     */
+     
+    double** volts = cpl_malloc (nrow_met * sizeof(double*));
+    cpl_array ** volts_array = cpl_table_get_data_array (metrology_table,"VOLT");
+    for (cpl_size row = 0; row < nrow_met; row ++) {
+        volts[row] = cpl_malloc (80 * sizeof(double));
+        for (cpl_size diode = 0; diode < 80; diode ++) {
+            volts[row][diode] = cpl_array_get (volts_array[row], diode, NULL);
+        }
+    }
+    
+    CPLCHECK_MSG ("Cannot load metrology data");
+    
+    /* 
      * Allocate memory for FC the output
      *     opd_fc[nrow*ntel] 
      */
-    
-	gravi_table_new_column (vismet_table, "FLAG_FC", NULL, CPL_TYPE_INT);
+     
+    gravi_table_new_column (vismet_table, "FLAG_FC", NULL, CPL_TYPE_INT);
     int * flag_fc = cpl_table_get_data_int (vismet_table, "FLAG_FC");
     
     gravi_table_new_column (vismet_table, "OPD_FC", "m", CPL_TYPE_DOUBLE);
-	double * opd_fc = cpl_table_get_data_double (vismet_table, "OPD_FC");
-
+    double * opd_fc = cpl_table_get_data_double (vismet_table, "OPD_FC");
+    
     gravi_table_new_column (vismet_table, "VAMP_FC_FT", "V", CPL_TYPE_DOUBLE);
-	double * coher_fc_ft = cpl_table_get_data_double (vismet_table, "VAMP_FC_FT");
-
+    double * coher_fc_ft = cpl_table_get_data_double (vismet_table, "VAMP_FC_FT");
+    
     gravi_table_new_column (vismet_table, "VAMP_FC_SC", "V", CPL_TYPE_DOUBLE);
-	double * coher_fc_sc = cpl_table_get_data_double (vismet_table, "VAMP_FC_SC");
-
-	/* 
+    double * coher_fc_sc = cpl_table_get_data_double (vismet_table, "VAMP_FC_SC");
+    
+    /* 
      * Allocate memory for TEL output
      *     opd_tel[nrow*ntel][ndiode]
      */
-	
-	gravi_table_new_column_array (vismet_table, "FLAG_TEL", NULL, CPL_TYPE_INT, ndiode);
-	cpl_array ** flag_tel_array = cpl_table_get_data_array (vismet_table,"FLAG_TEL");
+     
+    gravi_table_new_column_array (vismet_table, "FLAG_TEL", NULL, CPL_TYPE_INT, ndiode);
+    cpl_array ** flag_tel_array = cpl_table_get_data_array (vismet_table,"FLAG_TEL");
     
-	gravi_table_new_column_array (vismet_table, "OPD_TEL", "m", CPL_TYPE_DOUBLE, ndiode);
-	cpl_array ** opd_tel_array = cpl_table_get_data_array (vismet_table,"OPD_TEL");
+    gravi_table_new_column_array (vismet_table, "OPD_TEL", "m", CPL_TYPE_DOUBLE, ndiode);
+    cpl_array ** opd_tel_array = cpl_table_get_data_array (vismet_table,"OPD_TEL");
     
-	gravi_table_new_column_array (vismet_table, "VAMP_TEL_FT", "V", CPL_TYPE_DOUBLE, ndiode);
-	cpl_array ** coher_tel_ft_array = cpl_table_get_data_array (vismet_table,"VAMP_TEL_FT");
+    gravi_table_new_column_array (vismet_table, "VAMP_TEL_FT", "V", CPL_TYPE_DOUBLE, ndiode);
+    cpl_array ** coher_tel_ft_array = cpl_table_get_data_array (vismet_table,"VAMP_TEL_FT");
     
-	gravi_table_new_column_array (vismet_table, "VAMP_TEL_SC", "V", CPL_TYPE_DOUBLE, ndiode);
-	cpl_array ** coher_tel_sc_array = cpl_table_get_data_array (vismet_table,"VAMP_TEL_SC");
-
+    gravi_table_new_column_array (vismet_table, "VAMP_TEL_SC", "V", CPL_TYPE_DOUBLE, ndiode);
+    cpl_array ** coher_tel_sc_array = cpl_table_get_data_array (vismet_table,"VAMP_TEL_SC");
     
-	/* Wrap the newly computed phi_tel into the cpl_table. Wrapping make
+    
+    /* Wrap the newly computed phi_tel into the cpl_table. Wrapping make
      * the data 'valid' without having to copy them. Thus efficient */
-	double ** opd_tel      = cpl_malloc (sizeof(double*) * nrow_met * ntel);
-	int ** flag_tel        = cpl_malloc (sizeof(int*) * nrow_met * ntel);
-	double ** coher_tel_ft = cpl_malloc (sizeof(double*) * nrow_met * ntel);
-	double ** coher_tel_sc = cpl_malloc (sizeof(double*) * nrow_met * ntel);
+    double ** opd_tel      = cpl_malloc (sizeof(double*) * nrow_met * ntel);
+    int ** flag_tel        = cpl_malloc (sizeof(int*) * nrow_met * ntel);
+    double ** coher_tel_ft = cpl_malloc (sizeof(double*) * nrow_met * ntel);
+    double ** coher_tel_sc = cpl_malloc (sizeof(double*) * nrow_met * ntel);
     
-	for (cpl_size row = 0; row < nrow_met * ntel; row ++) {
+    for (cpl_size row = 0; row < nrow_met * ntel; row ++) {
         flag_tel[row]       = cpl_malloc (sizeof(int) * ndiode);
         flag_tel_array[row] = cpl_array_wrap_int (flag_tel[row], ndiode);
         
@@ -2064,96 +2062,97 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
         
         coher_tel_sc[row]       = cpl_malloc (sizeof(double) * ndiode);
         coher_tel_sc_array[row] = cpl_array_wrap_double (coher_tel_sc[row], ndiode);
-	}
-
-	CPLCHECK_MSG ("Cannot allocate output memory");
-
+    }
     
-
-	/* Init the TAC algorithm -- this allocate memory */
+    CPLCHECK_MSG ("Cannot allocate output memory");
+    
+    
+    
+    /* Init the TAC algorithm -- this allocate memory */
     structTacData * tacData;
     structTacConfiguration * tacConfiguration;
-
-	/* get the laser wavelength data */
-	double lambda_met_mean =  gravi_pfits_get_met_wavelength_mean(header, metrology_table);
-	cpl_msg_info (cpl_func,"Lambda met mean :%f nm",  lambda_met_mean*1e9);
-
+    
+    /* get the laser wavelength data */
+    double lambda_met_mean =  gravi_pfits_get_met_wavelength_mean(header, metrology_table);
+    cpl_msg_info (cpl_func,"Lambda met mean :%f nm",  lambda_met_mean*1e9);
+    
     tacData = metrology_makeDefaultTacData(lambda_met_mean);
     tacConfiguration = tacData->tacConfiguration;
-
+    
     /* Loop on time sample to run the TAC algorithm */
     for(long sample_number = 1; sample_number <= nrow_met; sample_number++) {
         
-	  /* Run the TAC algorithm */
-	  tacData->sample_number = sample_number;
-	  tacData->buffer_idx_avg = ((sample_number - 1) % tacConfiguration->number_to_average);
-	  metrology_read_voltages(tacData, volts[sample_number-1]);
-	  metrology_algorithm(tacData);
+        /* Run the TAC algorithm */
+        tacData->sample_number = sample_number;
+        tacData->buffer_idx_avg = ((sample_number - 1) % tacConfiguration->number_to_average);
+        metrology_read_voltages(tacData, volts[sample_number-1]);
+        metrology_algorithm(tacData);
+            
+        /* Fill the output arrays as D1T1, D2T1, D3T1, D4T1, D1T2, D2T2... */
+        int idx_ft = 0;
+        int idx_sc = 32;
+        for (int idx = 0, tel = 0; tel < ntel; tel++) {
+            cpl_size nmet = (sample_number-1)*ntel + tel;
+            
+            for (int diode = 0; diode < ndiode; diode++) {
+                /* TAC computation */
+                opd_tel[nmet][diode] = tacData->opl_telescope_diode[tel][diode];
+                flag_tel[nmet][diode] = tacData->total_flag_telescope[tel][diode][FT] | tacData->total_flag_telescope[tel][diode][SC];
+                
+                /* Volt amplitude */
+                coher_tel_ft[nmet][diode] = sqrt (volts[sample_number-1][idx_ft+idx*2] * volts[sample_number-1][idx_ft+idx*2] + 
+                                                  volts[sample_number-1][idx_ft+idx*2+1] * volts[sample_number-1][idx_ft+idx*2+1]);
+                coher_tel_sc[nmet][diode] = sqrt (volts[sample_number-1][idx_sc+idx*2] * volts[sample_number-1][idx_sc+idx*2] + 
+                                                  volts[sample_number-1][idx_sc+idx*2+1] * volts[sample_number-1][idx_sc+idx*2+1]);
+                idx++;
+            }
+        }
         
-	  /* Fill the output arrays as D1T1, D2T1, D3T1, D4T1, D1T2, D2T2... */
-	  int idx_ft = 0;
-	  int idx_sc = 32;
-	  for (int idx = 0, tel = 0; tel < ntel; tel++) {
-        cpl_size nmet = (sample_number-1)*ntel + tel;
-        
-		for (int diode = 0; diode < ndiode; diode++) {
-		  /* TAC computation */
-		  opd_tel[nmet][diode] = tacData->opl_telescope_diode[tel][diode];
-		  flag_tel[nmet][diode] = tacData->total_flag_telescope[tel][diode][FT] | tacData->total_flag_telescope[tel][diode][SC];
-          
-		  /* Volt amplitude */
-		  coher_tel_ft[nmet][diode] = sqrt (volts[sample_number-1][idx_ft+idx*2] * volts[sample_number-1][idx_ft+idx*2] + 
-											volts[sample_number-1][idx_ft+idx*2+1] * volts[sample_number-1][idx_ft+idx*2+1]);
-		  coher_tel_sc[nmet][diode] = sqrt (volts[sample_number-1][idx_sc+idx*2] * volts[sample_number-1][idx_sc+idx*2] + 
-											volts[sample_number-1][idx_sc+idx*2+1] * volts[sample_number-1][idx_sc+idx*2+1]);
-		  idx++;
-		}
-	  }
-	  
-	  /* Fill the output arrays as T1, T2, T3, T4... */
-	  idx_ft = 64;
-	  idx_sc = 72;
-	  for (int idx = 0, tel = 0; tel < ntel; tel++) {
-        cpl_size nmet = (sample_number-1)*ntel + tel;
-        
-	    /* TAC computation */
-	    opd_fc[nmet]  = tacData->opl_fiber_coupler[tel];
-		flag_fc[nmet] = tacData->total_flag_fiber_coupler[tel][FT] | tacData->total_flag_fiber_coupler[tel][SC];
-	    /* Volt amplitude */
-	    coher_fc_ft[nmet] = sqrt (volts[sample_number-1][idx_ft+idx*2] * volts[sample_number-1][idx_ft+idx*2] + 
-                                  volts[sample_number-1][idx_ft+idx*2+1] * volts[sample_number-1][idx_ft+idx*2+1]);
-	    coher_fc_sc[nmet] = sqrt (volts[sample_number-1][idx_sc+idx*2] * volts[sample_number-1][idx_sc+idx*2] + 
-                                  volts[sample_number-1][idx_sc+idx*2+1] * volts[sample_number-1][idx_sc+idx*2+1]);
-		idx++;
-	  }
+        /* Fill the output arrays as T1, T2, T3, T4... */
+        idx_ft = 64;
+        idx_sc = 72;
+        for (int idx = 0, tel = 0; tel < ntel; tel++) {
+            cpl_size nmet = (sample_number-1)*ntel + tel;
+            
+            /* TAC computation */
+            opd_fc[nmet]  = tacData->opl_fiber_coupler[tel];
+            flag_fc[nmet] = tacData->total_flag_fiber_coupler[tel][FT] | tacData->total_flag_fiber_coupler[tel][SC];
+            /* Volt amplitude */
+            coher_fc_ft[nmet] = sqrt (volts[sample_number-1][idx_ft+idx*2] * volts[sample_number-1][idx_ft+idx*2] + 
+                                      volts[sample_number-1][idx_ft+idx*2+1] * volts[sample_number-1][idx_ft+idx*2+1]);
+            coher_fc_sc[nmet] = sqrt (volts[sample_number-1][idx_sc+idx*2] * volts[sample_number-1][idx_sc+idx*2] + 
+                                      volts[sample_number-1][idx_sc+idx*2+1] * volts[sample_number-1][idx_sc+idx*2+1]);
+            idx++;
+        }
+    
     }
     /* End loop on time sample */
-
-	
-	/* Get the TIME of the header reference phase */
-	const char * date = gravi_pfits_get_met_ph (header);
-	const char * acq_date = gravi_pfits_get_start_prcacq (header);
-	double time_ref = 86400*1e6*(gravi_convert_to_mjd (date) - gravi_convert_to_mjd (acq_date));
-	int * time_met = cpl_table_get_data_int (metrology_table, "TIME");
-
-	cpl_size row_ref = -1;
-	for (cpl_size row = 1; row < nrow_met; row++) 
-	  if (time_met[row]>time_ref && time_met[row-1]<time_ref) {
-	    row_ref = row; break;
-	  }
-	
-	/* Check if we have found the metrology reference date inside the file */
-	if (row_ref == -1) {
-	  cpl_error_set_message(cpl_func, CPL_ERROR_ILLEGAL_INPUT,
-				"The metrology phase date is not within"
-				" the boundaries of RMN acquisition");
-	  return CPL_ERROR_NULL_INPUT;
-	} else {
-	  cpl_msg_info (cpl_func,"The metrology phase date is OK (row %lld over %lld).", row_ref, nrow_met);
-	}
-
-	/* Re-install the absolute phase for the FC diodes */
-	for (int tel = 0; tel < ntel; tel++) {
+    
+    
+    /* Get the TIME of the header reference phase */
+    const char * date = gravi_pfits_get_met_ph (header);
+    const char * acq_date = gravi_pfits_get_start_prcacq (header);
+    double time_ref = 86400*1e6*(gravi_convert_to_mjd (date) - gravi_convert_to_mjd (acq_date));
+    int * time_met = cpl_table_get_data_int (metrology_table, "TIME");
+    
+    cpl_size row_ref = -1;
+    for (cpl_size row = 1; row < nrow_met; row++) 
+        if (time_met[row]>time_ref && time_met[row-1]<time_ref) {
+            row_ref = row; break;
+        }
+    
+    /* Check if we have found the metrology reference date inside the file */
+    if (row_ref == -1) {
+        cpl_error_set_message(cpl_func, CPL_ERROR_ILLEGAL_INPUT,
+              "The metrology phase date is not within"
+              " the boundaries of RMN acquisition");
+        return CPL_ERROR_NULL_INPUT;
+    } else {
+        cpl_msg_info (cpl_func,"The metrology phase date is OK (row %lld over %lld).", row_ref, nrow_met);
+    }
+    
+    /* Re-install the absolute phase for the FC diodes */
+    for (int tel = 0; tel < ntel; tel++) {
         sprintf (card_ft, "ESO OCS MET PH_FC%d_FT", tel+1);
         sprintf (card_sc, "ESO OCS MET PH_FC%d_SC", tel+1);
         double opd_ref =  lambda_met_mean / CPL_MATH_2PI *
@@ -2163,11 +2162,11 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
         for (cpl_size row = 0; row < nrow_met; row++) {
             opd_fc[row*ntel+tel] += opd_ref_int;
         }
-	}
-	/* End loop on tel and diodes */
-
-	/* Re-install the absolute phase for the TEL diodes */
-	for (int tel = 0; tel < ntel; tel++) {
+    }
+    /* End loop on tel and diodes */
+    
+    /* Re-install the absolute phase for the TEL diodes */
+    for (int tel = 0; tel < ntel; tel++) {
         for (int diode = 0; diode < ndiode; diode++) {
             sprintf (card_ft,"ESO OCS MET PH_T%d_D%d_FT", tel+1, diode+1);
             sprintf (card_sc,"ESO OCS MET PH_T%d_D%d_SC", tel+1, diode+1);
@@ -2179,269 +2178,268 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
                 opd_tel[row*ntel+tel][diode] += opd_ref_int;
             }
         }
-	}
+    }
     
-
-	/*----------------------------------------------------------------*/
-	/* FE start                                                       */
-	/*----------------------------------------------------------------*/
-	/* "tel" refers to "GV" all throughout FE */
- 
-	/*--------------------------------------------*/
-	/* Correction to Fiber Coupler Metrology OPD  */
-	/* from pupil motion, fiber pickup, and focus */
-	/*--------------------------------------------*/
-	cpl_msg_info (cpl_func,"FE: calculate OPD_FC_CORR from OPD_PUPIL and pickup/defocus.");
-
-	/* Create array in OI_VIS_MET table, fill with zeros, and get pointer */
-	gravi_table_new_column (vismet_table, "OPD_FC_CORR", "m", CPL_TYPE_DOUBLE);
-	double * opd_fc_corr = cpl_table_get_data_double (vismet_table, "OPD_FC_CORR");
-
-	/* Pupil correction already calculated before and available from OPD_PUPIL */
-	double * opd_pupil = NULL;
-	if ( cpl_table_has_column(vismet_table, "OPD_PUPIL") ) {
-		opd_pupil = cpl_table_get_data_double (vismet_table, "OPD_PUPIL");
-	}
-	else {
-		cpl_msg_warning(cpl_func,"Cannot get the OPD_PUPIL (not computed) so will"
-                        "not correct for pupil opd (check the --reduce-acq-cam option)");
-	}
-
-	/* Correction from differential focus */
-	/* independent from objects separation */
-	cpl_vector * opd_focus_offset;
-	opd_focus_offset = cpl_vector_new (4);
-	/* Focus offsets calibrated from AT measurements 17 November 2017 */
-	cpl_vector_set (opd_focus_offset, 0, -57e-9);
-	cpl_vector_set (opd_focus_offset, 1, -90e-9);
-	cpl_vector_set (opd_focus_offset, 2,  22e-9);
-	cpl_vector_set (opd_focus_offset, 3, -86e-9);
-
-	/* Mismatch between metrology FC pickup fiber position and pupil reference position */
-	/* correction proportional to object separation */
-	cpl_vector * opd_pickup_offset;
-	opd_pickup_offset = cpl_vector_new (4);
     
-	/* Retrieve object separation */
-	double dx_in = gravi_pfits_get_sobj_x (header);
-	double dy_in = gravi_pfits_get_sobj_y (header);
-	double rho_in = sqrt(dx_in*dx_in + dy_in*dy_in);
-	CPLCHECK_MSG ("Cannot get separation");
-
+    /*----------------------------------------------------------------*/
+    /* FE start                                                       */
+    /*----------------------------------------------------------------*/
+    /* "tel" refers to "GV" all throughout FE */
+    
+    /*--------------------------------------------*/
+    /* Correction to Fiber Coupler Metrology OPD  */
+    /* from pupil motion, fiber pickup, and focus */
+    /*--------------------------------------------*/
+    cpl_msg_info (cpl_func,"FE: calculate OPD_FC_CORR from OPD_PUPIL and pickup/defocus.");
+    
+    /* Create array in OI_VIS_MET table, fill with zeros, and get pointer */
+    gravi_table_new_column (vismet_table, "OPD_FC_CORR", "m", CPL_TYPE_DOUBLE);
+    double * opd_fc_corr = cpl_table_get_data_double (vismet_table, "OPD_FC_CORR");
+    
+    /* Pupil correction already calculated before and available from OPD_PUPIL */
+    double * opd_pupil = NULL;
+    if ( cpl_table_has_column(vismet_table, "OPD_PUPIL") ) {
+        opd_pupil = cpl_table_get_data_double (vismet_table, "OPD_PUPIL");
+    }
+    else {
+        cpl_msg_warning(cpl_func,"Cannot get the OPD_PUPIL (not computed) so will"
+                "not correct for pupil opd (check the --reduce-acq-cam option)");
+    }
+    
+    /* Correction from differential focus */
+    /* independent from objects separation */
+    cpl_vector * opd_focus_offset;
+    opd_focus_offset = cpl_vector_new (4);
+    /* Focus offsets calibrated from AT measurements 17 November 2017 */
+    cpl_vector_set (opd_focus_offset, 0, -57e-9);
+    cpl_vector_set (opd_focus_offset, 1, -90e-9);
+    cpl_vector_set (opd_focus_offset, 2,  22e-9);
+    cpl_vector_set (opd_focus_offset, 3, -86e-9);
+    
+    /* Mismatch between metrology FC pickup fiber position and pupil reference position */
+    /* correction proportional to object separation */
+    cpl_vector * opd_pickup_offset;
+    opd_pickup_offset = cpl_vector_new (4);
+    
+    /* Retrieve object separation */
+    double dx_in = gravi_pfits_get_sobj_x (header);
+    double dy_in = gravi_pfits_get_sobj_y (header);
+    double rho_in = sqrt(dx_in*dx_in + dy_in*dy_in);
+    CPLCHECK_MSG ("Cannot get separation");
+    
     /* Force separation to zero in SINGLE */
     if (gravi_pfits_get_mode (header) == MODE_SINGLE) {
         cpl_msg_info (cpl_func,"Mode SINGLE thus separation forced to 0.0");
         rho_in = 0.;
     }
     
-	cpl_msg_info (cpl_func,"FE: SOBJX, SOBJY in mas: %g, %g ", dx_in, dy_in );
-	cpl_msg_info (cpl_func,"FE: separation in mas: %g ", rho_in );
+    cpl_msg_info (cpl_func,"FE: SOBJX, SOBJY in mas: %g, %g ", dx_in, dy_in );
+    cpl_msg_info (cpl_func,"FE: separation in mas: %g ", rho_in );
     
-	/* Separation dependent offsets calibrated from AT measurements 17 November 2017 */
-	cpl_vector_set (opd_pickup_offset, 0,  -102e-9 * rho_in / 1000.);
-	cpl_vector_set (opd_pickup_offset, 1,    53e-9 * rho_in / 1000.);
-	cpl_vector_set (opd_pickup_offset, 2,   152e-9 * rho_in / 1000.);
-	cpl_vector_set (opd_pickup_offset, 3,  -107e-9 * rho_in / 1000.);
-	/* The effect is by factor 1.8m/8m smaller for ATs */
-	/* get name of first telescope and decide accordingly */
-	const char * telname = gravi_conf_get_telname (0, header);
-
+    /* Separation dependent offsets calibrated from AT measurements 17 November 2017 */
+    cpl_vector_set (opd_pickup_offset, 0,  -102e-9 * rho_in / 1000.);
+    cpl_vector_set (opd_pickup_offset, 1,    53e-9 * rho_in / 1000.);
+    cpl_vector_set (opd_pickup_offset, 2,   152e-9 * rho_in / 1000.);
+    cpl_vector_set (opd_pickup_offset, 3,  -107e-9 * rho_in / 1000.);
+    /* The effect is by factor 1.8m/8m smaller for ATs */
+    /* get name of first telescope and decide accordingly */
+    const char * telname = gravi_conf_get_telname (0, header);
+    
     if (telname == NULL || telname[0] == 'U') {
-	  cpl_msg_info (cpl_func,"Scaling pickup offsets to UTs.");
+        cpl_msg_info (cpl_func,"Scaling pickup offsets to UTs.");
+    } else {
+        cpl_vector_multiply_scalar(opd_pickup_offset, 1.8/8.0);
+        cpl_msg_info (cpl_func,"Scaling pickup offsets to ATs.");
     }
-	else {
-	  cpl_vector_multiply_scalar(opd_pickup_offset, 1.8/8.0);
-	  cpl_msg_info (cpl_func,"Scaling pickup offsets to ATs.");
-	}
-
-	/* Apply pupil, focus and pickup offsets */
-	for (int tel = 0; tel < ntel; tel++) {
-	    cpl_msg_info (cpl_func,"FE: Tel %d Pupil %g Focus %g Pickup %g",
-			  tel, (opd_pupil?opd_pupil[0*ntel+tel]:0)*1e9, 
-			  cpl_vector_get (opd_focus_offset, tel)*1e9,
-			  cpl_vector_get (opd_pickup_offset, tel)*1e9 );	   
-		for (cpl_size row = 0; row < nrow_met; row++) {
-			opd_fc_corr[row*ntel+tel] = (opd_pupil?opd_pupil[row*ntel+tel]:0)
-					+ cpl_vector_get (opd_focus_offset, tel)
-					+ cpl_vector_get (opd_pickup_offset, tel) ;
-		}
-	}
-
-	/*---------------------------------------------------------------*/
-	/* Deprojection for telescope diodes to center of telescope      */
-	/* based on prior knowledge of object separation and astigmatism */
-	/*---------------------------------------------------------------*/
-       
-	cpl_msg_info (cpl_func,"FE: deproject telescope diodes to center of telescope in OPD_TEL_CORR.");
-
-	/* Create array in OI_VIS_MET table, fill with zeros, and get list of pointer. 
+    
+    /* Apply pupil, focus and pickup offsets */
+    for (int tel = 0; tel < ntel; tel++) {
+        cpl_msg_info (cpl_func,"FE: Tel %d Pupil %g Focus %g Pickup %g",
+            tel, (opd_pupil?opd_pupil[0*ntel+tel]:0)*1e9, 
+            cpl_vector_get (opd_focus_offset, tel)*1e9,
+            cpl_vector_get (opd_pickup_offset, tel)*1e9 );	   
+        for (cpl_size row = 0; row < nrow_met; row++) {
+            opd_fc_corr[row*ntel+tel] = (opd_pupil?opd_pupil[row*ntel+tel]:0)
+                + cpl_vector_get (opd_focus_offset, tel)
+                + cpl_vector_get (opd_pickup_offset, tel) ;
+        }
+    }
+    
+    /*---------------------------------------------------------------*/
+    /* Deprojection for telescope diodes to center of telescope      */
+    /* based on prior knowledge of object separation and astigmatism */
+    /*---------------------------------------------------------------*/
+    
+    cpl_msg_info (cpl_func,"FE: deproject telescope diodes to center of telescope in OPD_TEL_CORR.");
+    
+    /* Create array in OI_VIS_MET table, fill with zeros, and get list of pointer. 
      * Note that this list has to be free */
-	gravi_table_init_column_array (vismet_table, "OPD_TEL_CORR", "m", CPL_TYPE_DOUBLE, ndiode);
-	double ** opd_tel_corr = gravi_table_get_data_array_double (vismet_table, "OPD_TEL_CORR");
-
-	/* Read metrology receiver positions,
-	 * 1st index = beam/tel, 2nd index = diode  */
-	double recx[4][4]; 
-	double recy[4][4]; 
-
-	/* Read from MET_POS  */
-	for (int tel=0;tel<4;tel++) {
-	  for (int diode=0;diode<4;diode++) {
-	    recx[tel][diode] = gravi_metrology_get_posx (header, 3-tel, diode); /* in order GV 1,2,3,4 */
-	    recy[tel][diode] = gravi_metrology_get_posy (header, 3-tel, diode); /* in order GV 1,2,3,4 */
-	  }
-	}
-
-	/* implementation of Julien's formula */
-	/* met_pos_az = [HIERARCH ESO MET AT<tel> REC<diode>X] */
-	/* met_pos_zd = [HIERARCH ESO MET AT<tel> REC<diode>Y] */
-	/* sep_U = [ESO INS SOBJ X] */
-	/* sep_V = [ESO INS SOBJ Y] */
-	/* The de-projection is the following scalar product: */
-	/* (met_pos_az E_AZ + met_pos_zd E_ZD) . (sep_U E_U + sep_V E_V) */
+    gravi_table_init_column_array (vismet_table, "OPD_TEL_CORR", "m", CPL_TYPE_DOUBLE, ndiode);
+    double ** opd_tel_corr = gravi_table_get_data_array_double (vismet_table, "OPD_TEL_CORR");
     
-	/* declare variable for receiver position in az,zd in mm*/
-	double met_pos_az;
-	double met_pos_zd;
+    /* Read metrology receiver positions,
+     * 1st index = beam/tel, 2nd index = diode  */
+    double recx[4][4]; 
+    double recy[4][4]; 
     
-	/* Declare projection in meter */
-	double deproject;
+    /* Read from MET_POS  */
+    for (int tel=0;tel<4;tel++) {
+        for (int diode=0;diode<4;diode++) {
+            recx[tel][diode] = gravi_metrology_get_posx (header, 3-tel, diode); /* in order GV 1,2,3,4 */
+            recy[tel][diode] = gravi_metrology_get_posy (header, 3-tel, diode); /* in order GV 1,2,3,4 */
+        }
+    }
     
-	/* Vectors used in Juliens formula */
-	cpl_vector * vector1 = cpl_vector_new (3);
-	cpl_vector * vector2 = cpl_vector_new (3);	
-	cpl_vector * vector3 = cpl_vector_new (3);	
-	cpl_vector * vector4 = cpl_vector_new (3);
+    /* implementation of Julien's formula */
+    /* met_pos_az = [HIERARCH ESO MET AT<tel> REC<diode>X] */
+    /* met_pos_zd = [HIERARCH ESO MET AT<tel> REC<diode>Y] */
+    /* sep_U = [ESO INS SOBJ X] */
+    /* sep_V = [ESO INS SOBJ Y] */
+    /* The de-projection is the following scalar product: */
+    /* (met_pos_az E_AZ + met_pos_zd E_ZD) . (sep_U E_U + sep_V E_V) */
+    
+    /* declare variable for receiver position in az,zd in mm*/
+    double met_pos_az;
+    double met_pos_zd;
+    
+    /* Declare projection in meter */
+    double deproject;
+    
+    /* Vectors used in Juliens formula */
+    cpl_vector * vector1 = cpl_vector_new (3);
+    cpl_vector * vector2 = cpl_vector_new (3);	
+    cpl_vector * vector3 = cpl_vector_new (3);	
+    cpl_vector * vector4 = cpl_vector_new (3);
     
     /* read E_U,V,AZ,ZD from OI_VIS_MET table */
-	cpl_array ** E_U = cpl_table_get_data_array (vismet_table,"E_U");
-	cpl_array ** E_V = cpl_table_get_data_array (vismet_table,"E_V");
-	cpl_array ** E_AZ = cpl_table_get_data_array (vismet_table,"E_AZ");
-	cpl_array ** E_ZD = cpl_table_get_data_array (vismet_table,"E_ZD");
-	cpl_msg_info (cpl_func,"FE: E_U = [%g, %g, %g].", 
-		      cpl_array_get (E_U[0*ntel+0], 0, NULL),
-		      cpl_array_get (E_U[0*ntel+0], 1, NULL),
-		      cpl_array_get (E_U[0*ntel+0], 2, NULL));
-	cpl_msg_info (cpl_func,"FE: E_V = [%g, %g, %g].", 
-		      cpl_array_get (E_V[0*ntel+0], 0, NULL),
-		      cpl_array_get (E_V[0*ntel+0], 1, NULL),
-		      cpl_array_get (E_V[0*ntel+0], 2, NULL));
-	cpl_msg_info (cpl_func,"FE: E_AZ = [%g, %g, %g].", 
-		      cpl_array_get (E_AZ[0*ntel+0], 0, NULL),
-		      cpl_array_get (E_AZ[0*ntel+0], 1, NULL),
-		      cpl_array_get (E_AZ[0*ntel+0], 2, NULL));
-	cpl_msg_info (cpl_func,"FE: E_ZD = [%g, %g, %g].", 
-		      cpl_array_get (E_ZD[0*ntel+0], 0, NULL),
-		      cpl_array_get (E_ZD[0*ntel+0], 1, NULL),
-		      cpl_array_get (E_ZD[0*ntel+0], 2, NULL));
-
+    cpl_array ** E_U = cpl_table_get_data_array (vismet_table,"E_U");
+    cpl_array ** E_V = cpl_table_get_data_array (vismet_table,"E_V");
+    cpl_array ** E_AZ = cpl_table_get_data_array (vismet_table,"E_AZ");
+    cpl_array ** E_ZD = cpl_table_get_data_array (vismet_table,"E_ZD");
+    cpl_msg_info (cpl_func,"FE: E_U = [%g, %g, %g].", 
+            cpl_array_get (E_U[0*ntel+0], 0, NULL),
+            cpl_array_get (E_U[0*ntel+0], 1, NULL),
+            cpl_array_get (E_U[0*ntel+0], 2, NULL));
+    cpl_msg_info (cpl_func,"FE: E_V = [%g, %g, %g].", 
+            cpl_array_get (E_V[0*ntel+0], 0, NULL),
+            cpl_array_get (E_V[0*ntel+0], 1, NULL),
+            cpl_array_get (E_V[0*ntel+0], 2, NULL));
+    cpl_msg_info (cpl_func,"FE: E_AZ = [%g, %g, %g].", 
+            cpl_array_get (E_AZ[0*ntel+0], 0, NULL),
+            cpl_array_get (E_AZ[0*ntel+0], 1, NULL),
+            cpl_array_get (E_AZ[0*ntel+0], 2, NULL));
+    cpl_msg_info (cpl_func,"FE: E_ZD = [%g, %g, %g].", 
+            cpl_array_get (E_ZD[0*ntel+0], 0, NULL),
+            cpl_array_get (E_ZD[0*ntel+0], 1, NULL),
+            cpl_array_get (E_ZD[0*ntel+0], 2, NULL));
+    
     /* loop over all column and diodes */
-	for (int tel = 0; tel < ntel; tel++) {
+    for (int tel = 0; tel < ntel; tel++) {
         for (cpl_size row = 0; row < nrow_met; row++) {
-          for (int diode = 0; diode < ndiode; diode++) {
-	      met_pos_az = recx[tel][diode]; /* in mm */
-	      met_pos_zd = recy[tel][diode]; /* in mm */
-          
-	      /* Filling vectors of Juliens formula */
-	      cpl_vector_set (vector1, 0, met_pos_az * cpl_array_get (E_AZ[row*ntel+tel], 0, NULL));
-	      cpl_vector_set (vector1, 1, met_pos_az * cpl_array_get (E_AZ[row*ntel+tel], 1, NULL));
-	      cpl_vector_set (vector1, 2, met_pos_az * cpl_array_get (E_AZ[row*ntel+tel], 2, NULL));
-	      cpl_vector_set (vector2, 0, met_pos_zd * cpl_array_get (E_ZD[row*ntel+tel], 0, NULL));
-	      cpl_vector_set (vector2, 1, met_pos_zd * cpl_array_get (E_ZD[row*ntel+tel], 1, NULL));
-	      cpl_vector_set (vector2, 2, met_pos_zd * cpl_array_get (E_ZD[row*ntel+tel], 2, NULL));
-	      cpl_vector_set (vector3, 0, dx_in * cpl_array_get (E_U[row*ntel+tel], 0, NULL));
-	      cpl_vector_set (vector3, 1, dx_in * cpl_array_get (E_U[row*ntel+tel], 1, NULL));
-	      cpl_vector_set (vector3, 2, dx_in * cpl_array_get (E_U[row*ntel+tel], 2, NULL));
-	      cpl_vector_set (vector4, 0, dy_in * cpl_array_get (E_V[row*ntel+tel], 0, NULL));
-	      cpl_vector_set (vector4, 1, dy_in * cpl_array_get (E_V[row*ntel+tel], 1, NULL));
-	      cpl_vector_set (vector4, 2, dy_in * cpl_array_get (E_V[row*ntel+tel], 2, NULL));
-          
-	      /* Add first two vectors, result is in vector1 */
-	      cpl_vector_add(vector1,vector2);
-	      /* add second two vectors, result is in vector3 */
-	      cpl_vector_add(vector3,vector4);
-	      /* calculate deprojection */
-	      deproject = cpl_vector_product(vector1, vector3);  /* in mm * mas */
-	      deproject = deproject / 1000. / 1000. / 3600. / 360. * TWOPI; /* convert in meter */ 
-	      if (row == 0 && tel == 0 && diode == 0) { 
-		cpl_msg_info (cpl_func,"FE: Julien deproject diode 0 in nm: %g", deproject*1e9);
-	      }
-	      if (row == 0 && tel == 0 && diode == 1) {
-		cpl_msg_info (cpl_func,"FE: Julien deproject diode 1 in nm: %g", deproject*1e9);
-	      }
-	      if (row == 0 && tel == 0 && diode == 2) {
-		cpl_msg_info (cpl_func,"FE: Julien deproject diode 2 in nm: %g", deproject*1e9);
-	      }
-	      if (row == 0 && tel == 0 && diode == 3) {
-		cpl_msg_info (cpl_func,"FE: Julien deproject diode 3 in nm: %g", deproject*1e9);
-	      }
-	      /* apply deprojection to opd_tel and store in new array */
-	      /* difference to FC will be done further down */
-	      opd_tel_corr[row*ntel+tel][diode] = deproject;
-	    }
-	  }
-	}
-
-	/* Free memory */
-	FREE (cpl_vector_delete, vector1);
-	FREE (cpl_vector_delete, vector2);
-	FREE (cpl_vector_delete, vector3);
-	FREE (cpl_vector_delete, vector4);
-
-	/* for comparison, applying recipe from Stefan's slide using mean parallactic angle from header */
-	double posang; 
-	double parang; 
-	double metang; 
-	double sep; 
-	int flag;
+            for (int diode = 0; diode < ndiode; diode++) {
+                met_pos_az = recx[tel][diode]; /* in mm */
+                met_pos_zd = recy[tel][diode]; /* in mm */
+                
+                /* Filling vectors of Juliens formula */
+                cpl_vector_set (vector1, 0, met_pos_az * cpl_array_get (E_AZ[row*ntel+tel], 0, NULL));
+                cpl_vector_set (vector1, 1, met_pos_az * cpl_array_get (E_AZ[row*ntel+tel], 1, NULL));
+                cpl_vector_set (vector1, 2, met_pos_az * cpl_array_get (E_AZ[row*ntel+tel], 2, NULL));
+                cpl_vector_set (vector2, 0, met_pos_zd * cpl_array_get (E_ZD[row*ntel+tel], 0, NULL));
+                cpl_vector_set (vector2, 1, met_pos_zd * cpl_array_get (E_ZD[row*ntel+tel], 1, NULL));
+                cpl_vector_set (vector2, 2, met_pos_zd * cpl_array_get (E_ZD[row*ntel+tel], 2, NULL));
+                cpl_vector_set (vector3, 0, dx_in * cpl_array_get (E_U[row*ntel+tel], 0, NULL));
+                cpl_vector_set (vector3, 1, dx_in * cpl_array_get (E_U[row*ntel+tel], 1, NULL));
+                cpl_vector_set (vector3, 2, dx_in * cpl_array_get (E_U[row*ntel+tel], 2, NULL));
+                cpl_vector_set (vector4, 0, dy_in * cpl_array_get (E_V[row*ntel+tel], 0, NULL));
+                cpl_vector_set (vector4, 1, dy_in * cpl_array_get (E_V[row*ntel+tel], 1, NULL));
+                cpl_vector_set (vector4, 2, dy_in * cpl_array_get (E_V[row*ntel+tel], 2, NULL));
+                
+                /* Add first two vectors, result is in vector1 */
+                cpl_vector_add(vector1,vector2);
+                /* add second two vectors, result is in vector3 */
+                cpl_vector_add(vector3,vector4);
+                /* calculate deprojection */
+                deproject = cpl_vector_product(vector1, vector3);  /* in mm * mas */
+                deproject = deproject / 1000. / 1000. / 3600. / 360. * TWOPI; /* convert in meter */ 
+                if (row == 0 && tel == 0 && diode == 0) { 
+                    cpl_msg_info (cpl_func,"FE: Julien deproject diode 0 in nm: %g", deproject*1e9);
+                }
+                if (row == 0 && tel == 0 && diode == 1) {
+                    cpl_msg_info (cpl_func,"FE: Julien deproject diode 1 in nm: %g", deproject*1e9);
+                }
+                if (row == 0 && tel == 0 && diode == 2) {
+                    cpl_msg_info (cpl_func,"FE: Julien deproject diode 2 in nm: %g", deproject*1e9);
+                }
+                if (row == 0 && tel == 0 && diode == 3) {
+                    cpl_msg_info (cpl_func,"FE: Julien deproject diode 3 in nm: %g", deproject*1e9);
+                }
+                /* apply deprojection to opd_tel and store in new array */
+                /* difference to FC will be done further down */
+                opd_tel_corr[row*ntel+tel][diode] = deproject;
+            }
+        }
+    }
     
-	/* Posangle is calculated from SOBJX ansd SOBJY already read before 
+    /* Free memory */
+    FREE (cpl_vector_delete, vector1);
+    FREE (cpl_vector_delete, vector2);
+    FREE (cpl_vector_delete, vector3);
+    FREE (cpl_vector_delete, vector4);
+    
+    /* for comparison, applying recipe from Stefan's slide using mean parallactic angle from header */
+    double posang; 
+    double parang; 
+    double metang; 
+    double sep; 
+    int flag;
+    
+    /* Posangle is calculated from SOBJX ansd SOBJY already read before 
        x,y are exchanged following coordinate systems in Stefan's slide */
-	posang = myAtan (dy_in,dx_in, &flag);
-	cpl_msg_info (cpl_func,"FE: position angle in degrees: %g ", posang / TWOPI * 360. );
+    posang = myAtan (dy_in,dx_in, &flag);
+    cpl_msg_info (cpl_func,"FE: position angle in degrees: %g ", posang / TWOPI * 360. );
     
-	/* Paralactic angle is averaged from fitsheader */
-	double parang_start = cpl_propertylist_get_double(header, "ESO ISS PARANG START");
-	double parang_end = cpl_propertylist_get_double(header, "ESO ISS PARANG END");
-	CPLCHECK_MSG ("Cannot get paralactic angle");
-	parang = (parang_start + parang_end)/2. / 360. * TWOPI ; /* in rad */
-	cpl_msg_info (cpl_func,"FE: paralactic angle in degrees: %g ", parang / TWOPI * 360. );
+    /* Paralactic angle is averaged from fitsheader */
+    double parang_start = cpl_propertylist_get_double(header, "ESO ISS PARANG START");
+    double parang_end = cpl_propertylist_get_double(header, "ESO ISS PARANG END");
+    CPLCHECK_MSG ("Cannot get paralactic angle");
+    parang = (parang_start + parang_end)/2. / 360. * TWOPI ; /* in rad */
+    cpl_msg_info (cpl_func,"FE: paralactic angle in degrees: %g ", parang / TWOPI * 360. );
     
-	/* metrology angle following Stefan's slide */
-	metang = posang - parang; /* following Stefan's slide */
-	cpl_msg_info (cpl_func,"FE: metrology angle in degrees: %g ", metang / TWOPI * 360. );
+    /* metrology angle following Stefan's slide */
+    metang = posang - parang; /* following Stefan's slide */
+    cpl_msg_info (cpl_func,"FE: metrology angle in degrees: %g ", metang / TWOPI * 360. );
     
-	/* Separation is calculated from rho_in already calculated before from SOBJX and SOBJY */
-	sep  = rho_in / 1000. / 3600. / 360. * TWOPI ; /* in rad */
-	cpl_msg_info (cpl_func,"FE: separation in radians: %g ", sep );
-	/* diode offsets */
-	double sdeproject;
-	sdeproject = sep * (- recy[0][0] * cos(metang) - recx[0][0] * sin(metang)) / 1000.; /* in meter */
-	cpl_msg_info (cpl_func,"FE: Stefan deproject diode 0 in nm: %g", sdeproject*1e9);
-	sdeproject = sep * (- recy[0][1] * cos(metang) - recx[0][1] * sin(metang)) / 1000.; /* in meter */
-	cpl_msg_info (cpl_func,"FE: Stefan deproject diode 1 in nm: %g", sdeproject*1e9);
-	sdeproject = sep * (- recy[0][2] * cos(metang) - recx[0][2] * sin(metang)) / 1000.; /* in meter */
-	cpl_msg_info (cpl_func,"FE: Stefan deproject diode 2 in nm: %g", sdeproject*1e9);
-	sdeproject = sep * (- recy[0][3] * cos(metang) - recx[0][3] * sin(metang)) / 1000.; /* in meter */
-	cpl_msg_info (cpl_func,"FE: Stefan deproject diode 3 in nm: %g", sdeproject*1e9);
-
-	/* and correct for astigmatism */
-	/* values from Stefan's email for in order AT/UT 1,2,3,4 */
-	double AstigmAmplitudeAT[4] = 	{0.1643797, 0.166604301, 0.0996125938, 0.266071934} ; /* in microns */
-	double AstigmThetaAT[4] = {1.116211914, 28.48113853, 0.42385066, 25.92291209};  /* in degrees */
-	double AstigmAmplitudeUT[4] = 	{0.18216255, 0.185116601, 0.113190052, 0.242351495}; /* in microns */
-	double AstigmThetaUT[4] ={-2.696882009, 18.07496983, 20.56624745, 19.13334754}; /* in degrees */
-
-	/* local variables */
-	double AstigmAmplitude[4]; /* in meter */
-	double AstigmTheta[4]; /* in radian */
-	double rmax; 
-	double astigm;
-	double diodeang;
-	double astang;
-	double astradius;
+    /* Separation is calculated from rho_in already calculated before from SOBJX and SOBJY */
+    sep  = rho_in / 1000. / 3600. / 360. * TWOPI ; /* in rad */
+    cpl_msg_info (cpl_func,"FE: separation in radians: %g ", sep );
+    /* diode offsets */
+    double sdeproject;
+    sdeproject = sep * (- recy[0][0] * cos(metang) - recx[0][0] * sin(metang)) / 1000.; /* in meter */
+    cpl_msg_info (cpl_func,"FE: Stefan deproject diode 0 in nm: %g", sdeproject*1e9);
+    sdeproject = sep * (- recy[0][1] * cos(metang) - recx[0][1] * sin(metang)) / 1000.; /* in meter */
+    cpl_msg_info (cpl_func,"FE: Stefan deproject diode 1 in nm: %g", sdeproject*1e9);
+    sdeproject = sep * (- recy[0][2] * cos(metang) - recx[0][2] * sin(metang)) / 1000.; /* in meter */
+    cpl_msg_info (cpl_func,"FE: Stefan deproject diode 2 in nm: %g", sdeproject*1e9);
+    sdeproject = sep * (- recy[0][3] * cos(metang) - recx[0][3] * sin(metang)) / 1000.; /* in meter */
+    cpl_msg_info (cpl_func,"FE: Stefan deproject diode 3 in nm: %g", sdeproject*1e9);
     
-	/* Select astigm calibration and rmax according to AT or UT */
+    /* and correct for astigmatism */
+    /* values from Stefan's email for in order AT/UT 1,2,3,4 */
+    double AstigmAmplitudeAT[4] = 	{0.1643797, 0.166604301, 0.0996125938, 0.266071934} ; /* in microns */
+    double AstigmThetaAT[4] = {1.116211914, 28.48113853, 0.42385066, 25.92291209};  /* in degrees */
+    double AstigmAmplitudeUT[4] = 	{0.18216255, 0.185116601, 0.113190052, 0.242351495}; /* in microns */
+    double AstigmThetaUT[4] ={-2.696882009, 18.07496983, 20.56624745, 19.13334754}; /* in degrees */
+    
+    /* local variables */
+    double AstigmAmplitude[4]; /* in meter */
+    double AstigmTheta[4]; /* in radian */
+    double rmax; 
+    double astigm;
+    double diodeang;
+    double astang;
+    double astradius;
+    
+    /* Select astigm calibration and rmax according to AT or UT */
     if (telname == NULL || telname[0] == 'U') {
         cpl_msg_info (cpl_func,"FE: applying UT astigmatism correction");
         rmax = 4000; /* in mm */
@@ -2449,185 +2447,185 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
             AstigmAmplitude[i] = AstigmAmplitudeUT[3-i] * 1e-6; /* in order GV1,2,3,4 */
             AstigmTheta[i] = AstigmThetaUT[3-i] / 360. * TWOPI; /* in order GV1,2,3,4 */
         }
-	}
-    else {
+    } else {
         cpl_msg_info (cpl_func,"FE: applying AT astigmatism correction");
         rmax = 900; /* in mm */
         for (int i = 0; i < 4; i++) {
             AstigmAmplitude[i] = AstigmAmplitudeAT[3-i] * 1e-6; /* in order GV1,2,3,4 */
             AstigmTheta[i] = AstigmThetaAT[3-i] / 360. * TWOPI; /* in order GV1,2,3,4 */
         }
-	}
+    }
     
     /* loop over all diodes and beams */
-	for (int tel = 0; tel < ntel; tel++) {
-          for (cpl_size row = 0; row < nrow_met; row++) {
-	    for (int diode = 0; diode < ndiode; diode++) {
-	      diodeang = myAtan(-recy[tel][diode],-recx[tel][diode], &flag);  /* in radian */
-	      astang = metang - diodeang + AstigmTheta[tel] ; /* in radian */
-	      astradius = sqrt(recx[tel][diode]*recx[tel][diode] + recy[tel][diode]*recy[tel][diode]) / rmax; /* normalized */
-	      astigm = AstigmAmplitude[tel] * sqrt(6) * astradius * astradius * sin(2. * astang); /* in meter */
-	      if (row == 0 && tel == 0 && diode == 0) { 
-		cpl_msg_info (cpl_func,"FE: Frank diode angle [deg]: %g", diodeang / TWOPI * 360.);
-		cpl_msg_info (cpl_func,"FE: Frank astigmatism angle [deg]: %g", astang / TWOPI * 360.);
-		cpl_msg_info (cpl_func,"FE: Frank normalized astradius: %g", astradius);
-		cpl_msg_info (cpl_func,"FE: Frank astigmatism diode 0 in nm: %g", astigm*1e9);
-	      }
-	      if (row == 0 && tel == 0 && diode == 1) {
-		cpl_msg_info (cpl_func,"FE: Frank astigmatism diode 1 in nm: %g", astigm*1e9);
-	      }
-	      if (row == 0 && tel == 0 && diode == 2) {
-		cpl_msg_info (cpl_func,"FE: Frank astigmatism diode 2 in nm: %g", astigm*1e9);
-	      }
-	      if (row == 0 && tel == 0 && diode == 3) {
-		cpl_msg_info (cpl_func,"FE: Frank astigmatism diode 3 in nm: %g", astigm*1e9);
-	      }
-	      /* apply astigmatism */
-	      opd_tel_corr[row*ntel+tel][diode] -= astigm; 
-	    }
-	  }
-	}
-
-	/*---------------------------------------------------------------------------------------*/
-	/* calculate difference between projected metrology receivers and corrected fibercoupler */
-	/*---------------------------------------------------------------------------------------*/
-
-	cpl_msg_info (cpl_func,"FE: calculate difference between corrected telescope diodes and fiber coupler in OPD_TELFC_CORR.");
-
-	/* Create array in OI_VIS_MET table, fill with zeros, and get pointer */
-	gravi_table_init_column_array (vismet_table, "OPD_TELFC_CORR", "m", CPL_TYPE_DOUBLE, ndiode);
-	double ** opd_telfc_corr = gravi_table_get_data_array_double (vismet_table, "OPD_TELFC_CORR");
-
-	/* going to complex phasor notation and then back to opd */
-	double phi;
-	double phifc;
-	double complex phasor;
-	double complex phasorfc;
-	double complex dphasor;
-
-	for (int tel = 0; tel < ntel; tel++) {
-          for (cpl_size row = 0; row < nrow_met; row++) {
-	    phifc = (opd_fc[row*ntel+tel] + opd_fc_corr[row*ntel+tel]) 
-	      / lambda_met_mean * TWOPI; /* fiber coupler */
-	    phasorfc = cos(phifc) + sin(phifc) * I;
-	    for (int diode = 0; diode < ndiode; diode++) {
-	      phi = (opd_tel[row*ntel+tel][diode] + opd_tel_corr[row*ntel+tel][diode]) 
-		/ lambda_met_mean * TWOPI; /* telescope receiver */
-	      phasor = cos(phi) + sin(phi) * I;
-	      dphasor = phasor*conj(phasorfc);
-	      opd_telfc_corr[row*ntel+tel][diode] = carg(dphasor) / TWOPI * lambda_met_mean ;
-	    }
-	  }
-	}
-
-	/* wrap around median */
-	cpl_vector *tmp_vector;
-	tmp_vector = cpl_vector_new (nrow_met);
-	double tmp_median;
-	double low_limit;
-	double high_limit;
-
-	for (int tel = 0; tel < ntel; tel++) {
-	  for (int diode = 0; diode < ndiode; diode++) {
-	    /* fill tmp_vector with opd_telfc_corr for given telescope and diode */
-	    for (cpl_size row = 0; row < nrow_met; row++) {
-	      cpl_vector_set (tmp_vector, row, opd_telfc_corr[row*ntel+tel][diode]);
-	    }
-	    /* calculate median */
-	    tmp_median =  cpl_vector_get_median_const(tmp_vector);
-	    high_limit = (tmp_median + lambda_met_mean / 2.);
-	    low_limit = (tmp_median - lambda_met_mean / 2.);
-	    /* wrap to median */
-	    for (cpl_size row = 0; row < nrow_met; row++) {
-	      if (opd_telfc_corr[row*ntel+tel][diode] > high_limit) {
-		opd_telfc_corr[row*ntel+tel][diode] -= lambda_met_mean;
-	      }
-	      if (opd_telfc_corr[row*ntel+tel][diode] < low_limit) {
-		opd_telfc_corr[row*ntel+tel][diode] += lambda_met_mean;
-	      }
-	    }
-	    /* do a second wrap around median for better estimate */
-	    for (cpl_size row = 0; row < nrow_met; row++) {
-	      cpl_vector_set (tmp_vector, row, opd_telfc_corr[row*ntel+tel][diode]);
-	    }
-	    tmp_median =  cpl_vector_get_median_const(tmp_vector);
-	    high_limit = (tmp_median + lambda_met_mean / 2.);
-	    low_limit = (tmp_median - lambda_met_mean / 2.);
-	    for (cpl_size row = 0; row < nrow_met; row++) {
-	      if (opd_telfc_corr[row*ntel+tel][diode] > high_limit) {
-		opd_telfc_corr[row*ntel+tel][diode] -= lambda_met_mean;
-	      }
-	      if (opd_telfc_corr[row*ntel+tel][diode] < low_limit) {
-		opd_telfc_corr[row*ntel+tel][diode] += lambda_met_mean;
-	      }
-	    }
-	  }
-	}
-
-	/* report final median for each telescope and diode */
-	for (int tel = 0; tel < ntel; tel++) {
-	  for (int diode = 0; diode < ndiode; diode++) {
-	    /* fill tmp_vector with opd_telfc for given telescope and diode */
-	    for (cpl_size row = 0; row < nrow_met; row++) {
-	      cpl_vector_set (tmp_vector, row, opd_telfc_corr[row*ntel+tel][diode]);
-	    }
-	    /* calculate median */
-	    tmp_median =  cpl_vector_get_median_const(tmp_vector);
-	    cpl_msg_info (cpl_func,"FE: median TEL-FC in nm for Tel %d Diode %d : %g ",
-                      tel, diode, tmp_median*1e9);
-	  }
-	}
-
-	/*---------------------------------------------------------*/
-	/* Caclulate mean correction for all telescope diodes      */
-	/* currently simple mean, could also be other combinations,*/
-	/* e.g. the less noisy mean of opposite diodes             */ 
-	/*---------------------------------------------------------*/
-	cpl_msg_info (cpl_func,"FE: calculate OPD_TELFC_MCORR.");
-
-	/* Create array in OI_VIS_MET table, fill with zeros, and get pointer */
-	gravi_table_new_column (vismet_table, "OPD_TELFC_MCORR", "m", CPL_TYPE_DOUBLE);
-	double * opd_telfc_mcorr = cpl_table_get_data_double (vismet_table, "OPD_TELFC_MCORR");
-
-	/* Calculate mean correction and store in table */
-	for (int tel = 0; tel < ntel; tel++) {
-	  for (cpl_size row = 0; row < nrow_met; row++) {
-	    opd_telfc_mcorr[row*ntel+tel] = 
-	      (opd_telfc_corr[row*ntel+tel][0] 
-	       + opd_telfc_corr[row*ntel+tel][1]
-	       + opd_telfc_corr[row*ntel+tel][2]
-	       + opd_telfc_corr[row*ntel+tel][3]) / 4. ;
-	  }
-	}
-
-	FREE (cpl_vector_delete, opd_focus_offset);
-	FREE (cpl_vector_delete, opd_pickup_offset);
-	FREE (cpl_vector_delete, tmp_vector);
-
-	cpl_msg_info (cpl_func,"FE: end.");
-
-	/*----------------------------------------------------------------*/
-	/* FE end                                                         */
-	/*----------------------------------------------------------------*/
-
-	CPLCHECK_MSG ("Cannot fill result of metrology computation");
-
-	/* Free the pointer to pointer to data */
-	FREELOOP (cpl_free, volts, nrow_met);
-	FREE (cpl_free, opd_tel);
-	FREE (cpl_free, flag_tel);
-	FREE (cpl_free, coher_tel_ft);
-	FREE (cpl_free, coher_tel_sc);
+    for (int tel = 0; tel < ntel; tel++) {
+        for (cpl_size row = 0; row < nrow_met; row++) {
+            for (int diode = 0; diode < ndiode; diode++) {
+                diodeang = myAtan(-recy[tel][diode],-recx[tel][diode], &flag);  /* in radian */
+                astang = metang - diodeang + AstigmTheta[tel] ; /* in radian */
+                astradius = sqrt(recx[tel][diode]*recx[tel][diode] + recy[tel][diode]*recy[tel][diode]) / rmax; /* normalized */
+                astigm = AstigmAmplitude[tel] * sqrt(6) * astradius * astradius * sin(2. * astang); /* in meter */
+                if (row == 0 && tel == 0 && diode == 0) { 
+                    cpl_msg_info (cpl_func,"FE: Frank diode angle [deg]: %g", diodeang / TWOPI * 360.);
+                    cpl_msg_info (cpl_func,"FE: Frank astigmatism angle [deg]: %g", astang / TWOPI * 360.);
+                    cpl_msg_info (cpl_func,"FE: Frank normalized astradius: %g", astradius);
+                    cpl_msg_info (cpl_func,"FE: Frank astigmatism diode 0 in nm: %g", astigm*1e9);
+                }
+                if (row == 0 && tel == 0 && diode == 1) {
+                    cpl_msg_info (cpl_func,"FE: Frank astigmatism diode 1 in nm: %g", astigm*1e9);
+                }
+                if (row == 0 && tel == 0 && diode == 2) {
+                    cpl_msg_info (cpl_func,"FE: Frank astigmatism diode 2 in nm: %g", astigm*1e9);
+                }
+                if (row == 0 && tel == 0 && diode == 3) {
+                    cpl_msg_info (cpl_func,"FE: Frank astigmatism diode 3 in nm: %g", astigm*1e9);
+                }
+                /* apply astigmatism */
+                opd_tel_corr[row*ntel+tel][diode] -= astigm; 
+            }
+        }
+    }
+    
+    /*---------------------------------------------------------------------------------------*/
+    /* calculate difference between projected metrology receivers and corrected fibercoupler */
+    /*---------------------------------------------------------------------------------------*/
+    
+    cpl_msg_info (cpl_func,"FE: calculate difference between corrected telescope diodes and fiber coupler in OPD_TELFC_CORR.");
+    
+    /* Create array in OI_VIS_MET table, fill with zeros, and get pointer */
+    gravi_table_init_column_array (vismet_table, "OPD_TELFC_CORR", "m", CPL_TYPE_DOUBLE, ndiode);
+    double ** opd_telfc_corr = gravi_table_get_data_array_double (vismet_table, "OPD_TELFC_CORR");
+    
+    /* going to complex phasor notation and then back to opd */
+    double phi;
+    double phifc;
+    double complex phasor;
+    double complex phasorfc;
+    double complex dphasor;
+    
+    for (int tel = 0; tel < ntel; tel++) {
+        for (cpl_size row = 0; row < nrow_met; row++) {
+            phifc = (opd_fc[row*ntel+tel] + opd_fc_corr[row*ntel+tel]) 
+                      / lambda_met_mean * TWOPI; /* fiber coupler */
+            phasorfc = cos(phifc) + sin(phifc) * I;
+            for (int diode = 0; diode < ndiode; diode++) {
+                phi = (opd_tel[row*ntel+tel][diode] + opd_tel_corr[row*ntel+tel][diode]) 
+                        / lambda_met_mean * TWOPI; /* telescope receiver */
+                phasor = cos(phi) + sin(phi) * I;
+                dphasor = phasor*conj(phasorfc);
+                opd_telfc_corr[row*ntel+tel][diode] = carg(dphasor) / TWOPI * lambda_met_mean ;
+            }
+        }
+    }
+    
+    /* wrap around median */
+    cpl_vector *tmp_vector;
+    tmp_vector = cpl_vector_new (nrow_met);
+    double tmp_median;
+    double low_limit;
+    double high_limit;
+    
+    for (int tel = 0; tel < ntel; tel++) {
+        for (int diode = 0; diode < ndiode; diode++) {
+            /* fill tmp_vector with opd_telfc_corr for given telescope and diode */
+            for (cpl_size row = 0; row < nrow_met; row++) {
+              cpl_vector_set (tmp_vector, row, opd_telfc_corr[row*ntel+tel][diode]);
+            }
+            /* calculate median */
+            tmp_median =  cpl_vector_get_median_const(tmp_vector);
+            high_limit = (tmp_median + lambda_met_mean / 2.);
+            low_limit = (tmp_median - lambda_met_mean / 2.);
+            /* wrap to median */
+            for (cpl_size row = 0; row < nrow_met; row++) {
+                if (opd_telfc_corr[row*ntel+tel][diode] > high_limit) {
+                    opd_telfc_corr[row*ntel+tel][diode] -= lambda_met_mean;
+                }
+                if (opd_telfc_corr[row*ntel+tel][diode] < low_limit) {
+                    opd_telfc_corr[row*ntel+tel][diode] += lambda_met_mean;
+                }
+            }
+            /* do a second wrap around median for better estimate */
+            for (cpl_size row = 0; row < nrow_met; row++) {
+                cpl_vector_set (tmp_vector, row, opd_telfc_corr[row*ntel+tel][diode]);
+            }
+            tmp_median =  cpl_vector_get_median_const(tmp_vector);
+            high_limit = (tmp_median + lambda_met_mean / 2.);
+            low_limit = (tmp_median - lambda_met_mean / 2.);
+            for (cpl_size row = 0; row < nrow_met; row++) {
+                if (opd_telfc_corr[row*ntel+tel][diode] > high_limit) {
+                    opd_telfc_corr[row*ntel+tel][diode] -= lambda_met_mean;
+                }
+                if (opd_telfc_corr[row*ntel+tel][diode] < low_limit) {
+                    opd_telfc_corr[row*ntel+tel][diode] += lambda_met_mean;
+                }
+            }
+        }
+    }
+    
+    /* report final median for each telescope and diode */
+    for (int tel = 0; tel < ntel; tel++) {
+        for (int diode = 0; diode < ndiode; diode++) {
+            /* fill tmp_vector with opd_telfc for given telescope and diode */
+            for (cpl_size row = 0; row < nrow_met; row++) {
+                cpl_vector_set (tmp_vector, row, opd_telfc_corr[row*ntel+tel][diode]);
+            }
+            /* calculate median */
+            tmp_median =  cpl_vector_get_median_const(tmp_vector);
+            cpl_msg_info (cpl_func,"FE: median TEL-FC in nm for Tel %d Diode %d : %g ",
+                          tel, diode, tmp_median*1e9);
+        }
+    }
+    
+    /*---------------------------------------------------------*/
+    /* Caclulate mean correction for all telescope diodes      */
+    /* currently simple mean, could also be other combinations,*/
+    /* e.g. the less noisy mean of opposite diodes             */ 
+    /*---------------------------------------------------------*/
+    cpl_msg_info (cpl_func,"FE: calculate OPD_TELFC_MCORR.");
+    
+    /* Create array in OI_VIS_MET table, fill with zeros, and get pointer */
+    gravi_table_new_column (vismet_table, "OPD_TELFC_MCORR", "m", CPL_TYPE_DOUBLE);
+    double * opd_telfc_mcorr = cpl_table_get_data_double (vismet_table, "OPD_TELFC_MCORR");
+    
+    /* Calculate mean correction and store in table */
+    for (int tel = 0; tel < ntel; tel++) {
+        for (cpl_size row = 0; row < nrow_met; row++) {
+            opd_telfc_mcorr[row*ntel+tel] = 
+                 (opd_telfc_corr[row*ntel+tel][0] 
+                + opd_telfc_corr[row*ntel+tel][1]
+                + opd_telfc_corr[row*ntel+tel][2]
+                + opd_telfc_corr[row*ntel+tel][3]) / 4. ;
+        }
+    }
+    
+    FREE (cpl_vector_delete, opd_focus_offset);
+    FREE (cpl_vector_delete, opd_pickup_offset);
+    FREE (cpl_vector_delete, tmp_vector);
+    
+    cpl_msg_info (cpl_func,"FE: end.");
+    
+    /*----------------------------------------------------------------*/
+    /* FE end                                                         */
+    /*----------------------------------------------------------------*/
+    
+    CPLCHECK_MSG ("Cannot fill result of metrology computation");
+    
+    /* Free the pointer to pointer to data */
+    FREELOOP (cpl_free, volts, nrow_met);
+    FREE (cpl_free, opd_tel);
+    FREE (cpl_free, flag_tel);
+    FREE (cpl_free, coher_tel_ft);
+    FREE (cpl_free, coher_tel_sc);
     FREE (cpl_free, opd_tel_corr);
     FREE (cpl_free, opd_telfc_corr);
-
+    
     /* Free the TAC data */
     FREE (cpl_free, tacConfiguration);
     FREE (cpl_free, tacData);
-
+    
     gravi_msg_function_exit(1);
-	return CPL_ERROR_NONE;
+    return CPL_ERROR_NONE;
 }
+
 
 /* -------------------------------------------------------------------- */
 /**
