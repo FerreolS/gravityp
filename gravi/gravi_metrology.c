@@ -59,6 +59,10 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
                                     cpl_table * vismet_table,
                                     cpl_propertylist * header);
 
+cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
+                                      cpl_table * vismet_table,
+                                      cpl_propertylist * header);
+
 cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
                                     cpl_table * vismet_table,
                                     double delay,
@@ -1971,7 +1975,7 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
  *  
  * @param metrology_table  The input METROLOGY table
  * @param vismet_table     The input/output OI_VIS_MET table
- * @param header      The corresponding HEADER
+ * @param header           The corresponding HEADER
  * 
  * Wrapper to interface with the TAC real-time algorithm.
  * This fill new columns in the existing OI_VIS_MET table:
@@ -1979,8 +1983,8 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
  */
 /*----------------------------------------------------------------------------*/
 cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
-            cpl_table * vismet_table,
-            cpl_propertylist * header)
+                                    cpl_table * vismet_table,
+                                    cpl_propertylist * header)
 {
     gravi_msg_function_start(1);
     cpl_ensure_code (metrology_table, CPL_ERROR_NULL_INPUT);
@@ -2180,11 +2184,55 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
         }
     }
     
+    CPLCHECK_MSG ("Cannot fill result of metrology computation");
     
-    /*----------------------------------------------------------------*/
-    /* FE start                                                       */
-    /*----------------------------------------------------------------*/
-    /* "tel" refers to "GV" all throughout FE */
+    /* Free the pointer to pointer to data */
+    FREELOOP (cpl_free, volts, nrow_met);
+    FREE (cpl_free, opd_tel);
+    FREE (cpl_free, flag_tel);
+    FREE (cpl_free, coher_tel_ft);
+    FREE (cpl_free, coher_tel_sc);
+    
+    /* Free the TAC data */
+    FREE (cpl_free, tacConfiguration);
+    FREE (cpl_free, tacData);
+    
+    gravi_msg_function_exit(1);
+    return CPL_ERROR_NONE;
+}
+
+
+
+/*----------------------------------------------------------------*/
+/* FE start                                                       */
+/*----------------------------------------------------------------*/
+/* "tel" refers to "GV" all throughout FE */
+
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Best knowledge correction for referencing TEL to FC
+ *  
+ * @param metrology_table  The input METROLOGY table
+ * @param vismet_table     The input/output OI_VIS_MET table
+ * @param header           The corresponding HEADER
+ * 
+ */
+/*----------------------------------------------------------------------------*/
+cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
+                                      cpl_table * vismet_table,
+                                      cpl_propertylist * header)
+{
+    gravi_msg_function_start(1);
+    
+    int ndiode = 4, ntel = 4;
+    cpl_size nrow_met = cpl_table_get_nrow (metrology_table);
+    
+    double * opd_fc = cpl_table_get_data_double (vismet_table, "OPD_FC");
+    double ** opd_tel = gravi_table_get_data_array_double (vismet_table, "OPD_TEL");
+    
+    /* get the laser wavelength data */
+    double lambda_met_mean =  gravi_pfits_get_met_wavelength_mean(header, metrology_table);
+    cpl_msg_info (cpl_func,"Lambda met mean :%f nm",  lambda_met_mean*1e9);
     
     /*--------------------------------------------*/
     /* Correction to Fiber Coupler Metrology OPD  */
@@ -2607,20 +2655,12 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
     /* FE end                                                         */
     /*----------------------------------------------------------------*/
     
-    CPLCHECK_MSG ("Cannot fill result of metrology computation");
+    CPLCHECK_MSG ("Cannot fill result of TEL vs FC computation");
     
     /* Free the pointer to pointer to data */
-    FREELOOP (cpl_free, volts, nrow_met);
     FREE (cpl_free, opd_tel);
-    FREE (cpl_free, flag_tel);
-    FREE (cpl_free, coher_tel_ft);
-    FREE (cpl_free, coher_tel_sc);
     FREE (cpl_free, opd_tel_corr);
     FREE (cpl_free, opd_telfc_corr);
-    
-    /* Free the TAC data */
-    FREE (cpl_free, tacConfiguration);
-    FREE (cpl_free, tacData);
     
     gravi_msg_function_exit(1);
     return CPL_ERROR_NONE;
@@ -2864,6 +2904,10 @@ cpl_error_code gravi_metrology_reduce (gravi_data * data,
     /* Add the columns from TAC algorithm */
     gravi_metrology_tac (metrology_table, vismet_table, header);
     CPLCHECK_MSG ("Cannot reduce metrology with TAC algo");
+    
+    /* Compute TEL vs FC corrections */
+    gravi_metrology_telfc (metrology_table, vismet_table, header);
+    CPLCHECK_MSG ("Cannot compute TEL vs FC reference");
     
     /* Add the VISMET_TABLE table to the gravi_data */
     gravi_data_add_table (data, NULL, GRAVI_OI_VIS_MET_EXT, vismet_table);
