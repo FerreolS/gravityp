@@ -2361,8 +2361,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     
     /* (rec_az E_AZ + rec_zd E_ZD) . (sobj_U E_U + sobj_V E_V) */
     
-    /* Declare projection in meter */
-    double deproject;
+    /* Declare some variables */
+    double deproject, northangle, field_dU, field_dV;
     
     /* Vectors used in Julien's formula */
     cpl_vector * rec = cpl_vector_new (3);
@@ -2373,6 +2373,10 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     cpl_array ** E_V = cpl_table_get_data_array (vismet_table,"E_V");
     cpl_array ** E_AZ = cpl_table_get_data_array (vismet_table,"E_AZ");
     cpl_array ** E_ZD = cpl_table_get_data_array (vismet_table,"E_ZD");
+    
+    /* read the field fiber offset */
+    double * field_dX = cpl_table_get_data_double (vismet_table, "FIELD_FIBER_DX");
+    double * field_dY = cpl_table_get_data_double (vismet_table, "FIELD_FIBER_DY");
     
     /* some debug messages */
     cpl_msg_info (cpl_func,"FE: E_U = [%g, %g, %g].", 
@@ -2394,7 +2398,18 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     
     /* loop over all column and diodes */
     for (int tel = 0; tel < ntel; tel++) {
+        
+        /* compute the north angle on acqcam */
+        northangle =  gravi_pfits_get_fangle_acqcam (header, tel);
+        
         for (cpl_size row = 0; row < nrow_met; row++) {
+            
+            /* transform field fiber offset from acqcam (x,y) to sky (U,V) */
+            field_dU = field_dX[row*ntel+tel] * sin( (northangle+90.) * CPL_MATH_RAD_DEG )
+                     + field_dY[row*ntel+tel] * cos( (northangle+90.) * CPL_MATH_RAD_DEG );
+            field_dV = field_dX[row*ntel+tel] * sin( (northangle    ) * CPL_MATH_RAD_DEG )
+                     + field_dY[row*ntel+tel] * cos( (northangle    ) * CPL_MATH_RAD_DEG );
+            
             for (int diode = 0; diode < ndiode; diode++) {
                 
                 /* Filling vectors of Julien's formula */
@@ -2404,12 +2419,12 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                                        +rec_zd[tel][diode] * cpl_array_get (E_ZD[row*ntel+tel], 1, NULL));
                 cpl_vector_set (rec, 2, rec_az[tel][diode] * cpl_array_get (E_AZ[row*ntel+tel], 2, NULL)
                                        +rec_zd[tel][diode] * cpl_array_get (E_ZD[row*ntel+tel], 2, NULL));
-                cpl_vector_set (sobj, 0, dx_in * cpl_array_get (E_U[row*ntel+tel], 0, NULL)
-                                        +dy_in * cpl_array_get (E_V[row*ntel+tel], 0, NULL));
-                cpl_vector_set (sobj, 1, dx_in * cpl_array_get (E_U[row*ntel+tel], 1, NULL)
-                                        +dy_in * cpl_array_get (E_V[row*ntel+tel], 1, NULL));
-                cpl_vector_set (sobj, 2, dx_in * cpl_array_get (E_U[row*ntel+tel], 2, NULL)
-                                        +dy_in * cpl_array_get (E_V[row*ntel+tel], 2, NULL));
+                cpl_vector_set (sobj, 0, (dx_in+field_dU) * cpl_array_get (E_U[row*ntel+tel], 0, NULL)
+                                        +(dy_in+field_dV) * cpl_array_get (E_V[row*ntel+tel], 0, NULL));
+                cpl_vector_set (sobj, 1, (dx_in+field_dU) * cpl_array_get (E_U[row*ntel+tel], 1, NULL)
+                                        +(dy_in+field_dV) * cpl_array_get (E_V[row*ntel+tel], 1, NULL));
+                cpl_vector_set (sobj, 2, (dx_in+field_dU) * cpl_array_get (E_U[row*ntel+tel], 2, NULL)
+                                        +(dy_in+field_dV) * cpl_array_get (E_V[row*ntel+tel], 2, NULL));
                 
                 /* calculate deprojection */
                 deproject = cpl_vector_product(rec, sobj);  /* in mm * mas */
