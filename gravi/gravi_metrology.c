@@ -2424,12 +2424,12 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                                        +rec_zd[tel][diode] * cpl_array_get (E_ZD[row*ntel+tel], 1, NULL));
                 cpl_vector_set (rec, 2, rec_az[tel][diode] * cpl_array_get (E_AZ[row*ntel+tel], 2, NULL)
                                        +rec_zd[tel][diode] * cpl_array_get (E_ZD[row*ntel+tel], 2, NULL));
-                cpl_vector_set (sobj, 0, (dx_in+field_dU) * cpl_array_get (E_U[row*ntel+tel], 0, NULL)
-                                        +(dy_in+field_dV) * cpl_array_get (E_V[row*ntel+tel], 0, NULL));
-                cpl_vector_set (sobj, 1, (dx_in+field_dU) * cpl_array_get (E_U[row*ntel+tel], 1, NULL)
-                                        +(dy_in+field_dV) * cpl_array_get (E_V[row*ntel+tel], 1, NULL));
-                cpl_vector_set (sobj, 2, (dx_in+field_dU) * cpl_array_get (E_U[row*ntel+tel], 2, NULL)
-                                        +(dy_in+field_dV) * cpl_array_get (E_V[row*ntel+tel], 2, NULL));
+                cpl_vector_set (sobj, 0, (dx_in-field_dU) * cpl_array_get (E_U[row*ntel+tel], 0, NULL)
+                                        +(dy_in-field_dV) * cpl_array_get (E_V[row*ntel+tel], 0, NULL));
+                cpl_vector_set (sobj, 1, (dx_in-field_dU) * cpl_array_get (E_U[row*ntel+tel], 1, NULL)
+                                        +(dy_in-field_dV) * cpl_array_get (E_V[row*ntel+tel], 1, NULL));
+                cpl_vector_set (sobj, 2, (dx_in-field_dU) * cpl_array_get (E_U[row*ntel+tel], 2, NULL)
+                                        +(dy_in-field_dV) * cpl_array_get (E_V[row*ntel+tel], 2, NULL));
                 
                 /* calculate deprojection */
                 deproject = cpl_vector_product(rec, sobj);  /* in mm * mas */
