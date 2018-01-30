@@ -2345,7 +2345,9 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     double ** opd_tel_corr = gravi_table_get_data_array_double (vismet_table, "OPD_TEL_CORR");
     
     /* Read metrology receiver positions from MET_POS,
-     * 1st index = beam/tel, 2nd index = diode  */
+     * rec_az = [HIERARCH ESO MET AT<tel> REC<diode>X]
+     * rec_zd = [HIERARCH ESO MET AT<tel> REC<diode>Y]
+     * 1st index = beam/tel, 2nd index = diode */
     double rec_az[4][4]; 
     double rec_zd[4][4]; 
     for (int tel=0;tel<4;tel++) {
@@ -2355,13 +2357,9 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         }
     }
     
-    /* implementation of Julien's formula */
-    /* met_pos_az = [HIERARCH ESO MET AT<tel> REC<diode>X] */
-    /* met_pos_zd = [HIERARCH ESO MET AT<tel> REC<diode>Y] */
-    /* sep_U = [ESO INS SOBJ X] */
-    /* sep_V = [ESO INS SOBJ Y] */
-    /* The de-projection is the following scalar product: */
-    /* (met_pos_az E_AZ + met_pos_zd E_ZD) . (sep_U E_U + sep_V E_V) */
+    /*----- PART II.a.1: Separation deprojection (Julien's method) -----*/
+    
+    /* (rec_az E_AZ + rec_zd E_ZD) . (sep_U E_U + sep_V E_V) */
     
     /* Declare projection in meter */
     double deproject;
@@ -2422,6 +2420,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                 /* calculate deprojection */
                 deproject = cpl_vector_product(vector1, vector3);  /* in mm * mas */
                 deproject = deproject / 1000. / 1000. / 3600. / 360. * TWOPI; /* convert in meter */ 
+                
+                /* some debug messages */
                 if (row == 0 && tel == 0 && diode == 0) { 
                     cpl_msg_info (cpl_func,"FE: Julien deproject diode 0 in nm: %g", deproject*1e9);
                 }
@@ -2434,8 +2434,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                 if (row == 0 && tel == 0 && diode == 3) {
                     cpl_msg_info (cpl_func,"FE: Julien deproject diode 3 in nm: %g", deproject*1e9);
                 }
-                /* apply deprojection to opd_tel and store in new array */
-                /* difference to FC will be done further down */
+                
+                /* store deprojection in opd_tel_corr */
                 opd_tel_corr[row*ntel+tel][diode] = deproject;
             }
         }
@@ -2446,6 +2446,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     FREE (cpl_vector_delete, vector2);
     FREE (cpl_vector_delete, vector3);
     FREE (cpl_vector_delete, vector4);
+    
+    /*----- PART II.a.2: Separation deprojection (Stefan method) -----*/
     
     /* for comparison, applying recipe from Stefan's slide using mean parallactic angle from header */
     double posang; 
@@ -2484,7 +2486,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     sdeproject = sep * (- rec_zd[0][3] * cos(metang) - rec_az[0][3] * sin(metang)) / 1000.; /* in meter */
     cpl_msg_info (cpl_func,"FE: Stefan deproject diode 3 in nm: %g", sdeproject*1e9);
     
-    /* and correct for astigmatism */
+    /*----- Part II.b: Astigmatism -----*/
+    
     /* values from Stefan's email for in order AT/UT 1,2,3,4 */
     double AstigmAmplitudeAT[4] = 	{0.1643797, 0.166604301, 0.0996125938, 0.266071934} ; /* in microns */
     double AstigmThetaAT[4] = {1.116211914, 28.48113853, 0.42385066, 25.92291209};  /* in degrees */
@@ -2525,6 +2528,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                 astang = metang - diodeang + AstigmTheta[tel] ; /* in radian */
                 astradius = sqrt(rec_az[tel][diode]*rec_az[tel][diode] + rec_zd[tel][diode]*rec_zd[tel][diode]) / rmax; /* normalized */
                 astigm = AstigmAmplitude[tel] * sqrt(6) * astradius * astradius * sin(2. * astang); /* in meter */
+                
+                /* some debug messages */
                 if (row == 0 && tel == 0 && diode == 0) { 
                     cpl_msg_info (cpl_func,"FE: Frank diode angle [deg]: %g", diodeang / TWOPI * 360.);
                     cpl_msg_info (cpl_func,"FE: Frank astigmatism angle [deg]: %g", astang / TWOPI * 360.);
@@ -2540,6 +2545,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                 if (row == 0 && tel == 0 && diode == 3) {
                     cpl_msg_info (cpl_func,"FE: Frank astigmatism diode 3 in nm: %g", astigm*1e9);
                 }
+                
                 /* apply astigmatism */
                 opd_tel_corr[row*ntel+tel][diode] -= astigm; 
             }
