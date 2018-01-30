@@ -2203,19 +2203,17 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
 
 
 
-/*----------------------------------------------------------------*/
-/* FE start                                                       */
-/*----------------------------------------------------------------*/
-/* "tel" refers to "GV" all throughout FE */
-
 /*----------------------------------------------------------------------------*/
 /**
  * @brief Best knowledge correction for referencing TEL to FC
- *  
+ *
  * @param metrology_table  The input METROLOGY table
  * @param vismet_table     The input/output OI_VIS_MET table
  * @param header           The corresponding HEADER
- * 
+ *
+ * FE start
+ * "tel" referes to "GV" all through this function
+ *
  */
 /*----------------------------------------------------------------------------*/
 cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
@@ -2227,6 +2225,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     int ndiode = 4, ntel = 4;
     cpl_size nrow_met = cpl_table_get_nrow (metrology_table);
     
+    /* get OPD_FC and OPD_TEL */
     double * opd_fc = cpl_table_get_data_double (vismet_table, "OPD_FC");
     double ** opd_tel = gravi_table_get_data_array_double (vismet_table, "OPD_TEL");
     
@@ -2234,17 +2233,24 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     double lambda_met_mean =  gravi_pfits_get_met_wavelength_mean(header, metrology_table);
     cpl_msg_info (cpl_func,"Lambda met mean :%f nm",  lambda_met_mean*1e9);
     
-    /*--------------------------------------------*/
-    /* Correction to Fiber Coupler Metrology OPD  */
-    /* from pupil motion, fiber pickup, and focus */
-    /*--------------------------------------------*/
+    
+    /************************************************/
+    /*              PART I:  OPD_FC_CORR            */
+    /************************************************/
+    /*   Correction to Fiber Coupler Metrology OPD  */
+    /* from pupil motion, fiber pickup, and defocus */
+    /************************************************/
+    
+    
     cpl_msg_info (cpl_func,"FE: calculate OPD_FC_CORR from OPD_PUPIL and pickup/defocus.");
     
     /* Create array in OI_VIS_MET table, fill with zeros, and get pointer */
     gravi_table_new_column (vismet_table, "OPD_FC_CORR", "m", CPL_TYPE_DOUBLE);
     double * opd_fc_corr = cpl_table_get_data_double (vismet_table, "OPD_FC_CORR");
     
-    /* Pupil correction already calculated before and available from OPD_PUPIL */
+    /*----- PART I.a: Pupil Motion -----*/
+    
+    /* Pupil motion correction already calculated before and available from OPD_PUPIL */
     double * opd_pupil = NULL;
     if ( cpl_table_has_column(vismet_table, "OPD_PUPIL") ) {
         opd_pupil = cpl_table_get_data_double (vismet_table, "OPD_PUPIL");
@@ -2253,6 +2259,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         cpl_msg_warning(cpl_func,"Cannot get the OPD_PUPIL (not computed) so will"
                 "not correct for pupil opd (check the --reduce-acq-cam option)");
     }
+    
+    /*----- PART I.b: Defocus -----*/
     
     /* Correction from differential focus */
     /* independent from objects separation */
@@ -2263,6 +2271,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     cpl_vector_set (opd_focus_offset, 1, -90e-9);
     cpl_vector_set (opd_focus_offset, 2,  22e-9);
     cpl_vector_set (opd_focus_offset, 3, -86e-9);
+    
+    /*----- PART I.c: Fiber offset -----*/
     
     /* Mismatch between metrology FC pickup fiber position and pupil reference position */
     /* correction proportional to object separation */
@@ -2289,23 +2299,25 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     cpl_vector_set (opd_pickup_offset, 1,    53e-9 * rho_in / 1000.);
     cpl_vector_set (opd_pickup_offset, 2,   152e-9 * rho_in / 1000.);
     cpl_vector_set (opd_pickup_offset, 3,  -107e-9 * rho_in / 1000.);
+    
     /* The effect is by factor 1.8m/8m smaller for ATs */
     /* get name of first telescope and decide accordingly */
     const char * telname = gravi_conf_get_telname (0, header);
-    
     if (telname == NULL || telname[0] == 'U') {
         cpl_msg_info (cpl_func,"Scaling pickup offsets to UTs.");
     } else {
-        cpl_vector_multiply_scalar(opd_pickup_offset, 1.8/8.0);
+        cpl_vector_multiply_scalar (opd_pickup_offset, 1.8/8.0);
         cpl_msg_info (cpl_func,"Scaling pickup offsets to ATs.");
     }
     
+    /*----- PART I a+b+c -----*/
+    
     /* Apply pupil, focus and pickup offsets */
     for (int tel = 0; tel < ntel; tel++) {
-        cpl_msg_info (cpl_func,"FE: Tel %d Pupil %g Focus %g Pickup %g",
-            tel, (opd_pupil?opd_pupil[0*ntel+tel]:0)*1e9, 
-            cpl_vector_get (opd_focus_offset, tel)*1e9,
-            cpl_vector_get (opd_pickup_offset, tel)*1e9 );	   
+        cpl_msg_info (cpl_func, "FE: Tel %d Pupil %g Focus %g Pickup %g",
+                      tel, (opd_pupil?opd_pupil[0*ntel+tel]:0)*1e9,
+                      cpl_vector_get (opd_focus_offset, tel)*1e9,
+                      cpl_vector_get (opd_pickup_offset, tel)*1e9 );
         for (cpl_size row = 0; row < nrow_met; row++) {
             opd_fc_corr[row*ntel+tel] = (opd_pupil?opd_pupil[row*ntel+tel]:0)
                 + cpl_vector_get (opd_focus_offset, tel)
@@ -2313,10 +2325,15 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         }
     }
     
-    /*---------------------------------------------------------------*/
+    
+    
+    /*****************************************************************/
+    /*                     PART II:  OPD_TEL_CORR                    */
+    /*****************************************************************/
     /* Deprojection for telescope diodes to center of telescope      */
     /* based on prior knowledge of object separation and astigmatism */
-    /*---------------------------------------------------------------*/
+    /*****************************************************************/
+    
     
     cpl_msg_info (cpl_func,"FE: deproject telescope diodes to center of telescope in OPD_TEL_CORR.");
     
@@ -2325,12 +2342,11 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     gravi_table_init_column_array (vismet_table, "OPD_TEL_CORR", "m", CPL_TYPE_DOUBLE, ndiode);
     double ** opd_tel_corr = gravi_table_get_data_array_double (vismet_table, "OPD_TEL_CORR");
     
-    /* Read metrology receiver positions,
+    /* Read metrology receiver positions from MET_POS,
      * 1st index = beam/tel, 2nd index = diode  */
     double recx[4][4]; 
     double recy[4][4]; 
     
-    /* Read from MET_POS  */
     for (int tel=0;tel<4;tel++) {
         for (int diode=0;diode<4;diode++) {
             recx[tel][diode] = gravi_metrology_get_posx (header, 3-tel, diode); /* in order GV 1,2,3,4 */
@@ -2353,7 +2369,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     /* Declare projection in meter */
     double deproject;
     
-    /* Vectors used in Juliens formula */
+    /* Vectors used in Julien's formula */
     cpl_vector * vector1 = cpl_vector_new (3);
     cpl_vector * vector2 = cpl_vector_new (3);	
     cpl_vector * vector3 = cpl_vector_new (3);	
@@ -2364,6 +2380,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     cpl_array ** E_V = cpl_table_get_data_array (vismet_table,"E_V");
     cpl_array ** E_AZ = cpl_table_get_data_array (vismet_table,"E_AZ");
     cpl_array ** E_ZD = cpl_table_get_data_array (vismet_table,"E_ZD");
+    
+    /* some debug messages */
     cpl_msg_info (cpl_func,"FE: E_U = [%g, %g, %g].", 
             cpl_array_get (E_U[0*ntel+0], 0, NULL),
             cpl_array_get (E_U[0*ntel+0], 1, NULL),
