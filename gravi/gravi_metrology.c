@@ -2805,6 +2805,7 @@ cpl_table * gravi_metrology_compute_p2vm (cpl_table * metrology_table, double wa
 	return p2vm_met;
 }
 
+
 /* -------------------------------------------------------------------- */
 /**
  * @brief Reduce the metrology
@@ -2815,39 +2816,38 @@ cpl_table * gravi_metrology_compute_p2vm (cpl_table * metrology_table, double wa
  * and added this data. It is then updated with the TAC algorithm.
  */
 /* -------------------------------------------------------------------- */
-
 cpl_error_code gravi_metrology_reduce (gravi_data * data,
                                        gravi_data * eop_data,
                                        gravi_data * met_pos,
                                        const cpl_parameterlist * parlist)
 {
     gravi_msg_function_start(1);
-	cpl_ensure_code (data, CPL_ERROR_NULL_INPUT);
-
-	/* Load data */
-	cpl_table * metrology_table = gravi_data_get_table (data, GRAVI_METROLOGY_EXT);
-	cpl_propertylist * header = gravi_data_get_header (data);
-	CPLCHECK_MSG ("Cannot load met extension");
-
-	/* Update receiver position */
-	if (met_pos) {
+    cpl_ensure_code (data, CPL_ERROR_NULL_INPUT);
+    
+    /* Load data */
+    cpl_table * metrology_table = gravi_data_get_table (data, GRAVI_METROLOGY_EXT);
+    cpl_propertylist * header = gravi_data_get_header (data);
+    CPLCHECK_MSG ("Cannot load met extension");
+    
+    /* Update receiver position */
+    if (met_pos) {
         cpl_table * pos_table = gravi_data_get_table (met_pos, "RECEIVER_POSITION");
         gravi_metrology_update_receiverpos (header, pos_table);
         CPLCHECK_MSG ("Cannot update receiver positions");
-	}
-
+    }
+    
     /* Create the table */
-	cpl_table * vismet_table = NULL;
-	vismet_table = gravi_metrology_create (metrology_table, header);
-	CPLCHECK_MSG ("Cannot create vismet_table");
-
+    cpl_table * vismet_table = NULL;
+    vismet_table = gravi_metrology_create (metrology_table, header);
+    CPLCHECK_MSG ("Cannot create vismet_table");
+    
     /* Compute pointing directions, but do not calculate projected baseline */
     int save_pointing = 1;
     gravi_eop_pointing_uv (vismet_table, header,
                           (eop_data ? gravi_data_get_table_x (eop_data, 0) : NULL),
                           (eop_data ? gravi_data_get_header (eop_data) : NULL),
                           save_pointing, NULL);
-
+    
     /* If VIS_ACQ table exist, we compute the OPD_PUPIL */
     if (gravi_data_has_extension (data, GRAVI_OI_VIS_ACQ_EXT)) {
         cpl_table * visacq_table;        
@@ -2855,22 +2855,22 @@ cpl_error_code gravi_metrology_reduce (gravi_data * data,
         double delay = gravi_param_get_double_default (parlist, "gravity.metrology.acq-correction-delay",0.0);
         gravi_metrology_acq (visacq_table, vismet_table, delay, header);
     }
-
-	/* Reduce the metrology with the DRS algorithm, this 
-	 * creates the OI_VIS_MET table */
-	gravi_metrology_drs (metrology_table, vismet_table, header);
-	CPLCHECK_MSG ("Cannot reduce metrology with DRS algo");
-
-	/* Add the columns from TAC algorithm */
-	gravi_metrology_tac (metrology_table, vismet_table, header);
-	CPLCHECK_MSG ("Cannot reduce metrology with TAC algo");
-
-	/* Add the VISMET_TABLE table to the gravi_data */
-	gravi_data_add_table (data, NULL, GRAVI_OI_VIS_MET_EXT, vismet_table);
-	CPLCHECK_MSG ("Cannot add OI_VIS_MET in p2vmred_data");
-	
+    
+    /* Reduce the metrology with the DRS algorithm, this 
+     * creates the OI_VIS_MET table */
+    gravi_metrology_drs (metrology_table, vismet_table, header);
+    CPLCHECK_MSG ("Cannot reduce metrology with DRS algo");
+    
+    /* Add the columns from TAC algorithm */
+    gravi_metrology_tac (metrology_table, vismet_table, header);
+    CPLCHECK_MSG ("Cannot reduce metrology with TAC algo");
+    
+    /* Add the VISMET_TABLE table to the gravi_data */
+    gravi_data_add_table (data, NULL, GRAVI_OI_VIS_MET_EXT, vismet_table);
+    CPLCHECK_MSG ("Cannot add OI_VIS_MET in p2vmred_data");
+    
     gravi_msg_function_exit(1);
-	return CPL_ERROR_NONE;
+    return CPL_ERROR_NONE;
 }
 
 /**@}*/
