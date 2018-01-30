@@ -1969,12 +1969,12 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
 /**
  * @brief Compute the metrology signal from TAC algorithm
  *  
- * @param metrology_table  The input METROLOGY table (output)
+ * @param metrology_table  The input METROLOGY table
+ * @param vismet_table     The input/output OI_VIS_MET table
  * @param header      The corresponding HEADER
- * @param vismet_table     An already existing table (output)
  * 
- * Wrapper to interface with the TAC real-time algorithm
- * This fill new columns in the existing VIS_MET table:
+ * Wrapper to interface with the TAC real-time algorithm.
+ * This fill new columns in the existing OI_VIS_MET table:
  * OPD_MET_FC and OPD_MET_TEL, as well as FLAGs...
  */
 /*----------------------------------------------------------------------------*/
