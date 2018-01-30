@@ -2346,13 +2346,12 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     
     /* Read metrology receiver positions from MET_POS,
      * 1st index = beam/tel, 2nd index = diode  */
-    double recx[4][4]; 
-    double recy[4][4]; 
-    
+    double rec_az[4][4]; 
+    double rec_zd[4][4]; 
     for (int tel=0;tel<4;tel++) {
         for (int diode=0;diode<4;diode++) {
-            recx[tel][diode] = gravi_metrology_get_posx (header, 3-tel, diode); /* in order GV 1,2,3,4 */
-            recy[tel][diode] = gravi_metrology_get_posy (header, 3-tel, diode); /* in order GV 1,2,3,4 */
+            rec_az[tel][diode] = gravi_metrology_get_posx (header, 3-tel, diode); /* in order GV 1,2,3,4 */
+            rec_zd[tel][diode] = gravi_metrology_get_posy (header, 3-tel, diode); /* in order GV 1,2,3,4 */
         }
     }
     
@@ -2363,10 +2362,6 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     /* sep_V = [ESO INS SOBJ Y] */
     /* The de-projection is the following scalar product: */
     /* (met_pos_az E_AZ + met_pos_zd E_ZD) . (sep_U E_U + sep_V E_V) */
-    
-    /* declare variable for receiver position in az,zd in mm*/
-    double met_pos_az;
-    double met_pos_zd;
     
     /* Declare projection in meter */
     double deproject;
@@ -2405,16 +2400,14 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     for (int tel = 0; tel < ntel; tel++) {
         for (cpl_size row = 0; row < nrow_met; row++) {
             for (int diode = 0; diode < ndiode; diode++) {
-                met_pos_az = recx[tel][diode]; /* in mm */
-                met_pos_zd = recy[tel][diode]; /* in mm */
                 
                 /* Filling vectors of Juliens formula */
-                cpl_vector_set (vector1, 0, met_pos_az * cpl_array_get (E_AZ[row*ntel+tel], 0, NULL));
-                cpl_vector_set (vector1, 1, met_pos_az * cpl_array_get (E_AZ[row*ntel+tel], 1, NULL));
-                cpl_vector_set (vector1, 2, met_pos_az * cpl_array_get (E_AZ[row*ntel+tel], 2, NULL));
-                cpl_vector_set (vector2, 0, met_pos_zd * cpl_array_get (E_ZD[row*ntel+tel], 0, NULL));
-                cpl_vector_set (vector2, 1, met_pos_zd * cpl_array_get (E_ZD[row*ntel+tel], 1, NULL));
-                cpl_vector_set (vector2, 2, met_pos_zd * cpl_array_get (E_ZD[row*ntel+tel], 2, NULL));
+                cpl_vector_set (vector1, 0, rec_az[tel][diode] * cpl_array_get (E_AZ[row*ntel+tel], 0, NULL));
+                cpl_vector_set (vector1, 1, rec_az[tel][diode] * cpl_array_get (E_AZ[row*ntel+tel], 1, NULL));
+                cpl_vector_set (vector1, 2, rec_az[tel][diode] * cpl_array_get (E_AZ[row*ntel+tel], 2, NULL));
+                cpl_vector_set (vector2, 0, rec_zd[tel][diode] * cpl_array_get (E_ZD[row*ntel+tel], 0, NULL));
+                cpl_vector_set (vector2, 1, rec_zd[tel][diode] * cpl_array_get (E_ZD[row*ntel+tel], 1, NULL));
+                cpl_vector_set (vector2, 2, rec_zd[tel][diode] * cpl_array_get (E_ZD[row*ntel+tel], 2, NULL));
                 cpl_vector_set (vector3, 0, dx_in * cpl_array_get (E_U[row*ntel+tel], 0, NULL));
                 cpl_vector_set (vector3, 1, dx_in * cpl_array_get (E_U[row*ntel+tel], 1, NULL));
                 cpl_vector_set (vector3, 2, dx_in * cpl_array_get (E_U[row*ntel+tel], 2, NULL));
@@ -2482,13 +2475,13 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     cpl_msg_info (cpl_func,"FE: separation in radians: %g ", sep );
     /* diode offsets */
     double sdeproject;
-    sdeproject = sep * (- recy[0][0] * cos(metang) - recx[0][0] * sin(metang)) / 1000.; /* in meter */
+    sdeproject = sep * (- rec_zd[0][0] * cos(metang) - rec_az[0][0] * sin(metang)) / 1000.; /* in meter */
     cpl_msg_info (cpl_func,"FE: Stefan deproject diode 0 in nm: %g", sdeproject*1e9);
-    sdeproject = sep * (- recy[0][1] * cos(metang) - recx[0][1] * sin(metang)) / 1000.; /* in meter */
+    sdeproject = sep * (- rec_zd[0][1] * cos(metang) - rec_az[0][1] * sin(metang)) / 1000.; /* in meter */
     cpl_msg_info (cpl_func,"FE: Stefan deproject diode 1 in nm: %g", sdeproject*1e9);
-    sdeproject = sep * (- recy[0][2] * cos(metang) - recx[0][2] * sin(metang)) / 1000.; /* in meter */
+    sdeproject = sep * (- rec_zd[0][2] * cos(metang) - rec_az[0][2] * sin(metang)) / 1000.; /* in meter */
     cpl_msg_info (cpl_func,"FE: Stefan deproject diode 2 in nm: %g", sdeproject*1e9);
-    sdeproject = sep * (- recy[0][3] * cos(metang) - recx[0][3] * sin(metang)) / 1000.; /* in meter */
+    sdeproject = sep * (- rec_zd[0][3] * cos(metang) - rec_az[0][3] * sin(metang)) / 1000.; /* in meter */
     cpl_msg_info (cpl_func,"FE: Stefan deproject diode 3 in nm: %g", sdeproject*1e9);
     
     /* and correct for astigmatism */
@@ -2528,9 +2521,9 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     for (int tel = 0; tel < ntel; tel++) {
         for (cpl_size row = 0; row < nrow_met; row++) {
             for (int diode = 0; diode < ndiode; diode++) {
-                diodeang = myAtan(-recy[tel][diode],-recx[tel][diode], &flag);  /* in radian */
+                diodeang = myAtan(-rec_zd[tel][diode],-rec_az[tel][diode], &flag);  /* in radian */
                 astang = metang - diodeang + AstigmTheta[tel] ; /* in radian */
-                astradius = sqrt(recx[tel][diode]*recx[tel][diode] + recy[tel][diode]*recy[tel][diode]) / rmax; /* normalized */
+                astradius = sqrt(rec_az[tel][diode]*rec_az[tel][diode] + rec_zd[tel][diode]*rec_zd[tel][diode]) / rmax; /* normalized */
                 astigm = AstigmAmplitude[tel] * sqrt(6) * astradius * astradius * sin(2. * astang); /* in meter */
                 if (row == 0 && tel == 0 && diode == 0) { 
                     cpl_msg_info (cpl_func,"FE: Frank diode angle [deg]: %g", diodeang / TWOPI * 360.);
