@@ -1359,7 +1359,7 @@ cpl_error_code gravi_metrology_update_receiverpos (cpl_propertylist * header,
  * @param tel : telescope number (0 to 3) in gravity_beam
  * @param diode : diode number  (0 to 3)
  *
- * @return Receiver position as double
+ * @return Receiver position as double in [m]
  */
 /*----------------------------------------------------------------------------*/
 
@@ -1367,7 +1367,7 @@ double  gravi_metrology_get_posx (cpl_propertylist * header,
                                   int tel, int diode)
 {
     gravi_msg_function_start(0);
-	cpl_ensure (header, CPL_ERROR_NULL_INPUT, 0);
+    cpl_ensure (header, CPL_ERROR_NULL_INPUT, 0);
     
     /* Get telname */
     const char * telname = gravi_conf_get_telname (tel, header);
@@ -1380,17 +1380,17 @@ double  gravi_metrology_get_posx (cpl_propertylist * header,
     /* Read from header */
     char name[100];
     sprintf (name, "ESO MET %s REC%iX", telname, diode+1);
-    double pos = cpl_propertylist_get_double (header, name);
+    double pos = cpl_propertylist_get_double (header, name)*1e-3;
     
     gravi_msg_function_exit(0);
-	return pos;
+    return pos;
 }
 
 double  gravi_metrology_get_posy (cpl_propertylist * header,
                                   int tel, int diode)
 {
     gravi_msg_function_start(0);
-	cpl_ensure (header, CPL_ERROR_NULL_INPUT, 0);
+    cpl_ensure (header, CPL_ERROR_NULL_INPUT, 0);
     
     /* Get telname */
     const char * telname = gravi_conf_get_telname (tel, header);
@@ -1403,10 +1403,10 @@ double  gravi_metrology_get_posy (cpl_propertylist * header,
     /* Read from header */
     char name[100];
     sprintf (name, "ESO MET %s REC%iY", telname, diode+1);
-    double pos = cpl_propertylist_get_double (header, name);
+    double pos = cpl_propertylist_get_double (header, name)*1e-3;
         
     gravi_msg_function_exit(0);
-	return pos;
+    return pos;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -2352,8 +2352,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     double rec_zd[4][4]; 
     for (int tel=0;tel<4;tel++) {
         for (int diode=0;diode<4;diode++) {
-            rec_az[tel][diode] = gravi_metrology_get_posx (header, 3-tel, diode); /* in order GV 1,2,3,4 */
-            rec_zd[tel][diode] = gravi_metrology_get_posy (header, 3-tel, diode); /* in order GV 1,2,3,4 */
+            rec_az[tel][diode] = gravi_metrology_get_posx (header, 3-tel, diode); /* in [m] in order GV 1,2,3,4 */
+            rec_zd[tel][diode] = gravi_metrology_get_posy (header, 3-tel, diode); /* in [m] in order GV 1,2,3,4 */
         }
     }
     
@@ -2432,8 +2432,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                                         +(dy_in-field_dV) * cpl_array_get (E_V[row*ntel+tel], 2, NULL));
                 
                 /* calculate deprojection */
-                deproject = cpl_vector_product(rec, sobj);  /* in mm * mas */
-                deproject = deproject / 1000. / 1000. / 3600. / 360. * TWOPI; /* convert in meter */
+                deproject = cpl_vector_product(rec, sobj);  /* in m * mas */
+                deproject = deproject / 1000. / 3600. / 360. * TWOPI; /* convert in meter */
                 
                 /* some debug messages */
                 if (row == 0 && tel == 0 && diode == 0) { 
@@ -2489,13 +2489,13 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     cpl_msg_info (cpl_func,"FE: separation in radians: %g ", sep );
     /* diode offsets */
     double sdeproject;
-    sdeproject = sep * (- rec_zd[0][0] * cos(metang) - rec_az[0][0] * sin(metang)) / 1000.; /* in meter */
+    sdeproject = sep * (- rec_zd[0][0] * cos(metang) - rec_az[0][0] * sin(metang)); /* in meter */
     cpl_msg_info (cpl_func,"FE: Stefan deproject diode 0 in nm: %g", sdeproject*1e9);
-    sdeproject = sep * (- rec_zd[0][1] * cos(metang) - rec_az[0][1] * sin(metang)) / 1000.; /* in meter */
+    sdeproject = sep * (- rec_zd[0][1] * cos(metang) - rec_az[0][1] * sin(metang)); /* in meter */
     cpl_msg_info (cpl_func,"FE: Stefan deproject diode 1 in nm: %g", sdeproject*1e9);
-    sdeproject = sep * (- rec_zd[0][2] * cos(metang) - rec_az[0][2] * sin(metang)) / 1000.; /* in meter */
+    sdeproject = sep * (- rec_zd[0][2] * cos(metang) - rec_az[0][2] * sin(metang)); /* in meter */
     cpl_msg_info (cpl_func,"FE: Stefan deproject diode 2 in nm: %g", sdeproject*1e9);
-    sdeproject = sep * (- rec_zd[0][3] * cos(metang) - rec_az[0][3] * sin(metang)) / 1000.; /* in meter */
+    sdeproject = sep * (- rec_zd[0][3] * cos(metang) - rec_az[0][3] * sin(metang)); /* in meter */
     cpl_msg_info (cpl_func,"FE: Stefan deproject diode 3 in nm: %g", sdeproject*1e9);
     
     /*----- Part II.b: Astigmatism -----*/
@@ -2538,7 +2538,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
             for (int diode = 0; diode < ndiode; diode++) {
                 diodeang = myAtan(-rec_zd[tel][diode],-rec_az[tel][diode], &flag);  /* in radian */
                 astang = metang - diodeang + AstigmTheta[tel] ; /* in radian */
-                astradius = sqrt(rec_az[tel][diode]*rec_az[tel][diode] + rec_zd[tel][diode]*rec_zd[tel][diode]) / rmax; /* normalized */
+                astradius = sqrt(rec_az[tel][diode]*rec_az[tel][diode] + rec_zd[tel][diode]*rec_zd[tel][diode]) / (rmax/1000.0); /* normalized */
                 astigm = AstigmAmplitude[tel] * sqrt(6) * astradius * astradius * sin(2. * astang); /* in meter */
                 
                 /* some debug messages */
