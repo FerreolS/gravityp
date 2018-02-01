@@ -2354,14 +2354,13 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     double dy_in = gravi_pfits_get_sobj_y (header);
     double rho_in = sqrt(dx_in*dx_in + dy_in*dy_in);
     CPLCHECK_MSG ("Cannot get separation");
+    cpl_msg_info (cpl_func,"FE: SOBJX, SOBJY in mas: %g, %g ", dx_in, dy_in );
     
     /* Force separation to zero in SINGLE */
     if (gravi_pfits_get_mode (header) == MODE_SINGLE) {
         cpl_msg_info (cpl_func,"Mode SINGLE thus separation forced to 0.0");
         rho_in = 0.;
-    }
-    
-    cpl_msg_info (cpl_func,"FE: SOBJX, SOBJY in mas: %g, %g ", dx_in, dy_in );
+    }    
     cpl_msg_info (cpl_func,"FE: separation in mas: %g ", rho_in );
     
     /* Separation dependent offsets calibrated from AT measurements 17 November 2017 */
