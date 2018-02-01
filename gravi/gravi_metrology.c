@@ -77,6 +77,10 @@ double  gravi_metrology_get_posx (cpl_propertylist * header,
 double  gravi_metrology_get_posy (cpl_propertylist * header,
                                   int tel, int diode);
 
+double gravi_metrology_get_fc_focus (cpl_propertylist * header, int gv);
+
+double gravi_metrology_get_fc_shift (cpl_propertylist * header, int gv);
+
 cpl_error_code gravi_metrology_get_astig (cpl_propertylist * header, int gv,
                                           double * ampltiude, double * angle,
                                           double * radius);
@@ -1415,6 +1419,104 @@ double  gravi_metrology_get_posy (cpl_propertylist * header,
 
 /*----------------------------------------------------------------------------*/
 /**
+ * @brief Read the fiber coupler focus offset from the fits header
+ *
+ * @intput header : input header
+ * @intput gv : gravity input [0...3]
+ *
+ * @return Fiber coupler focus offset in nanometer
+ */
+/*----------------------------------------------------------------------------*/
+double gravi_metrology_get_fc_focus (cpl_propertylist * header, int gv)
+{
+    gravi_msg_function_start(0);
+    cpl_ensure (header, CPL_ERROR_NULL_INPUT, 0);
+    
+    /* Identify telescope name of requested GV input */
+    const char * telname = gravi_conf_get_telname (3-gv, header);
+    if (telname == NULL) {
+        cpl_msg_warning (cpl_func,"Cannot read fiber coupler focus offset for GV%i", gv+1);
+        return 0.0;
+    }
+    
+    /* Assemble header keyword */
+    char name[100];
+    if (telname[0] == 'U') {
+        sprintf (name, "ESO MET GV%i UT FC FOCUS", gv+1);
+    } else {
+        sprintf (name, "ESO MET GV%i AT FC FOCUS", gv+1);
+    }
+    
+    /* If keyword available, read it, otherwise use defaults with warning */
+    double defocus;
+    const double defocus_at[4] = {-57.0, -90.0, 22.0, -86.0}; // Measured 2017-11-17
+    const double defocus_ut[4] = {-57.0, -90.0, 22.0, -86.0}; // Copied from above
+    if (cpl_propertylist_has(header, name)) {
+        defocus = cpl_propertylist_get_double (header, name);
+    } else {
+        cpl_msg_warning (cpl_func,"Using static calibration for fiber coupler focus for GV%i!", gv+1);
+        if (telname[0] == 'U') {
+            defocus = defocus_ut[gv];
+        } else {
+            defocus = defocus_at[gv];
+        }
+    }
+    
+    gravi_msg_function_exit(0);
+    return defocus*1e-9; // Convert from [nm] in header to [m] in pipeline
+}
+
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Read the fiber coupler focus offset from the fits header
+ *
+ * @intput header : input header
+ * @intput gv : gravity input [0...3]
+ *
+ * @return Fiber coupler focus offset in nanometer
+ */
+/*----------------------------------------------------------------------------*/
+double gravi_metrology_get_fc_shift (cpl_propertylist * header, int gv)
+{
+    gravi_msg_function_start(0);
+    cpl_ensure (header, CPL_ERROR_NULL_INPUT, 0);
+    
+    /* Identify telescope name of requested GV input */
+    const char * telname = gravi_conf_get_telname (3-gv, header);
+    if (telname == NULL) {
+        cpl_msg_warning (cpl_func,"Cannot read fiber coupler shift offset for GV%i", gv+1);
+        return 0.0;
+    }
+    
+    /* Assemble header keyword */
+    char name[100];
+    if (telname[0] == 'U') {
+        sprintf (name, "ESO MET GV%i UT FC SHIFT", gv+1);
+    } else {
+        sprintf (name, "ESO MET GV%i AT FC SHIFT", gv+1);
+    }
+    
+    /* If keyword available, read it, otherwise use defaults with warning */
+    double shift;
+    const double shift_ut[4] = {-102.0        , 53.0        , 152.0        , -107.0        }; // Measured 2017-11-17
+    const double shift_at[4] = {-102.0*1.8/8.0, 53.0*1.8/8.0, 152.0*1.8/8.0, -107.0*1.8/8.0}; // Scaled from above
+    if (cpl_propertylist_has(header, name)) {
+        shift = cpl_propertylist_get_double (header, name);
+    } else {
+        cpl_msg_warning (cpl_func,"Using static calibration for fiber coupler shift for GV%i!", gv+1);
+        if (telname[0] == 'U') {
+            shift = shift_ut[gv];
+        } else {
+            shift = shift_at[gv];
+        }
+    }
+    
+    gravi_msg_function_exit(0);
+    return shift*1e-9;  // Convert from [nm/arcsec] in header to [m/arcsec] in pipeline
+}
+
+/*----------------------------------------------------------------------------*/
+/**
  * @brief Read the astigmatism amplitude and angle from the fits header
  *
  * @intput header : input header
@@ -2319,8 +2421,6 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     gravi_table_new_column (vismet_table, "OPD_FC_CORR", "m", CPL_TYPE_DOUBLE);
     double * opd_fc_corr = cpl_table_get_data_double (vismet_table, "OPD_FC_CORR");
     
-    /*----- PART I.a: Pupil Motion -----*/
-    
     /* Pupil motion correction already calculated before and available from OPD_PUPIL */
     double * opd_pupil = NULL;
     if ( cpl_table_has_column(vismet_table, "OPD_PUPIL") ) {
@@ -2330,24 +2430,6 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         cpl_msg_warning(cpl_func,"Cannot get the OPD_PUPIL (not computed) so will"
                 "not correct for pupil opd (check the --reduce-acq-cam option)");
     }
-    
-    /*----- PART I.b: Defocus -----*/
-    
-    /* Correction from differential focus */
-    /* independent from objects separation */
-    cpl_vector * opd_focus_offset = cpl_vector_new (4);
-    
-    /* Focus offsets calibrated from AT measurements 17 November 2017 */
-    cpl_vector_set (opd_focus_offset, 0, -57e-9);
-    cpl_vector_set (opd_focus_offset, 1, -90e-9);
-    cpl_vector_set (opd_focus_offset, 2,  22e-9);
-    cpl_vector_set (opd_focus_offset, 3, -86e-9);
-    
-    /*----- PART I.c: Fiber offset -----*/
-    
-    /* Mismatch between metrology FC pickup fiber position and pupil reference position */
-    /* correction proportional to object separation */
-    cpl_vector * opd_pickup_offset = cpl_vector_new (4);
     
     /* Retrieve object separation */
     double dx_in = gravi_pfits_get_sobj_x (header);
@@ -2363,39 +2445,23 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     }    
     cpl_msg_info (cpl_func,"FE: separation in mas: %g ", rho_in );
     
-    /* Separation dependent offsets calibrated from AT measurements 17 November 2017 */
-    cpl_vector_set (opd_pickup_offset, 0,  -102e-9 * rho_in / 1000.);
-    cpl_vector_set (opd_pickup_offset, 1,    53e-9 * rho_in / 1000.);
-    cpl_vector_set (opd_pickup_offset, 2,   152e-9 * rho_in / 1000.);
-    cpl_vector_set (opd_pickup_offset, 3,  -107e-9 * rho_in / 1000.);
-    
-    /* The effect is by factor 1.8m/8m smaller for ATs */
-    /* get name of first telescope and decide accordingly */
-    const char * telname = gravi_conf_get_telname (0, header);
-    if (telname == NULL || telname[0] == 'U') {
-        cpl_msg_info (cpl_func,"Scaling pickup offsets to UTs.");
-    } else {
-        cpl_vector_multiply_scalar (opd_pickup_offset, 1.8/8.0);
-        cpl_msg_info (cpl_func,"Scaling pickup offsets to ATs.");
-    }
-    
-    /*----- PART I a+b+c -----*/
-    
     /* Apply pupil, focus and pickup offsets */
     for (int tel = 0; tel < ntel; tel++) {
-        cpl_msg_info (cpl_func, "FE: Tel %d Pupil %g Focus %g Pickup %g",
-                      tel, (opd_pupil?opd_pupil[0*ntel+tel]:0)*1e9,
-                      cpl_vector_get (opd_focus_offset, tel)*1e9,
-                      cpl_vector_get (opd_pickup_offset, tel)*1e9 );
+        
+        double opd_fc_focus = gravi_metrology_get_fc_focus (header, tel); // [m]
+        double opd_fc_shift = gravi_metrology_get_fc_shift (header, tel) * (rho_in/1000.0); // [m/arcsec] x [arcsec] = [m]
+        
+        cpl_msg_info (cpl_func, "FE: Tel %d Pupil %g Focus %g Shift %g",
+                      tel,
+                      (opd_pupil?opd_pupil[0*ntel+tel]:0)*1e9,
+                      opd_fc_focus*1e9,
+                      opd_fc_shift*1e9 );
         for (cpl_size row = 0; row < nrow_met; row++) {
             opd_fc_corr[row*ntel+tel] = (opd_pupil?opd_pupil[row*ntel+tel]:0)
-                + cpl_vector_get (opd_focus_offset, tel)
-                + cpl_vector_get (opd_pickup_offset, tel) ;
+                                        + opd_fc_focus
+                                        + opd_fc_shift;
         }
     }
-    
-    FREE (cpl_vector_delete, opd_focus_offset);
-    FREE (cpl_vector_delete, opd_pickup_offset);
     
     
     /*****************************************************************/
