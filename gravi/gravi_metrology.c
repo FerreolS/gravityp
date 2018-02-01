@@ -77,6 +77,10 @@ double  gravi_metrology_get_posx (cpl_propertylist * header,
 double  gravi_metrology_get_posy (cpl_propertylist * header,
                                   int tel, int diode);
 
+cpl_error_code gravi_metrology_get_astig (cpl_propertylist * header, int gv,
+                                          double * ampltiude, double * angle,
+                                          double * radius);
+
 long gravi_round (double number);
 long gravi_round (double number)
 {
@@ -1411,6 +1415,72 @@ double  gravi_metrology_get_posy (cpl_propertylist * header,
 
 /*----------------------------------------------------------------------------*/
 /**
+ * @brief Read the astigmatism amplitude and angle from the fits header
+ *
+ * @intput header : input header
+ * @intput gv : gravity input [0...3]
+ *
+ * @output amplitude : amplitude of the astigmatism in [nm]
+ * @output angle : angle of the astigmatism in [deg]
+ * @params rmax : radius of the telescope in [m]
+ */
+/*----------------------------------------------------------------------------*/
+cpl_error_code gravi_metrology_get_astig (cpl_propertylist * header, int gv,
+                                          double * amplitude, double * angle,
+                                          double * radius)
+{
+    gravi_msg_function_start(0);
+    cpl_ensure (header, CPL_ERROR_NULL_INPUT, 0);
+    
+    /* Identify telescope name of requested GV input */
+    const char * telname = gravi_conf_get_telname (3-gv, header);
+    if (telname == NULL) {
+        cpl_msg_warning (cpl_func,"Cannot read the astigmatism offset for GV%i", gv+1);
+        *amplitude = 0.0;
+        *angle = 0.0;
+        *radius = 1.0;
+        return CPL_ERROR_NONE;
+    }
+    
+    /* Assemble header keywords */
+    char name_amp[100], name_ang[100];
+    if (telname[0] == 'U') {
+        sprintf (name_amp, "ESO MET GV%i UT ASTIG AMP", gv+1);
+        sprintf (name_ang, "ESO MET GV%i UT ASTIG ANG", gv+1);
+        *radius = 4.0; // radius of an UT [m]
+    } else {
+        sprintf (name_amp, "ESO MET GV%i AT ASTIG AMP", gv+1);
+        sprintf (name_ang, "ESO MET GV%i AT ASTIG ANG", gv+1);
+        *radius = 0.9; // radius if an AT [m]
+    }
+    
+    /* If keywords available, read it, otherwise use defaults with warning */
+    /* These are given in telescope order */
+    const double amplitude_at[4] = {164.37970, 166.604301,  99.612594, 266.071934}; // [nm]
+    const double amplitude_ut[4] = {182.16255, 185.116601, 113.190052, 242.351495}; // [nm]
+    const double angle_at[4] = { 1.116211914, 28.48113853,  0.42385066, 25.92291209}; // [deg]]
+    const double angle_ut[4] = {-2.696882009, 18.07496983, 20.56624745, 19.13334754}; // [deg]
+    if (cpl_propertylist_has(header, name_amp)
+     && cpl_propertylist_has(header, name_ang)) {
+        *amplitude = cpl_propertylist_get_double (header, name_amp);
+        *angle     = cpl_propertylist_get_double (header, name_ang);
+    } else {
+        cpl_msg_warning (cpl_func,"Using static calibration for astigmatism offset for GV%i!", gv+1);
+        if (telname[0] == 'U') {
+            *amplitude = amplitude_ut[3-gv];
+            *angle     = angle_ut[3-gv];
+        } else {
+            *amplitude = amplitude_at[3-gv];
+            *angle     = angle_at[3-gv];
+        }
+    }
+    
+    gravi_msg_function_exit(0);
+    return CPL_ERROR_NONE;
+}
+
+/*----------------------------------------------------------------------------*/
+/**
  * @brief Create the VIS_MET table
  *
  * @param metrology_table: input METROLOGY table
@@ -2500,46 +2570,26 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     
     /*----- Part II.b: Astigmatism -----*/
     
-    /* values from Stefan's email for in order AT/UT 1,2,3,4 */
-    double AstigmAmplitudeAT[4] = 	{0.1643797, 0.166604301, 0.0996125938, 0.266071934} ; /* in microns */
-    double AstigmThetaAT[4] = {1.116211914, 28.48113853, 0.42385066, 25.92291209};  /* in degrees */
-    double AstigmAmplitudeUT[4] = 	{0.18216255, 0.185116601, 0.113190052, 0.242351495}; /* in microns */
-    double AstigmThetaUT[4] ={-2.696882009, 18.07496983, 20.56624745, 19.13334754}; /* in degrees */
-    
     /* local variables */
-    double AstigmAmplitude[4]; /* in meter */
-    double AstigmTheta[4]; /* in radian */
-    double rmax; 
+    double AstigmAmplitude; // [nm]
+    double AstigmTheta; // [rad]
+    double AstigmRadius; // [m]
     double astigm;
     double diodeang;
     double astang;
     double astradius;
     
-    /* Select astigm calibration and rmax according to AT or UT */
-    if (telname == NULL || telname[0] == 'U') {
-        cpl_msg_info (cpl_func,"FE: applying UT astigmatism correction");
-        rmax = 4000; /* in mm */
-        for (int i = 0; i < 4; i++) {
-            AstigmAmplitude[i] = AstigmAmplitudeUT[3-i] * 1e-6; /* in order GV1,2,3,4 */
-            AstigmTheta[i] = AstigmThetaUT[3-i] / 360. * TWOPI; /* in order GV1,2,3,4 */
-        }
-    } else {
-        cpl_msg_info (cpl_func,"FE: applying AT astigmatism correction");
-        rmax = 900; /* in mm */
-        for (int i = 0; i < 4; i++) {
-            AstigmAmplitude[i] = AstigmAmplitudeAT[3-i] * 1e-6; /* in order GV1,2,3,4 */
-            AstigmTheta[i] = AstigmThetaAT[3-i] / 360. * TWOPI; /* in order GV1,2,3,4 */
-        }
-    }
-    
     /* loop over all diodes and beams */
     for (int tel = 0; tel < ntel; tel++) {
+        
+        gravi_metrology_get_astig (header, tel, &AstigmAmplitude, &AstigmTheta, &AstigmRadius);
+        
         for (cpl_size row = 0; row < nrow_met; row++) {
             for (int diode = 0; diode < ndiode; diode++) {
-                diodeang = myAtan(-rec_zd[tel][diode],-rec_az[tel][diode], &flag);  /* in radian */
-                astang = metang - diodeang + AstigmTheta[tel] ; /* in radian */
-                astradius = sqrt(rec_az[tel][diode]*rec_az[tel][diode] + rec_zd[tel][diode]*rec_zd[tel][diode]) / (rmax/1000.0); /* normalized */
-                astigm = AstigmAmplitude[tel] * sqrt(6) * astradius * astradius * sin(2. * astang); /* in meter */
+                diodeang = myAtan(-rec_zd[tel][diode],-rec_az[tel][diode], &flag);  // [rad]
+                astang = metang - diodeang + AstigmTheta*(TWOPI/360.); // [rad]
+                astradius = sqrt(rec_az[tel][diode]*rec_az[tel][diode] + rec_zd[tel][diode]*rec_zd[tel][diode]) / AstigmRadius; /* normalized */
+                astigm = (AstigmAmplitude*1e-9) * sqrt(6) * astradius * astradius * sin(2. * astang); // [m]
                 
                 /* some debug messages */
                 if (row == 0 && tel == 0 && diode == 0) { 
