@@ -2467,8 +2467,9 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     /*****************************************************************/
     /*                     PART II:  OPD_TEL_CORR                    */
     /*****************************************************************/
-    /* Deprojection for telescope diodes to center of telescope      */
-    /* based on prior knowledge of object separation and astigmatism */
+    /* Deprojection for telescope diodes to center of telescope,     */
+    /* based on prior knowledge of object separation,                */
+    /* acqcam pointing offset, and astigmatism.                      */
     /*****************************************************************/
     
     
@@ -2653,16 +2654,21 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         }
     }
     
-    /*---------------------------------------------------------------------------------------*/
-    /* calculate difference between projected metrology receivers and corrected fibercoupler */
-    /*---------------------------------------------------------------------------------------*/
+    /*****************************************************************/
+    /*                    PART III:  OPD_TELFC_CORR                  */
+    /*****************************************************************/
+    /* Calculation of the difference between the best correction of  */
+    /* the metrology receivers and the best correction of the fiber  */
+    /* coupler. This quantity should be close to zero.               */
+    /*****************************************************************/
     
     cpl_msg_info (cpl_func,"FE: calculate difference between corrected telescope diodes and fiber coupler in OPD_TELFC_CORR.");
     
-    /* Create array in OI_VIS_MET table, fill with zeros, and get pointer */
+    /* Create OPD_TELFC_CORR array in OI_VIS_MET table, fill with zeros, and get pointer */
     gravi_table_init_column_array (vismet_table, "OPD_TELFC_CORR", "m", CPL_TYPE_DOUBLE, ndiode);
     double ** opd_telfc_corr = gravi_table_get_data_array_double (vismet_table, "OPD_TELFC_CORR");
     
+    /* Compute OPD_TELFC_CORR as (OPD_TEL + OPD_TEL_CORR) - (OPD_FC + OPD_FC_CORR) */
     /* going to complex phasor notation and then back to opd */
     double phi;
     double phifc;
@@ -2743,11 +2749,16 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         }
     }
     
-    /*---------------------------------------------------------*/
-    /* Caclulate mean correction for all telescope diodes      */
-    /* currently simple mean, could also be other combinations,*/
-    /* e.g. the less noisy mean of opposite diodes             */ 
-    /*---------------------------------------------------------*/
+    
+    /*****************************************************************/
+    /*                   PART IV:  OPD_TELFC_MCORR                   */
+    /*****************************************************************/
+    /* Average the four telescope diodes.                            */
+    /* Note: could also be other combinations, e.g. the less noisy   */
+    /*       mean of opposite diodes.                                */ 
+    /*****************************************************************/
+    
+    
     cpl_msg_info (cpl_func,"FE: calculate OPD_TELFC_MCORR.");
     
     /* Create array in OI_VIS_MET table, fill with zeros, and get pointer */
