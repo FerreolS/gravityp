@@ -2492,7 +2492,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         }
     }
     
-    /*----- PART II.a.1: Separation deprojection (Julien's method) -----*/
+    /*----- PART II.a: Separation deprojection with acqcam correction -----*/
     
     /* (rec_az E_AZ + rec_zd E_ZD) . (sobj_U E_U + sobj_V E_V) */
     
@@ -2594,45 +2594,6 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     FREE (cpl_vector_delete, rec);
     FREE (cpl_vector_delete, sobj);
     
-    /*----- PART II.a.2: Separation deprojection (Stefan method) -----*/
-    
-    /* for comparison, applying recipe from Stefan's slide using mean parallactic angle from header */
-    double posang; 
-    double parang; 
-    double metang; 
-    double sep; 
-    int flag;
-    
-    /* Posangle is calculated from SOBJX ansd SOBJY already read before 
-       x,y are exchanged following coordinate systems in Stefan's slide */
-    posang = myAtan (dy_in,dx_in, &flag);
-    cpl_msg_info (cpl_func,"FE: position angle in degrees: %g ", posang / TWOPI * 360. );
-    
-    /* Paralactic angle is averaged from fitsheader */
-    double parang_start = cpl_propertylist_get_double(header, "ESO ISS PARANG START");
-    double parang_end = cpl_propertylist_get_double(header, "ESO ISS PARANG END");
-    CPLCHECK_MSG ("Cannot get paralactic angle");
-    parang = (parang_start + parang_end)/2. / 360. * TWOPI ; /* in rad */
-    cpl_msg_info (cpl_func,"FE: paralactic angle in degrees: %g ", parang / TWOPI * 360. );
-    
-    /* metrology angle following Stefan's slide */
-    metang = posang - parang; /* following Stefan's slide */
-    cpl_msg_info (cpl_func,"FE: metrology angle in degrees: %g ", metang / TWOPI * 360. );
-    
-    /* Separation is calculated from rho_in already calculated before from SOBJX and SOBJY */
-    sep  = rho_in / 1000. / 3600. / 360. * TWOPI ; /* in rad */
-    cpl_msg_info (cpl_func,"FE: separation in radians: %g ", sep );
-    /* diode offsets */
-    double sdeproject;
-    sdeproject = sep * (- rec_zd[0][0] * cos(metang) - rec_az[0][0] * sin(metang)); /* in meter */
-    cpl_msg_info (cpl_func,"FE: Stefan deproject diode 0 in nm: %g", sdeproject*1e9);
-    sdeproject = sep * (- rec_zd[0][1] * cos(metang) - rec_az[0][1] * sin(metang)); /* in meter */
-    cpl_msg_info (cpl_func,"FE: Stefan deproject diode 1 in nm: %g", sdeproject*1e9);
-    sdeproject = sep * (- rec_zd[0][2] * cos(metang) - rec_az[0][2] * sin(metang)); /* in meter */
-    cpl_msg_info (cpl_func,"FE: Stefan deproject diode 2 in nm: %g", sdeproject*1e9);
-    sdeproject = sep * (- rec_zd[0][3] * cos(metang) - rec_az[0][3] * sin(metang)); /* in meter */
-    cpl_msg_info (cpl_func,"FE: Stefan deproject diode 3 in nm: %g", sdeproject*1e9);
-    
     /*----- Part II.b: Astigmatism -----*/
     
     /* local variables */
@@ -2644,6 +2605,19 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     double astang;
     double astradius;
     
+    /* Paralactic angle is averaged from fitsheader */
+    // TODO: This needs to be improved
+    double parang = (cpl_propertylist_get_double(header, "ESO ISS PARANG START")
+                   + cpl_propertylist_get_double(header, "ESO ISS PARANG END"  ))/2. * (TWOPI/360.0); // in [rad]
+    CPLCHECK_MSG ("Cannot get paralactic angle");
+    cpl_msg_info (cpl_func,"FE: paralactic angle in degrees: %g ", parang * (360.0/TWOPI) );
+    
+    /* Posangle is calculated from SOBJX ansd SOBJY already read before 
+       x,y are exchanged following coordinate systems in Stefan's slide */
+    int flag;
+    double posang = myAtan (dy_in,dx_in, &flag);
+    cpl_msg_info (cpl_func,"FE: position angle in degrees: %g ", posang / TWOPI * 360. );
+    
     /* loop over all diodes and beams */
     for (int tel = 0; tel < ntel; tel++) {
         
@@ -2652,7 +2626,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         for (cpl_size row = 0; row < nrow_met; row++) {
             for (int diode = 0; diode < ndiode; diode++) {
                 diodeang = myAtan(-rec_zd[tel][diode],-rec_az[tel][diode], &flag);  // [rad]
-                astang = metang - diodeang + AstigmTheta*(TWOPI/360.); // [rad]
+                astang = posang - parang - diodeang + AstigmTheta*(TWOPI/360.); // [rad]
                 astradius = sqrt(rec_az[tel][diode]*rec_az[tel][diode] + rec_zd[tel][diode]*rec_zd[tel][diode]) / AstigmRadius; /* normalized */
                 astigm = (AstigmAmplitude*1e-9) * sqrt(6) * astradius * astradius * sin(2. * astang); // [m]
                 
