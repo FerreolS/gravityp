@@ -2498,7 +2498,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     /* (rec_az E_AZ + rec_zd E_ZD) . (sobj_U E_U + sobj_V E_V) */
     
     /* Declare some variables */
-    double deproject, northangle, field_dU, field_dV, scale;
+    double deproject, northangle, field_dU, field_dV;
     char card[100];
     
     /* Vectors used in Julien's formula */
@@ -2512,8 +2512,13 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     cpl_array ** E_ZD = cpl_table_get_data_array (vismet_table,"E_ZD");
     
     /* read the field fiber offset */
-    double * field_dX = cpl_table_get_data_double (vismet_table, "FIELD_FIBER_DX");
-    double * field_dY = cpl_table_get_data_double (vismet_table, "FIELD_FIBER_DY");
+    double * field_dX = NULL;
+    double * field_dY = NULL;
+    if ( cpl_table_has_column (vismet_table, "FIELD_FIBER_DX")
+      && cpl_table_has_column (vismet_table, "FIELD_FIBER_DX") ) {
+        field_dX = cpl_table_get_data_double (vismet_table, "FIELD_FIBER_DX");
+        field_dY = cpl_table_get_data_double (vismet_table, "FIELD_FIBER_DY");
+    }
     
     /* some debug messages */
     cpl_msg_info (cpl_func,"FE: E_U = [%g, %g, %g].", 
@@ -2539,17 +2544,24 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         /* compute the north angle on acqcam [deg] */
         northangle =  gravi_pfits_get_fangle_acqcam (header, tel);
         
-        /* get average image scale on acqcam [mas/pix] */
+        /* If available, get average image scale on acqcam [mas/pix] */
+        double scale = 0.0;
         sprintf (card,"ESO QC ACQ FIELD%d SCALE", tel+1);
-        scale = cpl_propertylist_get_double (header, card);
+        if (cpl_propertylist_has (header, card))
+            scale = cpl_propertylist_get_double (header, card);
         
         for (cpl_size row = 0; row < nrow_met; row++) {
             
-            /* transform field fiber offset from (x,y) acqcam [pix] to (U,V) sky [mas] */
-            field_dU = (field_dX[row*ntel+tel] * sin( (northangle+90.) * CPL_MATH_RAD_DEG )
-                       +field_dY[row*ntel+tel] * cos( (northangle+90.) * CPL_MATH_RAD_DEG ))*scale;
-            field_dV = (field_dX[row*ntel+tel] * sin( (northangle    ) * CPL_MATH_RAD_DEG )
-                       +field_dY[row*ntel+tel] * cos( (northangle    ) * CPL_MATH_RAD_DEG ))*scale;
+            /* If available, transform field fiber offset from (x,y) acqcam [pix] to (U,V) sky [mas] */
+            if (field_dX && field_dY) {
+                field_dU = (field_dX[row*ntel+tel] * sin( (northangle+90.) * CPL_MATH_RAD_DEG )
+                           +field_dY[row*ntel+tel] * cos( (northangle+90.) * CPL_MATH_RAD_DEG ))*scale;
+                field_dV = (field_dX[row*ntel+tel] * sin( (northangle    ) * CPL_MATH_RAD_DEG )
+                           +field_dY[row*ntel+tel] * cos( (northangle    ) * CPL_MATH_RAD_DEG ))*scale;
+            } else {
+                field_dU = 0.0;
+                field_dV = 0.0;
+            }
             
             for (int diode = 0; diode < ndiode; diode++) {
                 
