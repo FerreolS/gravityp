@@ -658,30 +658,42 @@ double gravi_pfits_get_drotoff (const cpl_propertylist * plist, int tel)
 
 double gravi_pfits_get_fangle_acqcam (const cpl_propertylist * plist, int tel)
 {
-    char name[90];
-
-    /* Angle of binary on ACQ image */
-    sprintf (name, "ESO INS DROTOFF%i", tel+1);
-    double drottoff = cpl_propertylist_get_double (plist, name);
+    double fangle = 0.0;
     
-    /* Position angle of binary */
-    double dx = cpl_propertylist_get_double (plist, "ESO INS SOBJ X");
-    double dy = cpl_propertylist_get_double (plist, "ESO INS SOBJ Y");
-    /* If in a mapping template, get stqrting position */
-    if (cpl_propertylist_has(plist, "ESO INS SOBJ OFFX")) {
-      dx -= cpl_propertylist_get_double (plist, "ESO INS SOBJ OFFX");
-      dy -= cpl_propertylist_get_double (plist, "ESO INS SOBJ OFFY");
+    if (cpl_propertylist_has (plist, "ESO INS SOBJ X") &&
+        cpl_propertylist_has (plist, "ESO INS SOBJ Y") ) {
+        
+        /* Angle of binary on ACQ image */
+        char name[90];
+        sprintf (name, "ESO INS DROTOFF%i", tel+1);
+        double drottoff = cpl_propertylist_get_double (plist, name);
+        
+        /* Position angle of binary */
+        double dx = cpl_propertylist_get_double (plist, "ESO INS SOBJ X");
+        double dy = cpl_propertylist_get_double (plist, "ESO INS SOBJ Y");
+        
+        /* If in a mapping template, remove dithering offset */
+        double posangle = 0.0;
+        if (cpl_propertylist_has(plist, "ESO INS SOBJ OFFX") &&
+            cpl_propertylist_has(plist, "ESO INS SOBJ OFFY")) {
+            
+            dx -= gravi_pfits_get_double_default (plist, "ESO INS SOBJ OFFX", 0.0);
+            dy -= gravi_pfits_get_double_default (plist, "ESO INS SOBJ OFFY", 0.0);
+        }
+        if ((fabs(dx)>0.0) || (fabs(dy)>0.0))
+            posangle = atan2 (dx, dy) * CPL_MATH_DEG_RAD;
+        
+        /* Angle of North in ACQ image, from vertical (y+) to right (x+) */
+        fangle = - posangle - drottoff + 270;
+        if (fangle >= 180) fangle -= 360.0;
+        if (fangle < -180) fangle += 360.0;
+        if (fangle >= 180) fangle -= 360.0;
+        if (fangle < -180) fangle += 360.0;
+        
+        cpl_msg_info (cpl_func, "fangle = %.2f [deg] / NorthACQ in Y to X", fangle);
+    } else {
+        cpl_msg_warning (cpl_func, "Cannot compute field angle: fangle = 0.0");
     }
-    double posangle = atan2 (dx, dy) * CPL_MATH_DEG_RAD;
-
-    /* Angle of North in ACQ image, from vertical (y+) to right (x+) */
-    double fangle = - posangle - drottoff + 270;
-    if (fangle >= 180) fangle -= 360.0;
-    if (fangle < -180) fangle += 360.0;
-    if (fangle >= 180) fangle -= 360.0;
-    if (fangle < -180) fangle += 360.0;
-    
-    cpl_msg_info (cpl_func, "fangle = %.2f [deg] / NorthACQ in Y to X", fangle);
     
     return fangle;
 }
