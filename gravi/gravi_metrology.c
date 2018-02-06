@@ -2839,6 +2839,19 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     cpl_msg_info (cpl_func,"FE: correction for dxy of GV3: %g %g pixel", mttdx[2], mttdy[2]);
     cpl_msg_info (cpl_func,"FE: correction for dxy of GV4: %g %g pixel", mttdx[3], mttdy[3]);
     
+    /* Add QC parameters for the corrections */
+    char qc_name[100];
+    for (int tel=0; tel<ntel; tel++) {
+        sprintf (qc_name, "ESO QC MET FIBER SC%iDX", tel+1);
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, mttdx[tel]);
+        cpl_propertylist_update_double (header, qc_name, mttdx[tel]);
+        cpl_propertylist_set_comment (header, qc_name, "[pix] SC fiber offset measured by tel metrology");
+        sprintf (qc_name, "ESO QC MET FIBER SC%iDY", tel+1);
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, mttdy[tel]);
+        cpl_propertylist_update_double (header, qc_name, mttdy[tel]);
+        cpl_propertylist_set_comment (header, qc_name, "[pix] SC fiber offset measured by tel metrology");
+    }
+    
     
     /*****************************************************************/
     /*                   PART IV:  OPD_TELFC_MCORR                   */
