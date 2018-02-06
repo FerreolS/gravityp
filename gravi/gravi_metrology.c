@@ -2747,6 +2747,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         }
     }
     
+    double mmet[4][4]; 
+    
     /* report final median for each telescope and diode */
     for (int tel = 0; tel < ntel; tel++) {
         for (int diode = 0; diode < ndiode; diode++) {
@@ -2757,9 +2759,85 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
             /* calculate median */
             tmp_median =  cpl_vector_get_median_const(tmp_vector);
             cpl_msg_info (cpl_func,"FE: median TEL-FC in nm for Tel %d Diode %d : %g ",
-                          tel, diode, tmp_median*1e9);
+                            tel, diode, tmp_median*1e9);
+            /* FE: put results in a local variable for below residual tilt calculation */
+            mmet[tel][diode] = tmp_median;
         }
     }
+    
+    /* FE: calculate residual tilt of metrology signal for each telescope and convert to 
+       equivalent dx,dy on detector. In other words, output the calibration error of fc_fiber_dxy
+    */
+    
+    double mttx[4];
+    double mtty[4];
+    double mttn[4];
+    double mtte[4];
+    double mttdx[4];
+    double mttdy[4];
+    for (int tel = 0; tel < ntel; tel++) {
+        mttx[tel] = (mmet[tel][3]*rec_az[tel][3]*pow(rec_zd[tel][0],2) - mmet[tel][0]*rec_az[tel][1]*rec_zd[tel][0]*rec_zd[tel][1] + mmet[tel][0]*rec_az[tel][0]*pow(rec_zd[tel][1],2) + 
+               mmet[tel][3]*rec_az[tel][3]*pow(rec_zd[tel][1],2) - mmet[tel][0]*rec_az[tel][2]*rec_zd[tel][0]*rec_zd[tel][2] + mmet[tel][0]*rec_az[tel][0]*pow(rec_zd[tel][2],2) + 
+               mmet[tel][3]*rec_az[tel][3]*pow(rec_zd[tel][2],2) - mmet[tel][3]*rec_az[tel][0]*rec_zd[tel][0]*rec_zd[tel][3] - mmet[tel][0]*rec_az[tel][3]*rec_zd[tel][0]*rec_zd[tel][3] - 
+               mmet[tel][3]*rec_az[tel][1]*rec_zd[tel][1]*rec_zd[tel][3] - mmet[tel][3]*rec_az[tel][2]*rec_zd[tel][2]*rec_zd[tel][3] + mmet[tel][0]*rec_az[tel][0]*pow(rec_zd[tel][3],2) - 
+               mmet[tel][2]*rec_zd[tel][2]*(rec_az[tel][0]*rec_zd[tel][0] + rec_az[tel][1]*rec_zd[tel][1] + rec_az[tel][3]*rec_zd[tel][3]) - 
+               mmet[tel][1]*rec_zd[tel][1]*(rec_az[tel][0]*rec_zd[tel][0] + rec_az[tel][2]*rec_zd[tel][2] + rec_az[tel][3]*rec_zd[tel][3]) + 
+               mmet[tel][2]*rec_az[tel][2]*(pow(rec_zd[tel][0],2) + pow(rec_zd[tel][1],2) + pow(rec_zd[tel][3],2)) + 
+               mmet[tel][1]*rec_az[tel][1]*(pow(rec_zd[tel][0],2) + pow(rec_zd[tel][2],2) + pow(rec_zd[tel][3],2))) /
+                    (pow(rec_az[tel][3],2)*pow(rec_zd[tel][0],2) + pow(rec_az[tel][0],2)*pow(rec_zd[tel][1],2) + 
+               pow(rec_az[tel][3],2)*pow(rec_zd[tel][1],2) + pow(rec_az[tel][0],2)*pow(rec_zd[tel][2],2) + 
+               pow(rec_az[tel][3],2)*pow(rec_zd[tel][2],2) - 2*rec_az[tel][0]*rec_az[tel][3]*rec_zd[tel][0]*rec_zd[tel][3] + 
+               pow(rec_az[tel][0],2)*pow(rec_zd[tel][3],2) - 2*rec_az[tel][2]*rec_zd[tel][2]*(rec_az[tel][0]*rec_zd[tel][0] + rec_az[tel][3]*rec_zd[tel][3]) - 
+               2*rec_az[tel][1]*rec_zd[tel][1]*(rec_az[tel][0]*rec_zd[tel][0] + rec_az[tel][2]*rec_zd[tel][2] + rec_az[tel][3]*rec_zd[tel][3]) + 
+               pow(rec_az[tel][2],2)*(pow(rec_zd[tel][0],2) + pow(rec_zd[tel][1],2) + pow(rec_zd[tel][3],2)) + 
+               pow(rec_az[tel][1],2)*(pow(rec_zd[tel][0],2) + pow(rec_zd[tel][2],2) + pow(rec_zd[tel][3],2)));
+        mtty[tel] = (-(mmet[tel][2]*rec_az[tel][0]*rec_az[tel][2]*rec_zd[tel][0]) - mmet[tel][3]*rec_az[tel][0]*rec_az[tel][3]*rec_zd[tel][0] - mmet[tel][2]*rec_az[tel][1]*rec_az[tel][2]*rec_zd[tel][1] - 
+               mmet[tel][3]*rec_az[tel][1]*rec_az[tel][3]*rec_zd[tel][1] + mmet[tel][2]*pow(rec_az[tel][0],2)*rec_zd[tel][2] + mmet[tel][2]*pow(rec_az[tel][1],2)*rec_zd[tel][2] - 
+               mmet[tel][3]*rec_az[tel][2]*rec_az[tel][3]*rec_zd[tel][2] + mmet[tel][2]*pow(rec_az[tel][3],2)*rec_zd[tel][2] + mmet[tel][3]*pow(rec_az[tel][0],2)*rec_zd[tel][3] + 
+               mmet[tel][3]*pow(rec_az[tel][1],2)*rec_zd[tel][3] + mmet[tel][3]*pow(rec_az[tel][2],2)*rec_zd[tel][3] - mmet[tel][2]*rec_az[tel][2]*rec_az[tel][3]*rec_zd[tel][3] + 
+               mmet[tel][0]*(pow(rec_az[tel][1],2)*rec_zd[tel][0] + pow(rec_az[tel][2],2)*rec_zd[tel][0] + pow(rec_az[tel][3],2)*rec_zd[tel][0] - 
+                 rec_az[tel][0]*rec_az[tel][1]*rec_zd[tel][1] - rec_az[tel][0]*rec_az[tel][2]*rec_zd[tel][2] - rec_az[tel][0]*rec_az[tel][3]*rec_zd[tel][3]) + 
+               mmet[tel][1]*(-(rec_az[tel][0]*rec_az[tel][1]*rec_zd[tel][0]) + pow(rec_az[tel][0],2)*rec_zd[tel][1] + pow(rec_az[tel][2],2)*rec_zd[tel][1] + 
+               pow(rec_az[tel][3],2)*rec_zd[tel][1] - rec_az[tel][1]*rec_az[tel][2]*rec_zd[tel][2] - rec_az[tel][1]*rec_az[tel][3]*rec_zd[tel][3]))/
+                    (pow(rec_az[tel][3],2)*pow(rec_zd[tel][0],2) + pow(rec_az[tel][0],2)*pow(rec_zd[tel][1],2) + 
+               pow(rec_az[tel][3],2)*pow(rec_zd[tel][1],2) + pow(rec_az[tel][0],2)*pow(rec_zd[tel][2],2) + 
+               pow(rec_az[tel][3],2)*pow(rec_zd[tel][2],2) - 2*rec_az[tel][0]*rec_az[tel][3]*rec_zd[tel][0]*rec_zd[tel][3] + 
+               pow(rec_az[tel][0],2)*pow(rec_zd[tel][3],2) - 2*rec_az[tel][2]*rec_zd[tel][2]*(rec_az[tel][0]*rec_zd[tel][0] + rec_az[tel][3]*rec_zd[tel][3]) - 
+               2*rec_az[tel][1]*rec_zd[tel][1]*(rec_az[tel][0]*rec_zd[tel][0] + rec_az[tel][2]*rec_zd[tel][2] + rec_az[tel][3]*rec_zd[tel][3]) + 
+               pow(rec_az[tel][2],2)*(pow(rec_zd[tel][0],2) + pow(rec_zd[tel][1],2) + pow(rec_zd[tel][3],2)) + 
+               pow(rec_az[tel][1],2)*(pow(rec_zd[tel][0],2) + pow(rec_zd[tel][2],2) + pow(rec_zd[tel][3],2)));
+        // above should be in radians , convert to mas 
+        mttx[tel] = mttx[tel] / TWOPI * 360. * 3600. * 1000.;
+        mtty[tel] = mtty[tel] / TWOPI * 360. * 3600. * 1000.;
+        // now convert tp pixel above should be in radians, divide by pixel scale to get pixel
+        double scale = 0.0;
+        sprintf (card,"ESO QC ACQ FIELD%d SCALE", tel+1);
+        if (cpl_propertylist_has (header, card))
+            scale = cpl_propertylist_get_double (header, card);
+
+        mttx[tel] = mttx[tel] / scale;
+        mtty[tel] = mtty[tel] / scale;
+        // rotate to sky (north, east) using parang
+        mtte[tel] =   mttx[tel]*cos(parang) + mtty[tel]*sin(parang);
+        mttn[tel] = - mttx[tel]*sin(parang) + mtty[tel]*cos(parang);
+        // rotate to acqcam
+        double northangle = gravi_pfits_get_fangle_acqcam (header, tel);
+        mttdx[tel] = mttn[tel]*sin(northangle * CPL_MATH_RAD_DEG ) + mtte[tel]*cos(northangle * CPL_MATH_RAD_DEG );
+        mttdy[tel] = mttn[tel]*cos(northangle * CPL_MATH_RAD_DEG ) - mtte[tel]*sin(northangle * CPL_MATH_RAD_DEG );
+    }
+    
+    cpl_msg_info (cpl_func,"FE: mttx, mtty in uvw coordinates of GV1: %g %g pixel", mttx[0], mtty[0]);
+    cpl_msg_info (cpl_func,"FE: mttx, mtty in uvw coordinates of GV2: %g %g pixel", mttx[1], mtty[1]);
+    cpl_msg_info (cpl_func,"FE: mttx, mtty in uvw coordinates of GV3: %g %g pixel", mttx[2], mtty[2]);
+    cpl_msg_info (cpl_func,"FE: mttx, mtty in uvw coordinates of GV4: %g %g pixel", mttx[3], mtty[3]);
+    cpl_msg_info (cpl_func,"FE: mttx, mtty in RA DEC coordinates of GV1: %g %g pixel", mtte[0], mttn[0]);
+    cpl_msg_info (cpl_func,"FE: mttx, mtty in RA DEC coordinates of GV2: %g %g pixel", mtte[1], mttn[1]);
+    cpl_msg_info (cpl_func,"FE: mttx, mtty in RA DEC coordinates of GV3: %g %g pixel", mtte[2], mttn[2]);
+    cpl_msg_info (cpl_func,"FE: mttx, mtty in RA DEC coordinates of GV4: %g %g pixel", mtte[3], mttn[3]);
+    cpl_msg_info (cpl_func,"FE: correction for dxy of GV1: %g %g pixel", mttdx[0], mttdy[0]);
+    cpl_msg_info (cpl_func,"FE: correction for dxy of GV2: %g %g pixel", mttdx[1], mttdy[1]);
+    cpl_msg_info (cpl_func,"FE: correction for dxy of GV3: %g %g pixel", mttdx[2], mttdy[2]);
+    cpl_msg_info (cpl_func,"FE: correction for dxy of GV4: %g %g pixel", mttdx[3], mttdy[3]);
     
     
     /*****************************************************************/
