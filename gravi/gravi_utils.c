@@ -616,7 +616,7 @@ int gravi_wave_get_nlambda(cpl_table *wave_data, double lambda_min, double lambd
 	int n_region = cpl_table_get_ncol (wave_data);
     int n_element;
 	double wave, max_wave=0., min_wave = 3*pow(10, -6);
-    double sc_medium_res, sc_high_res;
+    double sc_medium_res, sc_high_res, sc_low_res;
 	cpl_size ind_min=0, ind_max=n_wave-1;
 	char* regname;
 
@@ -672,16 +672,16 @@ int gravi_wave_get_nlambda(cpl_table *wave_data, double lambda_min, double lambd
     
     /* Constant wavelength channel width for SC - pkervell 16/03/2016 */
     /* Nominal spectral channel width for SC in meters */
-    /* sc_low_res = 0.0418181818 * pow(10, -6);*/
+    sc_low_res = 0.0418181818 * pow(10, -6);
     sc_medium_res = 0.0022009569 * pow(10, -6);
     sc_high_res =   0.0002642248 * pow(10, -6);
 
     /* SC low resolution case */
     /* Not implemented in low resolution due to tighter wavelength limits than 1.99-2.45 microns */
-    /* if (( res >= 0.95*sc_low_res) && (res <= 1.05*sc_low_res)) {
-        n_element = round(((lambda_max-lambda_min)/sc_low_res) + 1);
+    if (( res >= 0.95*sc_low_res) && (res <= 1.05*sc_low_res)) {
+        n_element = round(((lambda_max-lambda_min)/sc_low_res));
         cpl_msg_info (cpl_func, "Chosen SC LOW spectral resolution element = %e m, n_element = %i", sc_low_res, n_element);
-    }*/
+    }
     
     /* SC medium resolution case */
     /* Allow for a +/- 5% variation margin around nominal value */
