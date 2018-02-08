@@ -263,7 +263,7 @@ cpl_parameter * gravi_parameter_add_wave (cpl_parameterlist *self)
                                 "PIXEL to compute the wavelength per pixels\n "
                                 "BASELINE to compute the wavelength per baseline (ABCD)\n "
                                 "AUTO to compute the wavelength per pixels in LOW, and per baseline otherwise",
-                                "gravity.calib", "BASELINE", 3,
+                                "gravity.calib", "AUTO", 3,
                                 "PIXEL","BASELINE","AUTO");
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "wave-mode");
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
