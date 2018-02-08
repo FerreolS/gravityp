@@ -257,6 +257,18 @@ cpl_parameter * gravi_parameter_add_wave (cpl_parameterlist *self)
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
     cpl_parameterlist_append (self, p);
 
+    /* Wave determination */
+    p = cpl_parameter_new_enum ("gravity.vis.wave-mode", CPL_TYPE_STRING,
+                                "Define the way the wavelength are computed.\n "
+                                "PIXEL to compute the wavelength per pixels\n "
+                                "BASELINE to compute the wavelength per baseline (ABCD)\n "
+                                "AUTO to compute the wavelength per pixels in LOW, and per baseline otherwise",
+                                "gravity.calib", "BASELINE", 3,
+                                "PIXEL","BASELINE","AUTO");
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "wave-mode");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (self, p);
+
     return p;
 }
 
