@@ -93,6 +93,16 @@ cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
                                int spectral_order,
                                double * rms_residuals);
 
+cpl_table * gravi_wave_fit_individual (cpl_table * wave_individual_table,
+                                          cpl_table * weight_individual_table,
+                                          cpl_table * wave_fitted_table,
+                                          cpl_table * opd_table,
+                                          cpl_table * spectrum_table,
+                                          cpl_table * detector_table,
+                                          cpl_size fullstartx,
+                                       double n0, double n1, double n2,
+                                       double * rms_residuals);
+
 cpl_error_code gravi_wave_correct_dispersion (cpl_table * wave_fibre,
                                               double n0, double n1, double n2);
 
@@ -100,6 +110,9 @@ cpl_imagelist * gravi_wave_test_image (cpl_table * wavedata_table,
                                        cpl_table * wavefibre_table,
                                        cpl_table * profile_table,
                                        cpl_table * detector_table);
+
+
+
 
 /*-----------------------------------------------------------------------------
                                 Functions code
@@ -1369,10 +1382,289 @@ cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
 	return wavedata_table;
 }
 
+
+
+/*----------------------------------------------------------------------------*/
+/*
+ * @brief TBD
+ */
+/*----------------------------------------------------------------------------*/
+
+cpl_table * gravi_wave_fit_individual (cpl_table * wave_individual_table,
+                                          cpl_table * weight_individual_table,
+                                          cpl_table * wave_fitted_table,
+                                              cpl_table * opd_table,
+                                              cpl_table * spectrum_table,
+                                              cpl_table * detector_table,
+                                              cpl_size fullstartx,
+                                       double n0, double n1, double n2,
+                                       double * rms_residuals)
+{
+    
+    gravi_msg_function_start(1);
+    
+    cpl_ensure (wave_individual_table, CPL_ERROR_NULL_INPUT, NULL);
+    cpl_ensure (weight_individual_table,  CPL_ERROR_NULL_INPUT, NULL);
+    cpl_ensure (wave_fitted_table, CPL_ERROR_NULL_INPUT, NULL);
+    cpl_ensure (opd_table,  CPL_ERROR_NULL_INPUT, NULL);
+    cpl_ensure (spectrum_table,  CPL_ERROR_NULL_INPUT, NULL);
+    cpl_ensure (detector_table,  CPL_ERROR_NULL_INPUT, NULL);
+    
+    /* Get the number of wavelength, region, polarisation... */
+    cpl_size nwave = cpl_table_get_column_depth (spectrum_table, "DATA1");
+    cpl_size n_region = cpl_table_get_nrow (detector_table);
+    cpl_size nrow = cpl_table_get_nrow (spectrum_table);
+    int npol = (n_region > 24 ? 2 : 1);
+    int nbase = 6;
+    cpl_size nwave_ref=3000;
+    if (nwave<10) nwave_ref=600;
+    
+    CPLCHECK_NUL ("Cannot buid odd_index");
+    
+    /* Get OPD Table */
+    
+    
+    
+    /* create temporary variables */
+    
+    cpl_array * wave_individual_array = cpl_array_new (nwave, CPL_TYPE_DOUBLE);
+    cpl_array * weight_individual_array = cpl_array_new (nwave, CPL_TYPE_DOUBLE);
+    cpl_matrix * data_flux_matrix = cpl_matrix_new (nrow, nwave);
+    cpl_matrix * vis_to_flux_matrix = cpl_matrix_new (nrow, 3);
+    cpl_matrix * signal_matrix = cpl_matrix_new (nwave, nwave_ref);
+    cpl_matrix * residual_matrix = cpl_matrix_new (nwave, nwave_ref);
+    cpl_array * wave_reference_array = cpl_array_new (nwave_ref, CPL_TYPE_DOUBLE);
+    
+    /*initialise arrays */
+    
+    cpl_matrix_fill_column(vis_to_flux_matrix,1,2);
+    for (cpl_size wave_ref = 0; wave_ref < nwave_ref; wave_ref+=1)
+    {
+        // make matrix todo
+        double wave_value=1.95e-6+wave_ref*0.6e-6/((double) nwave_ref);
+        cpl_array_set_double(wave_reference_array,wave_ref,wave_value);
+    }
+    
+    CPLCHECK_NUL ("Cannot initialize arrays for wavelength fit");
+    
+    
+    for (cpl_size region = 0 ; region < n_region; region ++) {
+        
+        int base=gravi_region_get_base (detector_table, region);
+        char * data_x = GRAVI_DATA[region];
+    
+        cpl_msg_info_overwritable (cpl_func, "Least square fitting of wavelength for region %s", data_x);
+        // get data_flux_matrix
+        
+        for (cpl_size row = 0; row < nrow; row ++ ) {
+            cpl_array * flux_array= cpl_table_get_data_array(spectrum_table,data_x)[row];
+            for (cpl_size wave = 0; wave < nwave; wave ++) {
+                cpl_matrix_set (data_flux_matrix, row, wave, cpl_array_get(flux_array,wave, NULL));
+            }
+        }
+        
+    
+        for (cpl_size wave_ref = 0; wave_ref < nwave_ref; wave_ref+=1)
+        {
+            // make matrix
+            double wave_value=cpl_array_get(wave_reference_array,wave_ref,NULL);
+            
+            for (cpl_size row = 0; row < nrow; row ++ ) {
+                double opd = cpl_table_get (opd_table, "OPD", row*nbase+base, NULL);
+                double coherence_loss=1;
+                if (fabs(opd) > 1e-9)
+                {
+                    if (nwave <30)
+                    {
+                        coherence_loss=sin(opd*19500)/(opd*19500);
+                    }
+                }
+                cpl_matrix_set(vis_to_flux_matrix,row,0,cos(opd*6.28318530718/wave_value)*coherence_loss);
+                cpl_matrix_set(vis_to_flux_matrix,row,1,sin(opd*6.28318530718/wave_value)*coherence_loss);
+            }
+            
+            cpl_matrix * coef_vis = cpl_matrix_solve_normal(vis_to_flux_matrix,data_flux_matrix); // coef_vis is 3xnwave
+            cpl_matrix * data_flux_fit = cpl_matrix_product_create(vis_to_flux_matrix,coef_vis);
+            cpl_matrix * residuals_fit = cpl_matrix_duplicate(data_flux_fit);
+            cpl_matrix_subtract (residuals_fit,data_flux_matrix); //residuals_fit is nrowxnwave
+            
+            for (cpl_size wave = 0; wave < nwave; wave ++ ) {
+                cpl_matrix * temp_matrix = cpl_matrix_extract_column (data_flux_fit, wave);
+                cpl_matrix_set(signal_matrix,wave,wave_ref,cpl_matrix_get_stdev(temp_matrix));
+                FREE (cpl_matrix_delete, temp_matrix);
+                cpl_matrix * temp_matrix2 = cpl_matrix_extract_column (residuals_fit, wave);
+                cpl_matrix_set(residual_matrix,wave,wave_ref,cpl_matrix_get_stdev(temp_matrix2));
+                FREE (cpl_matrix_delete, temp_matrix2);
+            }
+            
+            FREE (cpl_matrix_delete, coef_vis);
+            FREE (cpl_matrix_delete, data_flux_fit);
+            FREE (cpl_matrix_delete, residuals_fit);
+            
+            CPLCHECK_NUL ("Cannot do Matrix inversion to calculate optimum wavelength");
+            
+        }
+        
+        // get minimum chi2 and amplitude signal for each wave
+        cpl_size wave_ref=1;
+        cpl_size discarded=1;
+        for (cpl_size wave = 0; wave < nwave; wave ++ ) {
+            
+            cpl_matrix * chi2_extract=cpl_matrix_extract_row(residual_matrix,wave);
+            
+            cpl_matrix_get_minpos(chi2_extract,&discarded, &wave_ref );
+            
+            double wave_value = cpl_array_get(wave_reference_array, wave_ref, NULL );
+            double weight_value = cpl_matrix_get(signal_matrix, wave , wave_ref )/(0.1+cpl_matrix_get(residual_matrix, wave, wave_ref ));
+            
+            cpl_array_set_double (wave_individual_array, wave, wave_value);
+            cpl_array_set_double (weight_individual_array, wave, weight_value);
+
+            FREE (cpl_matrix_delete, chi2_extract);
+            
+        }
+        
+        /* Add column */
+        cpl_table_new_column_array (wave_individual_table, data_x, CPL_TYPE_DOUBLE, nwave);
+        cpl_table_set_array (wave_individual_table, data_x, 0, wave_individual_array);
+        cpl_table_new_column_array (weight_individual_table, data_x, CPL_TYPE_DOUBLE, nwave);
+        cpl_table_set_array (weight_individual_table, data_x, 0, weight_individual_array);
+        cpl_table_new_column_array (wave_fitted_table, data_x, CPL_TYPE_DOUBLE, nwave);
+        cpl_table_set_array (wave_fitted_table, data_x, 0, wave_individual_array);
+    }
+    
+    CPLCHECK_NUL ("Cannot get individual wavelength for each pixel");
+    
+    FREE (cpl_array_delete   ,wave_individual_array);
+    FREE (cpl_array_delete   ,weight_individual_array);
+    FREE (cpl_array_delete   ,wave_reference_array);
+    FREE (cpl_matrix_delete  ,data_flux_matrix);
+    FREE (cpl_matrix_delete  ,vis_to_flux_matrix);
+    FREE (cpl_matrix_delete  ,signal_matrix);
+    FREE (cpl_matrix_delete  ,residual_matrix);
+    
+    cpl_msg_info (cpl_func, "Now fitting polynomials on wavelength channels");
+    
+    cpl_matrix * coef_to_wave = cpl_matrix_new (n_region / npol,4);
+    cpl_matrix * coef_to_wave_weight = cpl_matrix_new (n_region / npol,n_region / npol);
+    cpl_matrix * wavelength = cpl_matrix_new(n_region / npol,1);
+    
+    // set coordinates
+    for (cpl_size region = 0 ; region < n_region/ npol; region ++)
+    {
+        double mean_region = region - (n_region/npol-1)*0.5;
+        cpl_matrix_set (coef_to_wave, region, 0, 1);
+        cpl_matrix_set (coef_to_wave, region, 1, mean_region);
+        cpl_matrix_set (coef_to_wave, region, 2, mean_region*mean_region);
+        cpl_matrix_set (coef_to_wave, region, 3, mean_region*mean_region*mean_region);
+    }
+    
+    
+    
+    for (int pol = 0; pol < npol; pol++) {
+        
+        cpl_msg_info (cpl_func, "Looping for polyfit now, with pol: %i",(int) pol);
+        
+        for (cpl_size wave = 0; wave < nwave; wave ++) {
+            
+            // get the data for a common wave row
+            for (cpl_size region = 0 ; region < n_region/ npol; region ++) {
+     
+                // Get the pointers to the table arrays
+                char * data_x = GRAVI_DATA[region*npol+pol];
+                
+                
+                const cpl_array * wave_array = cpl_table_get_array (wave_individual_table, data_x, 0);
+                const cpl_array * weight_array = cpl_table_get_array (weight_individual_table, data_x, 0);
+                
+                
+                cpl_matrix_set (wavelength, region, 0, cpl_array_get(wave_array,wave,NULL));
+                double weight_value=cpl_array_get(weight_array,wave,NULL);
+                cpl_matrix_set (coef_to_wave_weight, region, region, weight_value*weight_value);
+            
+            }
+            
+            
+            cpl_matrix * coef_to_wave2 = cpl_matrix_product_create(coef_to_wave_weight,coef_to_wave);
+            cpl_matrix * wavelength2 = cpl_matrix_product_create(coef_to_wave_weight,wavelength);
+            
+            // Fit a second order polynomial
+            cpl_matrix * coeff = cpl_matrix_solve_normal(coef_to_wave2, wavelength2); // 4 x 1
+            cpl_matrix * wavelength_fitted = cpl_matrix_product_create(coef_to_wave, coeff); // n_region / npol x 1
+            
+            CPLCHECK_NUL ("Cannot do Matrix inversion to calculate optimum polynomial for wavelength");
+            
+            // Write result to new wave table
+            for (cpl_size region = 0 ; region < n_region/ npol; region ++) {
+                
+                char * data_x = GRAVI_DATA[region*npol+pol];
+                //cpl_msg_info (cpl_func, "Writing: region  %i",region);
+                cpl_array * wave_array = cpl_table_get_data_array (wave_fitted_table, data_x)[0];
+                
+                cpl_array_set_double(wave_array,wave,cpl_matrix_get(wavelength_fitted,region,0));
+
+            }
+            
+            FREE (cpl_matrix_delete  ,coef_to_wave2);
+            FREE (cpl_matrix_delete  ,wavelength2);
+            FREE (cpl_matrix_delete  ,coeff);
+            FREE (cpl_matrix_delete  ,wavelength_fitted);
+        }
+ 
+    }
+    FREE (cpl_matrix_delete  ,coef_to_wave);
+    FREE (cpl_matrix_delete  ,coef_to_wave_weight);
+    FREE (cpl_matrix_delete  ,wavelength);
+    
+    CPLCHECK_NUL ("Cannot fit individual wavelength with 3rd order polynomial");
+    
+    cpl_msg_info (cpl_func, "Correcting for wavelength error");
+    
+    
+    /* Correct the computed wavelength from the dispersion */
+    for (cpl_size region = 0 ; region < n_region; region ++)
+    {
+            char * data_x = GRAVI_DATA[region];
+            cpl_array * wavelength = cpl_table_get_data_array (wave_fitted_table, data_x)[0];
+            cpl_size nwave = cpl_array_get_size (wavelength);
+            for (cpl_size wave = 0 ; wave < nwave ; wave ++ ) {
+                
+                double result = cpl_array_get (wavelength, wave, NULL);
+                double d_met  = (result - LAMBDA_MET) / LAMBDA_MET;
+                cpl_array_set (wavelength, wave, result * (n0 + n1*d_met + n2*d_met*d_met));
+                
+            }
+            for (cpl_size wave = nwave/2 ; wave < nwave-1 ; wave ++ ) {
+                double result = cpl_array_get (wavelength, wave, NULL);
+                double result2 = cpl_array_get (wavelength, wave+1, NULL);
+                if (result2<result+2e-10) {
+                    result2=result+2e-10;
+                    cpl_array_set (wavelength, wave+1, result2);
+                }
+            }
+            for (cpl_size wave = nwave/2 ; wave > 0 ; wave -- ) {
+                double result = cpl_array_get (wavelength, wave, NULL);
+                double result2 = cpl_array_get (wavelength, wave-1, NULL);
+                if (result2>result-2e-10) {
+                        result2=result-2e-10;
+                    cpl_array_set (wavelength, wave-1, result2);
+                }
+            }
+        }
+    
+    CPLCHECK_NUL ("Error in correcting for dispersion");
+    
+    gravi_msg_function_exit(1);
+    return wave_fitted_table;
+}
+
+
+
+
 /*----------------------------------------------------------------------------*/
 /**
  * @brief Correct the WAVE_FIBRE table from a harcoded dispersion model.
- * 
+ *
  * @param wave_fibre      Input table, modified inplace
  * @param n0, n1, n2      Dispersion parameter
  */
@@ -1612,7 +1904,8 @@ cpl_error_code gravi_wave_qc (gravi_data * wave_map, gravi_data * profile_map)
 	  double maxwave =  1e10;
 	  
 	  for (int region = 0; region < n_region; region++) {
-		const cpl_array * wavelength = cpl_table_get_array (wave_data, GRAVI_DATA[region], 0);
+          const cpl_array * wavelength = cpl_table_get_array (wave_data, GRAVI_DATA[region], 0);
+          
 		minwave = CPL_MAX (minwave, cpl_array_get_min (wavelength));
 		maxwave = CPL_MIN (maxwave, cpl_array_get_max (wavelength));
 	  } /* End loop on regions */
@@ -1806,16 +2099,73 @@ cpl_error_code  gravi_compute_wave (gravi_data * wave_map,
 
     CPLCHECK_MSG ("Cannot fit 2d data");
     
-    /* 
-     * Add the WAVE_FIBRE and WAVE_DATA table in the wave_map 
+    /*
+     * New Wavelength interpolation made by sylvestre on January 30 2018 
      */
-    cpl_msg_info (cpl_func,"Add WAVE_FIBRE and WAVE_DATA in wave_map");
     
-    gravi_data_add_table (wave_map, cpl_propertylist_duplicate (spectrum_plist),
-                          GRAVI_WAVE_FIBRE_EXT(type_data), wavefibre_table);
+    int DO_IT=0;
+    if (gravi_param_get_string(parlist, "gravity.calib.wave-mode") == "PIXEL")
+        DO_IT = 1;
+    if (gravi_param_get_string(parlist, "gravity.calib.wave-mode") == "BASELINE")
+        DO_IT = 0;
+    if (gravi_param_get_string(parlist, "gravity.calib.wave-mode") == "AUTO")
+        if (gravi_pfits_get_spec_res(raw_header) == "LOW")
+            DO_IT = 1;
+        else
+            DO_IT = 0;
+    cpl_msg_info(cpl_func, "Option wave-mode : %s and spec res : %s : do it : %d ",
+            gravi_param_get_string(parlist, "gravity.calib.wave-mode"),
+            gravi_pfits_get_spec_res(raw_header), DO_IT);
+
     
-    gravi_data_add_table (wave_map, cpl_propertylist_duplicate (spectrum_plist),
-                          GRAVI_WAVE_DATA_EXT(type_data), wavedata_table);
+    cpl_msg_info (cpl_func, "Additional Wavelength Fit");
+    
+    if (type_data == GRAVI_SC && DO_IT == 1)
+    {
+        cpl_table * wave_individual_table = cpl_table_new (1);
+        cpl_table * weight_individual_table   = cpl_table_new (1);
+        cpl_table * wave_fitted_table = cpl_table_new (1);
+        
+        gravi_wave_fit_individual (wave_individual_table,
+                                   weight_individual_table,
+                                   wave_fitted_table,
+                                   opd_table,
+                                   spectrum_table,
+                                   detector_table,
+                                   fullstartx,
+                                   n0,n1,n2,
+                                   &rms_residuals);
+        
+        cpl_msg_info (cpl_func,"Add tables in wave_map");
+
+        gravi_data_add_table (wave_map, cpl_propertylist_duplicate (spectrum_plist),
+                              "WAVE_INDIV_SC", wave_individual_table);
+        gravi_data_add_table (wave_map, cpl_propertylist_duplicate (spectrum_plist),
+                              "WAVE_WEIGHT_SC", weight_individual_table);
+        gravi_data_add_table (wave_map, cpl_propertylist_duplicate (spectrum_plist),
+                              "WAVE_FITTED_SC", wavedata_table);
+        
+        gravi_data_add_table (wave_map, cpl_propertylist_duplicate (spectrum_plist),
+                              GRAVI_WAVE_FIBRE_EXT(type_data), wavefibre_table);
+        gravi_data_add_table (wave_map, cpl_propertylist_duplicate (spectrum_plist),
+                              GRAVI_WAVE_DATA_EXT(type_data), wave_fitted_table);
+    } else {
+        /*
+         * Add the WAVE_FIBRE and WAVE_DATA table in the wave_map
+         */
+        cpl_msg_info (cpl_func,"Add WAVE_FIBRE and WAVE_DATA in wave_map");
+
+        gravi_data_add_table (wave_map, cpl_propertylist_duplicate (spectrum_plist),
+                              GRAVI_WAVE_FIBRE_EXT(type_data), wavefibre_table);
+
+        gravi_data_add_table (wave_map, cpl_propertylist_duplicate (spectrum_plist),
+                              GRAVI_WAVE_DATA_EXT(type_data), wavedata_table);
+
+        }
+
+
+
+    
     CPLCHECK_MSG ("Cannot set data");
     
 	gravi_msg_function_exit(1);
