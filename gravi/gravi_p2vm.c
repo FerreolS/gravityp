@@ -51,7 +51,7 @@
                                   Defines
  -----------------------------------------------------------------------------*/
 
-#define GRAVI_DEFAULT_LBD_MIN 2.000e-6
+#define GRAVI_DEFAULT_LBD_MIN 1.999e-6
 #define GRAVI_DEFAULT_LBD_MAX 2.450e-6
 
 /*-----------------------------------------------------------------------------
@@ -188,7 +188,7 @@ cpl_table * gravi_create_oiwave_table_sc (cpl_table * wave_table,
     double min_wave = GRAVI_DEFAULT_LBD_MIN;
 
     /* set the calibrated eff_wave for LOW res*/
-    double calib_eff_wave[11] = {7.2826E-08,
+    double calib_eff_wave[12] = {7.2826E-08,
                                  1.0747E-07,
                                  1.1168E-07,
                                  1.1024E-07,
@@ -198,6 +198,7 @@ cpl_table * gravi_create_oiwave_table_sc (cpl_table * wave_table,
                                  1.0989E-07,
                                  1.0876E-07,
                                  1.0834E-07,
+                                 1.0147E-07,
                                  1.0147E-07};
 
     /* Get the QC */
@@ -235,7 +236,7 @@ cpl_table * gravi_create_oiwave_table_sc (cpl_table * wave_table,
         // introduce *2 to be closer to the real Band pass
         cpl_table_set (oiwave_table, "EFF_BAND", wave, (max_wave-min_wave)/(nwave-1)*2);
         //for LOW mode (nwave=11) set to measured bandpass
-        if (nwave == 11) cpl_table_set (oiwave_table, "EFF_BAND", wave, calib_eff_wave[wave]);
+        if (nwave == 12) cpl_table_set (oiwave_table, "EFF_BAND", wave, calib_eff_wave[wave]);
     }
 
     gravi_msg_function_exit(1);
