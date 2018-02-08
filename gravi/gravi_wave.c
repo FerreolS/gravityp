@@ -2104,24 +2104,27 @@ cpl_error_code  gravi_compute_wave (gravi_data * wave_map,
      */
     
     int DO_IT=0;
-    if (gravi_param_get_string(parlist, "gravity.calib.wave-mode") == "PIXEL")
+    const char * wave_mode = gravi_param_get_string (parlist, "gravity.calib.wave-mode");
+    if (!strcmp (wave_mode,"PIXEL"))
         DO_IT = 1;
-    if (gravi_param_get_string(parlist, "gravity.calib.wave-mode") == "BASELINE")
+    if (!strcmp (wave_mode,"BASELINE"))
         DO_IT = 0;
-    if (gravi_param_get_string(parlist, "gravity.calib.wave-mode") == "AUTO")
-        if (gravi_pfits_get_spec_res(raw_header) == "LOW")
+    if (!strcmp (wave_mode,"AUTO"))
+    {
+        if (!strcmp (gravi_pfits_get_spec_res(raw_header), "LOW"))
             DO_IT = 1;
         else
             DO_IT = 0;
+    }
     cpl_msg_info(cpl_func, "Option wave-mode : %s and spec res : %s : do it : %d ",
             gravi_param_get_string(parlist, "gravity.calib.wave-mode"),
             gravi_pfits_get_spec_res(raw_header), DO_IT);
 
     
-    cpl_msg_info (cpl_func, "Additional Wavelength Fit");
     
     if (type_data == GRAVI_SC && DO_IT == 1)
     {
+        cpl_msg_info (cpl_func, "Additional Wavelength Fit");
         cpl_table * wave_individual_table = cpl_table_new (1);
         cpl_table * weight_individual_table   = cpl_table_new (1);
         cpl_table * wave_fitted_table = cpl_table_new (1);
