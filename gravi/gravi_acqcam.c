@@ -845,6 +845,7 @@ cpl_error_code gravi_acq_measure_strehl(cpl_image * img, double x, double y,
     *SR = (double) strehl.strehl_value.data;
     FREE (hdrl_image_delete, sub_hdrl);
     FREE (cpl_image_delete, sub_image);
+    hdrl_parameter_delete(strehl_params);
 
     gravi_msg_function_exit(0);
     return CPL_ERROR_NONE;
