@@ -51,8 +51,8 @@
                                   Defines
  -----------------------------------------------------------------------------*/
 
-#define GRAVI_DEFAULT_LBD_MIN 1.999e-6
-#define GRAVI_DEFAULT_LBD_MAX 2.450e-6
+#define GRAVI_DEFAULT_LBD_MIN 2e-6//1.988e-6
+#define GRAVI_DEFAULT_LBD_MAX 2.490e-6
 
 /*-----------------------------------------------------------------------------
                               Private prototypes
@@ -188,10 +188,11 @@ cpl_table * gravi_create_oiwave_table_sc (cpl_table * wave_table,
     double min_wave = GRAVI_DEFAULT_LBD_MIN;
 
     /* set the calibrated eff_wave for LOW res*/
-    double calib_eff_wave[12] = {7.2826E-08,
+    double calib_eff_wave[13] = {7.2826E-08,
                                  1.0747E-07,
                                  1.1168E-07,
                                  1.1024E-07,
+                                 1.1269E-07,
                                  1.1269E-07,
                                  1.3193E-07,
                                  1.2134E-07,
@@ -207,13 +208,13 @@ cpl_table * gravi_create_oiwave_table_sc (cpl_table * wave_table,
     qc_max = cpl_propertylist_get_double (header, QC_MAXWAVE(GRAVI_SC));
     CPLCHECK_NUL ("Cannot read the QC MINWAVE MAXWAVE");
 
-    /* Check the limit of the WAVE */
+    /* Check the limit of the WAVE
     if ( qc_min >= min_wave ||
          qc_max <= max_wave ) {
         cpl_msg_warning (cpl_func, "WAVE doesn't extend over the K-band, use the QC parameters");
         min_wave = qc_min + 0.00001e-6;
         max_wave = qc_max - 0.00001e-6;
-    }
+    }*/
     
     /* Get the nwave */
     cpl_size nwave = gravi_wave_get_nlambda (wave_table, min_wave, max_wave);

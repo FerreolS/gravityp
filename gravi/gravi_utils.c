@@ -702,6 +702,10 @@ int gravi_wave_get_nlambda(cpl_table *wave_data, double lambda_min, double lambd
     
     cpl_msg_info (cpl_func, "min=%e, max=%e, n=%f, res=%e, n=%i", lambda_min, lambda_max, (lambda_max-lambda_min)/res, res, n_element);
 
+    // add security here, or the interpolation will crash sometimes
+    if (n_element > n_wave)
+        n_element = n_wave;
+    
     return n_element;
 }
 

@@ -1545,7 +1545,7 @@ cpl_table * gravi_wave_fit_individual (cpl_table * wave_individual_table,
     
     cpl_msg_info (cpl_func, "Now fitting polynomials on wavelength channels");
     
-    cpl_matrix * coef_to_wave = cpl_matrix_new (n_region / npol,4);
+    cpl_matrix * coef_to_wave = cpl_matrix_new (n_region / npol,5);
     cpl_matrix * coef_to_wave_weight = cpl_matrix_new (n_region / npol,n_region / npol);
     cpl_matrix * wavelength = cpl_matrix_new(n_region / npol,1);
     
@@ -1557,9 +1557,8 @@ cpl_table * gravi_wave_fit_individual (cpl_table * wave_individual_table,
         cpl_matrix_set (coef_to_wave, region, 1, mean_region);
         cpl_matrix_set (coef_to_wave, region, 2, mean_region*mean_region);
         cpl_matrix_set (coef_to_wave, region, 3, mean_region*mean_region*mean_region);
+        cpl_matrix_set (coef_to_wave, region, 4, mean_region*mean_region*mean_region*mean_region);
     }
-    
-    
     
     for (int pol = 0; pol < npol; pol++) {
         
@@ -1589,7 +1588,7 @@ cpl_table * gravi_wave_fit_individual (cpl_table * wave_individual_table,
             cpl_matrix * wavelength2 = cpl_matrix_product_create(coef_to_wave_weight,wavelength);
             
             // Fit a second order polynomial
-            cpl_matrix * coeff = cpl_matrix_solve_normal(coef_to_wave2, wavelength2); // 4 x 1
+            cpl_matrix * coeff = cpl_matrix_solve_normal(coef_to_wave2, wavelength2); // 5 x 1
             cpl_matrix * wavelength_fitted = cpl_matrix_product_create(coef_to_wave, coeff); // n_region / npol x 1
             
             CPLCHECK_NUL ("Cannot do Matrix inversion to calculate optimum polynomial for wavelength");
