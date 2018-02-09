@@ -2810,10 +2810,21 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         mttx[tel] = mttx[tel] / TWOPI * 360. * 3600. * 1000.;
         mtty[tel] = mtty[tel] / TWOPI * 360. * 3600. * 1000.;
         // now convert tp pixel above should be in radians, divide by pixel scale to get pixel
-        double scale = 0.0;
+	// FE 2018-02-09 using default 18 mas/pixel from UTs, because division by 0.0 would cause NAN problems below
+        // double scale = 0.0;
+        double scale = 18.0;
         sprintf (card,"ESO QC ACQ FIELD%d SCALE", tel+1);
         if (cpl_propertylist_has (header, card))
             scale = cpl_propertylist_get_double (header, card);
+
+	// FE 2018-02-09 check if telescope given, otherwise
+	// receiver pos are all zero and we get NaN
+	/* Get telname */
+	const char * telname = gravi_conf_get_telname (tel, header);
+	if (telname == NULL) {
+	  mttx[tel] = 0.;
+	  mtty[tel] = 0.;
+	}
 
         mttx[tel] = mttx[tel] / scale;
         mtty[tel] = mtty[tel] / scale;
