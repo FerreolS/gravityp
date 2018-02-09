@@ -679,7 +679,7 @@ int gravi_wave_get_nlambda(cpl_table *wave_data, double lambda_min, double lambd
     /* SC low resolution case */
     /* Not implemented in low resolution due to tighter wavelength limits than 1.99-2.45 microns */
     if (( res >= 0.95*sc_low_res) && (res <= 1.05*sc_low_res)) {
-        n_element = round(((lambda_max-lambda_min)/sc_low_res) + 1);
+        n_element = round(((lambda_max-lambda_min)/sc_low_res) + 2); // plus two, because it is always better to have a little margin at low resolution, especially with the 3 pixels interpolation
         cpl_msg_info (cpl_func, "Chosen SC LOW spectral resolution element = %e m, n_element = %i", sc_low_res, n_element);
     }
     

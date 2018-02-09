@@ -51,8 +51,8 @@
                                   Defines
  -----------------------------------------------------------------------------*/
 
-#define GRAVI_DEFAULT_LBD_MIN 2e-6//1.988e-6
-#define GRAVI_DEFAULT_LBD_MAX 2.490e-6
+#define GRAVI_DEFAULT_LBD_MIN 1.9900e-6//1.988e-6
+#define GRAVI_DEFAULT_LBD_MAX 2.4905e-6
 
 /*-----------------------------------------------------------------------------
                               Private prototypes
@@ -188,10 +188,11 @@ cpl_table * gravi_create_oiwave_table_sc (cpl_table * wave_table,
     double min_wave = GRAVI_DEFAULT_LBD_MIN;
 
     /* set the calibrated eff_wave for LOW res*/
-    double calib_eff_wave[13] = {7.2826E-08,
+    double calib_eff_wave[14] = {7.2826E-08,
                                  1.0747E-07,
                                  1.1168E-07,
                                  1.1024E-07,
+                                 1.1028E-07,
                                  1.1269E-07,
                                  1.1269E-07,
                                  1.3193E-07,
@@ -237,7 +238,7 @@ cpl_table * gravi_create_oiwave_table_sc (cpl_table * wave_table,
         // introduce *2 to be closer to the real Band pass
         cpl_table_set (oiwave_table, "EFF_BAND", wave, (max_wave-min_wave)/(nwave-1)*2);
         //for LOW mode (nwave=11) set to measured bandpass
-        if (nwave == 12) cpl_table_set (oiwave_table, "EFF_BAND", wave, calib_eff_wave[wave]);
+        if (nwave == 14) cpl_table_set (oiwave_table, "EFF_BAND", wave, calib_eff_wave[wave]);
     }
 
     gravi_msg_function_exit(1);
@@ -896,8 +897,7 @@ cpl_error_code gravi_p2vm_normalisation (gravi_data * p2vm_map,
                     cpl_matrix_delete (matrix_T);
                     cpl_matrix_delete (matrix_I);
                     cpl_matrix_delete (matrix_c);
-                    break;
-                }
+                } else {
                 
                 /* Store the total flux for each tel (will be used to compute
                  * the mean over wave, output and files) in [e/dit/output] */
@@ -925,6 +925,7 @@ cpl_error_code gravi_p2vm_normalisation (gravi_data * p2vm_map,
                 FREE (cpl_matrix_delete, matrix_c);
                 FREE (cpl_matrix_delete, matrix_I);
                 FREE (cpl_matrix_delete, matrix_T);
+                }
             } /* end loop on WAVE */
         } /* end loop on baseline */
 
