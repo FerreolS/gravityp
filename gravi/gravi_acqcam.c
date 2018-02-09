@@ -831,10 +831,10 @@ cpl_error_code gravi_acq_measure_strehl(cpl_image * img, double x, double y,
     /* Hardcoded Mirror diameters */
     if (telname[0] == 'U') {
         strehl_params = 
-            hdrl_strehl_parameter_create(1.8e-6, 8.0, 1.3, pscale*1e-3, pscale*1e-3, 0.8, 0.8, 1.0);
+            hdrl_strehl_parameter_create(1.8e-6, 8.0/2.0, 1.126/2.0, pscale*1e-3, pscale*1e-3, 0.8, 0.8, 1.0);
     } else if (telname[0] == 'A') {
         strehl_params = 
-            hdrl_strehl_parameter_create(1.8e-6, 1.8, 0.138, pscale*1e-3, pscale*1e-3, 0.8, 0.8, 1.0);
+            hdrl_strehl_parameter_create(1.8e-6, 1.8/2.0, 0.138/2.0, pscale*1e-3, pscale*1e-3, 0.8, 0.8, 1.0);
     }
 
     hdrl_strehl_result strehl;
