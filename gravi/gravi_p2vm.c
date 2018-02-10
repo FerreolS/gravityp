@@ -51,8 +51,8 @@
                                   Defines
  -----------------------------------------------------------------------------*/
 
-#define GRAVI_DEFAULT_LBD_MIN 1.9900e-6//1.988e-6
-#define GRAVI_DEFAULT_LBD_MAX 2.4905e-6
+#define GRAVI_DEFAULT_LBD_MIN 1.99e-6//1.988e-6
+#define GRAVI_DEFAULT_LBD_MAX 2.45e-6//2.4905e-6
 
 /*-----------------------------------------------------------------------------
                               Private prototypes
