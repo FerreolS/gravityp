@@ -1043,9 +1043,10 @@ cpl_error_code gravi_interpolate_spectrum_table (cpl_table * spectrum_table,
                         weight_m[iw]/=Fm;
                         
                         // normalize the weight to conserve the variance
-                        norm = sqrt( pow(weight_m[iw],2) +  pow(weight_i[iw],2) + pow(weight_p[iw],2));
-			/* FE: the original 2 pixel interpolation applies normalization to preserve photon noise) */ 
-			// double norm = weight_m[iw] +  weight_i[iw] + weight_p[iw];
+                        //norm = sqrt( pow(weight_m[iw],2) +  pow(weight_i[iw],2) + pow(weight_p[iw],2));
+			/* FE: the original 2 pixel interpolation applies normalization to preserve photon noise) */
+                        norm = weight_m[iw] +  weight_i[iw] + weight_p[iw];
+                        /* SL: changed to simple sum(weights) =1 */
                         weight_p[iw]/=norm;
                         weight_i[iw]/=norm;
                         weight_m[iw]/=norm;
@@ -1167,9 +1168,10 @@ cpl_error_code gravi_interpolate_spectrum_table (cpl_table * spectrum_table,
                         weight_m[iw]/=Fm;
                         
                         // normalize the weight to conserve the variance
-                        norm = sqrt( pow(weight_m[iw],2) + pow(weight_p[iw],2));
+                        //norm = sqrt( pow(weight_m[iw],2) + pow(weight_p[iw],2));
+                        norm = weight_m[iw]+ weight_p[iw];
                         /* FE: the original 2 pixel interpolation applies normalization to preserve photon noise) */
-                        // double norm = weight_m[iw] +  weight_i[iw] + weight_p[iw];
+                        /* SL: changed to simple sum(weights) =1 */
                         weight_p[iw]/=norm;
                         weight_m[iw]/=norm;
                         

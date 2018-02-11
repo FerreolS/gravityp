@@ -51,8 +51,10 @@
                                   Defines
  -----------------------------------------------------------------------------*/
 
-#define GRAVI_DEFAULT_LBD_MIN 1.99e-6//1.988e-6
-#define GRAVI_DEFAULT_LBD_MAX 2.45e-6//2.4905e-6
+#define GRAVI_DEFAULT_LBD_MIN 1.99e-6
+#define GRAVI_DEFAULT_LBD_MAX 2.45e-6
+#define GRAVI_LOW_LBD_MIN 2.0000e-6
+#define GRAVI_LOW_LBD_MAX 2.481e-6
 
 /*-----------------------------------------------------------------------------
                               Private prototypes
@@ -183,9 +185,6 @@ cpl_table * gravi_create_oiwave_table_sc (cpl_table * wave_table,
     cpl_ensure (wave_table, CPL_ERROR_NULL_INPUT, NULL);
     cpl_ensure (header,     CPL_ERROR_NULL_INPUT, NULL);
 
-    /* Get the max_wave and min_wave*/
-    double max_wave = GRAVI_DEFAULT_LBD_MAX;
-    double min_wave = GRAVI_DEFAULT_LBD_MIN;
 
     /* set the calibrated eff_wave for LOW res*/
     double calib_eff_wave[14] = {7.2826E-08,
@@ -202,20 +201,29 @@ cpl_table * gravi_create_oiwave_table_sc (cpl_table * wave_table,
                                  1.0834E-07,
                                  1.0147E-07,
                                  1.0147E-07};
-
+    
     /* Get the QC */
     double qc_min, qc_max;
     qc_min = cpl_propertylist_get_double (header, QC_MINWAVE(GRAVI_SC));
     qc_max = cpl_propertylist_get_double (header, QC_MAXWAVE(GRAVI_SC));
     CPLCHECK_NUL ("Cannot read the QC MINWAVE MAXWAVE");
-
-    /* Check the limit of the WAVE
-    if ( qc_min >= min_wave ||
-         qc_max <= max_wave ) {
-        cpl_msg_warning (cpl_func, "WAVE doesn't extend over the K-band, use the QC parameters");
-        min_wave = qc_min + 0.00001e-6;
-        max_wave = qc_max - 0.00001e-6;
-    }*/
+    
+    /* Get the max_wave and min_wave*/
+    int n_element = cpl_table_get_column_depth (wave_table, "DATA1");
+    CPLCHECK_NUL ("Cannot get the number of elements");
+    double max_wave ,min_wave ;
+    if (n_element<20)
+    {
+        max_wave = GRAVI_LOW_LBD_MAX;
+        min_wave = GRAVI_LOW_LBD_MIN;
+        cpl_msg_info (cpl_func,"Using Low resolution wavelength table");
+        
+    }else{
+        max_wave = GRAVI_DEFAULT_LBD_MAX;
+        min_wave = GRAVI_DEFAULT_LBD_MIN;
+        cpl_msg_info (cpl_func,"Using High/Med resolution wavelength table");
+    }
+    CPLCHECK_NUL ("Cannot get the max_wave and min_wave");
     
     /* Get the nwave */
     cpl_size nwave = gravi_wave_get_nlambda (wave_table, min_wave, max_wave);
