@@ -187,20 +187,24 @@ cpl_table * gravi_create_oiwave_table_sc (cpl_table * wave_table,
 
 
     /* set the calibrated eff_wave for LOW res*/
-    double calib_eff_wave[14] = {7.2826E-08,
-                                 1.0747E-07,
-                                 1.1168E-07,
-                                 1.1024E-07,
-                                 1.1028E-07,
-                                 1.1269E-07,
-                                 1.1269E-07,
-                                 1.3193E-07,
-                                 1.2134E-07,
-                                 1.0989E-07,
-                                 1.0876E-07,
-                                 1.0834E-07,
-                                 1.0147E-07,
-                                 1.0147E-07};
+    /* OP 2018-02-12: new bandwidths measured for 3pix interpolation 
+                      average of the six P1 baselines
+		      also valid for P2
+    */
+    double calib_eff_wave[14] = {7.046E-08,
+                                 1.243E-07,
+                                 1.342E-07,
+                                 1.278E-07,
+                                 1.255E-07,
+                                 1.345E-07,
+                                 1.423E-07,
+                                 1.332E-07,
+                                 1.235E-07,
+                                 1.165E-07,
+                                 1.158E-07,
+                                 1.157E-07,
+                                 1.120E-07,
+                                 9.597E-08};
     
     /* Get the QC */
     double qc_min, qc_max;
