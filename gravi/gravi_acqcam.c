@@ -90,7 +90,8 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
                                    cpl_imagelist * acqcam_imglist,
                                    cpl_propertylist * header,
                                    cpl_table * acqcam_table,
-                                   cpl_propertylist * o_header);
+                                   cpl_propertylist * o_header,
+                                   cpl_boolean calculate_strehl);
 
 cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y,
                                        double *ex, double *ey, cpl_size size);
@@ -1172,7 +1173,8 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
                                    cpl_imagelist * acqcam_imglist,
                                    cpl_propertylist * header,
                                    cpl_table * acqcam_table,
-                                   cpl_propertylist * o_header)
+                                   cpl_propertylist * o_header,
+                                   cpl_boolean calculate_strehl)
 {
     gravi_msg_function_start(1);
     cpl_ensure_code (mean_img,       CPL_ERROR_NULL_INPUT);
@@ -1623,19 +1625,21 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             /*-------------------------------------*/
             /* Strehl computation of current frame */
             /*-------------------------------------*/
-            double Strehl = 1.0;
-            if ((xFT != 0.0) && (pscale > 13.0)) {
-                gravi_acq_measure_strehl(img, xFT, yFT, pscale, &Strehl, header);
-                total_Strehl += Strehl;
-                nStrehl += 1;
-                cpl_table_set (acqcam_table, "FIELD_STREHL", row*ntel+tel, Strehl);
-            } else if (pscale == 0) {
-                gravi_acq_measure_strehl(img, xFT, yFT, scale, &Strehl, header);
-                total_Strehl += Strehl;
-                nStrehl += 1;
-                cpl_table_set (acqcam_table, "FIELD_STREHL", row*ntel+tel, Strehl);
-            } else {
-                cpl_table_set (acqcam_table, "FIELD_STREHL", row*ntel+tel, -1.0);
+            if (calculate_strehl) {
+                double Strehl = 1.0;
+                if ((xFT != 0.0) && (pscale > 13.0)) {
+                    gravi_acq_measure_strehl(img, xFT, yFT, pscale, &Strehl, header);
+                    total_Strehl += Strehl;
+                    nStrehl += 1;
+                    cpl_table_set (acqcam_table, "FIELD_STREHL", row*ntel+tel, Strehl);
+                } else if (pscale == 0) {
+                    gravi_acq_measure_strehl(img, xFT, yFT, scale, &Strehl, header);
+                    total_Strehl += Strehl;
+                    nStrehl += 1;
+                    cpl_table_set (acqcam_table, "FIELD_STREHL", row*ntel+tel, Strehl);
+                } else {
+                    cpl_table_set (acqcam_table, "FIELD_STREHL", row*ntel+tel, -1.0);
+                }
             }
             
         } /* End loop on images */
@@ -1644,17 +1648,19 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         /* Average Strehl computation  */
         /*-----------------------------*/
         
-        sprintf (qc_name, "ESO QC ACQ FIELD%i STREHL", tel+1);
-        if (nStrehl == 0) {
-            /* Fitting failed: put QC to 0. */
-            qc_val = 0.;
-        } else {
-            /* Fiting succeeded: shift into full frame */
-            qc_val =  total_Strehl/((double)nStrehl);
+        if (calculate_strehl) {
+            sprintf (qc_name, "ESO QC ACQ FIELD%i STREHL", tel+1);
+            if (nStrehl == 0) {
+                /* Fitting failed: put QC to 0. */
+                qc_val = 0.;
+            } else {
+                /* Fiting succeeded: shift into full frame */
+                qc_val =  total_Strehl/((double)nStrehl);
+            }
+            cpl_msg_info (cpl_func, "%s = %f", qc_name, qc_val);
+            cpl_propertylist_update_double (o_header, qc_name, qc_val);
+            cpl_propertylist_set_comment (o_header, qc_name, "Average Strehl value from AcqCam images");
         }
-        cpl_msg_info (cpl_func, "%s = %f", qc_name, qc_val);
-        cpl_propertylist_update_double (o_header, qc_name, qc_val);
-        cpl_propertylist_set_comment (o_header, qc_name, "Average Strehl value from AcqCam images");
         
     } /* End loop on tel */
     
@@ -1679,7 +1685,8 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
 /*----------------------------------------------------------------------------*/
 
 cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
-                                    gravi_data * input_data)
+                                    gravi_data * input_data,
+                                    cpl_boolean calculate_strehl)
 {
     gravi_msg_function_start(1);
     cpl_ensure_code (output_data, CPL_ERROR_NULL_INPUT);
@@ -1724,7 +1731,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
 
     /* Compute FIELD columns */
     gravi_acqcam_field (mean_img, acqcam_imglist, header,
-                        acqcam_table, o_header);
+                        acqcam_table, o_header, calculate_strehl);
 	CPLCHECK_MSG ("Cannot reduce field images");
     
     

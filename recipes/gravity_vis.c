@@ -244,12 +244,20 @@ static int gravity_vis_create(cpl_plugin * plugin)
 	cpl_parameterlist_append (recipe->parameters, p);
 
     /* Reduce ACQ_CAM */
-	p = cpl_parameter_new_value ("gravity.test.reduce-acq-cam", CPL_TYPE_BOOL,
+    p = cpl_parameter_new_value ("gravity.test.reduce-acq-cam", CPL_TYPE_BOOL,
                                  "If TRUE, reduced ACQ_CAM images",
                                  "gravity.test", FALSE);
-	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "reduce-acq-cam");
-	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
-	cpl_parameterlist_append (recipe->parameters, p);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "reduce-acq-cam");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (recipe->parameters, p);
+
+    /* Add Strehl calculation to ACQ_CAM reduction */
+    p = cpl_parameter_new_value ("gravity.test.reduce-acq-cam-strehl", CPL_TYPE_BOOL,
+                                 "If TRUE, add Strehl computation to ACQ_CAM processing",
+                                 "gravity.test", FALSE);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "reduce-acq-cam-strehl");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (recipe->parameters, p);
 
     /* Wave color correction */
     p = cpl_parameter_new_value ("gravity.vis.color-wave-correction", CPL_TYPE_BOOL,
@@ -722,7 +730,8 @@ static int gravity_vis(cpl_frameset * frameset,
 
         /* Reduce the Acquisition Camera and delete data */
         if (gravi_param_get_bool (parlist,"gravity.test.reduce-acq-cam")) {
-            gravi_reduce_acqcam (p2vmred_data, preproc_data);
+            cpl_boolean calculate_strehl = gravi_param_get_bool (parlist,"gravity.test.reduce-acq-cam-strehl");
+            gravi_reduce_acqcam (p2vmred_data, preproc_data, calculate_strehl);
         }
         
         /* Move extensions and delete preproc */
