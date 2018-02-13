@@ -2765,6 +2765,40 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         }
     }
     
+    /* FE: 2018-02-12: put QC parameters with residual Mean and simple TT and ASTIG estimates;
+       simple means, not taking into acount detailed receiver positions, but working
+       on sum and differences of opposite diodes; 
+       convention such that results give "residual in nm per diode"
+       OFFS      = Mean of all diodes 
+                 = (D0 + D1 + D2 + D3) / 4
+       TIP/TILT  = 1/2 * difference of opposite diodes
+       TIP       = (D0 - D2) / 2
+       TILT      = (D1 - D3) / 2
+       ASTIG     = 1/2 * difference of Mean of opposite Diodes) = 
+                 = [ (D0 + D2) / 2 - (D1 + D3) / 2 ] / 2
+                 = (D0 - D1 + D2 - D3) / 4
+    */
+    
+    char qc_name[100];
+    for (int tel=0; tel<ntel; tel++) {
+        sprintf (qc_name, "ESO QC MET OFF%i", tel+1);
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, (mmet[tel][0]+mmet[tel][1]+mmet[tel][2]+mmet[tel][3])/4.*1e9);
+        cpl_propertylist_update_double (header, qc_name, (mmet[tel][0]+mmet[tel][1]+mmet[tel][2]+mmet[tel][3])/4.*1e9);
+        cpl_propertylist_set_comment (header, qc_name, "[nm] residual metrology offset");
+        sprintf (qc_name, "ESO QC MET TIP%i", tel+1);
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, (mmet[tel][0]-mmet[tel][2])/2.*1e9);
+        cpl_propertylist_update_double (header, qc_name, (mmet[tel][0]-mmet[tel][2])/2.*1e9);
+        cpl_propertylist_set_comment (header, qc_name, "[nm] residual metrology tip");
+        sprintf (qc_name, "ESO QC MET TILT%i", tel+1);
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, (mmet[tel][1]-mmet[tel][3])/2.*1e9);
+        cpl_propertylist_update_double (header, qc_name, (mmet[tel][1]-mmet[tel][3])/2.*1e9);
+        cpl_propertylist_set_comment (header, qc_name, "[nm] residual metrology tilt");
+        sprintf (qc_name, "ESO QC MET ASTIG%i", tel+1);
+        cpl_msg_info (cpl_func, "%s = %f", qc_name,(mmet[tel][0]-mmet[tel][1]+mmet[tel][2]-mmet[tel][3])/4.*1e9);
+        cpl_propertylist_update_double (header, qc_name, (mmet[tel][0]-mmet[tel][1]+mmet[tel][2]-mmet[tel][3])/4.*1e9);
+        cpl_propertylist_set_comment (header, qc_name, "[nm] residual metrology astigmatism");
+    }
+    
     /* FE: calculate residual tilt of metrology signal for each telescope and convert to 
        equivalent dx,dy on detector. In other words, output the calibration error of fc_fiber_dxy
     */
@@ -2810,22 +2844,22 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         mttx[tel] = mttx[tel] / TWOPI * 360. * 3600. * 1000.;
         mtty[tel] = mtty[tel] / TWOPI * 360. * 3600. * 1000.;
         // now convert tp pixel above should be in radians, divide by pixel scale to get pixel
-	// FE 2018-02-09 using default 18 mas/pixel from UTs, because division by 0.0 would cause NAN problems below
+        // FE 2018-02-09 using default 18 mas/pixel from UTs, because division by 0.0 would cause NAN problems below
         // double scale = 0.0;
         double scale = 18.0;
         sprintf (card,"ESO QC ACQ FIELD%d SCALE", tel+1);
         if (cpl_propertylist_has (header, card))
             scale = cpl_propertylist_get_double (header, card);
-
-	// FE 2018-02-09 check if telescope given, otherwise
-	// receiver pos are all zero and we get NaN
-	/* Get telname */
-	const char * telname = gravi_conf_get_telname (tel, header);
-	if (telname == NULL) {
-	  mttx[tel] = 0.;
-	  mtty[tel] = 0.;
-	}
-
+        
+        // FE 2018-02-09 check if telescope given, otherwise
+        // receiver pos are all zero and we get NaN
+        /* Get telname */
+        const char * telname = gravi_conf_get_telname (tel, header);
+        if (telname == NULL) {
+            mttx[tel] = 0.;
+            mtty[tel] = 0.;
+        }
+        
         mttx[tel] = mttx[tel] / scale;
         mtty[tel] = mtty[tel] / scale;
         // rotate to sky (north, east) using parang
@@ -2851,7 +2885,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     cpl_msg_info (cpl_func,"FE: correction for dxy of GV4: %g %g pixel", mttdx[3], mttdy[3]);
     
     /* Add QC parameters for the corrections */
-    char qc_name[100];
+    // FE: declared above
+    // char qc_name[100];
     for (int tel=0; tel<ntel; tel++) {
         sprintf (qc_name, "ESO QC MET FIBER SC%iDX", tel+1);
         cpl_msg_info (cpl_func, "%s = %f", qc_name, mttdx[tel]);
@@ -2861,6 +2896,74 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         cpl_msg_info (cpl_func, "%s = %f", qc_name, mttdy[tel]);
         cpl_propertylist_update_double (header, qc_name, mttdy[tel]);
         cpl_propertylist_set_comment (header, qc_name, "[pix] SC fiber offset measured by tel metrology");
+    }
+    
+    /* FE 2018-02-10 Calculate best guess offset of SC fiber from 
+       desired SOBJXY given by SC_FIBER_DX - QC.MET.FIBER.SCiDX: 
+       sobj_dx/y in pixel on acqcam
+       sobj_dra/dec in mas on sky
+       sign convention is such that sobj_dxy is identical to value measured by acqcam
+       when residual metrology tilt is zero, and - QC.MET.FIBER.SCiDX in case the acqcam
+       doesn't see any error, but the metrology does */
+    
+    double sobj_dx[4]; /* total offset in pixel in acqcam coordinates */
+    double sobj_dy[4]; /* total offset in pixel in acqcam coordinates */
+    double sobj_dra[4]; /* total RA offset in mas */
+    double sobj_ddec[4]; /* total DEC offset in mas */
+    double sc_fiber_dx[4]; /* pixel offset measured by AcqCam (without taking into account metrology tilt) in pixel */
+    double sc_fiber_dy[4]; /* pixel offset measured by AcqCam (without taking into account metrology tilt) in pixel */
+    
+    for (int tel=0; tel<ntel; tel++) {
+        
+        /* in acquisition camera X/Y pixel */
+        sprintf (card,"ESO QC ACQ FIELD%d SC_FIBER_DX", tel+1);
+        if (cpl_propertylist_has (header, card)) {
+            sc_fiber_dx[tel] = cpl_propertylist_get_double (header, card);
+            sobj_dx[tel] = sc_fiber_dx[tel] - mttdx[tel];
+        } else {
+            sobj_dx[tel] = - mttdx[tel];
+        }
+        sprintf (card,"ESO QC ACQ FIELD%d SC_FIBER_DY", tel+1);
+        if (cpl_propertylist_has (header, card)) {
+            sc_fiber_dy[tel] = cpl_propertylist_get_double (header, card);
+            sobj_dy[tel] = sc_fiber_dy[tel] - mttdy[tel];
+        } else {
+            sobj_dy[tel] = - mttdy[tel];
+        }
+        
+        sprintf (qc_name, "ESO QC MET SOBJ DX%i", tel+1);
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, sobj_dx[tel]);
+        cpl_propertylist_update_double (header, qc_name, sobj_dx[tel]);
+        cpl_propertylist_set_comment (header, qc_name, "[pixel] x offset from SOBJ");
+        sprintf (qc_name, "ESO QC MET SOBJ DY%i", tel+1);
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, sobj_dy[tel]);
+        cpl_propertylist_update_double (header, qc_name, sobj_dy[tel]);
+        cpl_propertylist_set_comment (header, qc_name, "[pixel] y offset from SOBJ");
+        
+        /* on Sky in RA/DEC mas, undoing above ttdx calculation now for 
+           offset including offset measured on acqcam */
+        // rotate from acqcam to sky 
+        // FE 2018-02-10: below declaration should be done one in the beginning
+        double northangle = gravi_pfits_get_fangle_acqcam (header, tel);
+        sobj_dra[tel]  = sobj_dx[tel]*cos(northangle * CPL_MATH_RAD_DEG ) - sobj_dy[tel]*sin(northangle * CPL_MATH_RAD_DEG ); 
+        sobj_ddec[tel] = sobj_dx[tel]*sin(northangle * CPL_MATH_RAD_DEG ) + sobj_dy[tel]*cos(northangle * CPL_MATH_RAD_DEG );
+        // convert to mas 
+        // FE 2018-02-10 using the same dafault as above, if no acqcam measurement available
+        double scale = 18.0;
+        sprintf (card,"ESO QC ACQ FIELD%d SCALE", tel+1);
+        if (cpl_propertylist_has (header, card))
+            scale = cpl_propertylist_get_double (header, card);
+        sobj_dra[tel]  = sobj_dra[tel] * scale;
+        sobj_ddec[tel] = sobj_ddec[tel] * scale;
+        
+        sprintf (qc_name, "ESO QC MET SOBJ DRA%i", tel+1);
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, sobj_dra[tel]);
+        cpl_propertylist_update_double (header, qc_name, sobj_dra[tel]);
+        cpl_propertylist_set_comment (header, qc_name, "[mas] RA offset from SOBJ");
+        sprintf (qc_name, "ESO QC MET SOBJ DDEC%i", tel+1);
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, sobj_ddec[tel]);
+        cpl_propertylist_update_double (header, qc_name, sobj_ddec[tel]);
+        cpl_propertylist_set_comment (header, qc_name, "[pixel] DEC offset from SOBJ");
     }
     
     
