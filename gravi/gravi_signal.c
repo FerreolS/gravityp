@@ -109,7 +109,8 @@ cpl_error_code gravi_vis_create_opddisp_sc (cpl_table * vis_SC,
 
 cpl_error_code gravi_vis_create_imagingref_sc (cpl_table * vis_SC,
                                                cpl_table * wave_table,
-                                               cpl_propertylist * header);
+                                               cpl_propertylist * header,
+                                               const cpl_parameterlist * parlist);
 
 /*-----------------------------------------------------------------------------
                                  Function code
@@ -2524,7 +2525,8 @@ cpl_error_code gravi_vis_create_opddisp_sc (cpl_table * vis_SC,
 
 cpl_error_code gravi_vis_create_imagingref_sc (cpl_table * vis_SC,
                                                 cpl_table * wave_table,
-                                                cpl_propertylist * header)
+                                                cpl_propertylist * header,
+                                                const cpl_parameterlist * parlist)
 {
     gravi_msg_function_start(1);
     cpl_ensure_code (vis_SC,     CPL_ERROR_NULL_INPUT);
@@ -2539,6 +2541,8 @@ cpl_error_code gravi_vis_create_imagingref_sc (cpl_table * vis_SC,
     double * ucoord        = cpl_table_get_data_double (vis_SC, "UCOORD");
     double * vcoord        = cpl_table_get_data_double (vis_SC, "VCOORD");
     cpl_array ** phase_ref = cpl_table_get_data_array  (vis_SC, "PHASE_REF");
+    double * opd_met_telfc_mcorr = NULL;
+    double * opd_met_fc_corr     = NULL;
     CPLCHECK_MSG ("Cannot get input data");
 
     /* If OPD_DISP is not computed, we cannot compute IMAGING_REF neither */
@@ -2560,11 +2564,28 @@ cpl_error_code gravi_vis_create_imagingref_sc (cpl_table * vis_SC,
     cpl_array ** phaseref = cpl_table_get_data_array (vis_SC, "IMAGING_REF");
     CPLCHECK_MSG ("Cannot create column");
 
+    /* Check use of telescope metrology */
+    cpl_boolean use_tel_met = gravi_param_get_bool (parlist, "gravity.signal.use-tel-met");
+    if (use_tel_met) {
+        cpl_msg_info (cpl_func,"Use telescope metrology for IMAGING_REF computation");
+        opd_met_telfc_mcorr = cpl_table_get_data_double (vis_SC, "OPD_MET_TELFC_MCORR");
+        opd_met_fc_corr = cpl_table_get_data_double (vis_SC, "OPD_MET_TELFC_MCORR");
+    } else {
+        cpl_msg_info (cpl_func,"Use fiber coupler metrology for IMAGING_REF computation");
+    }
+
     /* Compute the reference phase for each row */
     for (cpl_size row = 0; row < nrow; row ++) {
 
         /* New array */
         phaseref[row] = cpl_array_new (nwave, CPL_TYPE_DOUBLE);
+
+        /* If requested, use telescope metrology */
+        // OPD_MET_TEL_CORR averages to a few nanometers and is not used below.
+        double opd_met_telfc = 0.0;  // [rad]
+        if (use_tel_met) {
+            opd_met_telfc = opd_met_telfc_mcorr[row] + opd_met_fc_corr[row];
+        }
 
         /* Compute VISPHI for each wavelength */
         for (int w = 0; w < nwave; w++) {
@@ -2576,7 +2597,8 @@ cpl_error_code gravi_vis_create_imagingref_sc (cpl_table * vis_SC,
             cpl_array_set (phaseref[row], w,
                            cpl_array_get (phase_ref[row], w, NULL)
                            - cpl_array_get (opd_disp[row],  w, NULL)  * CPL_MATH_2PI / wavelength
-                           + (ucoord[row] * sep_U + vcoord[row] * sep_V) * CPL_MATH_2PI / wavelength);
+                           + (ucoord[row] * sep_U + vcoord[row] * sep_V) * CPL_MATH_2PI / wavelength
+                           + opd_met_telfc * CPL_MATH_2PI / wavelength);
             CPLCHECK_MSG ("Cannot compute the imaging phase");
         }
 
@@ -2787,7 +2809,7 @@ cpl_error_code gravi_compute_signals (gravi_data * p2vmred_data,
      gravi_vis_create_phaseref_sc (vis_SC, oi_wavelengthsc, oi_wavelengthft);
 
      /* Create the IMAGING_REF phase ref, need PHASE_REF */
-     gravi_vis_create_imagingref_sc (vis_SC, oi_wavelengthsc, p2vmred_header);
+     gravi_vis_create_imagingref_sc (vis_SC, oi_wavelengthsc, p2vmred_header, parlist);
 
      CPLCHECK_MSG ("Cannot compute the PHASE_REF");
   } /* End loop on pol */

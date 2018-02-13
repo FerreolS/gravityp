@@ -593,6 +593,15 @@ cpl_error_code gravi_parameter_add_rejection (cpl_parameterlist *self, int isCal
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
     cpl_parameterlist_append (self, p);
     
+    /* Flag to activate use of telescope metrology in IMAGING_REF calculation */
+    p = cpl_parameter_new_value ("gravity.signal.use-tel-met", CPL_TYPE_BOOL,
+                                 "Flag to use telescope metrology in IMAGING_REF calculation.\n "
+                                 "If disabled, the default, fiber coupler metrology is used instead.",
+                                 "gravity.signal", FALSE);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "use-tel-met");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (self, p);
+    
     return CPL_ERROR_NONE;
 }
 
