@@ -1222,9 +1222,13 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
     /* calibration from Julien, using GJ65 observation with Sylvestre tracking on 2018-01-03, email 2018-01-10 
     double calib_dx[] = {-0.61, -1.69, -0.97,  0.00} ;
     double calib_dy[] = { 0.53, -1.07, -0.49, -0.47} ; */
-    /* calibration from Oli, using GJ65 observation with Sylvestre tracking on 2018-01-03, email 2018-01-19 */
+    /* calibration from Oli, using GJ65 observation with Sylvestre tracking on 2018-01-03, email 2018-01-19/
     double calib_dx[] = {-0.63, -1.67, -0.97,  0.02} ;
-    double calib_dy[] = { 0.55, -1.07, -0.49, -0.45} ;
+    double calib_dy[] = { 0.55, -1.07, -0.49, -0.45} ; */
+    /* FE: removing obsolete calib_dx, because now handled by ICS, or by 
+       correcting fitsheader retrospectively */
+    double calib_dx[] = {0,0,0,0} ;
+    double calib_dy[] = {0,0,0,0} ;
     
     /* If sub-windowing, we read the sub-window size */
     cpl_size nsx = 512;
