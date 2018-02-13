@@ -530,60 +530,60 @@ cpl_error_code gravi_parameter_add_rejection (cpl_parameterlist *self, int isCal
     cpl_ensure_code (self, CPL_ERROR_NULL_INPUT);
     
     cpl_parameter *p;
-	p = cpl_parameter_new_value ("gravity.signal.snr-min-ft", CPL_TYPE_DOUBLE,
+    p = cpl_parameter_new_value ("gravity.signal.snr-min-ft", CPL_TYPE_DOUBLE,
                                  "SNR threshold to accept FT frames (>0). It raises the first bit (<<0)\n "
                                  "of column REJECTION_FLAG of FT.",
                                  "gravity.signal", isCalib ? 30.0 : 3.0);
-	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "snr-min-ft");
-	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
-	cpl_parameterlist_append (self, p);
-
-	/* OPDC_STATE threshold for fringe DET in FT */
-	p = cpl_parameter_new_value ("gravity.signal.global-state-min-ft", CPL_TYPE_DOUBLE,
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "snr-min-ft");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (self, p);
+    
+    /* OPDC_STATE threshold for fringe DET in FT */
+    p = cpl_parameter_new_value ("gravity.signal.global-state-min-ft", CPL_TYPE_DOUBLE,
                                  "Minimum OPDC state to accept FT frames (>=0) It raises the second bit\n "
                                  "(<<1) of column REJECTION_FLAG of FT.",
                                  "gravity.signal", 2.0);
-	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "global-state-min-ft");
-	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
-	cpl_parameterlist_append (self, p);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "global-state-min-ft");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (self, p);
     
-	p = cpl_parameter_new_value ("gravity.signal.global-state-max-ft", CPL_TYPE_DOUBLE,
+    p = cpl_parameter_new_value ("gravity.signal.global-state-max-ft", CPL_TYPE_DOUBLE,
                                  "Maximum OPDC state to accept FT frames (>=0) It raises the second bit\n "
                                  "(<<1) of column REJECTION_FLAG of FT.",
                                  "gravity.signal", 4.0);
-	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "global-state-max-ft");
-	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
-	cpl_parameterlist_append (self, p);
-
-	/* STATE threshold for fringe DET in FT */
-	p = cpl_parameter_new_value ("gravity.signal.state-min-ft", CPL_TYPE_DOUBLE,
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "global-state-max-ft");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (self, p);
+    
+    /* STATE threshold for fringe DET in FT */
+    p = cpl_parameter_new_value ("gravity.signal.state-min-ft", CPL_TYPE_DOUBLE,
                                  "Minimum OPDC state per baseline to accept FT frames (>=0) It raises\n "
                                  "the second bit (<<1) of column REJECTION_FLAG of FT.",
                                  "gravity.signal", 1.0);
-	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "state-min-ft");
-	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
-	cpl_parameterlist_append (self, p);
-	
-	/* Minimum detection ratio to accept SC frame */
-	p = cpl_parameter_new_value ("gravity.signal.tracking-min-sc", CPL_TYPE_DOUBLE,
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "state-min-ft");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (self, p);
+    
+    /* Minimum detection ratio to accept SC frame */
+    p = cpl_parameter_new_value ("gravity.signal.tracking-min-sc", CPL_TYPE_DOUBLE,
                                  "Minimum ratio of accepted FT frames in order to accept a SC frames (0..1),\n "
                                  "that is, for each SC DIT, the fraction of the time the\n "
                                  "REJECTION_FLAG of the FT is not 0.\n "
                                  "It raises the first bit (<<0) of column REJECTION_FLAG of SC",
                                  "gravity.signal", 0.8);
-	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "tracking-min-sc");
-	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
-	cpl_parameterlist_append (self, p);
-
-	/* vFactor threshold to accept SC frame */
-	p = cpl_parameter_new_value ("gravity.signal.vfactor-min-sc", CPL_TYPE_DOUBLE,
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "tracking-min-sc");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (self, p);
+    
+    /* vFactor threshold to accept SC frame */
+    p = cpl_parameter_new_value ("gravity.signal.vfactor-min-sc", CPL_TYPE_DOUBLE,
                                  "vFactor threshold to accept SC frame (0..1).\n ",
                                  "It raises the second bit (<<1) of column REJECTION_FLAG of SC",
                                  "gravity.signal", isCalib ? 0.8 : 0.1);
-	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "vfactor-min-sc");
-	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
-	cpl_parameterlist_append (self, p);
-
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "vfactor-min-sc");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (self, p);
+    
     /* Flag to activate metrology zero calculation */
     p = cpl_parameter_new_value ("gravity.signal.use-met-zero", CPL_TYPE_BOOL,
                                  "Flag to activate metrology zero calculation in OPD_DISP.\n "

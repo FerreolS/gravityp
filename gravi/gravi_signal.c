@@ -53,27 +53,27 @@
  -----------------------------------------------------------------------------*/
 
 cpl_error_code gravi_vis_bootstrap_snr_and_delay(cpl_table * oi_vis,
-												   const char * name_snr,
-												   const char * name_gdl);
+                                                 const char * name_snr,
+                                                 const char * name_gdl);
 cpl_error_code gravi_vis_correct_phasediff(cpl_table * oi_vis1, const char *name1,
-											 cpl_table * oi_vis2, const char *name2,
-											 double * phasediff);
+                                           cpl_table * oi_vis2, const char *name2,
+                                           double * phasediff);
 cpl_error_code gravi_vis_compute_mean_phasor(cpl_table * oi_vis,
-											   const char * name_vis,
-											   const char * name_err,
-											   const char * name_pha,
-											   const char * name_var);
+                                             const char * name_vis,
+                                             const char * name_err,
+                                             const char * name_pha,
+                                             const char * name_var);
 cpl_error_code gravi_vis_compute_interspectre (cpl_table * oi_vis,
-												 const char * name_vis,
-												 const char * name_is);
+                                               const char * name_vis,
+                                               const char * name_is);
 cpl_error_code gravi_vis_compute_snr(cpl_table * oi_vis,
-									   const char * name_pha,
-									   const char * name_var,
-									   const char * name_snr);
+                                     const char * name_pha,
+                                     const char * name_var,
+                                     const char * name_snr);
 cpl_error_code gravi_vis_compute_isdelay(cpl_table * oi_vis,
-										   const char * name_isp,
-										   const char * name_gdl,
-										   cpl_table * oi_wavelength);
+                                         const char * name_isp,
+                                         const char * name_gdl,
+                                         cpl_table * oi_wavelength);
 cpl_error_code gravi_vis_create_pfactor_sc (cpl_table * vis_SC, cpl_table * flux_FT);
 cpl_error_code gravi_vis_create_f1f2_sc (cpl_table * vis_SC, cpl_table * flux_SC);
 cpl_error_code gravi_vis_create_f1f2_ft (cpl_table * vis_FT, cpl_table * flux_FT);
@@ -89,23 +89,23 @@ cpl_error_code gravi_vis_create_acq_sc (cpl_table * vis_SC,
                                         cpl_table * vis_ACQ);
 
 cpl_error_code gravi_vis_create_vfactor_sc (cpl_table * vis_SC,
-											cpl_table * wave_table_sc,
-											cpl_table * vis_FT,
-											cpl_table * wave_table_ft);
+                                            cpl_table * wave_table_sc,
+                                            cpl_table * vis_FT,
+                                            cpl_table * wave_table_ft);
 cpl_error_code gravi_vis_create_lockratio_sc (cpl_table * vis_SC,
-											  cpl_table * vis_FT);
+                                              cpl_table * vis_FT);
 
 cpl_error_code gravi_vis_create_phaseref_sc (cpl_table * vis_SC,
-											 cpl_table * wave_table_sc,
-											 cpl_table * wave_table_ft);
+                                             cpl_table * wave_table_sc,
+                                             cpl_table * wave_table_ft);
 
 
 cpl_error_code gravi_vis_create_opddisp_sc (cpl_table * vis_SC,
-					    cpl_table * flux_SC,
-					    cpl_table * wave_table,
-					    cpl_table * disp_table,
-					    cpl_propertylist * header,
-					    const cpl_parameterlist * parlist);
+                                            cpl_table * flux_SC,
+                                            cpl_table * wave_table,
+                                            cpl_table * disp_table,
+                                            cpl_propertylist * header,
+                                            const cpl_parameterlist * parlist);
 
 cpl_error_code gravi_vis_create_imagingref_sc (cpl_table * vis_SC,
                                                cpl_table * wave_table,
@@ -131,8 +131,8 @@ cpl_error_code gravi_vis_create_imagingref_sc (cpl_table * vis_SC,
 /* -------------------------------------------------------------------------- */
 
 cpl_error_code gravi_vis_bootstrap_snr_and_delay(cpl_table * oi_vis,
-												   const char * name_snr,
-												   const char * name_gdl)
+                                                 const char * name_snr,
+                                                 const char * name_gdl)
 {
   gravi_msg_function_start(0);
   cpl_ensure_code (oi_vis,   CPL_ERROR_NULL_INPUT);
@@ -2552,8 +2552,8 @@ cpl_error_code gravi_vis_create_imagingref_sc (cpl_table * vis_SC,
     CPLCHECK_MSG ("Cannot get OPD_DISP data");
 
     /* Get from header the separation, converted from mas to radian */
-	double sep_U = gravi_pfits_get_sobj_x (header)*1e-3/3600.0/CPL_MATH_DEG_RAD;
-	double sep_V = gravi_pfits_get_sobj_y (header)*1e-3/3600.0/CPL_MATH_DEG_RAD;
+    double sep_U = gravi_pfits_get_sobj_x (header)*1e-3/3600.0/CPL_MATH_DEG_RAD;
+    double sep_V = gravi_pfits_get_sobj_y (header)*1e-3/3600.0/CPL_MATH_DEG_RAD;
 
     /* Create new PHASE_REF_IMG column array */
     gravi_table_new_column_array (vis_SC, "IMAGING_REF", "rad", CPL_TYPE_DOUBLE, nwave);
