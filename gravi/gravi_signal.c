@@ -2561,7 +2561,7 @@ cpl_error_code gravi_vis_create_imagingref_sc (cpl_table * vis_SC,
 
     /* Create new PHASE_REF_IMG column array */
     gravi_table_new_column_array (vis_SC, "IMAGING_REF", "rad", CPL_TYPE_DOUBLE, nwave);
-    cpl_array ** phaseref = cpl_table_get_data_array (vis_SC, "IMAGING_REF");
+    cpl_array ** imaging_ref = cpl_table_get_data_array (vis_SC, "IMAGING_REF");
     CPLCHECK_MSG ("Cannot create column");
 
     /* Check use of telescope metrology */
@@ -2578,7 +2578,7 @@ cpl_error_code gravi_vis_create_imagingref_sc (cpl_table * vis_SC,
     for (cpl_size row = 0; row < nrow; row ++) {
 
         /* New array */
-        phaseref[row] = cpl_array_new (nwave, CPL_TYPE_DOUBLE);
+        imaging_ref[row] = cpl_array_new (nwave, CPL_TYPE_DOUBLE);
 
         /* If requested, use telescope metrology */
         // OPD_MET_TEL_CORR averages to a few nanometers and is not used below.
@@ -2594,7 +2594,7 @@ cpl_error_code gravi_vis_create_imagingref_sc (cpl_table * vis_SC,
             
             /* IMAGING_REF = PHASE_REF - OPD_DISP * (2PI/EFF_WAVE) + 
                (UCOORD*SOBJ_X + VCOORD*SOBJ_Y) * (2PI/EFF_WAVE) */
-            cpl_array_set (phaseref[row], w,
+            cpl_array_set (imaging_ref[row], w,
                            cpl_array_get (phase_ref[row], w, NULL)
                            - cpl_array_get (opd_disp[row],  w, NULL)  * CPL_MATH_2PI / wavelength
                            + (ucoord[row] * sep_U + vcoord[row] * sep_V) * CPL_MATH_2PI / wavelength
@@ -2603,7 +2603,7 @@ cpl_error_code gravi_vis_create_imagingref_sc (cpl_table * vis_SC,
         }
 
         /* Wrap this phase in [rad] */
-        gravi_array_phase_wrap (phaseref[row]);
+        gravi_array_phase_wrap (imaging_ref[row]);
     }
 
     gravi_msg_function_exit(1);
