@@ -135,7 +135,14 @@ static void test_image(void)
         cpl_image_delete(image);
         cpl_parameterlist_delete(parlist);
         cpl_frame_delete(frame);
-        
+        if (!cpl_errorstate_is_equal(prestate)) 
+        {
+            cpl_msg_error(fctid, "Function %s failed on valid input",
+                          test_subject);
+            cpl_end();
+            exit(EXIT_FAILURE);
+        }
+
     }
     
     return;
