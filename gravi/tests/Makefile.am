@@ -36,7 +36,7 @@ check_PROGRAMS = gravi_dfs-test \
                  gravi_utils-test \
                  gravi_calib-test \
                  gravi_strehl-test \
-                 gravi_image_test \
+                 gravi_image-test \
                  gravi_eop-test
 
 gravi_dfs_test_SOURCES = gravi_dfs-test.c
