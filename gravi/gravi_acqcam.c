@@ -832,17 +832,25 @@ cpl_error_code gravi_acq_measure_strehl(cpl_image * img, double x, double y,
     /* Hardcoded Mirror diameters */
     if (telname[0] == 'U') {
         strehl_params = 
-            hdrl_strehl_parameter_create(1.8e-6, 8.0/2.0, 1.126/2.0, pscale*1e-3, pscale*1e-3, 0.8, 0.8, 1.0);
+            hdrl_strehl_parameter_create (1.8e-6, 8.0/2.0, 1.126/2.0,
+                                          pscale*1e-3, pscale*1e-3,
+                                          0.8, 0.8, 1.0);
     } else if (telname[0] == 'A') {
         strehl_params = 
-            hdrl_strehl_parameter_create(1.8e-6, 1.8/2.0, 0.138/2.0, pscale*1e-3, pscale*1e-3, 0.8, 0.8, 1.0);
+            hdrl_strehl_parameter_create (1.8e-6, 1.8/2.0, 0.138/2.0,
+                                          pscale*1e-3, pscale*1e-3,
+                                          0.8, 0.8, 1.0);
+    } else {
+        cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
+                               "Cannot recognise the telescope");
+        return CPL_ERROR_ILLEGAL_INPUT;
     }
 
     hdrl_strehl_result strehl;
-    cpl_image * sub_image = cpl_image_extract(img, x-50, y-50, x+50, y+50);
-    hdrl_image * sub_hdrl = hdrl_image_create(sub_image, NULL);
+    cpl_image * sub_image = cpl_image_extract (img, x-50, y-50, x+50, y+50);
+    hdrl_image * sub_hdrl = hdrl_image_create (sub_image, NULL);
 
-    strehl = hdrl_strehl_compute(sub_hdrl, strehl_params);
+    strehl = hdrl_strehl_compute (sub_hdrl, strehl_params);
     *SR = (double) strehl.strehl_value.data;
     FREE (hdrl_image_delete, sub_hdrl);
     FREE (cpl_image_delete, sub_image);
