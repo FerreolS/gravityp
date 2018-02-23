@@ -6114,7 +6114,7 @@
             </port>
         </entity>
         <entity name="SofCreator" class="org.eso.SofCreator">
-            <property name="Dataset Name" class="ptolemy.data.expr.StringParameter" value="$DatasetName">
+            <property name="Dataset Name" class="ptolemy.data.expr.StringParameter" value="UNDEFINED">
             </property>
             <property name="Default Category" class="ptolemy.data.expr.StringParameter" value="">
             </property>
