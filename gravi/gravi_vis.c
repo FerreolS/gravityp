@@ -1358,7 +1358,14 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
         const char * phase_ref_sc = gravi_param_get_string (parlist, "gravity.vis.phase-ref-sc");
 
         if ( !strcmp (phase_ref_sc,"AUTO") && SOBJ_R > 0.001)
+        {
             phase_ref_sc = "IMAGING_REF";
+            if (cpl_table_has_column (vis_SC, phase_ref_sc) == 0) {
+                phase_ref_sc = "PHASE_REF";
+                cpl_msg_warning (cpl_func, "No table 'IMAGING_REF', changing mode to phase_ref_sc='PHASE_REF'");
+                CPLCHECK_NUL("tototo....");
+            }
+        }
         else if ( !strcmp (phase_ref_sc,"AUTO") && SOBJ_R < 0.001) 
             phase_ref_sc = "PHASE_REF";
         
