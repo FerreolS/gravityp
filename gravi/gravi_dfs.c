@@ -594,11 +594,11 @@ cpl_error_code gravi_parameter_add_rejection (cpl_parameterlist *self, int isCal
     cpl_parameterlist_append (self, p);
     
     /* Flag to control the use of metrology in IMAGING_REF calculation */
-    p = cpl_parameter_new_value ("gravity.signal.imaging-ref-met", CPL_TYPE_STRING,
+    p = cpl_parameter_new_enum  ("gravity.signal.imaging-ref-met", CPL_TYPE_STRING,
                                  "Metrology source used for IMAGING_REF calculation:\n "
-                                 "  FC: Use fibre coupler metrology (default);\n"
-                                 "  FC_CORR: Use fibre coupler metrology corrected from pupil motion;\n"
-                                 "  TEL: Use telescope metrology.",
+                                 "Use fibre coupler metrology (FC);\n "
+                                 "Use fibre coupler metrology corrected from pupil motion (FC_CORR);\n "
+                                 "Use telescope metrology (TEL).",
                                  "gravity.signal", "FC", 3,
                                  "FC", "FC_CORR", "TEL");
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "imaging-ref-met");
