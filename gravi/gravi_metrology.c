@@ -1449,8 +1449,8 @@ double gravi_metrology_get_fc_focus (cpl_propertylist * header, int gv)
     
     /* If keyword available, read it, otherwise use defaults with warning */
     double defocus;
-    const double defocus_at[4] = {-57.0, -90.0, 22.0, -86.0}; // Measured 2017-11-17
-    const double defocus_ut[4] = {-57.0, -90.0, 22.0, -86.0}; // Copied from above
+    const double defocus_at[4] = {-75.0, -100.0, 25.0, -75.0}; // Measured 2017-11-17
+    const double defocus_ut[4] = {-50.0, -125.0, -150.0, -175.0}; // Measured 2018-02-15
     if (cpl_propertylist_has(header, name)) {
         defocus = cpl_propertylist_get_double (header, name);
     } else {
@@ -1498,8 +1498,8 @@ double gravi_metrology_get_fc_shift (cpl_propertylist * header, int gv)
     
     /* If keyword available, read it, otherwise use defaults with warning */
     double shift;
-    const double shift_ut[4] = {-102.0        , 53.0        , 152.0        , -107.0        }; // Measured 2017-11-17
-    const double shift_at[4] = {-102.0*1.8/8.0, 53.0*1.8/8.0, 152.0*1.8/8.0, -107.0*1.8/8.0}; // Scaled from above
+    const double shift_ut[4] = {-450.0, -350.0, -50.0, -525.0}; // Measured 2018-02-15
+    const double shift_at[4] = {-100.0*1.8/8.0, 50.0*1.8/8.0, 150.0*1.8/8.0, -100.0*1.8/8.0}; // Measured 2017-11-17
     if (cpl_propertylist_has(header, name)) {
         shift = cpl_propertylist_get_double (header, name);
     } else {
@@ -2963,7 +2963,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         sprintf (qc_name, "ESO QC MET SOBJ DDEC%i", tel+1);
         cpl_msg_info (cpl_func, "%s = %f", qc_name, sobj_ddec[tel]);
         cpl_propertylist_update_double (header, qc_name, sobj_ddec[tel]);
-        cpl_propertylist_set_comment (header, qc_name, "[pixel] DEC offset from SOBJ");
+        cpl_propertylist_set_comment (header, qc_name, "[mas] DEC offset from SOBJ");
     }
     
     
