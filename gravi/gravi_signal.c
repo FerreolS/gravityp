@@ -2564,14 +2564,21 @@ cpl_error_code gravi_vis_create_imagingref_sc (cpl_table * vis_SC,
     cpl_array ** imaging_ref = cpl_table_get_data_array (vis_SC, "IMAGING_REF");
     CPLCHECK_MSG ("Cannot create column");
 
-    /* Check use of telescope metrology */
-    cpl_boolean use_tel_met = gravi_param_get_bool (parlist, "gravity.signal.use-tel-met");
-    if (use_tel_met) {
+    /* Which megtrology should be used for IMAGING_REF calculation? */
+    const char * imaging_ref_met = gravi_param_get_string (parlist, "gravity.signal.imaging-ref-met");
+    cpl_msg_info (cpl_func, "imaging-ref-met = %s", imaging_ref_met);
+    if (!strcmp (imaging_ref_met,"TEL")) {
         cpl_msg_info (cpl_func,"Use telescope metrology for IMAGING_REF computation");
         opd_met_telfc_mcorr = cpl_table_get_data_double (vis_SC, "OPD_MET_TELFC_MCORR");
         opd_met_fc_corr = cpl_table_get_data_double (vis_SC, "OPD_MET_TELFC_MCORR");
-    } else {
+    } else if (!strcmp (imaging_ref_met,"FC_CORR")) {
+        cpl_msg_info (cpl_func,"Use corrected fiber coupler metrology for IMAGING_REF computation");
+        opd_met_fc_corr = cpl_table_get_data_double (vis_SC, "OPD_MET_TELFC_MCORR");
+    } else if (!strcmp (imaging_ref_met,"FC")) {
         cpl_msg_info (cpl_func,"Use fiber coupler metrology for IMAGING_REF computation");
+    } else {
+        cpl_msg_error (cpl_func,"Unknown metrology source for IMAGING_REF calculation!");
+        cpl_ensure_code (imaging_ref_met, CPL_ERROR_ILLEGAL_INPUT);
     }
 
     /* Compute the reference phase for each row */
@@ -2580,12 +2587,9 @@ cpl_error_code gravi_vis_create_imagingref_sc (cpl_table * vis_SC,
         /* New array */
         imaging_ref[row] = cpl_array_new (nwave, CPL_TYPE_DOUBLE);
 
-        /* If requested, use telescope metrology */
-        // OPD_MET_TEL_CORR averages to a few nanometers and is not used below.
-        double opd_met_telfc = 0.0;  // [rad]
-        if (use_tel_met) {
-            opd_met_telfc = opd_met_telfc_mcorr[row] + opd_met_fc_corr[row];
-        }
+        /* If requested, use fiber coupler correction or telescope metrology */
+        double opd_met_corr = (opd_met_telfc_mcorr ? opd_met_telfc_mcorr[row] : 0.0)
+                            + (opd_met_fc_corr ? opd_met_fc_corr[row] : 0.0);
 
         /* Compute VISPHI for each wavelength */
         for (int w = 0; w < nwave; w++) {
@@ -2598,7 +2602,7 @@ cpl_error_code gravi_vis_create_imagingref_sc (cpl_table * vis_SC,
                            cpl_array_get (phase_ref[row], w, NULL)
                            - cpl_array_get (opd_disp[row],  w, NULL)  * CPL_MATH_2PI / wavelength
                            + (ucoord[row] * sep_U + vcoord[row] * sep_V) * CPL_MATH_2PI / wavelength
-                           + opd_met_telfc * CPL_MATH_2PI / wavelength);
+                           + opd_met_corr * CPL_MATH_2PI / wavelength);
             CPLCHECK_MSG ("Cannot compute the imaging phase");
         }
 
