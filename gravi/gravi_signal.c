@@ -2570,10 +2570,10 @@ cpl_error_code gravi_vis_create_imagingref_sc (cpl_table * vis_SC,
     if (!strcmp (imaging_ref_met,"TEL")) {
         cpl_msg_info (cpl_func,"Use telescope metrology for IMAGING_REF computation");
         opd_met_telfc_mcorr = cpl_table_get_data_double (vis_SC, "OPD_MET_TELFC_MCORR");
-        opd_met_fc_corr = cpl_table_get_data_double (vis_SC, "OPD_MET_TELFC_MCORR");
+        opd_met_fc_corr = cpl_table_get_data_double (vis_SC, "OPD_MET_FC_CORR");
     } else if (!strcmp (imaging_ref_met,"FC_CORR")) {
         cpl_msg_info (cpl_func,"Use corrected fiber coupler metrology for IMAGING_REF computation");
-        opd_met_fc_corr = cpl_table_get_data_double (vis_SC, "OPD_MET_TELFC_MCORR");
+        opd_met_fc_corr = cpl_table_get_data_double (vis_SC, "OPD_MET_FC_CORR");
     } else if (!strcmp (imaging_ref_met,"FC")) {
         cpl_msg_info (cpl_func,"Use fiber coupler metrology for IMAGING_REF computation");
     } else {
