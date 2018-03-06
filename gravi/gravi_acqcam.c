@@ -1538,12 +1538,30 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
                                         "SC object");
         }
         
+        /*-----------------------------*/
+        /* Average Strehl computation  */
+        /*-----------------------------*/
+        
+        double max_on_average, strehl_on_average;
+        
+        if (calculate_strehl) {
+            
+            /* Measure strehl and maximum on averaged image */
+            gravi_acq_measure_strehl(mean_img, xFT, yFT, scale, &strehl_on_average, header);
+            max_on_average = cpl_image_get_max(cpl_image_extract(mean_img, xFT-15, yFT-15, xFT+15, yFT+15));
+            
+            /* Update Strehl QC */
+            sprintf (qc_name, "ESO QC ACQ FIELD%i STREHL", tel+1);
+            cpl_msg_info (cpl_func, "%s = %f", qc_name, strehl_on_average);
+            cpl_propertylist_update_double (o_header, qc_name, strehl_on_average);
+            cpl_propertylist_set_comment (o_header, qc_name, "Average Strehl from stacked AcqCam images");
+            
+        }
+        
         /*----------------------------*/
         /* Now process frame by frame */
         /*----------------------------*/
         
-        double total_Strehl =0.;
-        int nStrehl = 0;
         /* Loop on all images */
         for (cpl_size row = 0; row < nrow; row++) {
             if (row %10 == 0 || row == (nrow-1))
@@ -1634,42 +1652,12 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             /* Strehl computation of current frame */
             /*-------------------------------------*/
             if (calculate_strehl) {
-                double Strehl = 1.0;
-                if ((xFT != 0.0) && (pscale > 13.0)) {
-                    gravi_acq_measure_strehl(img, xFT, yFT, pscale, &Strehl, header);
-                    total_Strehl += Strehl;
-                    nStrehl += 1;
-                    cpl_table_set (acqcam_table, "FIELD_STREHL", row*ntel+tel, Strehl);
-                } else if (pscale == 0) {
-                    gravi_acq_measure_strehl(img, xFT, yFT, scale, &Strehl, header);
-                    total_Strehl += Strehl;
-                    nStrehl += 1;
-                    cpl_table_set (acqcam_table, "FIELD_STREHL", row*ntel+tel, Strehl);
-                } else {
-                    cpl_table_set (acqcam_table, "FIELD_STREHL", row*ntel+tel, -1.0);
-                }
+                double max_on_frame = cpl_image_get_max(cpl_image_extract(img, xFT-15, yFT-15, xFT+15, yFT+15));
+                cpl_table_set (acqcam_table, "FIELD_STREHL", row*ntel+tel, strehl_on_average*(max_on_frame/max_on_average) );
             }
             
         } /* End loop on images */
-        
-        /*-----------------------------*/
-        /* Average Strehl computation  */
-        /*-----------------------------*/
-        
-        if (calculate_strehl) {
-            sprintf (qc_name, "ESO QC ACQ FIELD%i STREHL", tel+1);
-            if (nStrehl == 0) {
-                /* Fitting failed: put QC to 0. */
-                qc_val = 0.;
-            } else {
-                /* Fiting succeeded: shift into full frame */
-                qc_val =  total_Strehl/((double)nStrehl);
-            }
-            cpl_msg_info (cpl_func, "%s = %f", qc_name, qc_val);
-            cpl_propertylist_update_double (o_header, qc_name, qc_val);
-            cpl_propertylist_set_comment (o_header, qc_name, "Average Strehl value from AcqCam images");
-        }
-        
+    
     } /* End loop on tel */
     
     gravi_msg_function_exit(1);
