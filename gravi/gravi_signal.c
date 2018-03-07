@@ -2602,7 +2602,7 @@ cpl_error_code gravi_vis_create_imagingref_sc (cpl_table * vis_SC,
                            cpl_array_get (phase_ref[row], w, NULL)
                            - cpl_array_get (opd_disp[row],  w, NULL)  * CPL_MATH_2PI / wavelength
                            + (ucoord[row] * sep_U + vcoord[row] * sep_V) * CPL_MATH_2PI / wavelength
-                           + opd_met_corr * CPL_MATH_2PI / wavelength);
+                           - opd_met_corr * CPL_MATH_2PI / wavelength);
             CPLCHECK_MSG ("Cannot compute the imaging phase");
         }
 
