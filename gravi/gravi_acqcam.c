@@ -98,6 +98,8 @@ cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y,
 cpl_error_code gravi_acq_measure_strehl(cpl_image * img, double x, double y, 
                                         double pscale, double *SR, cpl_propertylist * header);
 
+cpl_error_code gravi_acq_measure_max(cpl_image * img, double x, double y, double size, double * img_max);
+
 /* This global variable optimises the computation
  * of partial derivative on fitted parameters */
 const extern int * GRAVI_LVMQ_FREE;
@@ -859,6 +861,26 @@ cpl_error_code gravi_acq_measure_strehl(cpl_image * img, double x, double y,
     return CPL_ERROR_NONE;
 }
 
+/*----------------------------------------------------------------------------*/
+/*
+ * @brief measure maximum of the source at the given location
+ */
+/*----------------------------------------------------------------------------*/
+
+cpl_error_code gravi_acq_measure_max(cpl_image * img, double x, double y, double size, double * img_max)
+{
+    gravi_msg_function_start(0);
+    cpl_ensure_code (img, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (img_max, CPL_ERROR_NULL_INPUT);
+    
+    cpl_image * small_img = cpl_image_extract(img, x-size, y-size, x+size, y+size);
+    *img_max = cpl_image_get_max(small_img);
+    cpl_image_delete(small_img);
+    
+    gravi_msg_function_exit(0);
+    return CPL_ERROR_NONE;
+}
+
 
 /*----------------------------------------------------------------------------*/
 /**
@@ -1544,7 +1566,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         
         /* Measure strehl and maximum on averaged image */
         gravi_acq_measure_strehl(mean_img, xFT, yFT, scale, &strehl_on_average, header);
-        max_on_average = cpl_image_get_max(cpl_image_extract(mean_img, xFT-15, yFT-15, xFT+15, yFT+15));
+        gravi_acq_measure_max(mean_img, xFT, yFT, 15, &max_on_average);
         
         /* Update Strehl QC */
         sprintf (qc_name, "ESO QC ACQ FIELD%i STREHL", tel+1);
@@ -1645,7 +1667,8 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             /*-------------------------------------*/
             /* Strehl computation of current frame */
             /*-------------------------------------*/
-            double max_on_frame = cpl_image_get_max(cpl_image_extract(img, xFT-15, yFT-15, xFT+15, yFT+15));
+            double max_on_frame;
+            gravi_acq_measure_max(img, xFT, yFT, 15, &max_on_frame);
             cpl_table_set (acqcam_table, "FIELD_STREHL", row*ntel+tel, strehl_on_average*(max_on_frame/max_on_average) );
             
         } /* End loop on images */
