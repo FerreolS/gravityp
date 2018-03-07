@@ -37,7 +37,6 @@ cpl_error_code gravi_preproc_acqcam (gravi_data *output_data,
                                      gravi_data *bad_data);
 
 cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
-                                    gravi_data * input_data,
-                                    cpl_boolean calculate_strehl);
+                                    gravi_data * input_data);
 
 #endif 	/* !GRAVI_ACQCAM_H */

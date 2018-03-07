@@ -90,8 +90,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
                                    cpl_imagelist * acqcam_imglist,
                                    cpl_propertylist * header,
                                    cpl_table * acqcam_table,
-                                   cpl_propertylist * o_header,
-                                   cpl_boolean calculate_strehl);
+                                   cpl_propertylist * o_header);
 
 cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y,
                                        double *ex, double *ey, cpl_size size);
@@ -1181,8 +1180,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
                                    cpl_imagelist * acqcam_imglist,
                                    cpl_propertylist * header,
                                    cpl_table * acqcam_table,
-                                   cpl_propertylist * o_header,
-                                   cpl_boolean calculate_strehl)
+                                   cpl_propertylist * o_header)
 {
     gravi_msg_function_start(1);
     cpl_ensure_code (mean_img,       CPL_ERROR_NULL_INPUT);
@@ -1544,19 +1542,15 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         
         double max_on_average, strehl_on_average;
         
-        if (calculate_strehl) {
-            
-            /* Measure strehl and maximum on averaged image */
-            gravi_acq_measure_strehl(mean_img, xFT, yFT, scale, &strehl_on_average, header);
-            max_on_average = cpl_image_get_max(cpl_image_extract(mean_img, xFT-15, yFT-15, xFT+15, yFT+15));
-            
-            /* Update Strehl QC */
-            sprintf (qc_name, "ESO QC ACQ FIELD%i STREHL", tel+1);
-            cpl_msg_info (cpl_func, "%s = %f", qc_name, strehl_on_average);
-            cpl_propertylist_update_double (o_header, qc_name, strehl_on_average);
-            cpl_propertylist_set_comment (o_header, qc_name, "Average Strehl from stacked AcqCam images");
-            
-        }
+        /* Measure strehl and maximum on averaged image */
+        gravi_acq_measure_strehl(mean_img, xFT, yFT, scale, &strehl_on_average, header);
+        max_on_average = cpl_image_get_max(cpl_image_extract(mean_img, xFT-15, yFT-15, xFT+15, yFT+15));
+        
+        /* Update Strehl QC */
+        sprintf (qc_name, "ESO QC ACQ FIELD%i STREHL", tel+1);
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, strehl_on_average);
+        cpl_propertylist_update_double (o_header, qc_name, strehl_on_average);
+        cpl_propertylist_set_comment (o_header, qc_name, "Average Strehl from stacked AcqCam images");
         
         /*----------------------------*/
         /* Now process frame by frame */
@@ -1651,13 +1645,11 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             /*-------------------------------------*/
             /* Strehl computation of current frame */
             /*-------------------------------------*/
-            if (calculate_strehl) {
-                double max_on_frame = cpl_image_get_max(cpl_image_extract(img, xFT-15, yFT-15, xFT+15, yFT+15));
-                cpl_table_set (acqcam_table, "FIELD_STREHL", row*ntel+tel, strehl_on_average*(max_on_frame/max_on_average) );
-            }
+            double max_on_frame = cpl_image_get_max(cpl_image_extract(img, xFT-15, yFT-15, xFT+15, yFT+15));
+            cpl_table_set (acqcam_table, "FIELD_STREHL", row*ntel+tel, strehl_on_average*(max_on_frame/max_on_average) );
             
         } /* End loop on images */
-    
+        
     } /* End loop on tel */
     
     gravi_msg_function_exit(1);
@@ -1681,8 +1673,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
 /*----------------------------------------------------------------------------*/
 
 cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
-                                    gravi_data * input_data,
-                                    cpl_boolean calculate_strehl)
+                                    gravi_data * input_data)
 {
     gravi_msg_function_start(1);
     cpl_ensure_code (output_data, CPL_ERROR_NULL_INPUT);
@@ -1727,7 +1718,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
 
     /* Compute FIELD columns */
     gravi_acqcam_field (mean_img, acqcam_imglist, header,
-                        acqcam_table, o_header, calculate_strehl);
+                        acqcam_table, o_header);
 	CPLCHECK_MSG ("Cannot reduce field images");
     
     
