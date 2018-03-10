@@ -45,7 +45,8 @@ static int gravity_eop_exec(cpl_plugin *);
 static int gravity_eop_destroy(cpl_plugin *);
 static int gravity_eop(cpl_frameset *, const cpl_parameterlist *);
 cpl_error_code gravity_eop_compute_qc(cpl_table * eop_table, 
-											   cpl_propertylist* header);
+                                      cpl_propertylist* header,
+                                      double * mjd_lastfinal);
 
 /*-----------------------------------------------------------------------------
                             Static variables
@@ -280,6 +281,9 @@ static int gravity_eop(cpl_frameset            * frameset,
     const char          *   eop_host;
     const char          *   eop_urlpath;
     cpl_propertylist    *   applist;
+    char                *   timestamp_lastfinal;
+    double                  mjd_lastfinal;
+    char                *   filename;
 
 	/* Message */
 	gravity_print_banner (); 
@@ -330,16 +334,19 @@ static int gravity_eop(cpl_frameset            * frameset,
     cpl_propertylist_append_string (applist, "ESO PRO TYPE", "IERS");
 
     /* Add a QC parameter  */
-    gravity_eop_compute_qc (eop_table, applist);
+    gravity_eop_compute_qc (eop_table, applist, &mjd_lastfinal);
+    
+    timestamp_lastfinal = gravi_convert_to_timestamp (mjd_lastfinal);
     
     /* Saving the product */
-    cpl_table_save (eop_table, applist, NULL, "gravity_eop.fits", CPL_IO_CREATE);
+    filename = cpl_sprintf("GRAVI_EOP_PARAM.%s.fits", timestamp_lastfinal);
+    cpl_table_save (eop_table, applist, NULL, filename, CPL_IO_CREATE);
 
 	cpl_msg_info (cpl_func,"Update the frameset");
 
     /* Updating the frameset */
     cpl_frame * product_frame = cpl_frame_new();
-    cpl_frame_set_filename (product_frame, "gravity_eop.fits");
+    cpl_frame_set_filename (product_frame, filename);
     cpl_frame_set_tag (product_frame, CPL_DFS_PRO_CATG);
     cpl_frame_set_type (product_frame, CPL_FRAME_TYPE_TABLE);
     cpl_frame_set_group (product_frame, CPL_FRAME_GROUP_PRODUCT);
@@ -350,16 +357,18 @@ static int gravity_eop(cpl_frameset            * frameset,
     /* Cleanup */
     cpl_propertylist_delete (applist);
     cpl_table_delete (eop_table);
+    cpl_free (filename);
+    cpl_free (timestamp_lastfinal);
 
 	gravi_msg_function_exit(1);
     return (int)cpl_error_get_code();
 }
 
 cpl_error_code gravity_eop_compute_qc (cpl_table * eop_table, 
-                                       cpl_propertylist* header)
+                                       cpl_propertylist* header,
+                                       double * mjd_lastfinal)
 {
     double mjd_start;
-    double mjd_lastfinal;
     double mjd_lastprediction;
     int null;
 
@@ -368,19 +377,19 @@ cpl_error_code gravity_eop_compute_qc (cpl_table * eop_table,
     {
         const char * flag = cpl_table_get_string(eop_table, "FLAG", i);
         if(!strncmp(flag, "I", 1))
-            mjd_lastfinal = cpl_table_get_double(eop_table, "MJD", i, &null);
+            *mjd_lastfinal = cpl_table_get_double(eop_table, "MJD", i, &null);
         if(!strncmp(flag, "P", 1))
             mjd_lastprediction = cpl_table_get_double(eop_table, "MJD", i, &null);
     }
 	
 	cpl_msg_info (cpl_func, "QC EOP MJD START = %.3f", mjd_start);
-	cpl_msg_info (cpl_func, "QC EOP MJD LAST FINAL = %.3f", mjd_lastfinal);
+	cpl_msg_info (cpl_func, "QC EOP MJD LAST FINAL = %.3f", *mjd_lastfinal);
 	cpl_msg_info (cpl_func, "QC EOP MJD LAST PREDICTION = %.3f", mjd_lastprediction);
 
     cpl_propertylist_append_double (header, "ESO QC EOP MJD START", mjd_start);
-    cpl_propertylist_append_double (header, "ESO QC EOP MJD LAST FINAL", mjd_lastfinal);
+    cpl_propertylist_append_double (header, "ESO QC EOP MJD LAST FINAL", *mjd_lastfinal);
     cpl_propertylist_append_double (header, "ESO QC EOP MJD LAST PREDICTION", mjd_lastprediction);
-    cpl_propertylist_append_double (header, "MJD-OBS", mjd_lastfinal);
+    cpl_propertylist_append_double (header, "MJD-OBS", *mjd_lastfinal);
 	
 	return CPL_ERROR_NONE;
 }
