@@ -261,6 +261,7 @@ double gravi_pfits_get_geolon(const cpl_propertylist * plist);
 double gravi_ra_to_rad (const char *stri);
 double gravi_dec_to_rad (const char *stri);
 double gravi_convert_to_mjd (const char * );
+char * gravi_convert_to_timestamp (double mjd);
 cpl_error_code gravi_pfits_ensure_double(cpl_propertylist * self, const char * name);
 
 cpl_propertylist *  gravi_plist_get_qc (cpl_propertylist * );

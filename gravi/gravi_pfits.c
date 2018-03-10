@@ -939,6 +939,22 @@ double gravi_convert_to_mjd (const char * start)
     return dmjd + (dhr + (dmin + dsec/60.0)/60.0)/24.0;
 }
 
+char * gravi_convert_to_timestamp (double mjd)
+{
+    int year, month, day, hour, minute;
+    double fraction, second;
+    
+    eraJd2cal (2400000.5, mjd, &year, &month, &day, &fraction);
+    
+    hour = (int)(fraction/3600.0);
+    fraction -= hour*3600.0;
+    minute = (int)(fraction/60.0);
+    fraction -= minute*60.0;
+    second = fraction;
+    
+    return cpl_sprintf ("%04i-%02i-%02iT%02i:%02i:%06.3f", year, month, day, hour, minute, second);
+}
+
 double gravi_pfits_get_decep (const cpl_propertylist * plist, double coef)
 {
     cpl_ensure (plist, CPL_ERROR_NULL_INPUT, 0.0);
