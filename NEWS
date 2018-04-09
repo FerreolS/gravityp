@@ -1,8 +1,14 @@
+------------------------------------------
+2018/04/09 : New version 1.1.1
+------------------------------------------
 
-Last changes in the pipeline
-****************************
+- New way to compute the wavelengths of the LOW spectral resolution mode.
+- Astrometry changes (including metrology) towards dueal field observations of the galactic center.
+- Improvements on Strehl ratio computation.
 
-
+------------------------------------------
+New version 1.0
+------------------------------------------
 
 2016/06/01 : r181290 : Weight the average of TF by the 1/sigma2, so that TF points with poor 
 	quality are discarded.
