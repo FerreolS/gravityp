@@ -288,7 +288,7 @@ select execute(ACTION_CALIB_DUAL) from inputFiles where RAW.TYPE == "DUAL_CAL_RA
 action ACTION_CALIB_DARK
 {
 recipe gravity_dark;
-product DARK { PRO.CATG = "DARK"; PRO.EXT="dark.fits";}
+product DARK { PRO.CATG = "DARK_WKF"; PRO.EXT="dark.fits";}
 }
 
 action ACTION_CALIB_DARK_P2VM
@@ -304,25 +304,25 @@ select file as DARK from calibFiles where PRO.CATG == "DARK_P2VM" and inputFile.
 
 recipe gravity_p2vm;
 //product DARK { PRO.CATG = "DARK"; PRO.EXT="dark.fits";}
-product FLAT { PRO.CATG = "FLAT"; PRO.EXT="flat.fits";}
-product WAVE { PRO.CATG = "WAVE"; PRO.EXT="wave.fits";}
-product P2VM { PRO.CATG = "P2VM"; PRO.EXT="p2vm.fits";}
+product FLAT { PRO.CATG = "FLAT_WKF"; PRO.EXT="flat.fits";}
+product WAVE { PRO.CATG = "WAVE_WKF"; PRO.EXT="wave.fits";}
+product P2VM { PRO.CATG = "P2VM_WKF"; PRO.EXT="p2vm.fits";}
 }
 
 
 action ACTION_SCIENCE_SINGLE
 {
 minRet = 0; maxRet = 1;
-select file as DARK from calibFiles where PRO.CATG == "DARK" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.DET2.SEQ1.DIT==DET2.SEQ1.DIT and inputFile.DET3.SEQ1.DIT==DET3.SEQ1.DIT and inputFile.INS.FDDL.WINDOW==INS.FDDL.WINDOW and inputFile.INSTRUME==INSTRUME;
+select file as DARK from calibFiles where PRO.CATG == "DARK_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.DET2.SEQ1.DIT==DET2.SEQ1.DIT and inputFile.DET3.SEQ1.DIT==DET3.SEQ1.DIT and inputFile.INS.FDDL.WINDOW==INS.FDDL.WINDOW and inputFile.INSTRUME==INSTRUME;
 
 minRet = 1; maxRet = 1;
-select file as FLAT from calibFiles where PRO.CATG == "FLAT" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.INSTRUME==INSTRUME;
+select file as FLAT from calibFiles where PRO.CATG == "FLAT_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.INSTRUME==INSTRUME;
 
 minRet = 1; maxRet = 1;
-select file as WAVE from calibFiles where PRO.CATG == "WAVE" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.INSTRUME==INSTRUME;
+select file as WAVE from calibFiles where PRO.CATG == "WAVE_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.INSTRUME==INSTRUME;
 
 minRet = 1; maxRet = 1;
-select file as P2VM from calibFiles where PRO.CATG == "P2VM" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.INSTRUME==INSTRUME;
+select file as P2VM from calibFiles where PRO.CATG == "P2VM_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.INSTRUME==INSTRUME;
 
 minRet = 0; maxRet = 1;
 select file as DISP_MODEL from calibFiles where PRO.CATG == "DISP_MODEL" and inputFile.INSTRUME==INSTRUME;
@@ -334,16 +334,16 @@ product SINGLE_SCI_VIS { PRO.CATG = "SINGLE_SCI_VIS"; PRO.EXT="single_sci_vis.fi
 action ACTION_CALIB_SINGLE
 {
 minRet = 0; maxRet = 1;
-select file as DARK from calibFiles where PRO.CATG == "DARK" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.DET2.SEQ1.DIT==DET2.SEQ1.DIT and inputFile.DET3.SEQ1.DIT==DET3.SEQ1.DIT and inputFile.INS.FDDL.WINDOW==INS.FDDL.WINDOW and inputFile.INSTRUME==INSTRUME;
+select file as DARK from calibFiles where PRO.CATG == "DARK_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.DET2.SEQ1.DIT==DET2.SEQ1.DIT and inputFile.DET3.SEQ1.DIT==DET3.SEQ1.DIT and inputFile.INS.FDDL.WINDOW==INS.FDDL.WINDOW and inputFile.INSTRUME==INSTRUME;
 
 minRet = 1; maxRet = 1;
-select file as FLAT from calibFiles where PRO.CATG == "FLAT" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.INSTRUME==INSTRUME;
+select file as FLAT from calibFiles where PRO.CATG == "FLAT_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.INSTRUME==INSTRUME;
 
 minRet = 1; maxRet = 1;
-select file as WAVE from calibFiles where PRO.CATG == "WAVE" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.INSTRUME==INSTRUME;
+select file as WAVE from calibFiles where PRO.CATG == "WAVE_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.INSTRUME==INSTRUME;
 
 minRet = 1; maxRet = 1;
-select file as P2VM from calibFiles where PRO.CATG == "P2VM" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.INSTRUME==INSTRUME;
+select file as P2VM from calibFiles where PRO.CATG == "P2VM_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.INSTRUME==INSTRUME;
 
 minRet = 0; maxRet = 1;
 select file as DISP_MODEL from calibFiles where PRO.CATG == "DISP_MODEL" and inputFile.INSTRUME==INSTRUME;
@@ -355,16 +355,16 @@ product SINGLE_CAL_VIS { PRO.CATG = "SINGLE_CAL_VIS"; PRO.EXT="single_cal_vis.fi
 action ACTION_SCIENCE_DUAL
 {
 minRet = 0; maxRet = 1;
-select file as DARK from calibFiles where PRO.CATG == "DARK" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.DET2.SEQ1.DIT==DET2.SEQ1.DIT and inputFile.DET3.SEQ1.DIT==DET3.SEQ1.DIT and inputFile.INS.FDDL.WINDOW==INS.FDDL.WINDOW and inputFile.INSTRUME==INSTRUME;
+select file as DARK from calibFiles where PRO.CATG == "DARK_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.DET2.SEQ1.DIT==DET2.SEQ1.DIT and inputFile.DET3.SEQ1.DIT==DET3.SEQ1.DIT and inputFile.INS.FDDL.WINDOW==INS.FDDL.WINDOW and inputFile.INSTRUME==INSTRUME;
 
 minRet = 1; maxRet = 1;
-select file as FLAT from calibFiles where PRO.CATG == "FLAT" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.INSTRUME==INSTRUME;
+select file as FLAT from calibFiles where PRO.CATG == "FLAT_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.INSTRUME==INSTRUME;
 
 minRet = 1; maxRet = 1;
-select file as WAVE from calibFiles where PRO.CATG == "WAVE" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.INSTRUME==INSTRUME;
+select file as WAVE from calibFiles where PRO.CATG == "WAVE_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.INSTRUME==INSTRUME;
 
 minRet = 1; maxRet = 1;
-select file as P2VM from calibFiles where PRO.CATG == "P2VM" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.INSTRUME==INSTRUME;
+select file as P2VM from calibFiles where PRO.CATG == "P2VM_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.INSTRUME==INSTRUME;
 
 minRet = 0; maxRet = 1;
 select file as DISP_MODEL from calibFiles where PRO.CATG == "DISP_MODEL" and inputFile.INSTRUME==INSTRUME;
@@ -376,16 +376,16 @@ product DUAL_SCI_VIS { PRO.CATG = "DUAL_SCI_VIS"; PRO.EXT="dual_sci_vis.fits";}
 action ACTION_CALIB_DUAL
 {
 minRet = 0; maxRet = 1;
-select file as DARK from calibFiles where PRO.CATG == "DARK" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.DET2.SEQ1.DIT==DET2.SEQ1.DIT and inputFile.DET3.SEQ1.DIT==DET3.SEQ1.DIT and inputFile.INS.FDDL.WINDOW==INS.FDDL.WINDOW and inputFile.INSTRUME==INSTRUME;
+select file as DARK from calibFiles where PRO.CATG == "DARK_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.DET2.SEQ1.DIT==DET2.SEQ1.DIT and inputFile.DET3.SEQ1.DIT==DET3.SEQ1.DIT and inputFile.INS.FDDL.WINDOW==INS.FDDL.WINDOW and inputFile.INSTRUME==INSTRUME;
 
 minRet = 1; maxRet = 1;
-select file as FLAT from calibFiles where PRO.CATG == "FLAT" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.INSTRUME==INSTRUME;
+select file as FLAT from calibFiles where PRO.CATG == "FLAT_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.INSTRUME==INSTRUME;
 
 minRet = 1; maxRet = 1;
-select file as WAVE from calibFiles where PRO.CATG == "WAVE" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.INSTRUME==INSTRUME;
+select file as WAVE from calibFiles where PRO.CATG == "WAVE_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.INSTRUME==INSTRUME;
 
 minRet = 1; maxRet = 1;
-select file as P2VM from calibFiles where PRO.CATG == "P2VM" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.INSTRUME==INSTRUME;
+select file as P2VM from calibFiles where PRO.CATG == "P2VM_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.INSTRUME==INSTRUME;
 
 minRet = 0; maxRet = 1;
 select file as DISP_MODEL from calibFiles where PRO.CATG == "DISP_MODEL" and inputFile.INSTRUME==INSTRUME;
