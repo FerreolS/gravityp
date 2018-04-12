@@ -19,7 +19,7 @@
  */
 
 /**
- * @defgroup gravity_acqcam  Acquisition Camera
+ * @defgroup gravi_acqcam  Acquisition Camera
  */
 /**@{*/
 

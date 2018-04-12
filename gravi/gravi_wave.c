@@ -20,6 +20,23 @@
 
 /**
  * @defgroup gravi_wave     Spectral calibration
+ *
+ * This module implements functions involved in the spectral calibration. The
+ * function @c gravi_compute_wave do the calibration itself :
+ *
+ * The wavelength of each spectral element is computed by comparing the measured
+ * phases of this spectral element with the realized OPD: OPDFT or OPDSC.
+ * The measured phases are computed from the A, B, C and D measurements with ellipse
+ * methode ().
+ *
+ * For each computed phase we know the expected OPD, OPDFT or OPD_SC from the metrology (@c gravi_compute_opds()).
+ * The slope of the phase versus OPD gives us the wavelength of the spectral element.
+ *
+ * When all spectral element wavelengths are computed we have two sets of calibrated points,
+ * one for each polarization. On each of these two sets, a model of lambda versus
+ * position on the detector is fitted. And from this the wavelength of each spectral
+ * element of each spectrum is computed and put in the wavelength map.
+ *
  */
 /**@{*/
 
@@ -427,7 +444,7 @@ cpl_error_code gravi_opds_correct_closures (cpl_table * phase_table,
  *
  *    2pi./LBD_MET * PHASE_MET_ijt = a.OPD_SC_ijt - b.OPD_FT_ijt + c_ij
  *
- * The routine discards samples that are ouside the SC DITs (defined with 
+ * The routine discards samples that are outside the SC DITs (defined with
  * OPD_SC==0). Then it solves the systems and compute residuals.
  * 
  * Since the routine uses a single coefficient (a) for all 6 baselines, the
@@ -791,7 +808,7 @@ cpl_table * gravi_opds_calibration (cpl_table * spectrum_table,
  * 
  * The routine then solves the linear system:
  *
- *    LBDMET.OPD_MET  / 2pi = a.OPD_SC - b.OPD_FT + c
+ *     \f$\lambda_{MET}.OPD_{MET}  / 2\pi = a.OPD_{SC} - b.OPD_{FT} + c\f$
  * 
  * in order to determine the true scaling of the SC (a)
  * and of the SC (b). A special care is taken to only consider the
@@ -1994,9 +2011,10 @@ cpl_error_code gravi_wave_qc (gravi_data * wave_map, gravi_data * profile_map)
 /**
  * @brief Create the WAVE calibration map. 
  *
- * @param wave_data          Output wave_map, already allocated.
- * @param spectrum_data      Input spectrum_data
- * @param type_data          GRAVI_SC or GRAVI_FT
+ * @param wave_map          Output wave_map, already allocated.
+ * @param spectrum_data     Input spectrum_data
+ * @param type_data         GRAVI_SC or GRAVI_FT
+ * @param parlist           Parameter list
  *
  * The output WAVE map is filled with WAVE_FIBRE and WAVE_DATA
  * tables, as well as QC parameters in the main header.
