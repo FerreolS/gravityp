@@ -3307,6 +3307,8 @@
             </port>
         </entity>
         <entity name="gravity_vis_1" class="org.eso.RecipeExecuter">
+            <property name="Recipe Failure Mode" class="ptolemy.data.expr.StringParameter" value="$RecipeFailureMode">
+            </property>
             <property name="Allow empty inputs" class="ptolemy.data.expr.Parameter" value="true">
             </property>
             <property name="_location" class="ptolemy.kernel.util.Location" value="[265.0, 180.0]">

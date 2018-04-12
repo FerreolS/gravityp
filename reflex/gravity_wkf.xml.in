@@ -3469,6 +3469,8 @@
             </port>
         </entity>
         <entity name="gravity_p2vm_1" class="org.eso.RecipeExecuter">
+            <property name="Recipe Failure Mode" class="ptolemy.data.expr.StringParameter" value="$RecipeFailureMode">
+            </property>
             <property name="Lazy Mode" class="ptolemy.data.expr.Parameter" value="true">
             </property>
             <property name="_location" class="ptolemy.kernel.util.Location" value="[255.0, 170.0]">
@@ -3619,6 +3621,8 @@
             </port>
         </entity>
         <entity name="gravity_vis_1" class="org.eso.RecipeExecuter">
+            <property name="Recipe Failure Mode" class="ptolemy.data.expr.StringParameter" value="$RecipeFailureMode">
+            </property>
             <property name="Allow empty inputs" class="ptolemy.data.expr.Parameter" value="true">
             </property>
             <property name="_location" class="ptolemy.kernel.util.Location" value="[265.0, 180.0]">
@@ -6156,6 +6160,8 @@
             </port>
         </entity>
         <entity name="gravity_dark_1" class="org.eso.RecipeExecuter">
+            <property name="Recipe Failure Mode" class="ptolemy.data.expr.StringParameter" value="$RecipeFailureMode">
+            </property>
             <property name="_location" class="ptolemy.kernel.util.Location" value="[415.0, 320.0]">
             </property>
             <port name="sof in" class="ptolemy.actor.TypedIOPort">

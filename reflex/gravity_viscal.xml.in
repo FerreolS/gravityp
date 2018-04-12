@@ -2690,6 +2690,8 @@
             </port>
         </entity>
         <entity name="gravity_viscal_1" class="org.eso.RecipeExecuter">
+            <property name="Recipe Failure Mode" class="ptolemy.data.expr.StringParameter" value="$RecipeFailureMode">
+            </property>
             <property name="_location" class="ptolemy.kernel.util.Location" value="[328.06541442871094, 71.3308219909668]">
             </property>
             <port name="sof in" class="ptolemy.actor.TypedIOPort">
