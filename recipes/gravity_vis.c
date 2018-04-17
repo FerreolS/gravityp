@@ -705,12 +705,16 @@ static int gravity_vis(cpl_frameset * frameset,
 			CPLCHECK_CLEAN ("Cannot save the PREPROC product");
 		}
         
+        /* Copy metrology and subtract background to preproc */
+        gravi_data_move_ext (preproc_data, data, GRAVI_METROLOGY_EXT);
+        if (dark_map != NULL)
+            gravi_subtract_met_dark (preproc_data, dark_map);
+        
         /* Move extensions from raw_data and delete it */
         gravi_data_move_ext (preproc_data, data, GRAVI_ARRAY_GEOMETRY_EXT);
         gravi_data_move_ext (preproc_data, data, GRAVI_OPTICAL_TRAIN_EXT);
         gravi_data_move_ext (preproc_data, data, GRAVI_OPDC_EXT);
         gravi_data_move_ext (preproc_data, data, GRAVI_FDDL_EXT);
-        gravi_data_move_ext (preproc_data, data, GRAVI_METROLOGY_EXT);
 		FREE (gravi_data_delete, data);
 		CPLCHECK_CLEAN ("Cannot move ext");
 

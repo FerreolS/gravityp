@@ -312,7 +312,7 @@ static int gravity_dark (cpl_frameset            * frameset,
         gravi_data_detector_cleanup (data_tmp, parlist);
 
 		/* Cleanup unused data */
-		gravi_data_erase (data_tmp, GRAVI_METROLOGY_EXT);
+		//gravi_data_erase (data_tmp, GRAVI_METROLOGY_EXT);
 		gravi_data_erase (data_tmp, GRAVI_OPDC_EXT);
 		gravi_data_erase (data_tmp, GRAVI_FDDL_EXT);
 
@@ -325,6 +325,7 @@ static int gravity_dark (cpl_frameset            * frameset,
 		}
 		else {
 		  /* Merge to first frame */
+            /* FIX ME: does not use multiple DARK for metrology Volts */
 		  int force = 0;
 		  gravi_data_append (raw_dark, data_tmp, force);
 		  FREE (gravi_data_delete, data_tmp);
@@ -334,7 +335,6 @@ static int gravity_dark (cpl_frameset            * frameset,
     }
 
 	
-
 	/* Compute the reduced DARK */
 	reduced_dark = gravi_compute_dark (raw_dark);
 	FREE (gravi_data_delete, raw_dark);
