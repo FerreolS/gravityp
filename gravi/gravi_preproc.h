@@ -51,4 +51,7 @@ cpl_error_code gravi_align_spectrum (gravi_data * spectrum_data,
                                      enum gravi_detector_type det_type,
                                      const cpl_parameterlist * parlist);
 
+cpl_error_code gravi_subtract_met_dark (gravi_data * preproc_data,
+                                     gravi_data * dark_map);
+
 #endif /* GRAVI_CALIB_H_ */

@@ -28,7 +28,6 @@
  -----------------------------------------------------------------------------*/
 
 #define INFO_DEBUG 0
-
 /*-----------------------------------------------------------------------------
                                    Includes
  -----------------------------------------------------------------------------*/
@@ -256,6 +255,96 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
 		CPLCHECK_NUL("Cannot save median in gravi_data");
         
     } /* End case FT */
+    
+    /*
+     * Compute the METROLOGY DARK
+     */
+    if (( isSky==1 )||(!gravi_data_has_extension (raw_data, GRAVI_METROLOGY_EXT))||( cpl_propertylist_get_double (raw_header, "MJD-OBS") < 58208.01  )) {
+        
+        if ( isSky==0 )
+            cpl_msg_warning (cpl_func,"The DARK data has no METROLOGY");
+        else if ( cpl_propertylist_get_double (raw_header, "MJD-OBS") < 58208.01  )
+            cpl_msg_warning (cpl_func,"The DARK data is too old for dark subtraction");
+
+    }
+    else
+    {
+        
+        cpl_msg_info(cpl_func, "Computing the %s of METROLOGY",isSky?"SKY":"DARK");
+        
+        /* Load the IMAGING_DATA table as DOUBLE */
+        cpl_msg_info (cpl_func,"Load data");
+        cpl_table * table_met = gravi_data_get_table (raw_data, GRAVI_METROLOGY_EXT);
+        cpl_table_cast_column (table_met, "VOLT", "VOLT", CPL_TYPE_DOUBLE);
+        cpl_imagelist * imglist = gravi_imagelist_wrap_column (table_met, "VOLT");
+        CPLCHECK_NUL ("Cannot load the VOLT data");
+        
+        /* Compute the median image of the imagelist */
+        cpl_msg_info (cpl_func,"Compute mean and median");
+        cpl_image * median_img = cpl_imagelist_collapse_median_create (imglist);
+        cpl_image * mean_img   = cpl_imagelist_collapse_create (imglist);
+        CPLCHECK_NUL ("Cannot compute the MEAN dark");
+        
+        /* Compute the std of each pixels */
+        cpl_msg_info (cpl_func,"Compute std");
+        cpl_imagelist_subtract_image (imglist, mean_img);
+        cpl_imagelist_power (imglist, 2.0);
+        cpl_image * stdev_img = cpl_imagelist_collapse_create (imglist);
+        cpl_image_power (stdev_img, 0.5);
+        
+        /* We power back the data, because we are working in-place */
+        cpl_imagelist_power (imglist, 0.5);
+        cpl_imagelist_add_image (imglist, mean_img);
+        
+        /* Delete data */
+        cpl_msg_info (cpl_func,"Delete data");
+        FREE (gravi_imagelist_unwrap_images, imglist);
+        FREE (cpl_image_delete, mean_img);
+        CPLCHECK_NUL ("Cannot compute the STD of the DARK");
+        
+        /* Compute the QC parameters RMS and MEDIAN */
+        cpl_msg_info (cpl_func, "Compute QC parameters");
+        double mean_qc = cpl_image_get_mean (median_img);
+        double darkrms = cpl_image_get_mean (stdev_img);
+        cpl_propertylist_update_double (dark_header, QC_MEANDARK_MET, mean_qc);
+        cpl_propertylist_update_double (dark_header, QC_DARKRMS_MET, darkrms);
+        CPLCHECK_NUL ("Cannot compute the QC");
+        
+        /* Verbose */
+        cpl_msg_info (cpl_func, "QC_MEDIAN%s_MET = %e","DARK", mean_qc);
+        cpl_msg_info (cpl_func, "QC_%sRMS_MET = %e","DARK", darkrms);
+        
+        /* Create the output DARK table, with a single row */
+        cpl_table * median_table = cpl_table_extract (table_met, 0, 1);
+        cpl_array * median_array = gravi_array_wrap_image (median_img);
+        
+        /* Put to zero the dark of the fiber coupler unit */
+        for (cpl_size diode = 64; diode < 80; diode++){
+            cpl_array_set(median_array, diode, 0);
+        }
+        
+        cpl_table_set_array (median_table, "VOLT", 0, median_array);
+        FREE (cpl_array_unwrap, median_array);
+        FREE (cpl_image_delete, median_img);
+        CPLCHECK_NUL("Cannot set median in table");
+        
+        /* Put median dark in the output gravi_data */
+        gravi_data_add_table (dark_map, NULL, GRAVI_METROLOGY_EXT, median_table);
+        CPLCHECK_NUL("Cannot save median in gravi_data");
+        
+        /* Create the output DARK RMS table, with a single row */
+        cpl_table * stdev_table = cpl_table_extract (table_met, 0, 1);
+        cpl_array * stdev_array = gravi_array_wrap_image (stdev_img);
+        cpl_table_set_array (stdev_table, "VOLT", 0, stdev_array);
+        FREE (cpl_array_unwrap, stdev_array);
+        FREE (cpl_image_delete, stdev_img);
+        CPLCHECK_NUL("Cannot set rms in table");
+        
+        /* Put median dark in the output gravi_data */
+        gravi_data_add_table (dark_map, NULL, GRAVI_METROLOGY_ERR_EXT, stdev_table);
+        CPLCHECK_NUL("Cannot save median in gravi_data");
+        
+    }  /* End case METROLOGY */
 
     /*
      * Compute the ACQ DARK

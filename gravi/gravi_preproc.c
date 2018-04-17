@@ -818,6 +818,58 @@ gravi_data * gravi_extract_spectrum (gravi_data * raw_data,
 	return spectrum_data;
 }
 
+
+
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Substract metrology dark
+ *
+ * @param preproc_data     The table to manipulate
+ * @param dark_data        DARK calibration map
+ *
+ * If Metrology dark is present, subtract DARK to METROLOGY data
+ */
+/*----------------------------------------------------------------------------*/
+
+cpl_error_code gravi_subtract_met_dark (gravi_data * preproc_data,
+                                                 gravi_data * dark_map)
+{
+    
+    gravi_msg_function_start(1);
+    cpl_ensure_code (dark_map , CPL_ERROR_NULL_INPUT);
+    
+    if (!gravi_data_has_extension (dark_map, GRAVI_METROLOGY_EXT)) {
+        cpl_msg_warning (cpl_func,"The DARK data has no METROLOGY extension");
+    }
+    else
+    {
+        cpl_table * met_data_table = gravi_data_get_table (preproc_data, GRAVI_METROLOGY_EXT);
+        cpl_table * met_dark_table = gravi_data_get_table (dark_map, GRAVI_METROLOGY_EXT);
+        CPLCHECK_MSG("Problem while getting the tables");
+        
+        /* Get pointer to the data */
+        const char * data_x="VOLT";
+        cpl_size nrow  = cpl_table_get_nrow (met_data_table);
+        cpl_array ** met_data_array = cpl_table_get_data_array (met_data_table, data_x);
+        cpl_ensure_code (met_data_array, CPL_ERROR_ILLEGAL_INPUT);
+        cpl_array ** met_dark_array = cpl_table_get_data_array (met_dark_table, data_x);
+        cpl_ensure_code (met_dark_array, CPL_ERROR_ILLEGAL_INPUT);
+        
+        /* Subtract data */
+        
+        for (cpl_size j = 0; j < nrow ; j++)
+        {
+            cpl_array_subtract(met_data_array[j],met_dark_array[0]);
+        }
+        
+        cpl_msg_info (cpl_func,"METROLOGY Volts have been subtracted from dark");
+    }
+ 
+    gravi_msg_function_exit(1);
+    return CPL_ERROR_NONE;
+    
+}
+
 /*----------------------------------------------------------------------------*/
 /**
  * @brief Re-interpolate in-place a spectrum table
