@@ -2,8 +2,9 @@
 2018/04/09 : New version 1.1.1
 ------------------------------------------
 
-- New way to compute the wavelengths of the LOW spectral resolution mode.
-- Astrometry changes (including metrology) towards dueal field observations of the galactic center.
+- New way to compute the wavelengths of the LOW spectral resolution mode. Now there is an alternative calibration algorithm and an alternative pixel interpolation.
+- Astrometry changes (including metrology) towards dueal field observations of the galactic center. In particular the data reduction now takes into accoung the
+pupil motion derived from the acquisition camera and the metrology diode measurements.
 - Improvements on Strehl ratio computation.
 
 ------------------------------------------
