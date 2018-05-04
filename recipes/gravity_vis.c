@@ -751,9 +751,15 @@ static int gravity_vis(cpl_frameset * frameset,
 
 		/* Compute the QC0 about tau0 from piezo signals */
 		gravi_compute_tau0 (p2vmred_data);
+        CPLCHECK_CLEAN ("Cannot compute QC for tau0");
 
-    /* Compute QC for the Fringe Tracker injection */
-    gravi_compute_qc_injection (p2vmred_data);
+        /* Compute QC for the Fringe Tracker injection */
+        gravi_compute_qc_injection (p2vmred_data);
+        CPLCHECK_CLEAN ("Cannot compute QC for FT injection");
+        
+        /* Compute QC for the Fringe Tracker OPD calculation */
+        gravi_compute_qc_ft_opd_estimator (p2vmred_data);
+        CPLCHECK_CLEAN ("Cannot compute QC for FT OPD estimator");
 
 		/* Compute the SNR_BOOT and GDELAY_BOOT */
 		gravi_compute_snr (p2vmred_data, parlist);

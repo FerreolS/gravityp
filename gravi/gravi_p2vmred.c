@@ -1209,4 +1209,142 @@ cpl_error_code gravi_compute_qc_injection (gravi_data * data)
   gravi_msg_function_exit(1);
   return CPL_ERROR_NONE;
 }
+
+
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Compute the QC for the FT linearity
+ *
+ * @param data:   The input data, shall contain an OI_VIS and OPDC table
+ *
+ * For each baseline, the linearity is calculated between the OPD measured by the P2VM
+ * (from the pipeline), and the OPD measured by the FT (in the OPDC table).
+ * Biases as a function of OPD phase is measured and stored as QC parameters
+ */
+/*----------------------------------------------------------------------------*/
+
+cpl_error_code gravi_compute_qc_ft_opd_estimator (gravi_data * p2vmred_data)
+{
+    gravi_msg_function_start(1);
+    cpl_ensure_code (p2vmred_data, CPL_ERROR_NULL_INPUT);
+    
+    int nbase = 6, ntel = 4;
+    char qc_name[100];
+    int nv;
+    
+    /* Get necessary data */
+    cpl_propertylist * header = gravi_data_get_header (p2vmred_data);
+    int npol = gravi_pfits_get_pola_num (header, GRAVI_FT);
+    cpl_table * opdc   = gravi_data_get_table (p2vmred_data, GRAVI_OPDC_EXT);
+    int * time_opdc  = cpl_table_get_data_int (opdc, "TIME");
+    cpl_array **opd_data_opdc   = cpl_table_get_data_array (opdc,"OPD");
+    cpl_size nrow = cpl_table_get_nrow (opdc);
+    CPLCHECK_MSG ("Cannot get data");
+    
+    /* initialize arrays */
+    cpl_array * opd_res_array = cpl_array_new(nrow, CPL_TYPE_DOUBLE_COMPLEX);
+    cpl_array * opd_array = cpl_array_new(nrow,  CPL_TYPE_DOUBLE);
+    cpl_array * snr_array = cpl_array_new(nrow,  CPL_TYPE_DOUBLE);
+    
+    /* do it for both polarisations (if needed) */
+    for (int pol = 0; pol<npol; pol++) {
+        cpl_table * oi_vis  = gravi_data_get_oi_vis (p2vmred_data, GRAVI_FT, pol, npol);
+        double * time_oivis  = cpl_table_get_data_double (oi_vis, "TIME");
+        cpl_array **visdata  = cpl_table_get_data_array (oi_vis,"VISDATA");
+        cpl_array **visdata_err   = cpl_table_get_data_array (oi_vis,"VISERR");
+        
+        cpl_size nrow_oivis  = cpl_table_get_nrow (oi_vis);
+        cpl_size nwave= cpl_array_get_size (visdata[0]);
+        
+        
+        /* For each baseline */
+        for (int base = 0; base<nbase; base++) {
+            cpl_size row_oivis = base;
+            /* For each row */
+            for (cpl_size row = 0; row<nrow; row++)
+            {
+                
+                /* FIXME: get rid of the 0.0011/2 (half step) */
+                while (( fabs (time_oivis[row_oivis+nbase]-time_opdc[row]+0.0011/2*1e6 )< fabs (time_oivis[row_oivis]-time_opdc[row]+0.0011/2*1e6 ) ) && (row_oivis<nrow_oivis-2*nbase))
+                {
+                    row_oivis+=nbase;
+                }
+                
+                double complex visdata_mean=cpl_array_get_mean_complex (visdata[row_oivis]);
+                cpl_array_set_double_complex(opd_res_array,row, visdata_mean*cexp ( I * cpl_array_get_float (opd_data_opdc[row], base, &nv) ));
+                cpl_array_set_double(opd_array, row, carg(visdata_mean));
+                
+                
+                /* get SNR */
+                double signal =0.0;
+                double noise  =0.0;
+                for (cpl_size wave = 0 ; wave < nwave ; wave ++)
+                {
+                    signal+=cabs(cpl_array_get_double_complex (visdata[row_oivis],wave, &nv));
+                    double err=cabs(cpl_array_get_double_complex (visdata_err[row_oivis],wave, &nv));
+                    noise+=err*err;
+                }
+                noise=sqrt(noise+1);
+                if (signal > noise)
+                    cpl_array_set_double(snr_array,row, signal /noise -1 );
+                else
+                    cpl_array_set_double(snr_array,row, 0 );
+                
+            }
+            CPLCHECK_MSG ("Cannot compute new array for cross-referencing OPD and FT OPD");
+            
+            double complex opd_mean = cpl_array_get_mean_complex (opd_res_array);
+            cpl_array_multiply_scalar_complex(opd_res_array,conj(opd_mean));
+            
+            double c_o=0,s_o=0;
+            double a_num=0,b_num=0,c_num=0,d_num=0,a_den=1,b_den=1,c_den=1,d_den=1;
+            double opd, opd_ref, snr_ref;
+            
+            for (cpl_size row = 0; row<nrow; row++)
+            {
+                opd=cpl_array_get_double(opd_array,row,&nv);
+                opd_ref=carg(cpl_array_get_double_complex(opd_res_array,row,&nv));
+                snr_ref=cpl_array_get_double(snr_array,row,&nv);
+                c_o=cos(opd);
+                a_num+=snr_ref*opd_ref*c_o;
+                a_den+=snr_ref*c_o*c_o;
+                s_o=sin(opd);
+                b_num+=snr_ref*opd_ref*s_o;
+                b_den+=snr_ref*s_o*s_o;
+                c_o=c_o*c_o;
+                c_num+=snr_ref*opd_ref*c_o;
+                c_den+=snr_ref*c_o*c_o;
+                s_o=s_o*s_o;
+                d_num+=snr_ref*opd_ref*s_o;
+                d_den+=snr_ref*s_o*s_o;
+            }
+            
+            CPLCHECK_MSG ("Cannot calculate variance of linearity");
+            
+            double a=a_num/a_den;
+            double b=b_num/b_den;
+            double c=c_num/c_den;
+            double d=d_num/d_den;
+            
+            /* Create the QC entry in the FITS header*/
+            if (npol == 2) sprintf (qc_name, "ESO QC LIN_FT P%d_B%d", pol,base);
+            if (npol == 1) sprintf (qc_name, "ESO QC LIN_FT P%d_B%d", 3,base);
+            cpl_propertylist_update_double (header, qc_name, sqrt(a*a+b*b+c*c+d*d));
+            cpl_propertylist_set_comment (header, qc_name, "FT nonlinearity biases [rad]");
+            
+            CPLCHECK_MSG ("Cannot store QCs");
+            
+        }
+    }
+    
+    cpl_array_delete (opd_array);
+    cpl_array_delete (opd_res_array);
+    cpl_array_delete (snr_array);
+    CPLCHECK_MSG ("Cannot close arrays");
+    
+    gravi_msg_function_exit(1);
+    return CPL_ERROR_NONE;
+}
+
+
 /**@}*/

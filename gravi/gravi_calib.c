@@ -259,12 +259,10 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
     /*
      * Compute the METROLOGY DARK
      */
-    if (( isSky==1 )||(!gravi_data_has_extension (raw_data, GRAVI_METROLOGY_EXT))||( cpl_propertylist_get_double (raw_header, "MJD-OBS") < 58208.01  )) {
+    if (( isSky==1 )||(!gravi_data_has_extension (raw_data, GRAVI_METROLOGY_EXT))) {
         
         if ( isSky==0 )
             cpl_msg_warning (cpl_func,"The DARK data has no METROLOGY");
-        else if ( cpl_propertylist_get_double (raw_header, "MJD-OBS") < 58208.01  )
-            cpl_msg_warning (cpl_func,"The DARK data is too old for dark subtraction");
 
     }
     else
@@ -321,6 +319,20 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
         /* Put to zero the dark of the fiber coupler unit */
         for (cpl_size diode = 64; diode < 80; diode++){
             cpl_array_set(median_array, diode, 0);
+        }
+        
+        /* Check on time */
+        double time_mjd_obs= cpl_propertylist_get_double (raw_header, "MJD-OBS");
+        
+        /* If the data is too old, we are using an old dataset */
+        
+        for (cpl_size diode = 64; diode < 80; diode++)
+        {
+            if (time_mjd_obs < 57747) cpl_array_set(median_array, diode, met_Sep_2016[diode]); /* 25 decembre 2016 */
+            else if (time_mjd_obs < 57851) cpl_array_set(median_array, diode, met_Mar_2017[diode]); /* 8 April */
+            else if (time_mjd_obs < 57924) cpl_array_set(median_array, diode, met_Jun_2017[diode]); /* 20 Juin */
+            else if (time_mjd_obs < 57990) cpl_array_set(median_array, diode, met_Jul_2017[diode]); /* 25 Juillet */
+            else if (time_mjd_obs < 58208.01) cpl_array_set(median_array, diode, met_Aug_2017[diode]);
         }
         
         cpl_table_set_array (median_table, "VOLT", 0, median_array);

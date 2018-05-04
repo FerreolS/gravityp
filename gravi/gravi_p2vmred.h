@@ -41,4 +41,6 @@ cpl_error_code gravi_compute_tau0 (gravi_data * data);
 
 cpl_error_code gravi_compute_qc_injection (gravi_data * data);
 
+cpl_error_code gravi_compute_qc_ft_opd_estimator (gravi_data * data);
+
 #endif /* GRAVI_P2VMRED_H_ */
