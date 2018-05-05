@@ -1340,8 +1340,8 @@ cpl_error_code gravi_compute_qc_ft_opd_estimator (gravi_data * p2vmred_data)
             else res_car=0;
         
             /* Create the QC entry in the FITS header*/
-            if (npol == 2) sprintf (qc_name, "ESO QC LIN_FT P%d_B%d", pol,base);
-            if (npol == 1) sprintf (qc_name, "ESO QC LIN_FT P%d_B%d", 3,base);
+            if (npol == 2) sprintf (qc_name, "ESO QC LIN_FT P%d_B%d", pol,base+1);
+            if (npol == 1) sprintf (qc_name, "ESO QC LIN_FT P%d_B%d", 3,base+1);
             cpl_propertylist_update_double (header, qc_name, res_car);
             cpl_propertylist_set_comment (header, qc_name, "FT nonlinearity biases [rad]");
             
