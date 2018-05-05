@@ -1298,6 +1298,7 @@ cpl_error_code gravi_compute_qc_ft_opd_estimator (gravi_data * p2vmred_data)
             
             double c_o=0,s_o=0;
             double a_num=0,b_num=0,c_num=0,d_num=0,a_den=1,b_den=1,c_den=1,d_den=1;
+            double opd_std_num=0,opd_std_den=1;
             double opd, opd_ref, snr_ref;
             
             for (cpl_size row = 0; row<nrow; row++)
@@ -1317,6 +1318,11 @@ cpl_error_code gravi_compute_qc_ft_opd_estimator (gravi_data * p2vmred_data)
                 s_o=s_o*s_o;
                 d_num+=snr_ref*opd_ref*s_o;
                 d_den+=snr_ref*s_o*s_o;
+                
+                /* calculate the standard deviation: numerator and denominator*/
+                opd_std_num+=snr_ref*opd_ref*snr_ref*opd_ref;
+                opd_std_den+=snr_ref;
+                
             }
             
             CPLCHECK_MSG ("Cannot calculate variance of linearity");
@@ -1325,11 +1331,18 @@ cpl_error_code gravi_compute_qc_ft_opd_estimator (gravi_data * p2vmred_data)
             double b=b_num/b_den;
             double c=c_num/c_den;
             double d=d_num/d_den;
+            /* calculate standard deviation */
+            double opd_std=sqrt(0.1+opd_std_num)/opd_std_den;
             
+            /* calculate the average standard error of cos, sin, sin2 and cos2 */
+            double res_car=a*a+b*b+c*c+d*d-16*opd_std*opd_std;
+            if (res_car > 0) res_car=sqrt(res_car);
+            else res_car=0;
+        
             /* Create the QC entry in the FITS header*/
             if (npol == 2) sprintf (qc_name, "ESO QC LIN_FT P%d_B%d", pol,base);
             if (npol == 1) sprintf (qc_name, "ESO QC LIN_FT P%d_B%d", 3,base);
-            cpl_propertylist_update_double (header, qc_name, sqrt(a*a+b*b+c*c+d*d));
+            cpl_propertylist_update_double (header, qc_name, res_car);
             cpl_propertylist_set_comment (header, qc_name, "FT nonlinearity biases [rad]");
             
             CPLCHECK_MSG ("Cannot store QCs");
