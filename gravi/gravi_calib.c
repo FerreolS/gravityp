@@ -326,7 +326,7 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
         
         /* If the data is too old, we are using an old dataset */
         
-        for (cpl_size diode = 64; diode < 80; diode++)
+        for (cpl_size diode = 0; diode < 64; diode++)
         {
             if (time_mjd_obs < 57747) cpl_array_set(median_array, diode, met_Sep_2016[diode]); /* 25 decembre 2016 */
             else if (time_mjd_obs < 57851) cpl_array_set(median_array, diode, met_Mar_2017[diode]); /* 8 April */
