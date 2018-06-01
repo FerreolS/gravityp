@@ -837,7 +837,7 @@ cpl_propertylist * gravi_plist_get_oifits_keywords (cpl_propertylist * header)
 
 /*-----------------------------------------------------------------------------*/
 /**
- * @brief Extract QC and PRO parameters
+ * @brief Extract QC parameters
  * @param header    The input header
  * @return A new cpl_parameterlist with the QC keywords
  */
@@ -845,8 +845,8 @@ cpl_propertylist * gravi_plist_get_oifits_keywords (cpl_propertylist * header)
 
 cpl_propertylist *  gravi_plist_get_qc (cpl_propertylist * header)
 {
-    const char * qc = " QC ", * pro = " PRO ";
-    
+    const char * qc = " QC ";
+
     /* Check inputs */
     cpl_ensure (header, CPL_ERROR_NULL_INPUT, NULL);
     
@@ -857,7 +857,6 @@ cpl_propertylist *  gravi_plist_get_qc (cpl_propertylist * header)
         cpl_property * p = cpl_propertylist_get (header, i);
         const char * p_name = cpl_property_get_name (p);
         if ( (strstr(p_name, qc) != NULL) ||
-             (strstr(p_name, pro) != NULL) ||
              (strstr(p_name, GRAVI_NIGHT_OBS) != NULL) ) {
             cpl_type type_qc = cpl_property_get_type (p);
             switch (type_qc) {
