@@ -106,7 +106,7 @@ cpl_image * gravi_image(const cpl_frame * input_frame,
 		fclose(file);
 	}
 	else {
-		yorick_argv[argv_i++] = cpl_sprintf("%s../../mira/mira-script.i",MIRADIR);
+		yorick_argv[argv_i++] = cpl_sprintf("%s/mira-script.i",MIRADIR);
 		cpl_msg_info(cpl_func, "Mira is there: %s", yorick_argv[argv_i-1]);
 	//File not found
 	}
