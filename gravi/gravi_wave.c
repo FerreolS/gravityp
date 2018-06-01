@@ -2104,10 +2104,11 @@ cpl_error_code  gravi_compute_wave (gravi_data * wave_map,
     	spatial_order = 0;
     	cpl_msg_info (cpl_func, "Option force-waveFT-equal applied");
     }
-    if (type_data == GRAVI_SC) {
-        spectral_order = gravi_param_get_int(parlist, "gravity.calib.wave-spectral-order");
-        cpl_msg_info (cpl_func, "Option set_spectral order to %d", spectral_order);
-    }
+// Keep default value
+//    if (type_data == GRAVI_SC) {
+//        spectral_order = gravi_param_get_int(parlist, "gravity.calib.wave-spectral-order");
+//        cpl_msg_info (cpl_func, "Option set_spectral order to %d", spectral_order);
+//    }
 
     wavedata_table = gravi_wave_fit_2d (wavefibre_table,
                                         detector_table,
@@ -2120,26 +2121,7 @@ cpl_error_code  gravi_compute_wave (gravi_data * wave_map,
      * New Wavelength interpolation made by sylvestre on January 30 2018 
      */
     
-    int DO_IT=0;
-    const char * wave_mode = gravi_param_get_string (parlist, "gravity.calib.wave-mode");
-    if (!strcmp (wave_mode,"PIXEL"))
-        DO_IT = 1;
-    if (!strcmp (wave_mode,"BASELINE"))
-        DO_IT = 0;
-    if (!strcmp (wave_mode,"AUTO"))
-    {
-        if (!strcmp (gravi_pfits_get_spec_res(raw_header), "LOW"))
-            DO_IT = 1;
-        else
-            DO_IT = 0;
-    }
-    cpl_msg_info(cpl_func, "Option wave-mode : %s and spec res : %s : do it : %d ",
-            gravi_param_get_string(parlist, "gravity.calib.wave-mode"),
-            gravi_pfits_get_spec_res(raw_header), DO_IT);
-
-    
-    
-    if (type_data == GRAVI_SC && DO_IT == 1)
+    if (type_data == GRAVI_SC && !strcmp (gravi_pfits_get_spec_res(raw_header), "LOW"))
     {
         cpl_msg_info (cpl_func, "Additional Wavelength Fit");
         cpl_table * wave_individual_table = cpl_table_new (1);

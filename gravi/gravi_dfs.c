@@ -250,24 +250,24 @@ cpl_parameter * gravi_parameter_add_wave (cpl_parameterlist *self)
 	cpl_parameterlist_append (self, p);
 
     /* Spectral order of 2D wave fit */
-    p = cpl_parameter_new_value ("gravity.calib.wave-spectral-order", CPL_TYPE_INT,
-                                "Set the spatial order of the wavelength 2D fit for SC.",
-                                 "gravity.calib", 3);
-    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "wave-spectral-order");
-    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
-    cpl_parameterlist_append (self, p);
+//    p = cpl_parameter_new_value ("gravity.calib.wave-spectral-order", CPL_TYPE_INT,
+//                                "Set the spatial order of the wavelength 2D fit for SC.",
+//                                 "gravity.calib", 3);
+//    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "wave-spectral-order");
+//    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+//    cpl_parameterlist_append (self, p);
 
     /* Wave determination */
-    p = cpl_parameter_new_enum ("gravity.calib.wave-mode", CPL_TYPE_STRING,
-                                "Define the way the wavelength are computed.\n "
-                                "PIXEL to compute the wavelength per pixels\n "
-                                "BASELINE to compute the wavelength per baseline (ABCD)\n "
-                                "AUTO to compute the wavelength per pixels in LOW, and per baseline otherwise",
-                                "gravity.calib", "AUTO", 3,
-                                "PIXEL","BASELINE","AUTO");
-    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "wave-mode");
-    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
-    cpl_parameterlist_append (self, p);
+//    p = cpl_parameter_new_enum ("gravity.calib.wave-mode", CPL_TYPE_STRING,
+//                                "Define the way the wavelength are computed.\n "
+//                                "PIXEL to compute the wavelength per pixels\n "
+//                                "BASELINE to compute the wavelength per baseline (ABCD)\n "
+//                                "AUTO to compute the wavelength per pixels in LOW, and per baseline otherwise",
+//                                "gravity.calib", "AUTO", 3,
+//                                "PIXEL","BASELINE","AUTO");
+//    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "wave-mode");
+//    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+//    cpl_parameterlist_append (self, p);
 
     return p;
 }
