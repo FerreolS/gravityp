@@ -1890,14 +1890,6 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
             gravi_data_add_img (bad_map, NULL, GRAVI_IMAGING_MASK_SC_EXT,
                                 flatmask_img);
 
-//            /* Test save */
-//            cpl_imagelist * save_imglist = cpl_imagelist_new ();
-//            cpl_imagelist_set (save_imglist, flat_img, 0);
-//            cpl_imagelist_set (save_imglist, flatmed_img, 1);
-//            cpl_imagelist_set (save_imglist, flatmask_img, 2);
-//            cpl_imagelist_save (save_imglist, "test_badpix_flat.fits", CPL_TYPE_DOUBLE, NULL, CPL_IO_CREATE);
-//            cpl_imagelist_unwrap (save_imglist);
-            
         } /* End case FLAT provided */
 
         

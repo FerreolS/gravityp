@@ -284,6 +284,8 @@ int gravi_data_test(){
 	cpl_frameset_delete(frameset);
 	gravi_data_delete(data1);
 	gravi_data_delete(data2);
+    unlink("test_data_save_data.fits");
+    unlink("test_data_save_dark.fits");
 
     return 0;
 }
