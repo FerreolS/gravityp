@@ -216,7 +216,7 @@ static int gravity_vis_create(cpl_plugin * plugin)
     /* Extraction */
     gravi_parameter_add_extract (recipe->parameters);
     gravi_parameter_add_metrology (recipe->parameters);
-    gravi_parameter_add_preproc (recipe->parameters);
+    // gravi_parameter_add_preproc (recipe->parameters); // now automatically handled in the preproc
     
     /* Snr, signal, rejectio flags, vis */
     gravi_parameter_add_compute_snr (recipe->parameters, isCalib);

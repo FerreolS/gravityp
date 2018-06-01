@@ -64,7 +64,8 @@ cpl_error_code gravi_interpolate_spectrum_table (cpl_table * spectrum_table,
                                                  cpl_table ** oiwave_tables,
                                                  cpl_table * detector_table,
                                                  cpl_table * specflat_table,
-                                                 const cpl_parameterlist * parlist);
+                                                 const cpl_parameterlist * parlist,
+                                                 int type_data);
 
 /*-----------------------------------------------------------------------------
                               Function code
@@ -894,7 +895,8 @@ cpl_error_code gravi_interpolate_spectrum_table (cpl_table * spectrum_table,
                                                  cpl_table ** oiwave_tables,
                                                  cpl_table * detector_table,
                                                  cpl_table * specflat_table,
-                                                 const cpl_parameterlist * parlist)
+                                                 const cpl_parameterlist * parlist,
+                                                 int type_data)
 {
     gravi_msg_function_start(1);
 
@@ -1008,12 +1010,13 @@ cpl_error_code gravi_interpolate_spectrum_table (cpl_table * spectrum_table,
 
             /* Check the Option
              * Go to 3 pixels interp if :
-             *  1- Option set
+             *  1- if LOW ie. nwave < 50 (old: Option set)
              *  2- Flat is given in input
-             *  3- Not FT data (nwave !=5)
+             *  3- Not FT data
              */
-            if ( (gravi_param_get_bool (parlist,"gravity.preproc.interp-3pixels") == TRUE)
-                   && ( nb_oiwave !=5 )){
+            //if ( (gravi_param_get_bool (parlist,"gravity.preproc.interp-3pixels") == TRUE)
+            //        && (flat  != NULL) && ( nb_oiwave !=5 ))
+            if ( ( nb_oiwave <= 50 ) && ( type_data != GRAVI_SC) && (flat  != NULL) ) {
                 cpl_msg_info_overwritable (cpl_func, "Reinterpolate (3 pixels) region %lld "
                                                        "over %lld (%lld->%lld channels)",
                                                        reg+1,nb_region,nb_wave,nb_oiwave);
@@ -1389,7 +1392,7 @@ cpl_error_code gravi_align_spectrum (gravi_data * spectrum_data,
                                           oiwave_tables,
                                           detector_table,
                                           specflat_table,
-                                          parlist);
+                                          parlist, type_data);
         
         FREE (cpl_free, oiwave_tables);
         CPLCHECK_MSG ("Cannot interpolate");
