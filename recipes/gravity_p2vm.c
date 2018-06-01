@@ -196,7 +196,7 @@ static int gravity_p2vm_create(cpl_plugin * plugin)
     /* Badpix and profile */
     gravi_parameter_add_badpix (recipe->parameters);
     gravi_parameter_add_profile (recipe->parameters);
-    gravi_parameter_add_preproc (recipe->parameters);
+    //gravi_parameter_add_preproc (recipe->parameters);
 
     /* Wave option */
     gravi_parameter_add_wave (recipe->parameters);
