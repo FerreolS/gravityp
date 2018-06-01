@@ -1016,7 +1016,7 @@ cpl_error_code gravi_interpolate_spectrum_table (cpl_table * spectrum_table,
              */
             //if ( (gravi_param_get_bool (parlist,"gravity.preproc.interp-3pixels") == TRUE)
             //        && (flat  != NULL) && ( nb_oiwave !=5 ))
-            if ( ( nb_oiwave <= 50 ) && ( type_data != GRAVI_SC) && (flat  != NULL) ) {
+            if ( ( nb_oiwave <= 50 ) && ( type_data == GRAVI_SC) && (flat  != NULL) ) {
                 cpl_msg_info_overwritable (cpl_func, "Reinterpolate (3 pixels) region %lld "
                                                        "over %lld (%lld->%lld channels)",
                                                        reg+1,nb_region,nb_wave,nb_oiwave);
