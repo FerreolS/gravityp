@@ -86,6 +86,7 @@ frame_group_to_string(cpl_frame_group group)
 /*----------------------------------------------------------------------------*/
 static void test_image(void)
 {
+#ifdef YORICK_BIN
     const char *const fctid = "test_image";
     const char *const test_subject = "gravi_image";
     cpl_errorstate prestate = cpl_errorstate_get();
@@ -145,6 +146,7 @@ static void test_image(void)
 
     }
     
+#endif
     return;
 }
 
