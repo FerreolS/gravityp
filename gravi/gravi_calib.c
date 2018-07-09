@@ -20,6 +20,16 @@
 
 /**
  * @defgroup gravi_calib  Detector calibration
+ *
+ * This module contains the functions that are used to calibrate the detector.
+ * These functions characterize the pixels of the detectors.
+ * They are call by the recipe gravity_dark or gravity_p2vm.
+ * - function dedicated to dark computation @c gravi_conpute_dark,
+ * @c gravi_average_dark
+ * - function dedicated to flat computation : @c gravi_compute_profile,
+ * @c gravi_create_profile, @c gravi_fit_profile, @c gravi_create_profile_image
+ * - computation of the gain : @c gravi_compute_gain
+ * - computation of the bad pixels : @c gravi_compute_badpix
  */
 /**@{*/
 
@@ -84,9 +94,12 @@ cpl_image * gravi_create_profile_image (cpl_image * mean_img,
  * 
  * @return The output DARK calibration map
  *
+ * \exception CPL_ERROR_NULL_INPUT no raw_data as input
+ *
  * The dark image of the SC is a saved as full image of the mean dark value
  * and mean dark standard deviation (RON). The dark for the FT is saved
- * into PIX array of the mean and dark standard deviation (RON).
+ * into PIX array of the mean and dark standard deviation (RON). And the dark of
+ * the metrology is save into the METOLOGY table.
  */
 /*----------------------------------------------------------------------------*/
 
@@ -403,6 +416,9 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
  * @param ndata    Number of DARK in the list
  *
  * @return A newly allocated DARK calibration map
+ *
+ * \exception CPL_ERROR_NULL_INPUT no data as input
+ *
  */
 /*---------------------------------------------------------------------------*/
 
@@ -473,6 +489,9 @@ gravi_data * gravi_average_dark (gravi_data ** data, cpl_size ndata)
  * @param ref_x, ref_y  Coordinate of a known pixel inside the spectra
  * @param size_profile  Spatial extend of the data to extract and fit
  * @param resolution    Spectral resolution (LOW, MED, HIGH)
+ *
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
+ * \exception CPL_ERROR_ILLEGAL_INPUT ref_x or ref_y are outside boundaries
  *
  * values_x0, values_y0, values_sigma are of size nx and unit [pixel] in
  * the FITS convention (1..nx). The function starts to fit the profile
@@ -750,6 +769,9 @@ cpl_error_code gravi_fit_profile (cpl_vector * values_x0,
  * 
  * @return The image of the profile
  *
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
+ * \exception CPL_ERROR_ILLEGAL_INPUT iy_min or iy_max are outside boundaries
+ *
  * The vectors values_x0, values_y0, values_sigma are first smoothed
  * (duplicated) with a polynomial interpolation before being used.
  * The image of the profile is built either from mean_img (LOW, MED) or
@@ -915,6 +937,10 @@ cpl_image * gravi_create_profile_image (cpl_image * mean_img,
  * 
  * @return The gravi_data with FLATs and PROFILE maps
  * 
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
+ * \exception CPL_ERROR_ILLEGAL_INPUT not all shutter are opened or profile_width
+ * option not > 0 or missing table in the input data
+ *
  * For each region defined in the IMAGING_DETECTOR_SC table this function
  * retrieves the profile of the spectrum passing by the reference point
  * defined in the table IMAGING_DETECTOR_SC. The FT data have no profile.
@@ -1442,6 +1468,9 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
  * @param nrawgain      4
  * @param dark_map      The input DARK calibration map
  *
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
+ * \exception CPL_ERROR_ILLEGAL_INPUT not all shutter are opened
+ *
  * It returs a propertylist with the QC value of the mean SC and mean FT
  * gain, in [ADU/e].
  */
@@ -1681,6 +1710,9 @@ cpl_propertylist * gravi_compute_gain (gravi_data ** flats_data,
  * 
  * @return The BAD map with the detected bad pixels.
  * 
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
+ * \exception CPL_ERROR_ILLEGAL_INPUT The number of input flats is not 4
+ *
  * Pixel with dark value or read-out-noise out of a specified
  * range are declared as bad pixels.
  *
@@ -2042,6 +2074,9 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
  * 
  * @return The BIASMASK map with the un-illuminated pixels.
  * 
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
+ * \exception CPL_ERROR_ILLEGAL_INPUT The number of input flats is not 4
+ *
  * Pixel with values lower than 100 adu in the collapsed FLAT
  * are flag with 1 in the BIASMASK, while illuminated pixels
  * (>100adu) are flag with 0 in BIASMASK.
