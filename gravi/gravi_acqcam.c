@@ -20,6 +20,13 @@
 
 /**
  * @defgroup gravi_acqcam  Acquisition Camera
+ *
+ * This module process the data of the acquisition camera. The main function
+ * called by the recipe gravity_vis is @c gravi_reduce_acqcam(). Two kind of acquisition
+ * camera images are reduced as described in section Algorithms/Processing ACQ :
+ * - the field images are reduced by the function @c gravi_acqcam_field()
+ * - the pupil images are reduced by the function @c gravi_acqcam_pupil()
+ *
  */
 /**@{*/
 
@@ -131,6 +138,8 @@ const int * GRAVI_LVMQ_FREE = NULL;
  * @param input_data:     the input gravi_data with the raw imagelist
  * @param bad_map:        the gravi_data containing the bad pixel map
  *                        for ACQ (in extension IMAGING_DATA_ACQ).
+ *
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
  */
 /*----------------------------------------------------------------------------*/
 
@@ -453,17 +462,22 @@ cpl_error_code gravi_acqcam_spot_imprint (cpl_image * img, cpl_vector * a)
 
 /*----------------------------------------------------------------------------*/
 /**
- * @brief Read the diode position from header into the vector output. Assume
- *        the four diodes form a rectangle centered on the pupil center.
- * 
- *        output[8]   = rotation  [deg], set to 0.0
- *        output[9]   = scale  [pix/m]
- *        output[10]  = dx [m]
- *        output[11]  = dy [m]
+ * @brief Read the diode position from header into the vector output
  * 
  * @param header:   input header
  * @param tel:      requested beam (0..3)
  * @param output:   output vector, shall be already allocated
+ *
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
+ * \exception CPL_ERROR_ILLEGAL_INPUT tel outside limits
+ *
+ * Read the diode position from header into the vector output. Assume
+ *        the four diodes form a rectangle centered on the pupil center.
+ *
+ *        - output[8]   = rotation  [deg], set to 0.0
+ *        - output[9]   = scale  [pix/m]
+ *        - output[10]  = dx [m]
+ *        - output[11]  = dy [m]
  */
 /*----------------------------------------------------------------------------*/
 
@@ -508,18 +522,24 @@ cpl_error_code gravi_acqcam_get_diode_ref (cpl_propertylist * header,
 
 /*----------------------------------------------------------------------------*/
 /**
- * @brief Read the sub-aperture position for the pupil sensor,
- *        and re-arrange them into the output vector
- *
- *        output[0] = x0+x1+x2+x3   (center of sub-apertures)
- *        output[1] = x0-x1+x2-x3
- *        output[2] = x0+x1-x2-x3
- *        output[3] = x0-x1-x2+x3
- *        output[4..7] = same for y
+ * @brief Re-arrange the sub-aperture position into the output vector
  *
  * @param header:   input header
  * @param tel:      requested beam (0..3)
  * @param output:   output vector, shall be already allocated
+ *
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
+ * \exception CPL_ERROR_ILLEGAL_INPUT tel outside limits
+ *
+ *
+ * Read the sub-aperture position for the pupil sensor,
+ *        and re-arrange them into the output vector
+ *
+ *        - output[0] = x0+x1+x2+x3   (center of sub-apertures)
+ *        - output[1] = x0-x1+x2-x3
+ *        - output[2] = x0+x1-x2-x3
+ *        - output[3] = x0-x1-x2+x3
+ *        - output[4..7] = same for y
  */
 /*----------------------------------------------------------------------------*/
 
@@ -891,6 +911,8 @@ cpl_error_code gravi_acq_measure_max(cpl_image * img, double x, double y, double
  * @param ex,ey:  output uncertainties on x and y
  * @param size:   size of box to consider
  * 
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
+ *
  * The function use cpl_fit_image_gaussian to fit a Gaussian into the image
  * The best-fit position is then fill with 0 in the image.
  */
@@ -984,6 +1006,8 @@ cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y,
  * @param acqcam_table:      output table
  * @param o_header:          output header
  * 
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
+ *
  * The routine analyse the pupil from ACQ and create QC parameters in the
  * header, as well as columns in the acqcam_table.
  */
@@ -1193,6 +1217,10 @@ cpl_error_code gravi_acqcam_pupil (cpl_image * mean_img,
  * @param acqcam_table:      output table
  * @param o_header:          output header
  * 
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
+ * \exception CPL_ERROR_ILLEGAL_INPUT Cannot find the data of the expected
+ * telescope
+ *
  * The routine analyse the field from ACQ and create QC parameters in the
  * header, as well as columns in the acqcam_table.
  */
@@ -1687,10 +1715,13 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
  *                      will be created, with ndit * ntel rows.
  * @param input_data:   The input gravi_data here the ACQ imagelist is
  *                      read.
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
  * 
- * The routine only process the PUPIL sensor so far. It creates a table with
+ * The routine process the PUPIL sensor. It creates a table with
  * the columns PUPIL_NSPOT (number of detected spots), PUPIL_R (rotation angle)
- * of telescope diode, PUPIL_X, PUPIL_Y, PUPIL_Z (shifts in [m]).
+ * of telescope diode, PUPIL_X, PUPIL_Y, PUPIL_Z (shifts in [m]) (@c gravi_acqcam_pupil).
+ * The routine process also the FIELD sensor. It creates a table with the position
+ * of the FT and SC target, the fiber shift DX, DY, SCALE and the STREHL (@c gravi_acqcam_field).
  * The TIME in [us] is also stored.
  */
 /*----------------------------------------------------------------------------*/

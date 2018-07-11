@@ -19,7 +19,7 @@
  */
 
 /**
- * @defgroup gravi_data gravi_data related functions
+ * @defgroup gravi_data Data handling functions
  *
  * This module implements the gravi data type. The type @c gravi_data is
  * basically a structure of variables container which consists of type
@@ -81,7 +81,11 @@ int gravi_data_get_dark_pos(cpl_table * detector_table, int reg, int x);
 /**
  * @brief Create an empty gravi_data.
  *
+ * @param nb_ext must be greater than 0
+ *
  * @return The newly created gravi_data type.
+ *
+ * \exception CPL_ERROR_ILLEGAL_INPUT @em is 0
  *
  * The function allocates memory for a gravi_data.
  * The returned gravi_data must be deleted using the  destructor
@@ -166,6 +170,9 @@ int gravi_data_is_oi_ext (cpl_propertylist * hdr)
  * @param hdr:  property list of the table, to check it is an OIFITS table
  * @param oi_table: the OIFITS table to verify
  *
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
+ * \exception CPL_ERROR_ILLEGAL_INPUT Cannot reinstall the savetypes
+ *
  * Ensure the FLAG columns are saved as BOOL, the STA_INDEX are saved as 
  * SHORT, the TARGET_ID are saved as SHORT and the MNT_STA are saved as SHORT.
  * This is to follow properly the OIFITS standard.
@@ -212,6 +219,8 @@ cpl_error_code gravi_data_check_savetypes (cpl_propertylist * hdr, cpl_table * o
  *
  * @param self     The gravi data to duplicate.
  * @return The copy of self.
+ *
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
  *
  * The function returns a copy of the gravi data @em self. The copy is a
  * deep copy, i.e. all fields members are copied.  I return
@@ -262,11 +271,15 @@ gravi_data * gravi_data_duplicate (const gravi_data *self)
  * @param first: the main gravi_data (will grow)
  * @param second: the gravi_data to append to first
  *
+ * \exception CPL_ERROR_NULL_INPUT Input data is missing
+ * \exception CPL_ERROR_INCOMPATIBLE_INPUT This extension of the input data are
+ * not compatible
+ *
  * The function only works for OIFITS so far.
  * The function skips some table that shall not be merged (OI_ARRAY,
  * OI_WAVELENGTH, OI_TARGET...). It appends the table extension and
- * the image extention by duplicating the data (@em second may be
- * properly desallocated).
+ * the image extension by duplicating the data (@em second may be
+ * properly deallocated).
  */
 /*----------------------------------------------------------------------------*/
 
@@ -348,6 +361,8 @@ cpl_error_code gravi_data_append (gravi_data * first, const gravi_data * second,
  * @param filename  Name of the input file.
  * @return The newly created gravi data or NULL if an error occurred.
  *
+ * \exception CPL_ERROR_NULL_INPUT Input data is missing
+ *
  * The function returns a gravi data created by reading the FITS file.
  * Currently only the FITS file format is supported. All the gravi data
  * memory members are allocated.
@@ -415,6 +430,9 @@ gravi_data * gravi_data_load (const char * filename)
  * @param filename  Name of the input file.
  * @param extensions_regexp Extensions to load
  * @return The newly created gravi data or NULL if an error occurred.
+ *
+ * \exception CPL_ERROR_NULL_INPUT Input data is missing
+ * \exception CPL_ERROR_ILLEGAL_INPUT @em extensions_regexp cannot be interpreted
  *
  * The function returns a gravi data created by reading the FITS file.
  * Only the extension names that match the regular expression in 
@@ -507,6 +525,8 @@ gravi_data * gravi_data_load_ext(const char * filename,
  *
  * @param data       The gravi data to dump
  *
+ * \exception CPL_ERROR_NULL_INPUT Input data is missing
+ *
  * If the information is missing, the function does nothing
  * and return successfuly.
  */
@@ -540,6 +560,8 @@ cpl_error_code gravi_data_dump_mode (gravi_data * data)
  * @param used_frameset   If not NULL, this frameset is append with frame
  * @return gravi_data
  *
+ * \exception CPL_ERROR_NULL_INPUT Input data is missing
+ *
  * Load and create a gravi data type from input frame.
  */
 /*----------------------------------------------------------------------------*/
@@ -572,6 +594,8 @@ gravi_data * gravi_data_load_frame (cpl_frame * frame,
  * @param filename        Name of the input file.
  * @param used_frameset   If not NULL, this frameset is append with frame
  * @return gravi_data
+ *
+ * \exception CPL_ERROR_NULL_INPUT Input data is missing
  *
  * Load and create a gravi data type from input RAW frame.
  * Data integrity is verified.
@@ -652,6 +676,8 @@ return 1;
  * @param used_frameset   If not NULL, this frameset is append with frame
  * @return gravi_data
  *
+ * \exception CPL_ERROR_NULL_INPUT Input data is missing
+ *
  * Load and create a gravi data type from input RAW frame.
  * Data integrity is verified.
  */
@@ -695,6 +721,8 @@ gravi_data * gravi_data_load_rawframe (cpl_frame * frame,
  * @param extensions_regexp  Regular expression with extensions to load
  * @return gravi_data
  *
+ * \exception CPL_ERROR_NULL_INPUT Input data is missing
+ *
  * Load and create a gravi data type from input RAW frame. Only the extensions
  * specified by the regular expression are loaded into the gravi_data struct.
  */
@@ -729,6 +757,9 @@ gravi_data * gravi_data_load_rawframe_ext (cpl_frame * frame,
 /**
  * @brief Dump the overall structure of a gravi_data in stdout.
  * @param self : gravi_data to dump
+ * \exception CPL_ERROR_NULL_INPUT Input data is missing
+ *
+ *
  */
 /*----------------------------------------------------------------------------*/
 
@@ -759,6 +790,8 @@ cpl_error_code gravi_data_dump (gravi_data *self)
  *
  * @param self     The input gravi_data.
  * @return The gravi data's current size, or 0 if the structure is empty.
+ * \exception CPL_ERROR_NULL_INPUT Input data is missing
+ *
  */
 /*----------------------------------------------------------------------------*/
 
@@ -777,12 +810,15 @@ int gravi_data_get_size(const gravi_data *self)
  * @param filename  Name of the file to write
  * @param mode      The desired output options (combined with bitwise or)
  *
+ * \exception CPL_ERROR_NULL_INPUT Input data is missing
+ * \exception CPL_ERROR_ILLEGAL_INPUT Unknown type of one extension
+ *
  * This function saves a gravi data to a FITS file, using cfitsio and save
  * all the tables members with its properties list.
  * Supported output modes are CPL_IO_CREATE (create a new file) and
  * CPL_IO_EXTEND  (append to an existing file).
  *
- * This is a low-level routine, wich does not provide a CPL compliant
+ * This is a low-level routine, which does not provide a CPL compliant
  * product (see gravi_data_save_new).
  */
 /*----------------------------------------------------------------------------*/
@@ -844,6 +880,9 @@ cpl_error_code gravi_data_save_data(gravi_data * self,
   * @param recipe     The recipe name
   * @param applist    Optional propertylist to append to primary header or NULL
   * @param proCatg    Optional string coding the PRO.CATG
+  *
+  * \exception CPL_ERROR_NULL_INPUT Input data is missing
+  *
   */
 /*----------------------------------------------------------------------------*/
 

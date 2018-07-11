@@ -20,6 +20,9 @@
 
 /**
  * @defgroup gravi_dfs  DFS related functions
+ *
+ *
+ *
  */
 /**@{*/
 
@@ -56,7 +59,7 @@ void gravity_print_banner (void)
 /**
  * @brief    Set the group as RAW or CALIB in a frameset
  * @param    set     the input frameset
- * @return   CPL_ERROR_NONE iff OK
+ * @return   CPL_ERROR_NONE if OK
  */
 /*----------------------------------------------------------------------------*/
 
@@ -140,8 +143,15 @@ cpl_error_code gravi_dfs_set_groups(cpl_frameset * set)
 
     return CPL_ERROR_NONE;
 }
-
-/*---------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief    Disable a parameter
+ * @param    p     the input parameter
+ * @return   CPL_ERROR_NONE if OK
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
+ *
+ */
+/*----------------------------------------------------------------------------*/
 
 cpl_error_code gravi_parameter_disable (cpl_parameter * p)
 {
@@ -152,7 +162,13 @@ cpl_error_code gravi_parameter_disable (cpl_parameter * p)
     return CPL_ERROR_NONE;
 }
 
-/*---------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief    Add badpix parameters to the input parameter list
+ * @param    self     parameter list
+ * @return   last parameter allocated
+ */
+/*----------------------------------------------------------------------------*/
 
 cpl_parameter * gravi_parameter_add_badpix (cpl_parameterlist *self)
 {
@@ -169,6 +185,14 @@ cpl_parameter * gravi_parameter_add_badpix (cpl_parameterlist *self)
 
     return p;
 }
+
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief    Add profile parameters to the input parameter list
+ * @param    self     parameter list
+ * @return   last parameter allocated
+ */
+/*----------------------------------------------------------------------------*/
 
 cpl_parameter * gravi_parameter_add_profile (cpl_parameterlist *self)
 {
