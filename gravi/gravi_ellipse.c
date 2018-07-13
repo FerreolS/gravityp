@@ -20,6 +20,12 @@
 
 /**
  * @defgroup gravi_ellipse  Compute phase and OPDs from data without P2VM
+ *
+ * This module implements the computation of the phase with the ellipse methode.
+ * See @c gravi_ellipse_phase_create(). It also implement the function
+ * @c gravi_ellipse_meanopd_create() to compute the OPD estimated overs the
+ * bandpass.
+ *
  */
 /**@{*/
 
@@ -333,7 +339,7 @@ cpl_vector * gravi_ellipse_phase_create_fast (cpl_vector * vectCA, cpl_vector * 
  *
  * The routine compute the OPD of each spectral channel with the
  * ellipse. These are averaged over channel and polarisations to
- * provide a single value per baselineand per DIT.
+ * provide a single value per baseline and per DIT.
  * 
  * The group-delay is also computed internally, to then ensure that
  * the returned OPD = 0 [m] corresponds to group-delay = 0 [m].

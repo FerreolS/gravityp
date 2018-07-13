@@ -20,6 +20,9 @@
 
 /**
  * @defgroup gravi_image  Image reconstruction (MIRA)
+ *
+ * This module offer a simple interface to run the MIRA program, which is an image
+ *  reconstruction tool.
  */
 /**@{*/
 
@@ -56,6 +59,10 @@ const int GRAVI_ERROR_TIMEOUT  = 0 + CPL_ERROR_EOL;
  * @param    input_data     the input OIFITS frame
  * @param    input_param    the input list of parameters
  * @return   cpl_image if OK, NULL else
+ * \exception CPL_ERROR_ASSIGNING_STREAM Cannot create yorick process
+ * \exception GRAVI_ERROR_TIMEOUT The computation is too long and reach the timeout
+ * \exception CPL_ERROR_NULL_INPUT No image as been send back by MIRA
+ *
  */
 /*----------------------------------------------------------------------------*/
 

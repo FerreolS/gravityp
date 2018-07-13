@@ -21,8 +21,14 @@
 /**
  * @defgroup gravi_dfs  DFS related functions
  *
+ * This module implements the functions linked to the data flow system.
  *
+ * There is
+ * a list of function gravi_parameter_add_[param_name]() to add the parameters to the parameter list mainly used in
+ * the recipe, they are manly called by the [recipe_name]_create() functions.
  *
+ * There is a list of functions gravi_frameset_extract_[tag_description]() to
+ * extract from input frameset the frame of interest.
  */
 /**@{*/
 
@@ -149,7 +155,6 @@ cpl_error_code gravi_dfs_set_groups(cpl_frameset * set)
  * @param    p     the input parameter
  * @return   CPL_ERROR_NONE if OK
  * \exception CPL_ERROR_NULL_INPUT input data is missing
- *
  */
 /*----------------------------------------------------------------------------*/
 
@@ -167,6 +172,7 @@ cpl_error_code gravi_parameter_disable (cpl_parameter * p)
  * @brief    Add badpix parameters to the input parameter list
  * @param    self     parameter list
  * @return   last parameter allocated
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
  */
 /*----------------------------------------------------------------------------*/
 
@@ -191,6 +197,7 @@ cpl_parameter * gravi_parameter_add_badpix (cpl_parameterlist *self)
  * @brief    Add profile parameters to the input parameter list
  * @param    self     parameter list
  * @return   last parameter allocated
+  * \exception CPL_ERROR_NULL_INPUT input data is missing
  */
 /*----------------------------------------------------------------------------*/
 
@@ -238,6 +245,14 @@ cpl_parameter * gravi_parameter_add_profile (cpl_parameterlist *self)
     return p;
 }
 
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief    Add preprocessing parameters to the input parameter list
+ * @param    self     parameter list
+ * @return   last parameter allocated
+  * \exception CPL_ERROR_NULL_INPUT input data is missing
+ */
+/*----------------------------------------------------------------------------*/
 cpl_parameter * gravi_parameter_add_preproc (cpl_parameterlist *self)
 {
     cpl_ensure (self, CPL_ERROR_NULL_INPUT, NULL);
@@ -256,6 +271,14 @@ cpl_parameter * gravi_parameter_add_preproc (cpl_parameterlist *self)
 }
 
 
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief    Add wavelength calibration parameters to the input parameter list
+ * @param    self     parameter list
+ * @return   last parameter allocated
+  * \exception CPL_ERROR_NULL_INPUT input data is missing
+ */
+/*----------------------------------------------------------------------------*/
 cpl_parameter * gravi_parameter_add_wave (cpl_parameterlist *self)
 {
     cpl_ensure (self, CPL_ERROR_NULL_INPUT, NULL);
@@ -295,6 +318,7 @@ cpl_parameter * gravi_parameter_add_wave (cpl_parameterlist *self)
 
     return p;
 }
+
 
 cpl_parameter * gravi_parameter_add_static_name (cpl_parameterlist *self)
 {
@@ -549,6 +573,15 @@ cpl_error_code gravi_parameter_add_compute_signal (cpl_parameterlist *self, int 
     return CPL_ERROR_NONE;
 }
 
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief    Add rejection parameters to the input parameter list
+ * @param    self     parameter list
+ * @param    isCalib     1 if it's calibrator 0 otherwise
+ * @return   last parameter allocated
+  * \exception CPL_ERROR_NULL_INPUT input data is missing
+ */
+/*----------------------------------------------------------------------------*/
 cpl_error_code gravi_parameter_add_rejection (cpl_parameterlist *self, int isCalib)
 {
     cpl_ensure_code (self, CPL_ERROR_NULL_INPUT);
@@ -786,7 +819,19 @@ cpl_error_code gravi_parameter_add_image (cpl_parameterlist *self)
     return CPL_ERROR_NONE;
 }
 
-/*---------------------------------------------------------------------------*/
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief    Extract a list of tags from a frameset
+ * @param    frameset     input frameset
+ * @param    frame_tags   Tag list to extract
+ * @param    nb_tags      Size of the tag list
+ * @return   The selected frameset
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
+ * \exception CPL_ERROR_ILLEGAL_INPUT nb_tags < 0
+ *
+ * The function returns a frameset corresponding the list of tags
+ */
+/*----------------------------------------------------------------------------*/
 
 cpl_frameset * gravi_frameset_extract (cpl_frameset * frameset,
 									   const char ** frame_tags,
@@ -818,6 +863,16 @@ cpl_frameset * gravi_frameset_extract (cpl_frameset * frameset,
 	return output_frameset;
 }
 
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief    Extract P2VM_RAW frame from the input frameset
+ * @param    frameset     input frameset
+ * @return   The selected frameset
+ *
+ * The function returns a frameset with the P2VM_RAW frames
+ */
+/*----------------------------------------------------------------------------*/
+
 cpl_frameset * gravi_frameset_extract_p2vm_data (cpl_frameset * frameset) {
   const char *tags[] = {GRAVI_P2VM_RAW};
   return gravi_frameset_extract (frameset, tags, 1);
@@ -826,6 +881,16 @@ cpl_frameset * gravi_frameset_extract_disp_data (cpl_frameset * frameset) {
   const char *tags[] = {GRAVI_DISP_RAW};
   return gravi_frameset_extract (frameset, tags, 1);
 }
+
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief    Extract DARK_RAW frame from the input frameset
+ * @param    frameset     input frameset
+ * @return   The selected frameset
+ *
+ * The function return a frameset with the DARK_RAW frames
+ */
+/*----------------------------------------------------------------------------*/
 cpl_frameset * gravi_frameset_extract_dark_data (cpl_frameset * frameset) {
   const char *tags[] = {GRAVI_DARK_RAW};
   return gravi_frameset_extract (frameset, tags, 1);
@@ -934,6 +999,19 @@ cpl_frameset * gravi_frameset_extract_patch (cpl_frameset * frameset) {
  * is NOT in the list.
  */
 /*---------------------------------------------------------------------------*/
+
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief    Get the parameter from the parameter list
+ * @param    parlist  input parameter list
+ * @param    name     Name of the paramter to find
+ * @param    def      defaul value to return
+ * @return   Value of the parameter
+ *
+ * The function get the parameter from the list. It provide a default in case
+ * the parameter is NOT in the list.
+ */
+/*----------------------------------------------------------------------------*/
 
 double gravi_param_get_double_default (const cpl_parameterlist * parlist, const char * name, double def)
 {

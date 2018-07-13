@@ -19,6 +19,15 @@
 
 /**
  * @defgroup gravi_eop  Earth Orientation Parameters
+ *
+ * This module implements the function link the the Earth Orientation Parameters.
+ * It contains the function called by the recipe @c gravity_eop to generate the static
+ * calibration file : @c gravity_eop_download_finals2000A() and
+ * @c gravity_eop_data_totable()
+ *
+ * It also implements the computation the UV coordinates making use of this EOP
+ * calibration file : @c gravi_compute_pointing_uv()
+ *
  */
 /**@{*/
 

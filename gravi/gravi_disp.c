@@ -20,6 +20,16 @@
 
 /**
  * @defgroup gravi_disp  Dispersion and Argon calibration
+ *
+ * This module contains two main functions : @c gravi_compute_argon_pos() and
+ * @c gravi_compute_disp() which are called respectively by the recipe
+ * @c gravity_wavelamp and @c gravity_disp.
+ *
+ * The @c gravi_compute_argon_pos computes the position of the known argon
+ * line wavelengths on which the @c gravi_compute_disp function relies as absolute
+ * wavelength calibration. Based on this, a precise dispersion calibration can be
+ * done.
+ *
  */
 /**@{*/
 
@@ -82,14 +92,18 @@ cpl_table * gravi_fit_dispersion (cpl_table * oiflux_table,
  * 
  * @return a gravi_data with the DISP_MODEL table extention.
  * 
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
+ *
+ *
  * The recipe first compute the linearisation coefficients of the FDDL
  * and store them into column LIN_FDDL_SC and LIN_FDDL_FT. Then
  * it computes the dispersion index of the FDDL and store them into
  * columns BETA and GAMMA. This table is then stored as extention
  * DISP_MODEL into the returned, newly allocated, gravi_data.
  *
- * The input vis_data shall have at least 10 observation (60 rows
+ * The input vis_data shall have at least 10 observations (60 rows
  * in OI_VIS tables).
+ *
  */
 /*----------------------------------------------------------------------------*/
 
@@ -331,6 +345,8 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
  *
  * @param vis_data     The VIS data, modified in-place
  * 
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
+ *
  * The function erase all observation with low FT visibilities (could be
  * tracking on second lobes), and then keep only those with the longuest
  * LKDT sequence.
@@ -422,6 +438,7 @@ cpl_error_code gravi_disp_cleanup (gravi_data * vis_data)
  * 
  * @param oiflux_table   The input OI_FLUX table
  * @return a table with the coefficients [um/V^i]
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
  *
  * Found the 22 parameters 6 Aij + 4 B1i + 4 B2i + 4 C1i + 4 C2i
  * by solving the linear system:
@@ -534,11 +551,14 @@ cpl_table * gravi_fit_fddl_lin (cpl_table * oiflux_table)
  * 
  * @return a table with the coefficients
  *
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
+ *
  * Found the  14 parameters 6Aij + 4Bi + CGi in 
  * by solving the linear system:
- * PHASEijt * LAMBDA_MET / 2pi = Aij + Ci (FDDL_FTit + FDDL_SCit)/2
- *                                   - Cj (FDDL_FTjt + FDDL_SCjt)/2
- *                                   + Bi METit - Bj METjt
+ *
+ * PHASEijt * LAMBDA_MET / 2pi = Aij + Ci (FDDL_FTit + FDDL_SCit)/2 -
+ *  Cj (FDDL_FTjt + FDDL_SCjt)/2 + Bi METit - Bj METjt
+ *
  * for all wavelength independently
  *
  * The routine takes a great care to unwrap the phase 
@@ -861,6 +881,10 @@ cpl_table * gravi_fit_dispersion (cpl_table * oiflux_table,
  * 
  * @param preproc_data:   ARGON frame already preproc
  * 
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
+ * \exception CPL_ERROR_ILLEGAL_INPUT mission table (spectrum or OI_WAVE) in
+ * the input data
+ *
  * The function computes the position of various argon lines in the SPECTRUM
  * of the SC. Then creates a new table POS_ARGON with the position in
  * [pixel], in wavelength [m] and the expected theoretical wavelength [m] of

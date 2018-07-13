@@ -22,7 +22,8 @@
  * @defgroup gravi_cpl  Gravity CPL interface
  *
  * This module implements some interactions with cpl objects to address specific
- * gravity needs. The manipulated cpl object are @cpl_matrix, @cpl_
+ * gravity needs. The manipulated cpl object are @c cpl_matrix, @c cpl_array,
+ * @c cpl_table and @c cpl_image
  *
  */
 /**@{*/

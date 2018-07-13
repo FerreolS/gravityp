@@ -20,6 +20,17 @@
 
 /**
  * @defgroup gravi_p2vm  P2VM calibration
+ *
+ * This modules implements the calibration of the P2VM. The main functions are called
+ * by the @c gravity_p2vm recipe. After allocating the P2VM table with @c gravi_create_p2vm()
+ * each file of the P2VM data set with one or two shutters opened (FLAT and P2VM) are processed with
+ * @c gravi_compute_p2vm() to fill the TRANSMISSION, COHERENCE and PHASE columns of the P2VM
+ * table. Then the TRANSMISSION are normalized with @c gravi_p2vm_normalisation() and
+ * the file with 4 shutters opened (WAVE) is processed to calibrated the closure with
+ * @c gravi_p2vm_phase_correction().
+ *
+ * The algorithms involved in this reduction are detailed in section Algorithms/Computation
+ *  of the P2VM.
  */
 /**@{*/
 
@@ -462,6 +473,10 @@ gravi_data * gravi_create_p2vm (gravi_data * wave_map)
  *                      GRAVI_DET_FT will do the same for FT detector
  *                      and GRAVI_DET_ALL will do it for both. 
  * 
+ * /exception CPL_ERROR_NULL_INPUT Input data is missing
+ * /exception CPL_ERROR_ILLEGAL_INPUT A table is missing in the input data,
+ *  or is does not correspond with a file with one or 2 shutters opened.
+ *
  * The function will compute the transmission, phase and coherence and save
  * them in the p2vm_map giving in the inputs (shall be initialized).
  */

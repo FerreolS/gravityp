@@ -20,6 +20,14 @@
 
 /**
  * @defgroup gravi_metrology  Metrology reduction
+ *
+ * This module implements the function relative to the metrology. The two main
+ * functions are
+ * - @c gravi_metrology_compute_p2vm() called by the recipe @c gravity_p2vm. With the
+ * same approach than the FT and SC combiners, it computes the P2VM of the metrology,
+ * - @c gravi_metrology_reduce() called by the recipes @c gravity_vis, @c gravity_disp
+ * and @c gravity_piezo. It reduces the metrology signal to compute the phase
+ * of the metrology
  */
 /**@{*/
 
@@ -1300,8 +1308,8 @@ int metrology_algorithm(structTacData * tacData)
 /**
  * @brief Update the receiver position from header from external calibration
  *
- * @param header :         input/output header to be modified
- * @param receiver_table : table with the new receiver position
+ * @param header          input/output header to be modified
+ * @param receiver_table  table with the new receiver position
  *
  * The table shall have a column TEL_NAME with value 'UT1', 'AT3'..., a
  * column RECX[4] with the x-position of the 4 diode of this telescope,
@@ -1363,9 +1371,9 @@ cpl_error_code gravi_metrology_update_receiverpos (cpl_propertylist * header,
 /**
  * @brief Read the receiver position from header
  *
- * @param header : input header
- * @param tel : telescope number (0 to 3) in gravity_beam
- * @param diode : diode number  (0 to 3)
+ * @param header input header
+ * @param tel telescope number (0 to 3) in gravity_beam
+ * @param diode diode number  (0 to 3)
  *
  * @return Receiver position as double in [m]
  */
@@ -1421,8 +1429,8 @@ double  gravi_metrology_get_posy (cpl_propertylist * header,
 /**
  * @brief Read the fiber coupler focus offset from the fits header
  *
- * @intput header : input header
- * @intput gv : gravity input [0...3]
+ * @param header input header
+ * @param gv gravity input [0...3]
  *
  * @return Fiber coupler focus offset in nanometer
  */
@@ -1470,8 +1478,8 @@ double gravi_metrology_get_fc_focus (cpl_propertylist * header, int gv)
 /**
  * @brief Read the fiber coupler focus offset from the fits header
  *
- * @intput header : input header
- * @intput gv : gravity input [0...3]
+ * @param header input header
+ * @param gv gravity input [0...3]
  *
  * @return Fiber coupler focus offset in nanometer
  */
@@ -1519,12 +1527,12 @@ double gravi_metrology_get_fc_shift (cpl_propertylist * header, int gv)
 /**
  * @brief Read the astigmatism amplitude and angle from the fits header
  *
- * @intput header : input header
- * @intput gv : gravity input [0...3]
+ * @param header input header
+ * @param gv gravity input [0...3]
  *
- * @output amplitude : amplitude of the astigmatism in [nm]
- * @output angle : angle of the astigmatism in [deg]
- * @params rmax : radius of the telescope in [m]
+ * @param amplitude  output amplitude of the astigmatism in [nm]
+ * @param angle output angle of the astigmatism in [deg]
+ * @params rmax radius of the telescope in [m]
  */
 /*----------------------------------------------------------------------------*/
 cpl_error_code gravi_metrology_get_astig (cpl_propertylist * header, int gv,
@@ -1640,11 +1648,11 @@ cpl_table * gravi_metrology_create (cpl_table * metrology_table,
 /**
  * @brief Fill the VIS_MET table with the OPD_PUPIL column
  *
- * @param visacq_table: input OI_VIS_ACQ table
- * @param vismet_table: output OI_VIS_MET table
- * @param delay:        delay in [s] between TIME in ACQ and the correction
+ * @param visacq_table input OI_VIS_ACQ table
+ * @param vismet_table output OI_VIS_MET table
+ * @param delay        delay in [s] between TIME in ACQ and the correction
  *                      seen by the metrology (TIME in OI_VIS_MET)
- * @param header:       corresponding HEADER
+ * @param header       corresponding HEADER
  *
  * Fill the OI_VIS_MET table from the OPD_PUPIL column computed from
  * the OPD_PUPIL column of the OI_VIS_ACQ table.
@@ -1785,6 +1793,7 @@ cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
  * the pipeline alorithm. The function creates the columns
  * PHASE_MET_FC (scalar) and PHASE_MET_TEL
  * (array of 4 values = diodes).
+ * Note that the p2vm of the metrology is note used in this computation.
  */
 /*----------------------------------------------------------------------------*/
 
@@ -3042,6 +3051,22 @@ static int dfda_sin(const double x[], const double a[], double result[]){
 	return (0);
 }
 
+/* -------------------------------------------------------------------- */
+/**
+ * @brief Calibrate the P2VM of the metrology
+ *
+ * @param metrology_table  input metrology data
+ * @param wave_met  Wavelength of the metrology [m]
+ * @return the p2vm of the metrology
+ *
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
+ *
+ * The resulting P2VM table contains the TRANSMISSION, COHERENCE and PHASE
+ * of the metrology.
+ *
+ */
+/* -------------------------------------------------------------------- */
+
 cpl_table * gravi_metrology_compute_p2vm (cpl_table * metrology_table, double wave_met)
 {
 	gravi_msg_function_start(1);
@@ -3197,6 +3222,11 @@ cpl_table * gravi_metrology_compute_p2vm (cpl_table * metrology_table, double wa
  * @brief Reduce the metrology
  *
  * @param data  a gravi_data with a METROLOGY extension (input/output)
+ * @param eop_data  Earth orientation parameter data or NULL
+ * @param met_pos  Metrology receiver position data or NULL
+ * @param parlist  list of recipe options (including acq-correction-delay)
+ *
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
  * 
  * The resulting VIS_MET table is created from the METROLOGY table
  * and added this data. It is then updated with the TAC algorithm.
