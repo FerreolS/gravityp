@@ -20,6 +20,16 @@
 
 /**
  * @defgroup gravi_tf Transfer function computation
+ *
+ * This module implements the functions to compute the transfer function and to
+ * calibrate the visibilities knowing this transfer function. The main functions
+ * are :
+ * - @c gravi_compute_tf() to compute the transfer funciotns. See
+ * Algorithms/Calibration with the TF, From CAL to TF estimations.
+ * - @c gravi_calibrate_vis() to interpolate (see Algorithms/Calibration with the TF,
+ * Interpolation of TF at the time of SCI) and to calibrate (see Algorithms/Calibration
+ * with the TF, Calibration)
+ *
  */
 /**@{*/
 

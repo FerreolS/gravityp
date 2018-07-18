@@ -20,7 +20,17 @@
 
 /**
  * @defgroup gravi_signal     Manipulated signals amoung real-time tables.
- *                            (resample, averaged, synchronise, creates...)
+ *
+ * This module computes all the quantities from the individual coherent flux
+ * measurements that are useful for the final processing of the visibilities.
+ * It includes the signal synchronization, resampling and averaged over SC DIT, as well
+ * as qualitative parameters.
+ * The main function called by @c gravity_vis are :
+ * - @c gravi_compute_snr() : see Algorithms/Computation of SNR
+ * - @c gravi_compute_signals() : see Algorithms/Computing the vFactor,
+ * Algorithms/Computing the pFactor, Algorithms/Phase referencing, Algorithms/Geometric flux
+ * - @c gravi_compute_rejection() : see Algorithms/Frame rejection
+ *
  */
 /**@{*/
 

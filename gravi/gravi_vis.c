@@ -20,6 +20,15 @@
 
 /**
  * @defgroup gravi_vis  Averaging the individual DITs into a final OIFITS
+ *
+ * This module processes the p2vmreduced file to produce the final product of the
+ * @c gravity_vis recipe. The functions @c gravi_compute_vis()  computes the averaged
+ * quantities, main steps are :
+ * - @c gravi_vis_average_bootstrap() to average the visibilities (see
+ * Algorithms/Average complex visibilities, Algorithms/Average squared visibilities)
+ * - @c gravi_flux_average_bootstrap() to average the fluxes (see Algorithms/AverageFlux)
+ * - @c gravi_t3_average_bootstrap() (see Algorithms/Average closure-phase)
+ *
  */
 /**@{*/
 
@@ -1135,7 +1144,7 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
  *        into a final, single observation per base and per tel.
  * 
  * @param p2vmred_data  P2VMREDUCED data containing OI_FLUX and OI_VIS tables
- * 	  	                comming from the @c gravi_compute_p2vmred
+ * 	  	                coming from the @c gravi_compute_p2vmred
  * @param parlist       Parameters of the recipe
  */
 /*----------------------------------------------------------------------------*/

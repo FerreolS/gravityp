@@ -20,6 +20,13 @@
 
 /**
  * @defgroup gravi_p2vmred  Compute the visibilities
+ *
+ * This module implement the functions to compute the coherent flux of all the
+ * frames of the beam combiners (FT and SC). The main function is @c gravi_compute_p2vmred().
+ * The algorithms involved in these fonction are description in the sections :
+ * - algorithms/Extraction of the coherent fluxes and telescope fluxes via P2VM
+ * - algorithms/Computation of SNR
+ *
  */
 /**@{*/
 
@@ -298,6 +305,9 @@ cpl_table * gravi_create_oiarray_table (const cpl_table * array_geometry,
  * 
  * @return  The data containing the OI_FLUX and OI_VIS tables who compute
  * 	        the visibilies of each acquisition. 
+ *
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
+ * \exception CPL_ERROR_ILLEGAL_INPUT input data are not compatible
  * 
  * It inverts the v2pm with a singular
  * value decomposition, and compute the product spectrum_values*p2vm.

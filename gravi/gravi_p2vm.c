@@ -473,8 +473,8 @@ gravi_data * gravi_create_p2vm (gravi_data * wave_map)
  *                      GRAVI_DET_FT will do the same for FT detector
  *                      and GRAVI_DET_ALL will do it for both. 
  * 
- * /exception CPL_ERROR_NULL_INPUT Input data is missing
- * /exception CPL_ERROR_ILLEGAL_INPUT A table is missing in the input data,
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
+ * \exception CPL_ERROR_ILLEGAL_INPUT A table is missing in the input data,
  *  or is does not correspond with a file with one or 2 shutters opened.
  *
  * The function will compute the transmission, phase and coherence and save
@@ -763,6 +763,10 @@ cpl_error_code gravi_compute_p2vm (gravi_data * p2vm_map, gravi_data * preproc_d
  * 	  	  	  	  	  	to check witch par of the p2vm map in the phase
  * 	  	  	  	  	  	and coherence must be normalised
  * 
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
+ * \exception CPL_ERROR_ILLEGAL_INPUT Cannot retrieve the number of wavelength
+ *
+ *
  * The function normalises the given p2vm map
  */
 /*----------------------------------------------------------------------------*/
@@ -1117,6 +1121,9 @@ cpl_error_code gravi_p2vm_normalisation (gravi_data * p2vm_map,
  *  1: Force phiA(lbd) to have zero mean and minimum GD for baselines (01,02,03)
  *  2: Force phiA(lbd) to have zero-GD for baselines (01,02,03)
  *
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
+ * \exception CPL_ERROR_ILLEGAL_INPUT full_phase parameter out of range
+ *
  * The p2vmreduced of a 4-shutter open observation
  * (generally the WAVE) can be used to compute the p2vm closure phase
  * and chromatic phase, which are then removed from the P2VM phases.
@@ -1336,6 +1343,8 @@ cpl_error_code gravi_p2vm_phase_correction (gravi_data * p2vm_map,
  *                      function gravi_compute_p2vm
  * 
  * @param p2vmred_data  The P2VMREDUCED of the 4-shutter open file
+ *
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
  *
  * Compute the mean OI_FLUX from the p2vmreduced data.
  * Normalize to mean=1.0 and store it into the p2vm_map.

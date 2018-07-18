@@ -20,6 +20,13 @@
 
 /**
  * @defgroup gravi_preproc  Preprocessing functions
+ *
+ * This module implements the preprocessing of the data, which is mainly to convert raw
+ * data into spectra. The main function @c gravi_extract_spectrum() is used at several
+ * place in the pipeline. And the steps of the preprocessing are description in the sections :
+ * - Algorithm/Spectrum Extraction
+ * - Algorithm/Re-interpolation to a common wavelength
+ *
  */
 /**@{*/
 
@@ -555,6 +562,8 @@ cpl_table * gravi_imglist_sc_collapse (cpl_table * profile_table,
  * @param sky_map          SKY calibration map
  * 
  * @return The output gravi data contenning all the spectrums
+ *
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
  *
  * It substrates the dark map. It converts data into photoelectrons using
  * the gain map and identify the bad pixels for a correction. Finally it extracts

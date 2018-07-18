@@ -20,6 +20,12 @@
 
 /**
  * @defgroup gravi_pfits  Gravity property list
+ *
+ * This module implement the function to access the a given property of the header.
+ * Some of the are specific for one keywords like @c gravi_pfits_det_starx()
+ * (not all of them are documented), and some are more generic like
+ * @c gravi_pfits_get_double()
+ *
  */
 /**@{*/
 

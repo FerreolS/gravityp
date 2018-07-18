@@ -20,6 +20,9 @@
 
 /**
  * @defgroup gravi_utils     Miscellaneous Utilities
+ *
+ * This module contains some utilities to access to specific quantities.
+ *
  */
 /**@{*/
 
@@ -1062,7 +1065,7 @@ double gravi_spectrum_get_flux (const cpl_table * table)
  * 
  * @param opd        Input vector with GD in [m]
  * @param wave       Input wave channel
- * @param nwav e     Number of wave channel (define spectral resolution)
+ * @param nwave     Number of wave channel (define spectral resolution)
  *
  * @return A newly allocated vector with the computed envelope
  *
