@@ -2169,6 +2169,59 @@ gravi_data * gravi_compute_biasmask (gravi_data * dark_map,
 	return biasmask_map;
 }
 
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Create BIASMASK for SC from raw FLATs and raw DARK
+ *
+ * @param dark_map     The input dark map calibration
+ * @param flats_data   The input raw flats (optional)
+ * @param nflat        The number of input flats (shall be 4)
+ * @param params       The parameter list
+ *
+ * @return The BIASMASK map with the un-illuminated pixels.
+ *
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
+ * \exception CPL_ERROR_ILLEGAL_INPUT The number of input flats is not 4
+ *
+ * Pixel with values lower than 100 adu in the collapsed FLAT
+ * are flag with 1 in the BIASMASK, while illuminated pixels
+ * (>100adu) are flag with 0 in BIASMASK.
+ *
+ * FIXME: improve the way we define the threshold. Use an 'ouverture'
+ * filtering maybe.
+ */
+/*----------------------------------------------------------------------------*/
+
+gravi_data * gravi_compute_piezotf (gravi_data * data,
+                                    const cpl_parameterlist * params)
+{
+    /* Verbose */
+    gravi_msg_function_start(1);
+    cpl_ensure (data,   CPL_ERROR_NULL_INPUT, NULL);
+    cpl_ensure (params,     CPL_ERROR_NULL_INPUT, NULL);
+
+    /* Construction of the piezo tf product */
+    gravi_data * piezo_tf = gravi_data_new(0);
+    cpl_propertylist * piezotf_header = gravi_data_get_header (piezo_tf);
+
+    /* Dump full header into product */
+    cpl_propertylist * data_header = gravi_data_get_header (data);
+    cpl_propertylist_append (piezotf_header, data_header);
+
+    /* Copy necessary tables */
+    gravi_data_copy_ext (piezo_tf, data, GRAVI_OPDC_EXT);
+
+    /* DO THE COMPUTATION*/
+
+
+
+
+
+
+    /* Verbose */
+    gravi_msg_function_exit(1);
+    return piezo_tf;
+}
 
 /*----------------------------------------------------------------------------*/
 

@@ -33,6 +33,7 @@ AM_CPPFLAGS = -DDATADIR=\"$(srcdir)/\" $(all_includes)
 
 check_PROGRAMS = gravi_dfs-test \
                  gravi_data-test \
+                 gravi_vis-test \
                  gravi_utils-test \
                  gravi_calib-test \
                  gravi_strehl-test \
@@ -53,6 +54,11 @@ gravi_calib_test_SOURCES = gravi_calib-test.c
 gravi_calib_test_LDFLAGS = $(CPL_LDFLAGS) $(GSL_LDFLAGS) $(HDRL_LDFLAGS)
 gravi_calib_test_LDADD = $(LIBCPLUI) $(LIBCPLCORE) $(LIBGRAVI) $(GSL_LIBS) $(HDRL_LIBS)
 gravi_calib_test_DEPENDENCY = $(LIBHDRL)
+
+gravi_vis_test_SOURCES = gravi_vis-test.c
+gravi_vis_test_LDFLAGS = $(CPL_LDFLAGS) $(GSL_LDFLAGS) $(HDRL_LDFLAGS)
+gravi_vis_test_LDADD = $(LIBCPLUI) $(LIBCPLCORE) $(LIBGRAVI) $(GSL_LIBS) $(HDRL_LIBS)
+gravi_vis_test_DEPENDENCY = $(LIBHDRL)
 
 gravi_utils_test_SOURCES = gravi_utils-test.c
 gravi_utils_test_LDFLAGS = $(CPL_LDFLAGS) $(GSL_LDFLAGS) $(HDRL_LDFLAGS)

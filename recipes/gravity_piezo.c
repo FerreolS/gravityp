@@ -298,16 +298,13 @@ static int gravity_piezo_destroy(cpl_plugin * plugin)
 static int gravity_piezo(cpl_frameset * frameset,
 					  const cpl_parameterlist * parlist)
 {
-    cpl_frameset * recipe_frameset=NULL, * wavecalib_frameset=NULL, * dark_frameset=NULL,
-	  * darkcalib_frameset=NULL, * flatcalib_frameset=NULL, * p2vmcalib_frameset=NULL,
-	  * badcalib_frameset=NULL, *used_frameset=NULL, * current_frameset=NULL;
+    cpl_frameset * recipe_frameset=NULL, *used_frameset=NULL, * current_frameset=NULL;
 	
 	cpl_frame * frame=NULL;
 	
-	gravi_data * p2vm_map=NULL, * data=NULL, * wave_map=NULL, * dark_map=NULL,
-	  * profile_map=NULL, * badpix_map=NULL, * preproc_data=NULL, * p2vmred_data=NULL, * oi_vis=NULL;
+	gravi_data * data=NULL, * piezo_data=NULL;
 	
-	int nb_vis, nb_frame;
+	int nb_frame;
 
 	/* Message */
 	gravity_print_banner (); 
@@ -319,193 +316,41 @@ static int gravity_piezo(cpl_frameset * frameset,
 					cpl_error_get_code()) ;
 
     /* Dispatch the frameset */
-    p2vmcalib_frameset = gravi_frameset_extract_p2vm_map (frameset);
-    darkcalib_frameset = gravi_frameset_extract_dark_map (frameset);
-    wavecalib_frameset = gravi_frameset_extract_wave_map (frameset);
-    dark_frameset = gravi_frameset_extract_dark_data (frameset);
-    flatcalib_frameset = gravi_frameset_extract_flat_map (frameset);
-    badcalib_frameset = gravi_frameset_extract_bad_map (frameset);
-	
     recipe_frameset = gravi_frameset_extract_piezotf_data (frameset);
-
-	/* To use this recipe the frameset must contain the p2vm, wave and
-	 * gain calibration file. */
-    if ( cpl_frameset_get_size (p2vmcalib_frameset) !=1 ||
-		 cpl_frameset_get_size (wavecalib_frameset) !=1 ||
-		 cpl_frameset_get_size (flatcalib_frameset) !=1 ||
-		 cpl_frameset_get_size (badcalib_frameset) != 1 ||
-		 cpl_frameset_get_size (recipe_frameset) < 1 ||
-		 (cpl_frameset_is_empty (dark_frameset) &&
-		  cpl_frameset_is_empty (darkcalib_frameset) )) {
-	  cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
-							 "Illegal number of P2VM, FLAT, WAVE, BAD, DARK, PIEZOTF file on the frameset");
-	  goto cleanup;
-    }
 
 	/* Insert calibration frame into the used frameset */
 	used_frameset = cpl_frameset_new();
-
-    /* 
-	 * Identify the DARK in the input frameset 
-	 */
-	
-    if (!cpl_frameset_is_empty (dark_frameset)) {
-	  
-    	frame = cpl_frameset_get_position (dark_frameset, 0);
-		data = gravi_data_load_rawframe (frame, used_frameset);
-        gravi_data_detector_cleanup (data, parlist);
-
-		/* Compute dark */
-		dark_map = gravi_compute_dark (data);
-		FREE (gravi_data_delete, data);
-		
-		CPLCHECK_CLEAN ("Could not compute the DARK map");
-
-		/* Save the dark map */
-		gravi_data_save_new (dark_map, frameset, NULL, parlist,
-							 NULL, frame, "gravity_piezo",
-                             NULL, GRAVI_DARK_MAP);
-		
-		CPLCHECK_CLEAN ("Could not save the DARK map");
-    }
-    else if (!cpl_frameset_is_empty (darkcalib_frameset)) {
-	  
-    	frame = cpl_frameset_get_position (darkcalib_frameset, 0);
-		dark_map = gravi_data_load_frame (frame, used_frameset);
-
-		CPLCHECK_CLEAN ("Could not load the DARK map");
-    }
-    else
-		cpl_msg_info (cpl_func, "There is no DARK in the frame set");
-
-	/* Identify the BAD in the input frameset */
-	frame = cpl_frameset_get_position (badcalib_frameset, 0);
-	badpix_map = gravi_data_load_frame (frame, used_frameset);
-		
-    /* Identify the FLAT in the input frameset */
-	frame = cpl_frameset_get_position (flatcalib_frameset, 0);
-	profile_map = gravi_data_load_frame (frame, used_frameset);
-
-    /* Identify the WAVE in the input frameset */
-	frame = cpl_frameset_get_position (wavecalib_frameset, 0);
-	wave_map = gravi_data_load_frame (frame, used_frameset);
-
-    /* Identify the P2VM in the input frameset */
-	frame = cpl_frameset_get_position (p2vmcalib_frameset, 0);
-	p2vm_map = gravi_data_load_frame (frame, used_frameset);
 
 	/*
 	 * Loop on input RAW frames to be reduced 
 	 */
 	
-	nb_vis = 0;
-	oi_vis = gravi_data_new(0);
 	
     nb_frame = cpl_frameset_get_size (recipe_frameset);
 	
-    for (int thread = 0; thread < nb_frame; thread++){
+    for (int i_file = 0; i_file < nb_frame; i_file++){
 		current_frameset = cpl_frameset_duplicate (used_frameset);
 
-		cpl_msg_info (cpl_func, " ***** OBJECT %d over %d ***** ", thread+1, nb_frame);
+		cpl_msg_info (cpl_func, " ***** File %d over %d ***** ", i_file+1, nb_frame);
 
 		/* 
-		 * Reduce the OBJECT
+		 * Reduce the File
 		 */
 		
-		frame = cpl_frameset_get_position (recipe_frameset, thread);
+		frame = cpl_frameset_get_position (recipe_frameset, i_file);
 		data = gravi_data_load_rawframe (frame, current_frameset);
-        gravi_data_detector_cleanup (data, parlist);
-
-		/* Option save the preproc file */
-		if (gravi_param_get_bool (parlist,"gravity.dfs.bias-subtracted-file")) {
-		  
-			gravi_data_save_new (data, frameset, NULL, parlist,
-								 current_frameset, frame, "gravity_piezo",
-								 NULL, "BIAS_SUBTRACTED");
-
-			CPLCHECK_CLEAN ("Cannot save the BIAS_SUBTRACTED product");
-		}
-		
-		
-		/* Check the shutters */
-		if ( !gravi_data_check_shutter_open (data) ) {
-		  cpl_msg_warning (cpl_func, "Shutter problem in the OBJECT");
-		}
-
-        /* Extract spectrum */
-        preproc_data = gravi_extract_spectrum (data, profile_map, dark_map,
-                                               badpix_map, NULL, parlist, 
-                                               GRAVI_DET_ALL);
-		CPLCHECK_CLEAN ("Cannot extract spectrum");
-        
-        /* Rescale to common wavelength */
-        gravi_align_spectrum (preproc_data, wave_map, p2vm_map, GRAVI_DET_ALL, parlist);
-		CPLCHECK_CLEAN ("Cannot re-interpolate spectrum");
-
-        /* Move extensions from raw_data */
-        gravi_data_move_ext (preproc_data, data, GRAVI_ARRAY_GEOMETRY_EXT);
-        gravi_data_move_ext (preproc_data, data, GRAVI_OPTICAL_TRAIN_EXT);
-        gravi_data_move_ext (preproc_data, data, GRAVI_OPDC_EXT);
-        gravi_data_move_ext (preproc_data, data, GRAVI_FDDL_EXT);
-        gravi_data_move_ext (preproc_data, data, GRAVI_METROLOGY_EXT);
-		FREE (gravi_data_delete, data);
-		CPLCHECK_CLEAN ("Cannot move ext");
-
-		/* Option save the preproc file */
-		if (gravi_param_get_bool (parlist,"gravity.dfs.preproc-file")) {
-		  
-			gravi_data_save_new (preproc_data, frameset, NULL, parlist,
-								 current_frameset, frame, "gravity_piezo",
-                                 NULL, GRAVI_PREPROC);
-
-			CPLCHECK_CLEAN ("Cannot save the PREPROC product");
-		}
-
-		/* Compute the flux and visibilities for each telescope and
-		 * per acquisition with the P2VM applied to preproc_data */
-		p2vmred_data = gravi_compute_p2vmred (preproc_data, p2vm_map,
-		                                "gravi_single", parlist, GRAVI_DET_ALL);
-		CPLCHECK_CLEAN ("Cannot apply p2vm to the preproc data");
-
-        /* Move extensions and delete preproc */
-        gravi_data_move_ext (p2vmred_data, preproc_data, GRAVI_METROLOGY_EXT);
-        gravi_data_move_ext (p2vmred_data, preproc_data, GRAVI_FDDL_EXT);
-        gravi_data_move_ext (p2vmred_data, preproc_data, GRAVI_OPDC_EXT);
-        FREE (gravi_data_delete, preproc_data);
-		CPLCHECK_CLEAN ("Cannot delete preproc");
-
-        /* Reduce the OPDC table */
-        gravi_compute_opdc_state (p2vmred_data);
-		CPLCHECK_CLEAN ("Cannot reduce OPDC");
-        
-		/* Reduce the metrology */
-		gravi_metrology_reduce (p2vmred_data, NULL, NULL, parlist);
-		CPLCHECK_CLEAN ("Cannot reduce metrology");
-
-		/* Compute the SNR_SMT and GDELAY_SMT columns */
-		gravi_compute_snr (p2vmred_data, parlist);
-		CPLCHECK_MSG ("Cannot compute SNR");
-
-		/* Compute the additional signals for averaging */
-		gravi_compute_signals (p2vmred_data, NULL, parlist);
-		CPLCHECK_MSG ("Cannot compute signals");
-
-		/* Compute rejection flags for averaging */
-		gravi_compute_rejection (p2vmred_data, parlist);
-		CPLCHECK_MSG ("Cannot rejection flags signals");
-
-		/* Add here your computation of QC */
+		piezo_data = gravi_compute_piezotf (data, parlist);
+		CPLCHECK_CLEAN ("Cannot compute the piezo TF");
 		
 		/* Save the PIEZOTF which is in fact a P2VMREDUCED */
-		gravi_data_save_new (p2vmred_data, frameset, NULL, parlist,
-							 current_frameset, frame, "gravity_piezo", NULL, "PIEZOTF");
+		gravi_data_save_new (piezo_data, frameset, NULL, parlist,
+							 current_frameset, frame, "gravity_piezo", NULL, GRAVI_PIEZOTF_MAP);
 		
 		CPLCHECK_CLEAN ("Cannot save the PIEZOTF product");
 
-		nb_vis++;
-		cpl_msg_info (cpl_func,"Free the p2vmreduced");
+		cpl_msg_info (cpl_func,"Free the piezotf");
 		FREE (cpl_frameset_delete, current_frameset);
-		FREE (gravi_data_delete, p2vmred_data);
+		FREE (gravi_data_delete, piezo_data);
     }
 	/* End loop on the input files to reduce */
 
@@ -516,21 +361,8 @@ cleanup:
 	/* Deallocation of all variables */
 	cpl_msg_info(cpl_func,"Memory cleanup");
 	
-	FREE (gravi_data_delete,dark_map);
 	FREE (gravi_data_delete,data);
-	FREE (gravi_data_delete,preproc_data);
-	FREE (gravi_data_delete,profile_map);
-	FREE (gravi_data_delete,wave_map);
-	FREE (gravi_data_delete,badpix_map);
-	FREE (gravi_data_delete,p2vm_map);
-	FREE (gravi_data_delete,p2vmred_data);
-	FREE (gravi_data_delete,oi_vis);
-	FREE (cpl_frameset_delete,darkcalib_frameset);
-	FREE (cpl_frameset_delete,wavecalib_frameset);
-	FREE (cpl_frameset_delete,flatcalib_frameset);
-	FREE (cpl_frameset_delete,badcalib_frameset);
-	FREE (cpl_frameset_delete,p2vmcalib_frameset);
-	FREE (cpl_frameset_delete,dark_frameset);
+	FREE (gravi_data_delete,piezo_data);
 	FREE (cpl_frameset_delete,recipe_frameset);
 	FREE (cpl_frameset_delete,current_frameset);
 	FREE (cpl_frameset_delete,used_frameset);

@@ -91,7 +91,8 @@ cpl_error_code gravi_dfs_set_groups(cpl_frameset * set)
 				   (!strcmp(tag, GRAVI_FLAT_RAW)) ||
 				   (!strcmp(tag, GRAVI_WAVE_RAW)) ||
 				   (!strcmp(tag, GRAVI_WAVELAMP_RAW)) ||
-				   (!strcmp(tag, GRAVI_P2VM_RAW)) ||
+                   (!strcmp(tag, GRAVI_P2VM_RAW)) ||
+                   (!strcmp(tag, GRAVI_PIEZOTF_RAW)) ||
 				   (!strcmp(tag, GRAVI_SINGLE_SCIENCE_RAW)) ||
 				   (!strcmp(tag, GRAVI_SINGLE_CALIB_RAW)) ||
 				   (!strcmp(tag, GRAVI_DUAL_SCIENCE_RAW)) ||
@@ -117,7 +118,8 @@ cpl_error_code gravi_dfs_set_groups(cpl_frameset * set)
 				  (!strcmp(tag, GRAVI_WAVE_MAP)) ||
 				  (!strcmp(tag, GRAVI_P2VM_MAP)) ||
 				  (!strcmp(tag, GRAVI_BAD_MAP)) ||
-				  (!strcmp(tag, GRAVI_BIASMASK_MAP)) ||
+                  (!strcmp(tag, GRAVI_BIASMASK_MAP)) ||
+                  (!strcmp(tag, GRAVI_PIEZOTF_MAP)) ||
 				  (!strcmp(tag, GRAVI_PREPROC)) ||
 				  (!strcmp(tag, GRAVI_TF_SINGLE_SCIENCE)) ||
 				  (!strcmp(tag, GRAVI_TF_SINGLE_CALIB)) ||
