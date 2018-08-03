@@ -509,7 +509,10 @@ cpl_error_code gravi_apply_tf_phi( gravi_data * science,
  * @param tf_science: The already allocated gravi_data in which
  *                    the interpolated TF at the time of the science 
  *                    is returned.
- * @param parlist:   The parameter list
+ * @param parlist:    The recipe parameters :
+ *                    - gravity.viscal.delta-time-calib to interpolate the TF [s]
+ *                    - gravity.viscal.force-calib to force calibration with the input calibrator
+ *                    - gravity.viscal.calib-flux to calibrate the flux
  * 
  * @return The calibrated OIFITS data.
  */
