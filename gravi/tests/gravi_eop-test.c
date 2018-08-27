@@ -63,8 +63,8 @@ static void gravi_eop_retrieve_eop_test(void)
     //Test retrieving the EOP data from the server
     int data_length;
     char * raw_text = gravity_eop_download_finals2000A(
-                        "ftp.iers.org", 
-                        "/products/eop/rapid/standard/finals2000A.data",
+                        "ftp.eso.org", 
+                        "/pub/dfs/pipelines/gravity/finals2000A.data",
                         &data_length);
     //Check there if the buffer is not empty
     cpl_test(data_length > 0);
