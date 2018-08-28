@@ -128,7 +128,7 @@ static void gravi_eop_retrieve_eop_test(void)
 
     //Test with wrong URL
     gravity_eop_download_finals2000A(
-        "ftp.iers.org",
+        "ftp.eso.org",
         "/invalid/path",
        &data_length);
 
@@ -136,7 +136,7 @@ static void gravi_eop_retrieve_eop_test(void)
 
     //Test with wrong path
     gravity_eop_download_finals2000A(
-        "ftp.iers.org",
+        "ftp.eso.org",
         "WRONG FORMATTED PATH",
        &data_length);
 
@@ -152,7 +152,7 @@ static void gravi_eop_retrieve_eop_test(void)
 
     //Test with NULL pointers
     gravity_eop_download_finals2000A(
-        "ftp.iers.org",
+        "ftp.eso.org",
         "/products/eop/rapid/standard/finals2000A.data",
         NULL);
 
@@ -166,7 +166,7 @@ static void gravi_eop_retrieve_eop_test(void)
     cpl_test_error(CPL_ERROR_NULL_INPUT);
 
     gravity_eop_download_finals2000A(
-        "ftp.iers.org",
+        "ftp.eso.org",
        NULL,
         &data_length);
 
