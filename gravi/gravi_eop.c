@@ -573,8 +573,11 @@ char * gravity_eop_download_finals2000A (const char * eop_host,
     cmd_socket = gravity_get_socket_connection(eop_host, ftp_port);
     if (cmd_socket == 0) 
     {
-        cpl_error_set_message(cpl_func, CPL_ERROR_DATA_NOT_FOUND,
-            "Couldn't connect to the host");
+        char * msg = cpl_malloc(strlen(eop_host) + 31);
+        snprintf(msg, strlen(eop_host) + 30, 
+                 "Couldn't connect to the host %s", eop_host);
+        cpl_error_set_message(cpl_func, CPL_ERROR_DATA_NOT_FOUND, msg);
+        cpl_free(msg);
         return NULL;
     }
     int flags = fcntl(cmd_socket, F_GETFL, 0);
@@ -590,17 +593,23 @@ char * gravity_eop_download_finals2000A (const char * eop_host,
     cpl_msg_debug(cpl_func, "SEND");
     if(!gravity_eop_send_ftpcmd(cmd_socket, "USER anonymous\n"))
     {
+        cpl_error_set_message(cpl_func, CPL_ERROR_DATA_NOT_FOUND,
+            "Failed to send anonymous user");
         close(cmd_socket);
         return NULL;
     }
     if(!gravity_eop_send_ftpcmd(cmd_socket, "PASS ftp@eso.org\n"))
     {
+        cpl_error_set_message(cpl_func, CPL_ERROR_DATA_NOT_FOUND,
+            "Failed to send pasword");
         close(cmd_socket);
         return NULL;
     }
     int data_port = gravity_eop_send_pasv(cmd_socket, "PASV\n");
     if(!data_port)
     {
+        cpl_error_set_message(cpl_func, CPL_ERROR_DATA_NOT_FOUND,
+            "Failed to get data port");
         close(cmd_socket);
         return NULL;
     }
@@ -609,6 +618,12 @@ char * gravity_eop_download_finals2000A (const char * eop_host,
     char data_port_s[256];
     snprintf(data_port_s, 255, "%d", data_port);
     data_socket = gravity_get_socket_connection(eop_host, data_port_s);
+    if (data_socket == 0) 
+    {
+        cpl_error_set_message(cpl_func, CPL_ERROR_DATA_NOT_FOUND,
+            "Couldn't open ftp data connection");
+        return NULL;
+    }
     
     /* Retrieving the file */
     if(!gravity_eop_send_ftpcmd(cmd_socket, "TYPE I\n"))
@@ -618,6 +633,7 @@ char * gravity_eop_download_finals2000A (const char * eop_host,
     if(!gravity_eop_send_ftpcmd(cmd_socket, retr_command))
     {
         close(cmd_socket);
+        close(data_socket);
         cpl_free(retr_command);
         return NULL;
     }
@@ -780,6 +796,7 @@ int gravity_eop_ftp_reply (int sockfd, char ** message)
             strncpy(msg + length, buffer, n);
         }
         length += n;
+        sleep(1);
     }
     if (errno == EAGAIN || errno == EWOULDBLOCK) // No messages were available
         errno= 0;
