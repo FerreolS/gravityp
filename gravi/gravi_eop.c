@@ -253,7 +253,7 @@ cpl_error_code gravi_eop_pointing_uv (cpl_table * input_table,
         cpl_msg_info (cpl_func, "Will save [E_U,E_V,E_W,E_AZ,E_ZD]");
     }
     int compute_uv;
-    if (array_table > 0) {
+    if (array_table != NULL) {
         cpl_msg_info (cpl_func, "Will compute [UCOORD,VCOORD]");
         compute_uv = 1;
     } else {
