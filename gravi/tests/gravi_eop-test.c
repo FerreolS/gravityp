@@ -26,6 +26,9 @@
                                    Includes
  -----------------------------------------------------------------------------*/
 
+#define _XOPEN_SOURCE 500
+#include <stdlib.h>
+#include <time.h>
 #include "gravi_eop.h"
 
 /*-----------------------------------------------------------------------------
@@ -60,26 +63,35 @@ static void gravi_eop_all_test(void)
 static void gravi_eop_retrieve_eop_test(void)
 {
 
+    //Initialize random number generator
+    srandom(time(NULL));
+
+    //Length of the raw retrieved data
     int data_length;
 
+    //The FTP retrieval is tried a few times, in case there is a
+    //transient network problem (ftp overloaded, for instance).
     int max_tries = 5;
     int itry = 1;
-    int retry = 1;
+    //Get how many tests have failed so far
     int test_failed_before = cpl_test_get_failed();
     char * raw_text = NULL;
     while(itry < max_tries && raw_text == NULL)
     {
         cpl_msg_debug(__func__, "Trying EOP data retrieval. Trial %d",itry);
         //Test retrieving the EOP data from the server
-        char * raw_text = gravity_eop_download_finals2000A(
+        raw_text = gravity_eop_download_finals2000A(
                 "ftp.eso.org",
                 "/pub/dfs/pipelines/gravity/finals2000A.data",
                 &data_length);
-        //Reset the status to try again
-        if(raw_text == NULL)
+        //Reset the error status before trying again (with some random delay)
+        if(raw_text == NULL && itry == max_tries)
         {
             itry++;
-            sleep(20);
+            int sleep_seconds = (int)(100.*random()/RAND_MAX);
+            cpl_msg_debug(__func__, "Sleeping %d seconds before retrying",
+                          sleep_seconds);
+            sleep(sleep_seconds);
             errno = 0;
             cpl_error_reset();
         }
@@ -100,7 +112,8 @@ static void gravi_eop_retrieve_eop_test(void)
     //Check that no system calls have set errno
     cpl_test_zero(errno_after);
 
-    //If those tests passed, continue with further tests
+    //If those tests passed (no more failed tests than before),
+    //then continue with further tests on the retrieved data
     if(cpl_test_get_failed() == test_failed_before)
     {
 
