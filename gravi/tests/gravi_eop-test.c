@@ -153,58 +153,58 @@ static void gravi_eop_retrieve_eop_test(void)
 
     //Test with wrong HOST name
     gravity_eop_download_finals2000A(
-        "invalid_host.nowhere",
-        "/products/eop/rapid/standard/finals2000A.data",
-        &data_length);
+            "invalid_host.nowhere",
+            "/products/eop/rapid/standard/finals2000A.data",
+            &data_length);
 
     cpl_test_error(CPL_ERROR_DATA_NOT_FOUND);
 
     //Test with wrong URL
     gravity_eop_download_finals2000A(
-        "ftp.eso.org",
-        "/invalid/path",
-       &data_length);
+            "ftp.eso.org",
+            "/invalid/path",
+            &data_length);
 
     cpl_test_error(CPL_ERROR_DATA_NOT_FOUND);
 
     //Test with wrong path
     gravity_eop_download_finals2000A(
-        "ftp.eso.org",
-        "WRONG FORMATTED PATH",
-       &data_length);
+            "ftp.eso.org",
+            "WRONG FORMATTED PATH",
+            &data_length);
 
     cpl_test_error(CPL_ERROR_DATA_NOT_FOUND);
 
     //Test with wrong URL and PATH
     gravity_eop_download_finals2000A(
-        "invalid_host.nowhere",
-        "/invalid/path",
-        &data_length);
+            "invalid_host.nowhere",
+            "/invalid/path",
+            &data_length);
 
     cpl_test_error(CPL_ERROR_DATA_NOT_FOUND);
 
     //Test with NULL pointers
     gravity_eop_download_finals2000A(
-        "ftp.eso.org",
-        "/products/eop/rapid/standard/finals2000A.data",
-        NULL);
+            "ftp.eso.org",
+            "/products/eop/rapid/standard/finals2000A.data",
+            NULL);
 
     cpl_test_error(CPL_ERROR_NULL_INPUT);
 
     gravity_eop_download_finals2000A(
-        NULL,
-        "/products/eop/rapid/standard/finals2000A.data",
-        &data_length);
+            NULL,
+            "/products/eop/rapid/standard/finals2000A.data",
+            &data_length);
 
     cpl_test_error(CPL_ERROR_NULL_INPUT);
 
     gravity_eop_download_finals2000A(
-        "ftp.eso.org",
-       NULL,
-        &data_length);
+            "ftp.eso.org",
+            NULL,
+            &data_length);
 
     cpl_test_error(CPL_ERROR_NULL_INPUT);
 
-  return;
+    return;
 }
 
