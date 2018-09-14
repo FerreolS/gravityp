@@ -576,7 +576,7 @@ char * gravity_eop_download_finals2000A (const char * eop_host,
         char * msg = cpl_malloc(strlen(eop_host) + 31);
         snprintf(msg, strlen(eop_host) + 30, 
                  "Couldn't connect to the host %s", eop_host);
-        cpl_error_set_message(cpl_func, CPL_ERROR_DATA_NOT_FOUND, msg);
+        cpl_error_set_message(cpl_func, CPL_ERROR_DATA_NOT_FOUND, "%s", msg);
         cpl_free(msg);
         return NULL;
     }
