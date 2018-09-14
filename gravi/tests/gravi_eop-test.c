@@ -60,13 +60,30 @@ static void gravi_eop_all_test(void)
 static void gravi_eop_retrieve_eop_test(void)
 {
 
-    //Test retrieving the EOP data from the server
-    int test_failed_before = cpl_test_get_failed();
     int data_length;
-    char * raw_text = gravity_eop_download_finals2000A(
-                        "ftp.eso.org", 
-                        "/pub/dfs/pipelines/gravity/finals2000A.data",
-                        &data_length);
+
+    int max_tries = 5;
+    int itry = 1;
+    int retry = 1;
+    int test_failed_before = cpl_test_get_failed();
+    char * raw_text = NULL;
+    while(itry < max_tries && raw_text == NULL)
+    {
+        cpl_msg_debug(__func__, "Trying EOP data retrieval. Trial %d",itry);
+        //Test retrieving the EOP data from the server
+        char * raw_text = gravity_eop_download_finals2000A(
+                "ftp.eso.org",
+                "/pub/dfs/pipelines/gravity/finals2000A.data",
+                &data_length);
+        //Reset the status to try again
+        if(raw_text == NULL)
+        {
+            itry++;
+            sleep(20);
+            errno = 0;
+            cpl_error_reset();
+        }
+    }
 
     //A copy needs to be done since further cpl_test functions will set it to zero
     int errno_after = errno;
@@ -76,7 +93,7 @@ static void gravi_eop_retrieve_eop_test(void)
 
     //Check there if the buffer is not empty
     cpl_test(data_length > 0);
- 
+
     //Check pointer is not null
     cpl_test_nonnull(raw_text);
 
@@ -136,7 +153,7 @@ static void gravi_eop_retrieve_eop_test(void)
 
     //Test with wrong HOST name
     gravity_eop_download_finals2000A(
-        "invalid_host.nowhere", 
+        "invalid_host.nowhere",
         "/products/eop/rapid/standard/finals2000A.data",
         &data_length);
 
@@ -190,4 +207,4 @@ static void gravi_eop_retrieve_eop_test(void)
 
   return;
 }
-        
+
