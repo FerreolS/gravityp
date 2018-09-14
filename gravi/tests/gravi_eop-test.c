@@ -61,63 +61,79 @@ static void gravi_eop_retrieve_eop_test(void)
 {
 
     //Test retrieving the EOP data from the server
+    int test_failed_before = cpl_test_get_failed();
     int data_length;
     char * raw_text = gravity_eop_download_finals2000A(
                         "ftp.eso.org", 
                         "/pub/dfs/pipelines/gravity/finals2000A.data",
                         &data_length);
+
+    //A copy needs to be done since further cpl_test functions will set it to zero
+    int errno_after = errno;
+
+    //Check no cpl error is set
+    cpl_test_error(CPL_ERROR_NONE);
+
     //Check there if the buffer is not empty
     cpl_test(data_length > 0);
  
     //Check pointer is not null
     cpl_test_nonnull(raw_text);
 
-    //Check no cpl error is set
-    cpl_test_error(CPL_ERROR_NONE);
+    //Check that no system calls have set errno
+    cpl_test_zero(errno_after);
 
-    //the first characters of raw_text is a number
-    char * endptr;
-    int num = strtol(raw_text, &endptr, 10);
-    cpl_test(num > 0);
-
-    //Test conversion to a table
-    cpl_table * eop_table =
-        gravity_eop_data_totable (raw_text, data_length);
-
-    //Test that the table has more than one row
-    cpl_test(cpl_table_get_nrow(eop_table) > 0);
-  
-    //Test that PMX, PMY, DUT don't have nonsense values (corrections are small)
-    cpl_test(cpl_table_get_column_max(eop_table, "PMX") < 10); 
-    cpl_test(cpl_table_get_column_min(eop_table, "PMX") > -10); 
-    cpl_test(cpl_table_get_column_max(eop_table, "PMY") < 10); 
-    cpl_test(cpl_table_get_column_min(eop_table, "PMY") > -10); 
-    cpl_test(cpl_table_get_column_max(eop_table, "DUT") < 10); 
-    cpl_test(cpl_table_get_column_min(eop_table, "DUT") > -10); 
-
-    //Test that MJD increases monotonically
-    for(cpl_size i_row = 1; i_row < cpl_table_get_nrow(eop_table); i_row++)
+    //If those tests passed, continue with further tests
+    if(cpl_test_get_failed() == test_failed_before)
     {
-         int null;
-         cpl_test(cpl_table_get_double(eop_table, "MJD", i_row, &null) > 
-                  cpl_table_get_double(eop_table, "MJD", i_row - 1, &null));
+
+        //the first characters of raw_text is a number
+        char * endptr;
+        int num = strtol(raw_text, &endptr, 10);
+        cpl_test(num > 0);
+
+        //Test conversion to a table
+        cpl_table * eop_table =
+                gravity_eop_data_totable (raw_text, data_length);
+
+        //Test that the table has more than one row
+        cpl_test(cpl_table_get_nrow(eop_table) > 0);
+
+        //Test that PMX, PMY, DUT don't have nonsense values (corrections are small)
+        cpl_test(cpl_table_get_column_max(eop_table, "PMX") < 10);
+        cpl_test(cpl_table_get_column_min(eop_table, "PMX") > -10);
+        cpl_test(cpl_table_get_column_max(eop_table, "PMY") < 10);
+        cpl_test(cpl_table_get_column_min(eop_table, "PMY") > -10);
+        cpl_test(cpl_table_get_column_max(eop_table, "DUT") < 10);
+        cpl_test(cpl_table_get_column_min(eop_table, "DUT") > -10);
+
+        //Test that MJD increases monotonically
+        for(cpl_size i_row = 1; i_row < cpl_table_get_nrow(eop_table); i_row++)
+        {
+            int null;
+            cpl_test(cpl_table_get_double(eop_table, "MJD", i_row, &null) >
+            cpl_table_get_double(eop_table, "MJD", i_row - 1, &null));
+        }
+        cpl_table_delete(eop_table);
+
+        //Test conversion with NULL pointer
+        eop_table = gravity_eop_data_totable (NULL, data_length);
+        cpl_test_error(CPL_ERROR_NULL_INPUT);
+        cpl_test_null(eop_table);
+
+        //Test with wrong data length
+        eop_table = gravity_eop_data_totable (raw_text, data_length - 1);
+        cpl_test_error(CPL_ERROR_NULL_INPUT);
+        cpl_test_null(eop_table);
+
+        //Test with wrong data length and NULL pointer
+        eop_table = gravity_eop_data_totable (NULL, data_length - 1);
+        cpl_test_error(CPL_ERROR_NULL_INPUT);
+        cpl_test_null(eop_table);
+
+        free(raw_text);
     }
-    cpl_table_delete(eop_table);
 
-    //Test conversion with NULL pointer
-    gravity_eop_data_totable (NULL, data_length);
-    cpl_test_error(CPL_ERROR_NULL_INPUT);
-
-    //Test with wrong data length
-    gravity_eop_data_totable (raw_text, data_length - 1);
-    cpl_test_error(CPL_ERROR_NULL_INPUT);
-
-    //Test with wrong data length and NULL pointer
-    gravity_eop_data_totable (NULL, data_length - 1);
-    cpl_test_error(CPL_ERROR_NULL_INPUT);
-
-    free(raw_text);
-  
     //Test with wrong HOST name
     gravity_eop_download_finals2000A(
         "invalid_host.nowhere", 
