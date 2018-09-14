@@ -84,16 +84,19 @@ static void gravi_eop_retrieve_eop_test(void)
                 "ftp.eso.org",
                 "/pub/dfs/pipelines/gravity/finals2000A.data",
                 &data_length);
-        //Reset the error status before trying again (with some random delay)
-        if(raw_text == NULL && itry == max_tries)
+        if(raw_text == NULL)
         {
             itry++;
-            int sleep_seconds = (int)(100.*random()/RAND_MAX);
-            cpl_msg_debug(__func__, "Sleeping %d seconds before retrying",
-                          sleep_seconds);
-            sleep(sleep_seconds);
-            errno = 0;
-            cpl_error_reset();
+            //Reset the error status before trying again (with some random delay)
+            if(itry < max_tries - 1)
+            {
+                int sleep_seconds = (int)(100.*random()/RAND_MAX);
+                cpl_msg_debug(__func__, "Sleeping %d seconds before retrying",
+                        sleep_seconds);
+                sleep(sleep_seconds);
+                errno = 0;
+                cpl_error_reset();
+            }
         }
     }
 
