@@ -40,12 +40,14 @@
 #include <config.h>
 #endif
 
+#define _XOPEN_SOURCE
 #include <cpl.h>
 #include <string.h>
 #include <stdio.h>
 #include <math.h>
 #include <time.h>
 #include <complex.h>
+#include <string.h>
 
 #include "gravi_data.h"
 #include "gravi_dfs.h"
@@ -1138,6 +1140,346 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
   return CPL_ERROR_NONE;
 }
  
+double gdAbacusErrPhi(double x)
+/**
+ * Estimate true phase rms from the cross-spectrum variance.
+ * see Petrov, Roddier and Aime, JOSAA vol 3, N.5, may 1986 p 634.
+ * and Petrov's Thesis, p. 50 ff.
+ * I replace the piecewise interpolation usually used by a polynomial
+ * approximation of the function:
+ * if z=log10(y), 
+ * then z=(C[1]*X^7+C[2]*X^6+C[3]*X^5+C[4]*X^4+C[5]*X^3+C[6]*X^2+C[7]*X+C[8])
+ * and y=10^z.
+ * where
+ * C[01]= 2.71918080109099
+ * C[02]=-17.1901043936273
+ * C[03]= 45.0654103760899
+ * C[04]=-63.4441678243197
+ * C[05]= 52.3098941426378
+ * C[06]=-25.8090699917488
+ * C[07]= 7.84352873962491
+ * C[08]=-1.57308595820081
+ * This interpolation is valid in the range x=[0.1,1.74413]. 
+ * Error is 1% everywhere except above x=1.73 where it is 10%
+ * Below x=0.1: y=x
+ * Above x=M_PI/sqrt(3.0), y = blanking (impossible value)
+ * Above x=1.74413, we take: y=0.691/(pi/sqrt(3.0)-x)
+ */
+{
+  const double Asymptot = CPL_MATH_PI / sqrt(3.0);
+  double c[8] = {2.7191808010909,
+    -17.1901043936273,
+    45.0654103760899,
+    -63.4441678243197,
+    52.3098941426378,
+    -25.8090699917488,
+    7.84352873962491,
+    -1.57308595820081};
+
+  double x2, x3, x4, x5, x6, x7, z;
+  if (x > Asymptot) {
+    return (1E10);
+  }
+  if (x > 1.74413) {
+    return (0.691 / (Asymptot - x));
+  }
+  if (x < 0.1) {
+    return (x);
+  }
+  x2 = x*x;
+  x3 = x2*x;
+  x4 = x2*x2;
+  x5 = x3*x2;
+  x6 = x3*x3;
+  x7 = x6*x;
+  z = c[0] * x7 + c[1] * x6 + c[2] * x5 + c[3] * x4 + c[4] * x3 + c[5] * x2 + c[6] * x + c[7];
+  return pow(10, z);
+}
+
+/*-----------------------------------------------------------------------------*/
+/**
+ * @brief Compute Averaged VISPHI in the manner described, e.g., in F. Millour's thesis.
+ * 
+ * @param oi_vis_avg:     already allocated OI_VIS table to be filled
+ * 
+ * @param oi_vis:         input OI_VIS with all individual DITs
+ * @param base:           base to consider (0..5)
+ * @param phase_ref:      phase used to rephase the DITs
+ *
+ */
+/*-----------------------------------------------------------------------------*/
+
+cpl_error_code gravi_average_self_visphi(cpl_table * oi_vis_avg,
+    cpl_table * oi_vis,
+    cpl_array * wavenumber,
+    const char * phase_ref, int* cmin, int* cmax, int nrange)
+{
+  gravi_msg_function_start(0);
+  cpl_ensure_code(oi_vis_avg, CPL_ERROR_ILLEGAL_OUTPUT);
+  cpl_ensure_code(oi_vis, CPL_ERROR_NULL_INPUT);
+
+  /* Parameters */
+  int nv = 0, nbase = 6;
+  cpl_size nrow = cpl_table_get_nrow(oi_vis) / nbase;
+  cpl_size nwave = cpl_table_get_column_depth(oi_vis, "VISDATA");
+
+  int use_crange = (nrange > 0);
+  if (use_crange) {
+    for (int i = 0; i < nrange; ++i) {
+      if (cmax[i] - cmin[i] < 1) {
+        use_crange = 0;
+        break;
+      }
+      if (cmax[i] > nwave - 1) {
+        use_crange = 0;
+        break;
+      }
+      if (cmin[i] < 0) {
+        use_crange = 0;
+        break;
+      }
+    }
+    if (use_crange) {
+      for (int i = 0; i < nrange; ++i) cpl_msg_info("Reference Channel", "Part %02d [%3d:%3d]", i + 1, cmin[i], cmax[i]);
+    } else {
+      cpl_msg_info("Warning (SELF_VISPHI)", "Invalid Ranges Found, continuing with default Method.");
+    }
+  }
+
+  /* Pointer to columns, to speed-up */
+  cpl_array ** pVISDATA = cpl_table_get_data_array(oi_vis, "VISDATA");
+  cpl_array ** pVISERR = cpl_table_get_data_array(oi_vis, "VISERR");
+  CPLCHECK_MSG("Cannot get the data");
+
+  /* Get the reference phase unless it has already been removed*/
+  cpl_array ** pPHASEREF = NULL;
+  if (phase_ref && strcmp(phase_ref, "NONE"))
+    pPHASEREF = cpl_table_get_data_array(oi_vis, phase_ref);
+  CPLCHECK_MSG("Cannot get the reference phase data (column missing?)");
+
+  /* Loop on base */
+  for (cpl_size base = 0; base < nbase; base++) {
+
+    /* number of valid rows for base */
+    cpl_size nvalid = 0;
+
+    /* Arrays to store the final, integrated quantities 
+     * 0: running_mean, 2: variance */
+    cpl_array **visPhi_res = gravi_array_new_list(2, CPL_TYPE_DOUBLE, nwave);
+
+    /* Get the number of non-rejected frames */
+    int * flag = cpl_table_get_data_int(oi_vis, "REJECTION_FLAG");
+    cpl_ensure_code(flag, CPL_ERROR_ILLEGAL_INPUT);
+    for (int row = 0; row < nrow; row++) if (flag[row * nbase + base] == 0) nvalid++;
+
+    cpl_msg_info("Stat (SELF_VISPHI)", "%6lld valid frames over %6lld (%5.1f%%)",
+        nvalid, nrow, (double) nvalid / (double) nrow * 100.0);
+
+    /* 
+     * return in case there are no valid frames at all
+     */
+    if (nvalid == 0) {
+      cpl_msg_debug(cpl_func, "No valid frames, force zero and infinite RMS");
+      cpl_array_fill_window(visPhi_res[1], 0, nwave, 1e10);
+      gravi_table_set_array_phase(oi_vis_avg, "VISPHI", base, visPhi_res[0]);
+      gravi_table_set_array_phase(oi_vis_avg, "VISPHIERR", base, visPhi_res[1]);
+      CPLCHECK_MSG("filling VISPHI");
+      /* Free variance */
+      FREELOOP(cpl_array_delete, visPhi_res, 2);
+      break;
+    }
+
+    cpl_array **Vis = gravi_array_new_list(nvalid, CPL_TYPE_DOUBLE_COMPLEX, nwave);
+    cpl_array **EVis = gravi_array_new_list(nvalid, CPL_TYPE_DOUBLE_COMPLEX, nwave);
+
+    cpl_array **W1 = gravi_array_new_list(nvalid, CPL_TYPE_DOUBLE_COMPLEX, nwave);
+    cpl_array **EW1 = gravi_array_new_list(nvalid, CPL_TYPE_DOUBLE_COMPLEX, nwave);
+    /* Loop on row */
+
+    for (cpl_size currentRow = 0, validRowIndex = -1; currentRow < nrow; currentRow++) {
+      if (flag[currentRow * nbase + base]) {
+        continue;
+      } else {
+        /* Get indices */
+        cpl_size rbase = currentRow * nbase + base;
+        validRowIndex++;
+
+        /* fast-no-CPL integration: get pointers on data */
+        double complex *ptrC = cpl_array_get_data_double_complex(Vis[validRowIndex]);
+        double complex *ptrEC = cpl_array_get_data_double_complex(EVis[validRowIndex]);
+        CPLCHECK_MSG("Cannot get data");
+
+        /* Loop on wave */
+        for (int w = 0; w < nwave; w++) {
+          double PHASEREF = pPHASEREF ? cpl_array_get(pPHASEREF[rbase], w, NULL) : 0.0;
+          double complex vis = cpl_array_get_double_complex(pVISDATA[rbase], w, NULL);
+          double complex viserr = cpl_array_get_double_complex(pVISERR[rbase], w, NULL);
+          CPLCHECK_MSG("Cannot get data");
+          if (PHASEREF) {
+            /* rephase <R> and <I> */
+            ptrC[w] = (cos(PHASEREF) * creal(vis) - sin(PHASEREF) * cimag(vis)) +
+                I * (cos(PHASEREF) * cimag(vis) + sin(PHASEREF) * creal(vis));
+          } else {
+            /* no rephasing */
+            ptrC[w] = vis;
+          }
+          ptrEC[w] = viserr;
+        } /* End loop on wave */
+      } /* End frame not flagged */
+    } /* End loop on rows */
+
+    for (int irow = 0; irow < nvalid; irow++) {
+
+      /* Normalize the phasor to avoid bad pixels */
+      /*
+            cpl_array * norm = cpl_array_duplicate(Vis[irow]);
+            cpl_array_abs(norm);
+            cpl_array_divide(Vis[irow], norm);
+       */
+
+      /* Compute and remove the mean group delay in [m] */
+      double mean_delay = 0.0;
+      gravi_array_get_group_delay_loop(&Vis[irow], wavenumber, &mean_delay, 1, 2e-3, CPL_FALSE); /*search at 20 lambda max if recentered with FT*/
+      gravi_array_multiply_phasor(Vis[irow], -2 * I * CPL_MATH_PI * mean_delay, wavenumber);
+
+      /* Compute and remove the mean phase in [rad] */
+      double mean_phase = carg(cpl_array_get_mean_complex(Vis[irow]));
+      cpl_array_multiply_scalar_complex(Vis[irow], cexp(-I * mean_phase));
+    }
+
+    cpl_array *CRef = cpl_array_new(nwave, CPL_TYPE_DOUBLE_COMPLEX);
+    cpl_array *ECRef = cpl_array_new(nwave, CPL_TYPE_DOUBLE_COMPLEX);
+    double complex *pCRef = cpl_array_get_data_double_complex(CRef);
+    double complex *pECRef = cpl_array_get_data_double_complex(ECRef);
+
+    /* Production of the reference channel: mean of all R and I parts
+     * of all channels except the one considered ( eq 2.3) */
+    for (int irow = 0; irow < nvalid; irow++) {
+      /*reset sum to 0 */
+      double complex totalVis = 0.0 + I * 0.0;
+      double complex totalEVis = 0.0 + I * 0.0;
+      /* fast-no-CPL integration: get pointers on data */
+      double complex *pVis = cpl_array_get_data_double_complex(Vis[irow]);
+      double complex *pEVis = cpl_array_get_data_double_complex(EVis[irow]);
+
+      double complex *pW1 = cpl_array_get_data_double_complex(W1[irow]);
+      double complex *pEW1 = cpl_array_get_data_double_complex(EW1[irow]);
+
+      CPLCHECK_MSG("Cannot get data");
+      if (use_crange) {
+        /* sum all Vis for this row */
+        int nchans = 0;
+        for (int i = 0; i < nrange; ++i) {
+          for (int w = cmin[i]; w < cmax[i]; ++w) {
+            totalVis += pVis[w];
+            totalEVis += pEVis[w];
+            nchans++;
+          }
+        }
+        for (int w = 0; w < nwave; w++) {
+          cpl_array_set_double_complex(CRef, w, totalVis / nchans);
+          cpl_array_set_double_complex(ECRef, w, totalEVis / nchans);
+        }
+      } else {
+        /* sum all Vis for this row */
+        for (int w = 0; w < nwave; w++) {
+          totalVis += pVis[w];
+          totalEVis += pEVis[w];
+        }
+        /* then construct Cref by substracting current R and I 
+         * at that Wlen and make the arithmetic mean. The code permits
+         * to avoid not only the channel itself removed but the 2*radius
+         * around (not activated). */
+        int iw = 0;
+        int radius = 0;
+        int divider = nwave - (2 * radius) - 1;
+        for (; iw < radius; iw++) {
+          cpl_array_set_double_complex(CRef, iw, totalVis / nwave);
+          cpl_array_set_double_complex(ECRef, iw, totalEVis / nwave);
+        }
+        for (; iw < nwave - radius; iw++) {
+          double complex tmp = 0.0 + I * 0.0;
+          double complex Etmp = 0.0 + I * 0.0;
+          for (int j = iw; j < iw + 2 * radius + 1; ++j) tmp += pVis[iw];
+          cpl_array_set_double_complex(CRef, iw, (totalVis - tmp) / divider);
+          for (int j = iw; j < iw + 2 * radius + 1; ++j) Etmp += pEVis[iw];
+          cpl_array_set_double_complex(ECRef, iw, (totalEVis - Etmp) / divider);
+        }
+        for (; iw < radius; iw++) {
+          cpl_array_set_double_complex(CRef, iw, totalVis / nwave);
+          cpl_array_set_double_complex(ECRef, iw, totalEVis / nwave);
+        }
+      }
+      /* Now the interspectrum is C*~C_Ref. Store in w1. */
+      for (int w = 0; w < nwave; w++) {
+        pW1[w] = pVis[w] * conj(pCRef[w]);
+
+        /* Please have a look to the F. Millour thesis
+           (http://tel.archives-ouvertes.fr/tel-00134268),
+           pp.91-92 (eq. 4.55 to 4.58) */
+        pEW1[w] = (creal(pEVis[w]) * pow(creal(pCRef[w]), 2) +
+            creal(pECRef[w]) * pow(creal(pVis[w]), 2) +
+            cimag(pVis[w]) * pow(cimag(pCRef[w]), 2) +
+            cimag(pECRef[w]) + pow(cimag(pVis[w]), 2)) +
+
+            I * (
+            cimag(pVis[w]) * pow(creal(pCRef[w]), 2) +
+            cimag(pECRef[w]) * pow(creal(pVis[w]), 2) +
+            creal(pVis[w]) * pow(cimag(pCRef[w]), 2) +
+            creal(pECRef[w]) + pow(cimag(pVis[w]), 2)
+            );
+      }
+    }
+
+    FREE(cpl_array_delete, CRef);
+    FREE(cpl_array_delete, ECRef);
+    FREELOOP(cpl_array_delete, Vis, nvalid);
+    FREELOOP(cpl_array_delete, EVis, nvalid);
+
+    double *pPhi = cpl_array_get_data_double(visPhi_res[0]);
+    double *pPhiErr = cpl_array_get_data_double(visPhi_res[1]);
+
+    /* Compute mean VisPhi as average of selected frames. */
+    for (int w = 0; w < nwave; w++) {
+      cpl_array *cpxVisVect = cpl_array_new(nvalid, CPL_TYPE_DOUBLE_COMPLEX);
+      /* The W1 vector */
+      for (int irow = 0; irow < nvalid; irow++) {
+        const double complex *pW1 = cpl_array_get_data_double_complex_const(W1[irow]);
+        cpl_array_set_double_complex(cpxVisVect, irow, pW1[w]);
+      }
+      /* The Phase Herself */
+      /* average re and im */
+      double complex w1Avg;
+      w1Avg = cpl_array_get_mean_complex(cpxVisVect);
+
+      /* store */
+      pPhi[w] = atan2(cimag(w1Avg), creal(w1Avg));
+      /* WE USE THE STATISTICAL ERROR FOR BINNING */
+      w1Avg = conj(w1Avg);
+      cpl_array *Vect = cpl_array_new(nvalid, CPL_TYPE_DOUBLE);
+      for (int irow = 0; irow < nvalid; irow++) {
+        const double complex *tW1 = cpl_array_get_data_double_complex_const(W1[irow]);
+        /* add w1*conj(w1Avg) to vector*/
+        cpl_array_set_double(Vect, irow, atan2(cimag(tW1[w] * w1Avg), creal(tW1[w] * w1Avg)));
+      }
+      double x = cpl_array_get_stdev(Vect);
+      /* Err on Phi must be corrected with an abacus*/
+      pPhiErr[w] = gdAbacusErrPhi(x / sqrt(nvalid));
+    }
+
+    gravi_table_set_array_phase(oi_vis_avg, "VISPHI", base, visPhi_res[0]);
+    gravi_table_set_array_phase(oi_vis_avg, "VISPHIERR", base, visPhi_res[1]);
+    CPLCHECK_MSG("filling VISPHI");
+    /* Free variance */
+    FREELOOP(cpl_array_delete, visPhi_res, 2);
+  }
+
+  /* End loop on bases */
+
+  gravi_msg_function_exit(0);
+  return CPL_ERROR_NONE;
+}
+
 /*----------------------------------------------------------------------------*/
 /**
  * @brief The function average the individual frames of a P2VMREDUCED file
@@ -1388,6 +1730,16 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
         else if ( !strcmp (output_phase_sc,"AUTO") && SOBJ_R < 0.001) 
             output_phase_sc = "DIFFERENTIAL";
         
+        /*
+          force SELF_REF if SELF_VISPHI unless NONE has been selected (for what purpose?)
+        */
+        if (!strcmp(output_phase_sc, "SELF_VISPHI")) {
+          if (strcmp(phase_ref_sc, "NONE")) {
+            phase_ref_sc = "SELF_REF"; /*we are robust to phase_ref_sc=NONE but SELF_REF is better */
+            cpl_msg_info(cpl_func, "Reference phase for SC forced to %s due to option SELF_VISPHI", phase_ref_sc);
+           } else cpl_msg_info(cpl_func, "Reference phase for SC is %s", phase_ref_sc);
+        } else cpl_msg_info(cpl_func, "Reference phase for SC is %s", phase_ref_sc);
+        
         cpl_msg_info (cpl_func, "Output phase for SC is %s",output_phase_sc);
         
 		/* Other reduction parameters */
@@ -1395,10 +1747,21 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
 		int p_factor_flag_sc = strstr (gravi_param_get_string (parlist, "gravity.vis.vis-correction-sc"),"PFACTOR") ? 1 : 0;
 		int debiasing_flag_sc = gravi_param_get_bool (parlist, "gravity.vis.debias-sc");
 		int nboot_sc = gravi_param_get_int (parlist, "gravity.vis.nboot");
+        const char* rangeString = gravi_param_get_string (parlist, "gravity.vis.output-phase-channels");
 		
 		cpl_msg_info (cpl_func, "Bias subtraction of V2 for SC is %s",debiasing_flag_sc?"ENABLE":"DISABLE");
+        /*
+          force VFACTOR and PFACTOR to 0 for SELF_VISPHI by precaution.
+        */
+        if (!strcmp(output_phase_sc, "SELF_VISPHI")) {
+          v_factor_flag_sc= 0;
+          p_factor_flag_sc= 0;
+          cpl_msg_info(cpl_func, "vFactor correction for SC is %s due to option SELF_VISPHI", v_factor_flag_sc ? "ENABLE" : "DISABLE");
+          cpl_msg_info(cpl_func, "pFactor correction for SC is %s due to option SELF_VISPHI", p_factor_flag_sc ? "ENABLE" : "DISABLE");
+        } else {
 		cpl_msg_info (cpl_func, "vFactor correction for SC is %s",v_factor_flag_sc?"ENABLE":"DISABLE");
 		cpl_msg_info (cpl_func, "pFactor correction for SC is %s",p_factor_flag_sc?"ENABLE":"DISABLE");
+        }
 
 		CPLCHECK_NUL("Cannot get parameters");
 
@@ -1515,7 +1878,53 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
 
             } /* End loop on base */
             }
+            if (!strcmp(output_phase_sc, "SELF_VISPHI")) {
+              int* cmin=NULL;
+              int* cmax=NULL;
+              int nrange=0;
+              /* rather complex C way to analyse strings defining clusters of wavelengths like " [ 12345 : 12346 , 678 : 680 , 822:864]" */
+              if (strcmp(rangeString, "UNKNOWN")) {
+              /*find number of ranges (they are separated by ',')*/
+                char *str, *str1 ;
+                int l=strlen(rangeString)+1;
+                int j=0;
+                int i=0;
+                str=(char*)malloc(l);
+                strncpy(str,rangeString,l); /*for future use*/
+                for (i = 0; i<l; ++i) if (str[i]!=' ' && str[i]!='\t') str[j++]=str[i]; //remove ALL blanks.
+                str[j]='\0';
+                l=strlen(str)+1;
+                str1=(char*)malloc(l);
+                strncpy(str1,str,l); /*for future use, as strtok destroys its arguments*/
             
+                char *token;
+                token = strtok(str, "[,]");
+                while (token) {
+                  nrange++;
+                  token = strtok(NULL, "[,]");
+                }
+                if (nrange > 1) {
+                  cmin=(int*) calloc(nrange,sizeof(int));
+                  cmax=(int*) calloc(nrange,sizeof(int));
+
+                  char *str2, *subtoken;
+                  char *saveptr1, *saveptr2;
+                  for (j = 0; ; j++, str1 = NULL) {
+                      token = strtok_r(str1, "[,]" , &saveptr1);
+                      if (token == NULL)
+                         break;
+                      for (str2 = token, i=0; i<2 ; str2 = NULL, ++i) {
+                         subtoken = strtok_r(str2, ":", &saveptr2);
+                         if (subtoken == NULL)
+                             break;
+                         int ret=sscanf(subtoken,"%d", (i==0)?&(cmin[j]):&(cmax[j]));
+                      }
+                  }
+                }
+               }
+
+               gravi_average_self_visphi(oi_vis_SC, vis_SC, wavenumber_sc, phase_ref_sc, cmin, cmax, nrange);
+             }
             /* 
              * Compute OIT3 for SC
              */

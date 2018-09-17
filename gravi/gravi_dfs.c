@@ -684,7 +684,7 @@ cpl_error_code gravi_parameter_add_compute_vis (cpl_parameterlist *self, int isC
     /* Force same time for all baselines */
 	p = cpl_parameter_new_value ("gravity.vis.force-same-time", CPL_TYPE_BOOL,
                                  "Force all baseline/quantities to have\n "
-                                 "strickly the same TIME and MJD columns",
+                                 "strictly the same TIME and MJD columns",
                                  "gravity.vis", FALSE);
 	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "force-same-time");
 	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
@@ -745,10 +745,21 @@ cpl_error_code gravi_parameter_add_compute_vis (cpl_parameterlist *self, int isC
                                 "With DIFFERENTIAL, the mean group-delay and mean\n "
                                 "phases are removed from the output VISPHI in the\n "
                                 "final OIFITS file. With ABSOLUTE, the VISPHI is\n "
-                                "kept unmodified.",
-                                "gravity.vis", "AUTO", 3,
-                                "DIFFERENTIAL","ABSOLUTE","AUTO");
+                                "kept unmodified. With SELF_VISPHI, the internal differential\n"
+                                "phase between each spectral channel and a common \n"
+                                "reference channel is computed.\n",
+                                "gravity.vis", "AUTO", 4,
+                                "DIFFERENTIAL","ABSOLUTE","AUTO", "SELF_VISPHI");
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "output-phase-sc");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (self, p);
+    
+    /* string in the form [124,232] giving channel subset in case SELF_VISPHI */
+	  p = cpl_parameter_new_value ("gravity.vis.output-phase-channels", CPL_TYPE_STRING,
+                                 "range (string in the form [min,max]) of channels\n"
+                                 "to use a SELF_VISPHI phase reference.\n",
+                                 "gravity.vis", "[0,0]");
+	  cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "output-phase-channels");
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
     cpl_parameterlist_append (self, p);
     
