@@ -273,7 +273,7 @@ int gravi_data_test(){
     test(gravi_data_save_data(data2, "test_data_save_data.fits", CPL_IO_CREATE),
     		"Save the data... ", flag);
 
-    test(gravi_data_save_new(data2, frameset, "test_data_save.fits", list,
+    test(gravi_data_save_new(data2, frameset, "test_data_save.fits", NULL, list,
         frameset, _frame, "test_save", applist, "DARK"), "Save the data with all options... ", flag);
 
 //    cpl_end();
