@@ -743,7 +743,7 @@ int gravity_eop_send_pasv (int sockfd, const char *cmd)
         return 0;
     }
 
-    char * msg;
+    char * msg = NULL;
     char * new_con;
     unsigned int v[6];
 
