@@ -446,7 +446,7 @@ static int gravity_postprocess(cpl_frameset * frameset,
 	gravi_vis_mjd_to_time (data_merged);
 	
 	/* Save the output data file based on the first frame of the frameset */
-	gravi_data_save_new (data_merged, frameset, NULL, parlist,
+	gravi_data_save_new (data_merged, frameset, NULL, NULL, parlist,
 						 used_frameset, frame_merged, "gravity_postprocess",
 						 NULL, "POSTPROCESSED");
 

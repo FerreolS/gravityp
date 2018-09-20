@@ -359,7 +359,7 @@ static int gravity_badpix(cpl_frameset            * frameset,
 	
 	/* Save the BAD */
 	frame = cpl_frameset_get_position (dark_frameset, 0);
-	gravi_data_save_new (badpix_map, frameset, NULL, parlist,
+	gravi_data_save_new (badpix_map, frameset, NULL, NULL, parlist,
 						 NULL, frame, "gravity_badpix",
                          NULL, GRAVI_BAD_MAP);
 

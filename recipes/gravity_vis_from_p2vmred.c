@@ -456,7 +456,7 @@ static int gravity_vis_from_p2vmred(cpl_frameset * frameset,
 	/* Save the output data file based on the first frame of the frameset */
 	frame = cpl_frameset_get_position (recipe_frameset, 0);
 	
-	gravi_data_save_new (vis_data, frameset, NULL, parlist,
+	gravi_data_save_new (vis_data, frameset, NULL, NULL, parlist,
                          used_frameset, frame, "gravity_vis_from_p2vmred",
                          NULL, proCatg);
 

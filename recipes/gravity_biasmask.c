@@ -355,7 +355,7 @@ static int gravity_biasmask(cpl_frameset            * frameset,
 	
 	/* Save the BAD */
 	frame = cpl_frameset_get_position (dark_frameset, 0);
-	gravi_data_save_new (biasmask_map, frameset, NULL, parlist,
+	gravi_data_save_new (biasmask_map, frameset, NULL, NULL, parlist,
 						 NULL, frame, "gravity_biasmask",
                          NULL, GRAVI_BIASMASK_MAP);
 

@@ -342,7 +342,7 @@ static int gravity_dark (cpl_frameset            * frameset,
 	CPLCHECK_CLEAN ("Could not compute the DARK map");
 	
 	/* Create product frame */
-	gravi_data_save_new (reduced_dark, frameset, NULL, parlist,
+	gravi_data_save_new (reduced_dark, frameset, NULL, NULL, parlist,
 						 used_frameset, frame, "gravity_dark",
                          NULL, GRAVI_DARK_MAP);
 	

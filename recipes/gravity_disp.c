@@ -384,7 +384,7 @@ static int gravity_disp(cpl_frameset            * frameset,
 		  CPLCHECK_CLEAN ("Could not compute the DARK map");
 		  
 		  /* Save the dark map */
-		  gravi_data_save_new (dark_map, frameset, NULL, parlist,
+		  gravi_data_save_new (dark_map, frameset, NULL, NULL, parlist,
 							   NULL, frame, "gravi_single",
                                NULL, GRAVI_DARK_MAP);
 		  
@@ -456,7 +456,7 @@ static int gravity_disp(cpl_frameset            * frameset,
     		/* Option save the proproc file */
 			if (gravi_param_get_bool (parlist,"gravity.dfs.preproc-file")) {
 			  
-    			gravi_data_save_new (preproc_data, frameset, NULL, parlist,
+    			gravi_data_save_new (preproc_data, frameset, NULL, NULL, parlist,
 									 current_frameset, frame, "gravity_disp",
                                      NULL, GRAVI_PREPROC);
 
@@ -499,7 +499,7 @@ static int gravity_disp(cpl_frameset            * frameset,
 			/* Save the P2VMREDUCED */
 			if (gravi_param_get_bool (parlist,"gravity.dfs.p2vmred-file")) {
 			  
-    			gravi_data_save_new (p2vmred_data, frameset, NULL, parlist,
+    			gravi_data_save_new (p2vmred_data, frameset, NULL, NULL, parlist,
 									 current_frameset, frame, "gravity_disp",
                                      NULL, GRAVI_P2VMRED_SINGLE_CALIB);
 				
@@ -523,7 +523,7 @@ static int gravity_disp(cpl_frameset            * frameset,
 			/* Save the VIS */
 			if (gravi_param_get_bool (parlist,"gravity.dfs.vis-file")) {
 			  
-    			gravi_data_save_new (tmpvis_data, frameset, NULL, parlist,
+    			gravi_data_save_new (tmpvis_data, frameset, NULL, NULL, parlist,
 									 current_frameset, frame, "gravity_disp",
                                      NULL, GRAVI_VIS_SINGLE_CALIB);
 				
@@ -564,7 +564,7 @@ static int gravity_disp(cpl_frameset            * frameset,
 		cpl_frameset_join (used_frameset, disp_frameset);
 		frame = cpl_frameset_get_position (disp_frameset, 0);
 		
-    	gravi_data_save_new (vis_data, frameset, NULL, parlist,
+    	gravi_data_save_new (vis_data, frameset, NULL, NULL, parlist,
 							 used_frameset, frame, "gravity_disp",
 							 NULL, GRAVI_DISP_VIS);
 		
@@ -608,7 +608,7 @@ static int gravity_disp(cpl_frameset            * frameset,
 	frame = cpl_frameset_get_position (disp_frameset, 0);
 
 	/* Save the DISP_MODEL */
-	gravi_data_save_new (disp_map, frameset, NULL, parlist,
+	gravi_data_save_new (disp_map, frameset, NULL, NULL, parlist,
 						 used_frameset, frame, "gravity_disp",
 						 NULL, GRAVI_DISP_MODEL);
 	

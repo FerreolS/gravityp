@@ -404,7 +404,7 @@ static int gravity_p2vm(cpl_frameset            * frameset,
         CPLCHECK_CLEAN ("Cannot compute the DARK map");
 
         /* Save the dark map */
-        gravi_data_save_new (dark_map, frameset, NULL, parlist,
+        gravi_data_save_new (dark_map, frameset, NULL, NULL, parlist,
                              NULL, frame, "gravity_p2vm",
                              NULL, GRAVI_DARK_MAP);
 
@@ -458,7 +458,7 @@ static int gravity_p2vm(cpl_frameset            * frameset,
 
         /* Save the BADPIX */
         frame = cpl_frameset_get_position (dark_frameset, 0);
-        gravi_data_save_new (badpix_map, frameset, NULL, parlist,
+        gravi_data_save_new (badpix_map, frameset, NULL, NULL, parlist,
                              NULL, frame, "gravity_p2vm",
                              NULL, GRAVI_BAD_MAP);
 
@@ -516,7 +516,7 @@ static int gravity_p2vm(cpl_frameset            * frameset,
         /* Save the FLAT map */
         frame = cpl_frameset_get_position (flat_frameset, 0);
 
-        gravi_data_save_new (profile_map, frameset, NULL, parlist,
+        gravi_data_save_new (profile_map, frameset, NULL, NULL, parlist,
                              used_frameset, frame, "gravity_p2vm",
                              NULL, GRAVI_FLAT_MAP);
 
@@ -605,7 +605,7 @@ static int gravity_p2vm(cpl_frameset            * frameset,
 
         /* Save the file with OPD_SC, OPD_FT, OI_VIS_MET */
         if (gravi_param_get_bool (parlist,"gravity.dfs.debug-file")) {
-            gravi_data_save_new (spectrum_data, frameset, NULL, parlist,
+            gravi_data_save_new (spectrum_data, frameset, NULL, NULL, parlist,
                     used_frameset, frame, "gravity_p2vm",
                     NULL, "DEBUG");
         }
@@ -668,8 +668,8 @@ static int gravity_p2vm(cpl_frameset            * frameset,
 
             /* Save the file with OPD_SC, OPD_FT, OI_VIS_MET */
             if (gravi_param_get_bool (parlist,"gravity.dfs.debug-file")) {
-                gravi_data_save_new (spectrum_data, frameset, NULL, parlist,
-                        used_frameset, frame, "gravity_p2vm",
+                gravi_data_save_new (spectrum_data, frameset, NULL, NULL,
+                        parlist, used_frameset, frame, "gravity_p2vm",
                         NULL, "DEBUG");
             }
         }
@@ -690,7 +690,7 @@ static int gravity_p2vm(cpl_frameset            * frameset,
         gravi_wave_qc (wave_map, profile_map);
 
         /* Save the WAVE map */
-        gravi_data_save_new (wave_map, frameset, NULL, parlist,
+        gravi_data_save_new (wave_map, frameset, NULL, NULL, parlist,
                              used_frameset, frame, "gravity_p2vm",
                              NULL, GRAVI_WAVE_MAP);
 
@@ -825,7 +825,7 @@ static int gravity_p2vm(cpl_frameset            * frameset,
         /* Option save the preproc file */
         if (gravi_param_get_bool (parlist,"gravity.dfs.preproc-file")) {
 
-            gravi_data_save_new (preproc_data, frameset, NULL, parlist,
+            gravi_data_save_new (preproc_data, frameset, NULL, NULL, parlist,
                     current_frameset, frame, "gravity_p2vm",
                     NULL, GRAVI_PREPROC);
         }
@@ -944,7 +944,7 @@ static int gravity_p2vm(cpl_frameset            * frameset,
      * is already created (from first P2VM file) 
      */
 
-    gravi_data_save_new (p2vm_map, frameset, NULL, parlist,
+    gravi_data_save_new (p2vm_map, frameset, NULL, NULL, parlist,
                          used_frameset, frame_p2vm, "gravity_p2vm",
                          NULL, GRAVI_P2VM_MAP);
 

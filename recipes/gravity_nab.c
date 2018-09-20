@@ -304,7 +304,7 @@ static int gravity_nab(cpl_frameset            * frameset,
         baseline_data = gravi_compute_baseline (raw_data);
 		FREE (gravi_data_delete, raw_data);
 		
-		gravi_data_save_new (baseline_data, frameset, NULL, parlist,
+		gravi_data_save_new (baseline_data, frameset, NULL, NULL, parlist,
 							 NULL, frame, "gravity_nab",
                              NULL, GRAVI_NAB_CAL);
 

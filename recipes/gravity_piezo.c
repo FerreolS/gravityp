@@ -343,8 +343,9 @@ static int gravity_piezo(cpl_frameset * frameset,
 		CPLCHECK_CLEAN ("Cannot compute the piezo TF");
 		
 		/* Save the PIEZOTF which is in fact a P2VMREDUCED */
-		gravi_data_save_new (piezo_data, frameset, NULL, parlist,
-							 current_frameset, frame, "gravity_piezo", NULL, GRAVI_PIEZOTF_MAP);
+		gravi_data_save_new (piezo_data, frameset, NULL, NULL, parlist,
+							 current_frameset, frame, "gravity_piezo",
+							 NULL, GRAVI_PIEZOTF_MAP);
 		
 		CPLCHECK_CLEAN ("Cannot save the PIEZOTF product");
 

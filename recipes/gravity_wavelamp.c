@@ -347,7 +347,7 @@ static int gravity_wavelamp(cpl_frameset            * frameset,
 	  CPLCHECK_CLEAN ("Could not compute the DARK map");
 	  
 	  /* Save the dark map */
-	  gravi_data_save_new (dark_map, frameset, NULL, parlist,
+	  gravi_data_save_new (dark_map, frameset, NULL, NULL, parlist,
 						   NULL, frame, "gravity_wavelamp",
                            NULL, GRAVI_DARK_MAP);
 	  
@@ -437,7 +437,7 @@ static int gravity_wavelamp(cpl_frameset            * frameset,
 	CPLCHECK_CLEAN ("Cannot compute the positions");
 
 	/* Save the output data file */
-	gravi_data_save_new (preproc_data, frameset, NULL, parlist,
+	gravi_data_save_new (preproc_data, frameset, NULL, NULL, parlist,
 						 used_frameset, frame, "gravity_wavelamp",
                          NULL, GRAVI_WAVELAMP_MAP);
 	

@@ -428,7 +428,7 @@ static int gravity_viscal(cpl_frameset            * frameset,
         /* Save the TF file */
         data_mode = gravi_data_frame_get_mode (frame);
         
-        gravi_data_save_new (vis_calib, frameset, NULL, parlist,
+        gravi_data_save_new (vis_calib, frameset, NULL, NULL, parlist,
                              NULL, frame, "gravity_vis",
                              NULL, GRAVI_TF_CALIB(data_mode));
         
@@ -492,7 +492,7 @@ static int gravity_viscal(cpl_frameset            * frameset,
       
       CPLCHECK_GOTO("Cannot compute ZP", cleanup_zp);
       
-      gravi_data_save_new (zero_data, frameset, "output.fits", parlist,
+      gravi_data_save_new (zero_data, frameset, "output.fits", NULL, parlist,
                            used_frameset, NULL, "gravity_vis",
                            NULL, GRAVI_ZP_CAL);
       
@@ -526,7 +526,7 @@ static int gravity_viscal(cpl_frameset            * frameset,
         /* Save calibrated visibilities */
         data_mode = gravi_data_frame_get_mode (frame);
         
-        gravi_data_save_new (calibrated, frameset, NULL, parlist,
+        gravi_data_save_new (calibrated, frameset, NULL, NULL, parlist,
                              current_frameset, frame, "gravity_vis",
                              NULL, GRAVI_VIS_CALIBRATED(data_mode));
         
@@ -535,7 +535,7 @@ static int gravity_viscal(cpl_frameset            * frameset,
         /* Save TF interpolated at the science visibilities */
         data_mode = gravi_data_frame_get_mode (frame);
         
-        gravi_data_save_new (tf_science, frameset, NULL, parlist,
+        gravi_data_save_new (tf_science, frameset, NULL, NULL, parlist,
                              current_frameset, frame, "gravity_vis", NULL,
                              GRAVI_TF_SCIENCE(data_mode));
         
