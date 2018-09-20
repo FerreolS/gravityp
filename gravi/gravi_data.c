@@ -874,6 +874,8 @@ cpl_error_code gravi_data_save_data(gravi_data * self,
   * @param self      The gravi data to save or NULL if empty
   * @param allframes  The list of input frames for the recipe
   * @param filename   Filename, or build from frame and proCatg if NULL
+  * @param suffix     If the filename is constructed from the recipe and
+  *                   pro_catg, add _suffix to it. Nothing added if NULL
   * @param parlist    The list of input parameters
   * @param usedframes The list of raw/calibration frames used for this product
   * @param frame      The reference frame to build the header
@@ -888,7 +890,8 @@ cpl_error_code gravi_data_save_data(gravi_data * self,
 
 cpl_error_code gravi_data_save_new (gravi_data 		  * self,
 									cpl_frameset 	  * allframes,
-									const char 		  * filename,
+                                    const char        * filename,
+                                    const char        * suffix,
 									const cpl_parameterlist * parlist,
 									cpl_frameset	  * usedframes,
 									cpl_frame * frame,
@@ -959,7 +962,10 @@ cpl_error_code gravi_data_save_new (gravi_data 		  * self,
 		 gravi_param_get_bool (parlist,"gravity.dfs.static-name")) {
 	  
 	  /* Use the recipe name and add the selected catg_ext */
-	  product_name = cpl_sprintf ("%s_%s.fits", recipe, catg_ext);
+	    if(suffix != NULL)
+	        product_name = cpl_sprintf ("%s_%s_%s.fits", recipe, catg_ext, suffix);
+	    else
+	        product_name = cpl_sprintf ("%s_%s.fits", recipe, catg_ext);
 	}
 	else {
 	  
