@@ -25,6 +25,8 @@
  * $Name:  $
  */
 
+#define _XOPEN_SOURCE 500 /* snprintf */
+
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -586,7 +588,9 @@ static int gravity_vis(cpl_frameset * frameset,
 		  
 		  /* Save the SKY map */
           if (averageSky == 0) {
-              gravi_data_save_new (sky_maps[isky], frameset, NULL, NULL,
+              char filename_suffix[10];
+              snprintf(filename_suffix, 10, "%d", isky);
+              gravi_data_save_new (sky_maps[isky], frameset, NULL, filename_suffix,
                                    parlist, NULL, frame, "gravity_vis",
                                    NULL, skyCatg);
               CPLCHECK_CLEAN ("Could not save the sky");
@@ -626,6 +630,8 @@ static int gravity_vis(cpl_frameset * frameset,
 	
     for (int ivis = 0; ivis < nb_frame; ivis++){
         int isky;
+        char filename_suffix[10];
+        snprintf(filename_suffix, 10, "%d", ivis);
 		current_frameset = cpl_frameset_duplicate (used_frameset);
 
 		cpl_msg_info (cpl_func, " ***** OBJECT %d over %d ***** ", ivis+1, nb_frame);
@@ -664,7 +670,7 @@ static int gravity_vis(cpl_frameset * frameset,
 		/* Option save the preproc file */
 		if (gravi_param_get_bool (parlist,"gravity.dfs.bias-subtracted-file")) {
 		  
-			gravi_data_save_new (data, frameset, NULL, NULL, parlist,
+			gravi_data_save_new (data, frameset, NULL, filename_suffix, parlist,
 								 current_frameset, frame, "gravity_vis",
 								 NULL, "BIAS_SUBTRACTED");
 
@@ -685,9 +691,9 @@ static int gravity_vis(cpl_frameset * frameset,
 
 		/* Option save the spectrum file */
 		if (gravi_param_get_bool (parlist,"gravity.dfs.spectrum-file")) {
-			gravi_data_save_new (preproc_data, frameset, NULL, NULL, parlist,
-								 current_frameset, frame, "gravity_vis",
-                                 NULL, GRAVI_SPECTRUM);
+			gravi_data_save_new (preproc_data, frameset, NULL, filename_suffix,
+			                     parlist, current_frameset, frame,
+			                     "gravity_vis", NULL, GRAVI_SPECTRUM);
 			CPLCHECK_CLEAN ("Cannot save the SPECTRUM product");
 		}
         
@@ -703,9 +709,9 @@ static int gravity_vis(cpl_frameset * frameset,
 
 		/* Option save the preproc file */
 		if (gravi_param_get_bool (parlist,"gravity.dfs.preproc-file")) {
-			gravi_data_save_new (preproc_data, frameset, NULL, NULL, parlist,
-								 current_frameset, frame, "gravity_vis",
-                                 NULL, GRAVI_PREPROC);
+			gravi_data_save_new (preproc_data, frameset, NULL, filename_suffix,
+			                     parlist, current_frameset, frame,
+			                     "gravity_vis", NULL, GRAVI_PREPROC);
 			CPLCHECK_CLEAN ("Cannot save the PREPROC product");
 		}
         
@@ -780,8 +786,8 @@ static int gravity_vis(cpl_frameset * frameset,
 		/* Save the p2vmreduced file */
 		if (gravi_param_get_bool (parlist,"gravity.dfs.p2vmred-file")) {
 			
-			gravi_data_save_new (p2vmred_data, frameset, NULL, NULL, parlist,
-								 current_frameset, frame,
+			gravi_data_save_new (p2vmred_data, frameset, NULL, filename_suffix,
+			                     parlist, current_frameset, frame,
 								 "gravity_vis", NULL, redCatg);
 
 			CPLCHECK_CLEAN ("Cannot save the P2VMREDUCED product");
@@ -821,7 +827,7 @@ static int gravity_vis(cpl_frameset * frameset,
 		if (gravi_param_get_bool (parlist,"gravity.dfs.astro-file")) {
 
 		    gravi_data_clean_for_astro (p2vmred_data);
-			gravi_data_save_new (p2vmred_data, frameset, NULL, NULL,
+			gravi_data_save_new (p2vmred_data, frameset, NULL, filename_suffix,
 			                     parlist, current_frameset, frame,
 			                     "gravity_vis", NULL, GRAVI_ASTROREDUCED);
 
