@@ -69,15 +69,10 @@ static int gravity_piezo(cpl_frameset *, const cpl_parameterlist *);
                             Static variables
  -----------------------------------------------------------------------------*/
 
-static char gravity_piezo_short[] = GRAVI_UNOFFERED"Calibrate the response of the piezo actuators.";
-static char gravity_piezo_description[] = GRAVI_UNOFFERED"This recipe compute the response (open loop transfer function) of the piezo actuators used to fringe-track in GRAVITY.\n"
-    GRAVI_RECIPE_INPUT"\n"    
-    GRAVI_FLAT_MAP"               : flat calibration (PRO.CATG="GRAVI_FLAT_MAP")\n"
-    GRAVI_BAD_MAP"                : badpixel calibration (PRO.CATG="GRAVI_BAD_MAP") \n"
-    GRAVI_WAVE_MAP"               : wave calibration (PRO.CATG="GRAVI_WAVE_MAP")\n"
-    GRAVI_P2VM_MAP"               : p2vm calibration (PRO.CATG="GRAVI_P2VM_MAP")\n"
-    GRAVI_DARK_MAP"               : dark calibration  (PRO.CATG="GRAVI_DARK_MAP")\n"
-    GRAVI_PIEZOTF_RAW"            : dedicated observations \n"
+static char gravity_piezo_short[] = "Calibrate the response of the piezo actuators.";
+static char gravity_piezo_description[] = "This recipe compute the response (open loop transfer function) of the piezo actuators used to fringe-track in GRAVITY.\n"
+    GRAVI_RECIPE_INPUT"\n"
+    GRAVI_PIEZOTF_RAW"            : dedicated observations (DPR.CATG=PIEZOTF_RAW)\n"
     GRAVI_RECIPE_OUTPUT"\n"    
     GRAVI_PIEZOTF_MAP"           : Respose of the piezo\n"
     "";
@@ -312,13 +307,22 @@ static int gravity_piezo(cpl_frameset * frameset,
 	cpl_msg_set_component_on();
 	gravi_msg_function_start(1);
 
+    /* Identify the frames in the input frameset */
     cpl_ensure_code(gravi_dfs_set_groups(frameset) == CPL_ERROR_NONE,
 					cpl_error_get_code()) ;
 
     /* Dispatch the frameset */
     recipe_frameset = gravi_frameset_extract_piezotf_data (frameset);
 
-	/* Insert calibration frame into the used frameset */
+    /* Check the frameset */
+    if (cpl_frameset_is_empty (recipe_frameset)) {
+        cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
+                               "No PIEZOTF file on the frameset") ;
+        goto cleanup;
+    }
+    
+    
+    /* Insert calibration frame into the used frameset */
 	used_frameset = cpl_frameset_new();
 
 	/*

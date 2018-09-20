@@ -2171,24 +2171,23 @@ gravi_data * gravi_compute_biasmask (gravi_data * dark_map,
 
 /*----------------------------------------------------------------------------*/
 /**
- * @brief Create BIASMASK for SC from raw FLATs and raw DARK
+ * @brief Create piezo transfer function for Kalman Calibration & monitoring
  *
- * @param dark_map     The input dark map calibration
- * @param flats_data   The input raw flats (optional)
- * @param nflat        The number of input flats (shall be 4)
+ * @param data         The input raw data
  * @param params       The parameter list
  *
- * @return The BIASMASK map with the un-illuminated pixels.
+ * @return The table of the OPDC data with the correct QC insrted
  *
  * \exception CPL_ERROR_NULL_INPUT input data is missing
- * \exception CPL_ERROR_ILLEGAL_INPUT The number of input flats is not 4
  *
- * Pixel with values lower than 100 adu in the collapsed FLAT
- * are flag with 1 in the BIASMASK, while illuminated pixels
- * (>100adu) are flag with 0 in BIASMASK.
+ * 1- Read the piezo commands (in volts) from the OPDC table
+ * 2- Read the OPD measured by the fringe tracker (in radians)
+ * 3- Using an SVD inversion, get the 20 parameters of the transfer function:
+ *      OPD(n)=a_i*piezo(n-1)+b_i*piezo(n-2)+c_i*piezo(n-3)+d_i*piezo(n-4)+e_i*piezo(n-5)
+ * where i is the piezo number (between 1 and 4), and a,b,c,d,e the 5 values of the
+ * autoregressive function of degree 5 (AR5).
+ * 4- Compute and store the QC parameters: residual errors, delay, gain, etc...
  *
- * FIXME: improve the way we define the threshold. Use an 'ouverture'
- * filtering maybe.
  */
 /*----------------------------------------------------------------------------*/
 
@@ -2210,12 +2209,213 @@ gravi_data * gravi_compute_piezotf (gravi_data * data,
 
     /* Copy necessary tables */
     gravi_data_copy_ext (piezo_tf, data, GRAVI_OPDC_EXT);
+    
+    /* Get the OPDC table */
+    cpl_table * opdc = gravi_data_get_table (piezo_tf, GRAVI_OPDC_EXT);
 
+    /* Get the necessary variables */
+    int nbase = 6;
+    int ntel = 4;
+    int nresp = 5;
+    int nsmooth = 201;
+    char qc_name[100];
+    char name[100];
+    double phase,pizeo;
+    int base1,base2,base3,sign1,sign2,sign3;
+    int ndit_small, dit_matrix;
+    double twoPi = 2.0 * M_PI;
+    
+    
     /* DO THE COMPUTATION*/
+    
+    //  Read data array from OPDC table
+    
+    cpl_size ndit   = cpl_table_get_nrow (opdc);
+    ndit_small=ndit-nsmooth-(nresp+1);
+    cpl_msg_info (cpl_func, "Preparing matrix inversion with NDIT = %lld",ndit);
+    cpl_array** opd   = cpl_table_get_data_array (opdc, "OPD");
+    cpl_array** piezo = cpl_table_get_data_array (opdc, "PIEZO_DL_OFFSET");
+    CPLCHECK_NUL ("Cannot read the OPDC data");
+    
+    // create temporary arrays
+    
+    cpl_array * phase_array = cpl_array_new(nbase,  CPL_TYPE_DOUBLE);
+    cpl_array * piezo_array = cpl_array_new(ntel,  CPL_TYPE_DOUBLE);
+    cpl_matrix * phase_matrix = cpl_matrix_new (ndit_small*nbase,1);
+    cpl_matrix * piezo_matrix = cpl_matrix_new (ndit_small*nbase, nresp*ntel);
+    cpl_matrix * piezo_header_resp = cpl_matrix_new (nresp*ntel,1);
+    
+    // Unwrap phase of OPD
+    for (cpl_size dit = 0 ; dit < ndit-1 ; dit ++)
+        for (cpl_size base = 0 ; base < nbase; base ++)
+    {
+        phase=cpl_array_get(opd[dit+1],base, NULL)-cpl_array_get(opd[dit],base, NULL);
+        phase-= twoPi * floor( phase / twoPi );
+        if (phase >M_PI) phase -= twoPi;
+        cpl_array_set(opd[dit+1],base, phase+cpl_array_get(opd[dit],base, NULL));
+    }
+    
+    // filter OPDs, Commands and create Matrixes
+    
+    for (cpl_size dit = 0 ; dit < ndit-nsmooth; dit ++)
+    {
+        // Filter OPDs
+        cpl_array_fill_window (phase_array, 0, nbase, 0.0);
+        for (cpl_size smooth = 0 ; smooth < nsmooth; smooth ++)
+            cpl_array_add( phase_array, opd[smooth+dit] );
+        cpl_array_multiply_scalar (phase_array, -1.0 / nsmooth);
+        cpl_array_add( phase_array, opd[ (int) (nsmooth/2+dit) ] );
+        
+        // Filter PIEZO commands
+        cpl_array_fill_window_double (piezo_array, 0, ntel, 0.0);
+        for (cpl_size smooth = 0 ; smooth < nsmooth; smooth ++)
+            cpl_array_add( piezo_array, piezo[smooth+dit] );
+        cpl_array_multiply_scalar (piezo_array, -1.0 / nsmooth);
+        cpl_array_add( piezo_array, piezo[ (int) (nsmooth/2+dit) ] );
+        
+        // Store values into phase matrix for SVD inversion
+        if (( dit-(nresp+1) >= 0 )&( dit-(nresp+1) < ndit_small))
+            for (cpl_size base = 0 ; base < nbase; base ++)
+            {
+                int dit_matrix =dit-(nresp+1)+base*ndit_small;
+                cpl_matrix_set(phase_matrix,dit_matrix,0,cpl_array_get(phase_array, base, NULL));
+            }
+        
+        // Store values into piezo matrix for SVD inversion
+        for (cpl_size tel = 0 ; tel < ntel; tel ++)
+        {
+            switch (tel)
+            {
+                default:
+                case 0:
+                    base1=0;
+                    sign1=-1;
+                    base2=1;
+                    sign2=-1;
+                    base3=2;
+                    sign3=-1;
+                    break;
+                case 1:
+                    base1=0;
+                    sign1=1;
+                    base2=3;
+                    sign2=-1;
+                    base3=4;
+                    sign3=-1;
+                    break;
+                case 2:
+                    base1=1;
+                    sign1=1;
+                    base2=3;
+                    sign2=1;
+                    base3=5;
+                    sign3=-1;
+                    break;
+                case 3:
+                    base1=2;
+                    sign1=1;
+                    base2=4;
+                    sign2=1;
+                    base3=5;
+                    sign3=1;
+                    break;
+            }
+                    
+                for (cpl_size resp = 0 ; resp < nresp; resp ++)
+                    if (( dit-(nresp+1)+(1+resp) >= 0 )&( dit-(nresp+1)+(1+resp) < ndit_small))
+                        {
+                            dit_matrix =dit-(nresp+1)+(1+resp)+base1*ndit_small;
+                            cpl_matrix_set(piezo_matrix,dit_matrix,resp*ntel+tel,sign1*cpl_array_get(piezo_array, tel, NULL));
+                            dit_matrix =dit-(nresp+1)+(1+resp)+base2*ndit_small;
+                            cpl_matrix_set(piezo_matrix,dit_matrix,resp*ntel+tel,sign2*cpl_array_get(piezo_array, tel, NULL));
+                            dit_matrix =dit-(nresp+1)+(1+resp)+base3*ndit_small;
+                            cpl_matrix_set(piezo_matrix,dit_matrix,resp*ntel+tel,sign3*cpl_array_get(piezo_array, tel, NULL));
+                        }
+        }
+    }
+    CPLCHECK_NUL ("Cannot create matrix for SVD inversion");
+    
+    // resolve SVD
+    cpl_msg_info (cpl_func, "Doing SVD inversion" );
+    cpl_matrix * piezo_resp = cpl_matrix_solve_normal(piezo_matrix,phase_matrix); // coef_vis is 20x1
+    cpl_matrix * residuals_fit = cpl_matrix_product_create(piezo_matrix,piezo_resp);
+    cpl_matrix_subtract (residuals_fit,phase_matrix); //residuals_fit is (ndit-5)*nbase
+    CPLCHECK_NUL ("Failed to do SVD inversion");
+    
+    // Get piezo response from header
+    
+    for (cpl_size tel = 0 ; tel < ntel; tel ++)
+        for (cpl_size resp = 0 ; resp < nresp; resp ++)
+        {
+            sprintf (name, "ESO FT KAL P%lld_RESP%lld", tel+1, resp+1);
+            cpl_matrix_set( piezo_header_resp, resp*ntel+ tel, 0, cpl_propertylist_get_double (piezotf_header, name));
+        }
+    
+    // output QC parameters
+    
+    sprintf (qc_name, "ESO QC FT KAL P_FIT");
+    cpl_propertylist_update_double (piezotf_header, qc_name, cpl_matrix_get_stdev( residuals_fit ) );
+    cpl_propertylist_set_comment (piezotf_header, qc_name, "Fitting standard deviation [rad]");
+    cpl_msg_info (cpl_func, "Fit standard deviation = %e [rad]", cpl_matrix_get_stdev( residuals_fit ) );
+    
+    
+    sprintf (name, "ESO FT RATE");
+    double sampling = cpl_propertylist_get_double (piezotf_header, name);
+    
+    for (cpl_size tel = 0 ; tel < ntel; tel ++)
+    {
+            for (cpl_size resp = 0 ; resp < nresp; resp ++)
+                {
+            sprintf (qc_name, "ESO QC FT KAL P%lld_RESP%lld", tel+1, resp+1);
+            cpl_propertylist_update_double (piezotf_header, qc_name, cpl_matrix_get( piezo_resp, resp*ntel+ tel,0 ) );
+            cpl_propertylist_set_comment (piezotf_header, qc_name, "Computed Kalman piezo response");
+                    
+            cpl_msg_info (cpl_func, "QC FT KAL P%lld_RESP%lld = %5.5g [rad/Volts]", tel+1, resp+1, cpl_matrix_get( piezo_resp, resp*ntel+ tel,0 ));
+                    
+                }
+        
+        // Get gain in rad/Volts
+        
+        double QC_gain=0.0;
+        for (cpl_size resp = 0 ; resp < nresp; resp ++)
+            QC_gain+=cpl_matrix_get( piezo_resp, resp*ntel + tel,0 );
+        
+        sprintf (qc_name, "ESO QC FT KAL P%lld_GAIN", tel+1);
+        cpl_propertylist_update_double (piezotf_header, qc_name, QC_gain );
+        cpl_propertylist_set_comment (piezotf_header, qc_name, "Piezo Gain [rad/Volts]");
+        
+        // Get pur delay in milliseconds
 
+        double QC_delay=0.0;
+        for (cpl_size resp = 0 ; resp < nresp; resp ++)
+            QC_delay+=(resp+1)*cpl_matrix_get( piezo_resp, resp*ntel + tel,0 )*sampling;
+        QC_delay/=QC_gain;
+        
+        sprintf (qc_name, "ESO QC FT KAL P%lld_DELAY", tel+1);
+        cpl_propertylist_update_double (piezotf_header, qc_name, QC_delay );
+        cpl_propertylist_set_comment (piezotf_header, qc_name, "Response time [ms]");
+        
+        // Get standard deviation
+        double QC_std=0.0;
+        for (cpl_size resp = 0 ; resp < nresp; resp ++)
+            QC_std+=(cpl_matrix_get( piezo_resp, resp*ntel + tel,0 ) - cpl_matrix_get( piezo_header_resp, resp*ntel+ tel, 0))
+            * (cpl_matrix_get( piezo_resp, resp*ntel + tel,0 ) - cpl_matrix_get( piezo_header_resp, resp*ntel+ tel, 0));
+        
+        sprintf (qc_name, "ESO QC FT KAL P%lld_STDEV", tel+1);
+        cpl_propertylist_update_double (piezotf_header, qc_name, sqrt(QC_std)/sqrt(nresp) );
+        cpl_propertylist_set_comment (piezotf_header, qc_name, "Stdev of RTC [radians]");
+        
+    }
+    CPLCHECK_NUL ("Failed to generate and store QC parameters");
 
-
-
+    // delete disposable arrays
+    cpl_array_delete(phase_array);
+    cpl_array_delete(piezo_array);
+    cpl_matrix_delete(phase_matrix);
+    cpl_matrix_delete(piezo_matrix);
+    cpl_matrix_delete(piezo_header_resp);
+    cpl_matrix_delete(piezo_resp);
+    cpl_matrix_delete(residuals_fit);
 
 
     /* Verbose */
