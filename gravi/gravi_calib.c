@@ -2223,7 +2223,7 @@ gravi_data * gravi_compute_piezotf (gravi_data * data,
     double phase,pizeo;
     int base1,base2,base3,sign1,sign2,sign3;
     int ndit_small, dit_matrix;
-    double twoPi = 2.0 * M_PI;
+    double twoPi = 2.0 * CPL_MATH_PI;
     
     
     /* DO THE COMPUTATION*/
@@ -2251,7 +2251,7 @@ gravi_data * gravi_compute_piezotf (gravi_data * data,
     {
         phase=cpl_array_get(opd[dit+1],base, NULL)-cpl_array_get(opd[dit],base, NULL);
         phase-= twoPi * floor( phase / twoPi );
-        if (phase >M_PI) phase -= twoPi;
+        if (phase > CPL_MATH_PI) phase -= twoPi;
         cpl_array_set(opd[dit+1],base, phase+cpl_array_get(opd[dit],base, NULL));
     }
     
