@@ -171,16 +171,6 @@ static int gravity_piezo_create(cpl_plugin * plugin)
 
     /* Use static names (output_procatg.fits) */
     gravi_parameter_add_static_name (recipe->parameters);
-
-    /* Intermediate files */
-    gravi_parameter_add_biassub_file (recipe->parameters);
-    gravi_parameter_add_preproc_file (recipe->parameters);
-
-    /* Snr, signal, rejection, vis */
-    gravi_parameter_add_compute_snr (recipe->parameters, isCalib);
-    gravi_parameter_add_compute_signal (recipe->parameters, isCalib);
-    gravi_parameter_add_rejection (recipe->parameters, isCalib);
-    gravi_parameter_add_compute_vis (recipe->parameters, isCalib);
 	
 	return 0;
 }
