@@ -71,10 +71,13 @@ static int gravity_piezo(cpl_frameset *, const cpl_parameterlist *);
 
 static char gravity_piezo_short[] = "Calibrate the response of the piezo actuators.";
 static char gravity_piezo_description[] = "This recipe compute the response (open loop transfer function) of the piezo actuators used to fringe-track in GRAVITY.\n"
+    GRAVI_RECIPE_FLOW"\n"
+    "* Compute the piezo TF QC parameter"
+    "* Write product\n"
     GRAVI_RECIPE_INPUT"\n"
-    GRAVI_PIEZOTF_RAW"            : dedicated observations (DPR.CATG=PIEZOTF_RAW)\n"
+    GRAVI_PIEZOTF_RAW"           : dedicated observations (DPR.CATG=PIEZOTF)\n"
     GRAVI_RECIPE_OUTPUT"\n"    
-    GRAVI_PIEZOTF_MAP"           : Respose of the piezo\n"
+    GRAVI_PIEZOTF_MAP"           : Response of the piezo\n"
     "";
 
 /*-----------------------------------------------------------------------------
