@@ -560,7 +560,17 @@ cpl_table * gravi_imglist_sc_collapse (cpl_table * profile_table,
  * @param dark_data        DARK calibration map
  * @param bad_map          BAD calibration map
  * @param sky_map          SKY calibration map
- * 
+ * @param parlist          Input parameter list with :
+ *                         - ditshift-sc : Shift the time of SC DITs by an integer
+ *                         value to account for lost frames in exposure (issue on the
+ *                         instrument side, report to instrument team). The
+ *                         time of all DITs in exposure are increased by
+ *                         ditshift x PERIOD. ditshift can be 0, positive
+ *                         (system has lost one SC DIT), or negative
+ *                         (SC desynchronized).
+ * @param det_type         The detector to extract GRAVI_DET_SC, GRAVI_DET_FT or
+ *                         GRAVI_DET_ALL
+ *
  * @return The output gravi data contenning all the spectrums
  *
  * \exception CPL_ERROR_NULL_INPUT input data is missing
@@ -887,7 +897,9 @@ cpl_error_code gravi_subtract_met_dark (gravi_data * preproc_data,
  * @param spectrum_table    The table to manipulate
  * @param wave_table        The input wave_table (one map per region)
  * @param oiwave_tables     The output OI_WAVEs table (same for all regions)
+ * @param detector_rable    The input IMAGING DETECTOR table
  * @param specflat_table    The SPECTRUMFLAT, to allow unbiased effective wave
+ * @param parlist           Input parameter list (no parameter used)
  *
  * All regions are re-interpolated into a common wavelength grid, defined
  * by the oiwave_table (OIFITS format). The input wave_table contains the 
@@ -1325,6 +1337,7 @@ cpl_error_code gravi_interpolate_spectrum_table (cpl_table * spectrum_table,
  *                          the science detector extensions will be processed.
  *                          GRAVI_DET_FT will do the same for FT detector
  *                          and GRAVI_DET_ALL will do it for both. 
+ * @param parlist           Input parameter list (no parameter used).
  * 
  * It re-samples
  * the spectral element according to the wavelength calibration.

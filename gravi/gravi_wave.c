@@ -2014,7 +2014,13 @@ cpl_error_code gravi_wave_qc (gravi_data * wave_map, gravi_data * profile_map)
  * @param wave_map          Output wave_map, already allocated.
  * @param spectrum_data     Input spectrum_data
  * @param type_data         GRAVI_SC or GRAVI_FT
- * @param parlist           Parameter list
+ * @param parlist           Input parameter list with :
+ *                          - force-wave-ft-equal : Force the spatial order of
+ *                          the wavelength 2D fit for FT to zero (so all region
+ *                          share the same calibration). This is used to build
+ *                          the P2VM calibration of the TAC real-time code running
+ *                          on the instrument ifself.
+ *
  *
  * The output WAVE map is filled with WAVE_FIBRE and WAVE_DATA
  * tables, as well as QC parameters in the main header.

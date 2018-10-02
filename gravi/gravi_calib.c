@@ -932,9 +932,20 @@ cpl_image * gravi_create_profile_image (cpl_image * mean_img,
  * @param dark_map	 	The DARK calibration map
  * @param bad_map	    BAD calibration map
  * @param nflat  	    The number of FLAT file inputs
- * @param params	  	The parameter list containing the variables defining
- * 	  	  	  	  	    the size of the profile
- * 
+ * @param params	  	Input parameter list with :
+ *                      - profile-width : Width of the detector window extracted
+ *                       around the default position of each spectrum, and on
+ *                       which the profile will be applied to perform the extraction.
+ *                      - force-badpix-to-zero : Force the badpixel to zero in profile.
+ *                      - profile-mode : Method to compute the extraction profile.
+ *                       PROFILE corresponds to the pixel intensities measured in the
+ *                       FLAT files (Gaussian like with FWHM of approx 1.5 pixel).
+ *                       This is the AUTO option for the Low and Med spectral
+ *                       resolution. GAUSS corresponds to a Gaussian fit of the
+ *                       (non-zero) pixel intensities measured in the FLAT files.
+ *                        BOX corresponds to a box-card of 6 pixels centered on the
+ *                        spectra measured in the FLAT files. This is the AUTO option
+ *                        for High spectral resolution.
  * @return The gravi_data with FLATs and PROFILE maps
  * 
  * \exception CPL_ERROR_NULL_INPUT input data is missing
@@ -1706,7 +1717,9 @@ cpl_propertylist * gravi_compute_gain (gravi_data ** flats_data,
  * @param dark_map 	   The input dark map calibration
  * @param flats_data   The input raw flats (optional)
  * @param nflat        The number of input flats (shall be 4)
- * @param params       The parameter list
+ * @param params       Input parameter list with :
+ *                     - bad-dark-threshold : the rms factor for dark bad
+ *                     pixel threshold.
  * 
  * @return The BAD map with the detected bad pixels.
  * 
@@ -2070,7 +2083,7 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
  * @param dark_map 	   The input dark map calibration
  * @param flats_data   The input raw flats (optional)
  * @param nflat        The number of input flats (shall be 4)
- * @param params       The parameter list
+ * @param params       The parameter list (no parameter used)
  * 
  * @return The BIASMASK map with the un-illuminated pixels.
  * 
@@ -2174,7 +2187,7 @@ gravi_data * gravi_compute_biasmask (gravi_data * dark_map,
  * @brief Create piezo transfer function for Kalman Calibration & monitoring
  *
  * @param data         The input raw data
- * @param params       The parameter list
+ * @param params       The parameter list (no parameter used)
  *
  * @return The table of the OPDC data with the correct QC insrted
  *

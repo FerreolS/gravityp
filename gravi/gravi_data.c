@@ -876,7 +876,8 @@ cpl_error_code gravi_data_save_data(gravi_data * self,
   * @param filename   Filename, or build from frame and proCatg if NULL
   * @param suffix     If the filename is constructed from the recipe and
   *                   pro_catg, add _suffix to it. Nothing added if NULL
-  * @param parlist    The list of input parameters
+  * @param parlist    Input parameter list with :
+  *                   - static-name : Use static names for the products (for ESO)
   * @param usedframes The list of raw/calibration frames used for this product
   * @param frame      The reference frame to build the header
   * @param recipe     The recipe name
@@ -1062,6 +1063,12 @@ int gravi_data_get_dark_pos(cpl_table * detector_table, int reg, int x)
  * @brief Perform self-bias correction to the SC raw data
  * 
  * @param data     gravi_data to be processed (in-place).
+ * @param parlist  parameter list with :
+ *                    - bias-method : Method to average the biaspixels when
+ *                    cleaning-up the SC detector (only applied to MED and LOW).
+ *                    Ideally the same value shall be used when reducing the DARK
+ *                    with gravity_dark and the OBJECT with gravity_vis.
+ *                    <MEDIAN | MEDIAN_PER_COLUMN> [MEDIAN]
  * 
  * This function applies the self bias-pixel correction to the IMAGING_DATA_SC
  * images, in-place. The bias is estimated independently for each image in the
