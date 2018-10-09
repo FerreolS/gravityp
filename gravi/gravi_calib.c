@@ -2381,7 +2381,7 @@ gravi_data * gravi_compute_piezotf (gravi_data * data,
                 {
             sprintf (qc_name, "ESO QC FT KAL P%lld_RESP%lld", tel+1, resp+1);
             cpl_propertylist_update_double (piezotf_header, qc_name, cpl_matrix_get( piezo_resp, resp*ntel+ tel,0 ) );
-            cpl_propertylist_set_comment (piezotf_header, qc_name, "Computed Kalman piezo response");
+            cpl_propertylist_set_comment (piezotf_header, qc_name, "Kalman piezo response");
                     
             cpl_msg_info (cpl_func, "QC FT KAL P%lld_RESP%lld = %5.5g [rad/Volts]", tel+1, resp+1, cpl_matrix_get( piezo_resp, resp*ntel+ tel,0 ));
                     
@@ -2395,7 +2395,7 @@ gravi_data * gravi_compute_piezotf (gravi_data * data,
         
         sprintf (qc_name, "ESO QC FT KAL P%lld_GAIN", tel+1);
         cpl_propertylist_update_double (piezotf_header, qc_name, QC_gain );
-        cpl_propertylist_set_comment (piezotf_header, qc_name, "Piezo Gain [rad/Volts]");
+        cpl_propertylist_set_comment (piezotf_header, qc_name, "Open loop gain [rad/Volts]");
         
         // Get pur delay in milliseconds
 
@@ -2406,7 +2406,7 @@ gravi_data * gravi_compute_piezotf (gravi_data * data,
         
         sprintf (qc_name, "ESO QC FT KAL P%lld_DELAY", tel+1);
         cpl_propertylist_update_double (piezotf_header, qc_name, QC_delay );
-        cpl_propertylist_set_comment (piezotf_header, qc_name, "Response time [ms]");
+        cpl_propertylist_set_comment (piezotf_header, qc_name, "Open loop latency [ms]");
         
         // Get standard deviation
         double QC_std=0.0;
