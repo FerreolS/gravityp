@@ -928,9 +928,9 @@ cpl_table * gravity_eop_data_totable (const char * eop_data, int data_length)
     /* Fill the columns from the string buffer */
     for(cpl_size i=0; i<n_entries; i++)
     {
-        char flag[3];
+        char flag[2];
         strncpy(flag, eop_data+i*LINE_SIZE+16, 1);
-        flag[2] = '\0';
+        flag[1] = '\0';
         cpl_table_set_string(eop_table, "FLAG", i, flag);
 
         cpl_table_set_double(eop_table, "MJD", i, atof(eop_data+i*LINE_SIZE+7));
