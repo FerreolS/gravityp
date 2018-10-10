@@ -98,7 +98,8 @@ static void gravi_eop_retrieve_eop_test(void)
                 cpl_error_reset();
             }
             else
-                cpl_msg_debug(__func__, "Maximum number of retries reached",
+                cpl_msg_debug(__func__, "Maximum number of retries (%d) "
+                              "reached", max_tries);
         }
     }
 
