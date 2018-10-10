@@ -90,7 +90,7 @@ static void gravi_eop_retrieve_eop_test(void)
             //Reset the error status before trying again (with some random delay)
             if(itry < max_tries - 1)
             {
-                int sleep_seconds = (int)(100.*random()/RAND_MAX);
+                int sleep_seconds = (int)(200.*random()/RAND_MAX);
                 cpl_msg_debug(__func__, "Sleeping %d seconds before retrying",
                         sleep_seconds);
                 sleep(sleep_seconds);
