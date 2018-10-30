@@ -1219,7 +1219,7 @@ cpl_error_code gravi_average_self_visphi(cpl_table * oi_vis_avg,
   cpl_ensure_code(oi_vis, CPL_ERROR_NULL_INPUT);
 
   /* Parameters */
-  int nv = 0, nbase = 6;
+  int nbase = 6;
   cpl_size nrow = cpl_table_get_nrow(oi_vis) / nbase;
   cpl_size nwave = cpl_table_get_column_depth(oi_vis, "VISDATA");
 
