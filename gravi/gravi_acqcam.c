@@ -161,10 +161,6 @@ cpl_error_code gravi_preproc_acqcam (gravi_data *output_data,
         return CPL_ERROR_NONE;
     }
 
-    cpl_propertylist * data_header;
-    data_header = gravi_data_get_header (input_data);
-    CPLCHECK_MSG ("Cannot get data or header");
-
     /* Construct a mask of badpixels */
     cpl_image * badpix_img = gravi_data_get_img (bad_map, GRAVI_IMAGING_DATA_ACQ_EXT);
     cpl_mask * badpix_mask = cpl_mask_threshold_image_create (badpix_img, 0.5, 10000);
@@ -225,7 +221,7 @@ cpl_error_code gravi_preproc_acqcam (gravi_data *output_data,
                 flux[row] = cpl_image_get_flux_window (img, 1, 1200, 2048, 1536) -
                             cpl_image_get_median_window (img, 1, 1200, 2048, 1536) * 2048 * 336;
 
-                cpl_msg_debug (cpl_func, "flux %lli = %.2f",row, flux[row]);
+            cpl_msg_debug (cpl_func, "flux %lli = %.2f",row, flux[row]);
         }
             
         for (cpl_size row = 0; row < nrow; row ++) {
