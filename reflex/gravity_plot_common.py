@@ -110,8 +110,8 @@ class PlotableRawCalibratorTF:
     maxtime = max(self.time)
     mintimeidx = numpy.argmin(self.time)
     maxtimeidx = numpy.argmax(self.time)
-    self.time.insert(0, math.floor(mintime))
-    self.time.append(math.ceil(maxtime))
+    self.time.insert(0, math.floor(mintime-0.5)+0.5)
+    self.time.append(math.ceil(maxtime+.5)-.5)
     for pola in range(1, self.npola + 1):
       for input1 in range(1,4 + 1):
         for input2 in range(input1+1,4 + 1):
