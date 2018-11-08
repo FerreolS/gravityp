@@ -52,6 +52,7 @@ class PlotableRawCalibratorTF:
       self.calib_list.append(PipelineProduct(fits))
     self.loadFromFits()
     self.tfdisp = SpectrumDisplay()
+    self.tfscdisp = ScatterDisplay()
 
   def loadFromFits(self):
     refhead = self.calib_list[0].all_hdu[0].header
@@ -186,6 +187,15 @@ class PlotableRawCalibratorTF:
                               self.tf[confkey_sc], self.color[confkey_sc]) 
           self.tfdisp.overplot(subplots[isub], self.time, 
                               self.tf[confkey_ft], self.color[confkey_ft]) 
+          xlim1, xlim2 = self.tfdisp.wave_lim
+          ylim1, ylim2 = self.tfdisp.flux_lim
+          self.tfscdisp.setLimits(xlim1, xlim2, ylim1, ylim2)
+          self.tfscdisp.setPointSize(10)
+          self.tfscdisp.setColor(self.color[confkey_sc])
+          self.tfscdisp.display(subplots[isub], '', '', self.time, self.tf[confkey_sc])
+          self.tfscdisp.setColor(self.color[confkey_ft])
+          self.tfscdisp.display(subplots[isub], '', '', self.time, self.tf[confkey_ft])
+
           if(self.npola) == 1:
             label_sc = "SC {0} - {1} ".format(self.gravi_input_sta[input1], 
                                               self.gravi_input_sta[input2])
