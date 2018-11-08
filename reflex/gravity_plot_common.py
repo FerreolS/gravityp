@@ -1,5 +1,6 @@
 try:
   import numpy
+  import math
   from pipeline_display import *
   from pipeline_product import *
   from reflex_plot_widgets import *
@@ -102,6 +103,28 @@ class PlotableRawCalibratorTF:
     for calib in self.calib_list:
       head = calib.all_hdu[0].header
       self.time.append(head['MJD-OBS']) 
+
+    #Add two more points, at the beginning and the end, 
+    #to avoid the degenerat case of one single calibrator
+    mintime = min(self.time)
+    maxtime = max(self.time)
+    mintimeidx = numpy.argmin(self.time)
+    maxtimeidx = numpy.argmax(self.time)
+    self.time.insert(0, math.floor(mintime))
+    self.time.append(math.ceil(maxtime))
+    for pola in range(1, self.npola + 1):
+      for input1 in range(1,4 + 1):
+        for input2 in range(input1+1,4 + 1):
+          confkey_sc = "SC{0}{1}_P{2}".format(input1, input2, pola)
+          confkey_ft = "FT{0}{1}_P{2}".format(input1, input2, pola)
+          mintfsc = self.tf[confkey_sc][mintimeidx]
+          maxtfsc = self.tf[confkey_sc][maxtimeidx]
+          self.tf[confkey_sc].insert(0, mintfsc)
+          self.tf[confkey_sc].append(maxtfsc)
+          mintfft = self.tf[confkey_ft][mintimeidx]
+          maxtfft = self.tf[confkey_ft][maxtimeidx]
+          self.tf[confkey_ft].insert(0, mintfft)
+          self.tf[confkey_ft].append(maxtfft)
 
     #Set the colors
     self.color = {}
