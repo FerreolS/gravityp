@@ -31,13 +31,15 @@ endif
 
 AM_CPPFLAGS = -DDATADIR=\"$(srcdir)/\" $(all_includes)
 
-check_PROGRAMS = gravi_dfs-test \
+check_PROGRAMS = gravi_vis-test \
+                 gravi_metrology-test \
+                 gravi_dfs-test \
                  gravi_data-test \
                  gravi_utils-test \
                  gravi_calib-test \
                  gravi_strehl-test \
                  gravi_image-test \
-                 gravi_eop-test
+                 gravi_eop-test 
 
 gravi_dfs_test_SOURCES = gravi_dfs-test.c
 gravi_dfs_test_LDFLAGS = $(CPL_LDFLAGS) $(GSL_LDFLAGS) $(HDRL_LDFLAGS)
@@ -74,6 +76,20 @@ gravi_eop_test_LDFLAGS = $(CPL_LDFLAGS) $(GSL_LDFLAGS) $(HDRL_LDFLAGS)
 gravi_eop_test_LDADD = $(LIBCPLUI) $(LIBCPLCORE) $(LIBGRAVI) $(GSL_LIBS) $(HDRL_LIBS)
 gravi_eop_test_DEPENDENCY = $(LIBHDRL)
 
+# EKW 23/10/20178 start
+gravi_vis_test_SOURCES = gravi_vis-test.c
+gravi_vis_test_LDFLAGS = $(CPL_LDFLAGS) $(GSL_LDFLAGS) $(HDRL_LDFLAGS)
+gravi_vis_test_LDADD = $(LIBCPLUI) $(LIBCPLCORE) $(LIBGRAVI) $(GSL_LIBS) $(HDRL_LIBS)
+gravi_vis_test_DEPENDENCY = $(LIBHDRL)
+
+gravi_metrology_test_SOURCES = gravi_metrology-test.c
+gravi_metrology_test_LDFLAGS = $(CPL_LDFLAGS) $(GSL_LDFLAGS) $(HDRL_LDFLAGS)
+gravi_metrology_test_LDADD = $(LIBCPLUI) $(LIBCPLCORE) $(LIBGRAVI) $(GSL_LIBS) $(HDRL_LIBS)
+gravi_metrology_test_DEPENDENCY = $(LIBHDRL)
+
+# EKW 23/10/20178 end
+
+
 # Be sure to reexport important environment variables.
 TESTS_ENVIRONMENT = MAKE="$(MAKE)" CC="$(CC)" CFLAGS="$(CFLAGS)" \
         CPPFLAGS="$(CPPFLAGS)" LD="$(LD)" LDFLAGS="$(LDFLAGS)" \
@@ -88,7 +104,6 @@ XFAIL_TESTS =
 # We need to remove any files that the above tests created.
 clean-local:
 	-rm test_data_*.fits
-	
 
 EXTRA_DIST = data1.oifits \
 Dark.fits \
@@ -104,5 +119,7 @@ gravi_dark_map.fits \
 gravi_wave_map.fits \
 gravi_p2vm_map.fits \
 p2vm_map.fits \
-vis_data.fits
-
+vis_data.fits \
+oi_vis_SC.fits \
+vis_SC.fits \
+wavenumber_sc_table.fits
