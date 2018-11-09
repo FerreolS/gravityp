@@ -2769,8 +2769,26 @@ cpl_error_code gravi_compute_signals (gravi_data * p2vmred_data,
 	
 	gravi_vis_create_vfactor_sc (vis_SC, oi_wavelengthsc,
 								 vis_FT, oi_wavelengthft);
-	
+
 	CPLCHECK_MSG ("Cannot create signals for VIS_SC");
+
+    /* 
+     * Create QC for PFACTOR and VFACTOR
+     */
+
+    for (int base = 0; base < nbase; base++) {        
+        char qc_name[100];
+        
+        sprintf (qc_name, "ESO QC VFACTOR%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
+        double vmean = gravi_table_get_column_mean (vis_SC, "V_FACTOR_WL", base, nbase);
+        cpl_propertylist_update_double (p2vmred_header, qc_name, vmean);
+        cpl_propertylist_set_comment (p2vmred_header, qc_name, "mean v-factor");
+        
+        sprintf (qc_name, "ESO QC PFACTOR%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
+        double pmean = gravi_table_get_column_mean (vis_SC, "P_FACTOR", base, nbase);
+        cpl_propertylist_update_double (p2vmred_header, qc_name, pmean);
+        cpl_propertylist_set_comment (p2vmred_header, qc_name, "mean p-factor");
+    }
 
     /* 
      * If available, create the signal from ACQ camera
