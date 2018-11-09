@@ -1,5 +1,6 @@
 DOXYGEN_BUILD_DIR = $(top_builddir)/doxygen
 DOXYGEN_HTML_DIR = $(top_builddir)/html
+DOXYGEN_LATEX_DIR = $(top_builddir)/latex
 DOXYGEN_HTML_INSTDIR = $(apidocdir)
 
 if MAINTAINER_MODE
@@ -23,6 +24,7 @@ clean-doxygen: clean-doxygen-am
 
 clean-doxygen-am:
 	-rm -rf $(DOXYGEN_HTML_DIR)
+	-rm -rf $(DOXYGEN_LATEX_DIR)
 
 DOXYGEN_INSTALL_TARGETS = doxygen-am install-doxygen-generic
 
