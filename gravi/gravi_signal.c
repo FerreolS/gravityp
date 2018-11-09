@@ -42,7 +42,6 @@
 #include <config.h>
 #endif
 
-#define _XOPEN_SOURCE
 #include <cpl.h>
 #include <string.h>
 #include <stdio.h>

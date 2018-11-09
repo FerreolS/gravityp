@@ -37,7 +37,6 @@
 #include <config.h>
 #endif
 
-#define _XOPEN_SOURCE 700
 #include <cpl.h>
 #include <string.h>
 #include <stdio.h>

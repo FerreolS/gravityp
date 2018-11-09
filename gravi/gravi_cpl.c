@@ -32,8 +32,6 @@
                                    Includes
  -----------------------------------------------------------------------------*/
 
-#define _XOPEN_SOURCE // for M_PI symbol
-
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif

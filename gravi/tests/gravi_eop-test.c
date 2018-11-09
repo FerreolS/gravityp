@@ -26,7 +26,6 @@
                                    Includes
  -----------------------------------------------------------------------------*/
 
-#define _XOPEN_SOURCE 500
 #include <stdlib.h>
 #include <time.h>
 #include "gravi_eop.h"
