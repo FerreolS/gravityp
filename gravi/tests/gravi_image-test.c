@@ -158,11 +158,7 @@ static void test_image(void)
 
 int main(void)
 {
-#if defined CPL_VERSION_CODE && CPL_VERSION_CODE >= CPL_VERSION(4, 0, 0)
     cpl_test_init(PACKAGE_BUGREPORT, CPL_MSG_INFO);
-#else
-    cpl_init();
-#endif
 
     test_image();
 

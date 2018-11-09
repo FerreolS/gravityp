@@ -397,12 +397,9 @@ int gravi_utils_test(void){
 
 int main(void)
 {
-	int flag;
-#if defined CPL_VERSION_CODE && CPL_VERSION_CODE >= CPL_VERSION(4, 0, 0)
+    int flag;
+
     cpl_test_init(PACKAGE_BUGREPORT, CPL_MSG_WARNING);
-#else
-    cpl_init();
-#endif
 
     flag=gravi_utils_test();
 

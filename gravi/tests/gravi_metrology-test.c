@@ -192,13 +192,9 @@ int gravi_metrology_test(void){
 
 int main(void)
 {
-	int flag;
+    int flag;
 
-#if defined CPL_VERSION_CODE && CPL_VERSION_CODE >= CPL_VERSION(4, 0, 0)
     cpl_test_init(PACKAGE_BUGREPORT, CPL_MSG_INFO);
-#else
-    cpl_init();
-#endif
 
     flag=gravi_metrology_test();
 
