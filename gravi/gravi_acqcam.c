@@ -1645,7 +1645,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             cpl_table_set (acqcam_table, "FIELD_FT_XERR", row*ntel+tel, exft);
             cpl_table_set (acqcam_table, "FIELD_FT_YERR", row*ntel+tel, eyft);
             CPLCHECK_MSG("Error setting FT column");
-            
+
             /*------------------------------------------*/
             /* Plate scale computation of current frame */
             /*------------------------------------------*/
@@ -1694,6 +1694,27 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             cpl_table_set (acqcam_table, "FIELD_STREHL", row*ntel+tel, strehl_on_average*(max_on_frame/max_on_average) );
             
         } /* End loop on images */
+
+        /* Add some QC */
+        double sc_std_x = gravi_table_get_column_std (acqcam_table, "FIELD_SC_X", tel, ntel);
+        sprintf (qc_name, "ESO QC ACQ FIELD%i SC_X STD", tel+1);
+        cpl_propertylist_update_double (o_header, qc_name, sc_std_x);
+        cpl_propertylist_set_comment (o_header, qc_name, "[pix] Std of field position of SC");
+
+        double sc_std_y = gravi_table_get_column_std (acqcam_table, "FIELD_SC_Y", tel, ntel);
+        sprintf (qc_name, "ESO QC ACQ FIELD%i SC_Y STD", tel+1);
+        cpl_propertylist_update_double (o_header, qc_name, sc_std_y);
+        cpl_propertylist_set_comment (o_header, qc_name, "[pix] Std of field position of SC");
+
+        double ft_std_x = gravi_table_get_column_std (acqcam_table, "FIELD_FT_X", tel, ntel);
+        sprintf (qc_name, "ESO QC ACQ FIELD%i FT_X STD", tel+1);
+        cpl_propertylist_update_double (o_header, qc_name, ft_std_x);
+        cpl_propertylist_set_comment (o_header, qc_name, "[pix] Std of field position of FT");
+
+        double ft_std_y = gravi_table_get_column_std (acqcam_table, "FIELD_FT_Y", tel, ntel);
+        sprintf (qc_name, "ESO QC ACQ FIELD%i FT_Y STD", tel+1);
+        cpl_propertylist_update_double (o_header, qc_name, ft_std_y);
+        cpl_propertylist_set_comment (o_header, qc_name, "[pix] Std of field position of FT");
         
     } /* End loop on tel */
     
