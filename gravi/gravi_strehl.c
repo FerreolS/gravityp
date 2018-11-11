@@ -50,8 +50,8 @@ cpl_error_code gravi_strehl(double wavelength)
     if(wavelength < 0)
         return CPL_ERROR_INCOMPATIBLE_INPUT;
 
-    hdrl_parameter * strehl_params = 
-        hdrl_strehl_parameter_create(wavelength,0.,0.,0.,0.,0.,0.,0.);
+    // hdrl_parameter * strehl_params = 
+    //    hdrl_strehl_parameter_create (wavelength,0.,0.,0.,0.,0.,0.,0.);
 
     return CPL_ERROR_NONE;
 }
