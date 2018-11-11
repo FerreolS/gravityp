@@ -259,7 +259,7 @@ cpl_parameter * gravi_parameter_add_preproc (cpl_parameterlist *self)
 {
     cpl_ensure (self, CPL_ERROR_NULL_INPUT, NULL);
 
-    cpl_parameter *p;
+    cpl_parameter *p = NULL;
 
     /* Method for interpolation */
 //    p = cpl_parameter_new_value ("gravity.preproc.interp-3pixels", CPL_TYPE_BOOL,
