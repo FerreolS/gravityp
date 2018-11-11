@@ -1715,6 +1715,11 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         sprintf (qc_name, "ESO QC ACQ FIELD%i FT_Y STD", tel+1);
         cpl_propertylist_update_double (o_header, qc_name, ft_std_y);
         cpl_propertylist_set_comment (o_header, qc_name, "[pix] Std of field position of FT");
+
+        double strehl_std = gravi_table_get_column_std (acqcam_table, "FIELD_STREHL", tel, ntel);
+        sprintf (qc_name, "ESO QC ACQ FIELD%i STREHL STD", tel+1);
+        cpl_propertylist_update_double (o_header, qc_name, strehl_std);
+        cpl_propertylist_set_comment (o_header, qc_name, "Std of FT strehl");
         
     } /* End loop on tel */
     
