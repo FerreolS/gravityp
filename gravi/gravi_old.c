@@ -5004,3 +5004,61 @@ double gravi_vector_get_med_percent(cpl_vector * vector_in, float percent)
 
     return cpl_vector_get_mean(vector_med);
 }
+
+
+
+cpl_error_code gravi_flux_create_average (cpl_table * i_table, cpl_table * o_table,
+                                          const char * colname, const char * sname)
+{
+  gravi_msg_function_start(1);
+  cpl_ensure_code (i_table);
+  cpl_ensure_code (o_table);
+  cpl_ensure_code (colname);
+
+  /* Check input */
+  if ( !cpl_table_has_column (i_table, colname)) {
+      cpl_msg_info (cpl_func, "Cannot average column %s (not in data)", colname);
+      return CPL_ERROR_NONE;
+  }
+
+
+  /* Get synch data */
+  int ntel = 4;
+  cpl_size nrow_i  = cpl_table_get_nrow (output_o) / ntel;
+  int * first_i = cpl_table_get_data_int (output_o, sname);
+  int * last_i  = cpl_table_get_data_int (output_o, sname);
+  cpl_ensure_code (first_i);
+  cpl_ensure_code (last_i);
+
+  const char * unit = cpl_table_get_column_unit (i_table, colname);
+  
+  /* Get data */
+  double * i_data = cpl_table_get_data_double (i_table, colname);
+  cpl_ensure_code (i_data);
+  
+  /* Create output */
+  gravi_table_new_column (o_table, o_table, unit, CPL_TYPE_DOUBLE);
+  double * o_data = cpl_table_get_data_double (o_table, colname);
+
+  /* Loop on tel and rows */
+  for (cpl_size tel = 0; tel < ntel; tel++) {
+      for (cpl_size row_o = 0; row_o < nrow_o; row_o ++) {
+          cpl_size no = row_o * ntel + tel;
+              
+          /* Sum over synch input frames */
+          for (cpl_size row_i = first_i[no] ; row_i < last_i[no]; row_i++) {
+              cpl_size ni = row_i * ntel + tel;
+              o_data [no] += i_data[ni];
+          }
+          CPLCHECK_MSG ("Fail to compute metrology per base from metrology per tel");
+
+          /* Normalize the means  (if nframe == 0, values are zero) */
+          cpl_size nframe = last_met[nsc] - first_met[nsc];
+          if (nframe != 0 ) o_data[no] /= nframe;
+      } /* End loop on output frames */
+  }/* End loop on tel */
+  
+  gravi_msg_function_exit(1);
+  return CPL_ERROR_NONE;
+}
+
