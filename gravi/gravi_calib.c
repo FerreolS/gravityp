@@ -2233,7 +2233,7 @@ gravi_data * gravi_compute_piezotf (gravi_data * data,
     int nsmooth = 201;
     char qc_name[100];
     char name[100];
-    double phase,pizeo;
+    double phase;
     int base1,base2,base3,sign1,sign2,sign3;
     int ndit_small, dit_matrix;
     double twoPi = 2.0 * CPL_MATH_PI;
