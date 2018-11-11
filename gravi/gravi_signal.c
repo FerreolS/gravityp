@@ -2421,14 +2421,16 @@ cpl_error_code gravi_vis_create_opddisp_sc (cpl_table * vis_SC,
   int t;
   char name[100];
   double * opl_zero_fc = cpl_malloc (4 * sizeof(double));
-  double gd_zero_fc;
-  // Initialise opl_zero_fc to zero
+  // double gd_zero_fc;
+  
+  /* Initialise opl_zero_fc to zero */
   for (t = 0; t < ntel; t++) {
     opl_zero_fc[t] = 0.0;
   }
   if ( gravi_param_get_bool (parlist, "gravity.signal.use-met-zero") ) {
     cpl_msg_info (cpl_func, "Metrology zero calculation is enabled!");
-    // Replace by OCS MET OPL_ZERO_FC, if available
+    
+    /* Replace by OCS MET OPL_ZERO_FC, if available */
     for (t = 0; t < ntel; t++) {
       sprintf (name, "ESO OCS MET OPL_ZERO_FC%i", t+1); 
       if (cpl_propertylist_has (header, name)) {
@@ -2438,7 +2440,8 @@ cpl_error_code gravi_vis_create_opddisp_sc (cpl_table * vis_SC,
         cpl_msg_info (cpl_func, "Updating metrology zero with OCS MET OPL_ZERO_FC%i and FDDL MET OFFSET%i: %f [mm]", t+1, t+1, opl_zero_fc[t]);
       }
     }
-    // Replace by PRO MET GD_ZERO_FC, if available
+    
+    /* Replace by PRO MET GD_ZERO_FC, if available */
     for (t = 0; t < ntel; t++) {
       if ( gravi_pfits_has_gdzero (header, t+1) ) {
           opl_zero_fc[t] =
