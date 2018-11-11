@@ -1176,6 +1176,8 @@ cpl_error_code gravi_compute_qc_injection (gravi_data * data)
   int npol = gravi_pfits_get_pola_num (header, GRAVI_FT);
   int ntel = 4;
 
+  
+
   /* For each telescope */
   for (int tel = 0; tel<ntel; tel++) {
     
@@ -1186,6 +1188,7 @@ cpl_error_code gravi_compute_qc_injection (gravi_data * data)
       
       /* Access the OI_FLUX table for the given polatisation */
       cpl_table * table = gravi_data_get_oi_flux (data, GRAVI_FT, pol, npol);
+      const cpl_array ** flux_array = cpl_table_get_data_array_const (table, "FLUX");
       
       /* How many rows do we have per telescope */
       cpl_size nrow = cpl_table_get_nrow (table) / ntel;
@@ -1195,7 +1198,7 @@ cpl_error_code gravi_compute_qc_injection (gravi_data * data)
 
       /* Fill the flux array with data */
       for (int row = 0; row<nrow; row++)
-        cpl_vector_set (flux, row, cpl_array_get_mean(cpl_table_get_array (table, "FLUX", tel+row*ntel)));
+        cpl_vector_set (flux, row, cpl_array_get_mean (flux_array[tel+row*ntel]));
       
       /* Sort the flux array */
       cpl_vector_sort (flux, CPL_SORT_ASCENDING);
