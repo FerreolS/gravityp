@@ -80,8 +80,16 @@ int gravi_vis_test(void){
 	double * waven_double = cpl_table_get_data_double(wavenumber_sc_tab, "TEST");
 	cpl_array *wavenumber_sc = cpl_array_wrap_double(waven_double,14);
 
-	gravi_average_self_visphi(oi_vis_SC, vis_SC, wavenumber_sc, "SELF_REF", cmin, cmax, nrange);
+	flag = gravi_average_self_visphi(oi_vis_SC, vis_SC, wavenumber_sc, "SELF_REF", cmin, cmax, nrange);
+	
+        FREE(cpl_table_delete,  oi_vis_SC);
+	
+	FREE(cpl_table_delete,  vis_SC);
+	
+	cpl_array_unwrap(wavenumber_sc);
+	FREE(cpl_table_delete,  wavenumber_sc_tab );
 
+	
  return flag;
 }
 /*----------------------------------------------------------------------------*/
