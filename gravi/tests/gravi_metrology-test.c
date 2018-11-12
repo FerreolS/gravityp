@@ -178,6 +178,7 @@ int gravi_metrology_test(void){
     gravi_metrology_get_astig (propertylist, 3, &AstigmAmplitude, &AstigmTheta, &AstigmRadius);
     printf ("3  with header AstigmAmplitude %e  - AstigmTheta %e  - AstigmRadius %e \n",AstigmAmplitude,AstigmTheta, AstigmRadius);
 
+    FREE(cpl_propertylist_delete, propertylist  );
 
     /* gravi_pfits_get_fangle_acqcam */
 
