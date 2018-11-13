@@ -42,8 +42,8 @@ AC_PROG_LN_S
 ESO_ENABLE_DEBUG(no)
 ESO_ENABLE_STRICT(no)
 ESO_PROG_CC_FLAG([std=c99], [CFLAGS="$CFLAGS -std=c99"])
-AC_DEFINE([POSIX_C_SOURCE], [200809L], [Minimun version of POSIX standard to use. Needed for mkstemp, snprintf, strndup, posix_fallocate, ftruncate, M_PI])
-AC_DEFINE([XOPEN_SOURCE], [700], [Minimun version of SUS standard to use])
+AC_DEFINE([_POSIX_C_SOURCE], [200809L], [Minimun version of POSIX standard to use. Needed for mkstemp, snprintf, strndup, posix_fallocate, ftruncate, M_PI])
+AC_DEFINE([_XOPEN_SOURCE], [700], [Minimun version of SUS standard to use])
 
 ESO_CHECK_DOCTOOLS
 
