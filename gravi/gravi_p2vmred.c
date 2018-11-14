@@ -1171,52 +1171,82 @@ cpl_error_code gravi_compute_qc_injection (gravi_data * data)
   cpl_ensure_code (data, CPL_ERROR_NULL_INPUT);
   
   char qc_name[100];
+  double p05 = 0.0, p95 = 0.0;
   
   cpl_propertylist * header = gravi_data_get_header (data);
   int npol = gravi_pfits_get_pola_num (header, GRAVI_FT);
-  int ntel = 4;
+  int ntel = 4, hw = 2;
 
-  
+  /* Create the kernel to smooth the flux series */
+  cpl_msg_info (cpl_func, "Smooth flux sery over %i samples", hw);
+
+  /* How many rows do we have per telescope */
+  cpl_table * table = gravi_data_get_oi_flux (data, GRAVI_FT, 0, npol);
+  cpl_size nrow = cpl_table_get_nrow (table) / ntel;
+
+  /* Create an empty vector to hold the data and be sorted later */
+  cpl_vector * flux = cpl_vector_new (nrow);
 
   /* For each telescope */
   for (int tel = 0; tel<ntel; tel++) {
+
+    /* Build a vector of total flux */
+    cpl_vector_fill (flux, 0.0);
     
-    double p05 = 0.0, p95 = 0.0;
-
-    /* For each polarisation */
     for (int pol = 0; pol<npol; pol++) {
-      
-      /* Access the OI_FLUX table for the given polatisation */
-      cpl_table * table = gravi_data_get_oi_flux (data, GRAVI_FT, pol, npol);
-      const cpl_array ** flux_array = cpl_table_get_data_array_const (table, "FLUX");
-      
-      /* How many rows do we have per telescope */
-      cpl_size nrow = cpl_table_get_nrow (table) / ntel;
 
-      /* Create an empty vector to hold the data and be sorted later */
-      cpl_vector * flux = cpl_vector_new(nrow);
-
-      /* Fill the flux array with data */
-      for (int row = 0; row<nrow; row++)
-        cpl_vector_set (flux, row, cpl_array_get_mean (flux_array[tel+row*ntel]));
-      
-      /* Sort the flux array */
-      cpl_vector_sort (flux, CPL_SORT_ASCENDING);
+        /* Get table */
+        cpl_table * table = gravi_data_get_oi_flux (data, GRAVI_FT, pol, npol);
+        const cpl_array ** flux_array = cpl_table_get_data_array_const (table, "FLUX");
         
-      /* Compute the 5 percentile and 95 percentile */
-      p05 += cpl_vector_get (flux, (cpl_size)(0.05*(nrow-1)));
-      p95 += cpl_vector_get (flux, (cpl_size)(0.95*(nrow-1)));
-      
-      /* Free the flux array */
-      cpl_vector_delete (flux);
-      
+        for (int row = 0; row<nrow; row++)
+            cpl_vector_set (flux, row, cpl_vector_get (flux, row) +
+                            cpl_array_get_mean (flux_array[tel+row*ntel]));
     }
     
+    /* Convolve to filter noise */
+    cpl_vector * flux_smooth;
+    flux_smooth = cpl_vector_filter_lowpass_create (flux, CPL_LOWPASS_GAUSSIAN, hw);
+
+    /* Define positive */
+    for (int row = 0; row<nrow; row++) 
+        cpl_vector_set (flux, row, CPL_MAX (0.0, cpl_vector_get (flux, row)));
+
+    /* Sort the flux array and normalise*/
+    cpl_vector_sort (flux, CPL_SORT_ASCENDING);
+    cpl_vector_divide_scalar (flux, cpl_vector_get_max (flux) / 100);
+        
+    /* Histogram as a string, values are 0-100 */
+    char qc_value[100];
+    sprintf (qc_value,"%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f,%.0f",
+             cpl_vector_get (flux, (cpl_size)(0.1*(nrow-1))),
+             cpl_vector_get (flux, (cpl_size)(0.2*(nrow-1))),
+             cpl_vector_get (flux, (cpl_size)(0.3*(nrow-1))),
+             cpl_vector_get (flux, (cpl_size)(0.4*(nrow-1))),
+             cpl_vector_get (flux, (cpl_size)(0.5*(nrow-1))),
+             cpl_vector_get (flux, (cpl_size)(0.6*(nrow-1))),
+             cpl_vector_get (flux, (cpl_size)(0.7*(nrow-1))),
+             cpl_vector_get (flux, (cpl_size)(0.8*(nrow-1))),
+             cpl_vector_get (flux, (cpl_size)(0.9*(nrow-1))));
+
+    /* Create the QC entry in the FITS header */
+    cpl_msg_info (cpl_func, "Flux Histo: %s", qc_value);
+    sprintf (qc_name, "ESO QC FLUX_FT%d HISTO", tel+1);
+    cpl_propertylist_update_string (header, qc_name, qc_value);
+    cpl_propertylist_set_comment (header, qc_name, "decile in percent");
+      
+    /* Compute the 5 percentile and 95 percentile */
+    p05 = cpl_vector_get (flux, (cpl_size)(0.05*(nrow-1)));
+    p95 = cpl_vector_get (flux, (cpl_size)(0.95*(nrow-1)));
+
     /* Create the QC entry in the FITS header */
     sprintf (qc_name, "ESO QC FLUX_FT%d P05P95", tel+1);
     cpl_propertylist_update_double (header, qc_name, p05/p95);
     cpl_propertylist_set_comment (header, qc_name, "injected flux 5 percentile over 95 percentile");
   }
+
+  /* Free the flux vector and the convolution kernel */
+  cpl_vector_delete (flux);
   
   gravi_msg_function_exit(1);
   return CPL_ERROR_NONE;
@@ -1240,7 +1270,7 @@ cpl_error_code gravi_compute_qc_ft_opd_estimator (gravi_data * p2vmred_data)
     gravi_msg_function_start(1);
     cpl_ensure_code (p2vmred_data, CPL_ERROR_NULL_INPUT);
     
-    int nbase = 6, ntel = 4;
+    int nbase = 6;
     char qc_name[100];
     int nv;
     
