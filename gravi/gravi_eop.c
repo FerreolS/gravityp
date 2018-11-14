@@ -63,7 +63,7 @@
  -----------------------------------------------------------------------------*/
 
 #define LINE_SIZE 188
-#define BUFFER_LENGTH 4096
+#define BUFFER_LENGTH 32768
 
 char * gravity_eop_get_ftp_file (int socketfd, int * data_length);
 int gravity_get_socket_connection (const char * host, const char * port);
@@ -686,6 +686,8 @@ int gravity_get_socket_connection (const char * host, const char * port)
 
         if (connect(sockfd, this_addr->ai_addr, this_addr->ai_addrlen) == -1) {
             close(sockfd);
+            if(errno == ECONNREFUSED)
+                errno = 0; //Reset errno if no remote partner at this address
             continue;
         }
         cpl_msg_debug(cpl_func, "Connection established");
