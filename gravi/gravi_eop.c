@@ -63,7 +63,7 @@
  -----------------------------------------------------------------------------*/
 
 #define LINE_SIZE 188
-#define BUFFER_LENGTH 256
+#define BUFFER_LENGTH 4096
 
 char * gravity_eop_get_ftp_file (int socketfd, int * data_length);
 int gravity_get_socket_connection (const char * host, const char * port);
@@ -571,7 +571,7 @@ char * gravity_eop_download_finals2000A (const char * eop_host,
     cpl_ensure (data_length, CPL_ERROR_NULL_INPUT, NULL);
     cpl_msg_debug (cpl_func, "Using URL ftp://%s%s", eop_host, eop_urlpath);
 
-    /* Getting the communication socket. use non-blocking mode for it */
+    /* Getting the communication socket. */
     cmd_socket = gravity_get_socket_connection(eop_host, ftp_port);
     if (cmd_socket == 0) 
     {
@@ -582,8 +582,6 @@ char * gravity_eop_download_finals2000A (const char * eop_host,
         cpl_free(msg);
         return NULL;
     }
-    int flags = fcntl(cmd_socket, F_GETFL, 0);
-    fcntl(cmd_socket, F_SETFL, flags | O_NONBLOCK);
 
     if(!gravity_eop_ftp_reply(cmd_socket, NULL))
     {
@@ -673,7 +671,7 @@ int gravity_get_socket_connection (const char * host, const char * port)
         return 0;
     }
 
-    /* Connecting to the server for the FTP commands. 
+    /* Connecting to the server for the FTP commands.
        The first address to which we can connect will be used.
        addr_list is a linked list */
     cpl_msg_debug(cpl_func, "Connecting to server");
@@ -783,11 +781,6 @@ int gravity_eop_ftp_reply (int sockfd, char ** message)
     if(message != NULL)
         *message = NULL;
 
-    /* Wait for the server to fill the reply, since we are using non-blocking recv */
-    cpl_msg_debug (cpl_func, "sleep for 5s...");
-    sleep(5);
-    cpl_msg_debug (cpl_func, "... done.");
-	
     while( ( n = recv(sockfd, buffer, BUFFER_LENGTH - 1, 0) ) > 0)
     {
         if(msg == NULL)
@@ -798,10 +791,23 @@ int gravity_eop_ftp_reply (int sockfd, char ** message)
             strncpy(msg + length, buffer, n);
         }
         length += n;
-        sleep(1);
+        
+        //Check FTP end of message.
+        //http://www.tcpipguide.com/free/t_FTPRepliesReplyCodeFormatandImportantReplyCodes-5.htm
+        if(msg[length-1]=='\n') //Reply contains full lines
+        {
+            //Search for the beggining of the last line
+            char * eolchar= msg + length - 1;
+            while(--eolchar != msg)
+                if (*(eolchar - 1) == '\n')
+                    break;
+            
+            //The FTP code has 3 numbers and a space afterwards if it is the last line
+            if(*(eolchar+3) == ' ')
+                break;
+        }
     }
-    if (errno == EAGAIN || errno == EWOULDBLOCK) // No messages were available
-        errno= 0;
+
     if(length == 0)
     {
         free(msg);
@@ -832,13 +838,8 @@ char * gravity_eop_get_ftp_file(int sockfd, int * data_length)
 
     length = 0;
 
-    /* Sleep */
-    cpl_msg_debug (cpl_func, "sleep 10s...");
-    sleep(10);
-    cpl_msg_debug (cpl_func, "... done.");
-	
     /* Get the data */
-    cpl_msg_info (cpl_func, "Get the data");
+    cpl_msg_info(cpl_func, "Get the data");
     while( ( n = recv(sockfd, buffer, BUFFER_LENGTH - 1, 0) ) > 0)
     {
         if(msg == NULL)
@@ -849,6 +850,7 @@ char * gravity_eop_get_ftp_file(int sockfd, int * data_length)
             strncpy(msg + length, buffer, n);
         }
         length += n;
+        cpl_msg_debug(cpl_func, "Received %d bytes so far",length);
     }
     if(length == 0)
         return 0; 
@@ -867,6 +869,7 @@ int gravity_eop_verify_ftp_code (char * msg, int length)
     //FTP protocol specifies that lines starting with 2xx codes are ok
     //Starting with 3xx are ok but the server expects some extra input
     //Starting with 4xx, 5xx or 6xx it denotes an error.
+    //http://www.tcpipguide.com/free/t_FTPRepliesReplyCodeFormatandImportantReplyCodes-2.htm
     while(line[0] == '1' || line[0] == '2' || line[0] == '3')
     {
         line = strchr(line, '\n');
