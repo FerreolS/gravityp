@@ -80,7 +80,11 @@ static void gravi_eop_retrieve_eop_test(void)
         cpl_msg_debug(__func__, "Trying EOP data retrieval. Trial %d",itry);
         //Test retrieving the EOP data from the server
         raw_text = gravity_eop_download_finals2000A(
-                "ftp.eso.org",
+                //In principle we should use ftp.eso.org (which is a DNS alias) 
+                //but this sets errno=2 in macOS when calling getaddrinfo(). 
+                //It seems to be fixed from macOS 10.13 on,
+                //so it can eventually be removed.
+                "eso-ftp02.hq.eso.org",
                 "/pub/dfs/pipelines/gravity/finals2000A.data",
                 &data_length);
         if(raw_text == NULL)
