@@ -658,8 +658,7 @@ int gravity_get_socket_connection (const char * host, const char * port)
 
     /* Set the hints. First we initialize to 0 the structure.
        Only retrieve IPv4 or IPv6 if configured in the system */
-    struct addrinfo hints;
-    memset(&hints, 0, sizeof(hints));
+    struct addrinfo hints = { 0 };
     hints.ai_flags = AI_ADDRCONFIG;
     hints.ai_socktype = SOCK_STREAM;
     /* Getting the list of IP addresses */
@@ -785,13 +784,18 @@ int gravity_eop_ftp_reply (int sockfd, char ** message)
 
     while( ( n = recv(sockfd, buffer, BUFFER_LENGTH - 1, 0) ) > 0)
     {
-        if(msg == NULL)
-            msg = strndup(buffer, n);
-        else 
+        void * tmp = realloc(msg, length + n + 1);
+        if(tmp == NULL)
         {
-            msg = realloc(msg, length + n + 1);
-            strncpy(msg + length, buffer, n);
+            free(msg);
+            return 0;
         }
+        else
+        {
+            msg =tmp;
+        }
+
+        strncpy(msg + length, buffer, n);
         length += n;
         
         //Check FTP end of message.
@@ -844,14 +848,20 @@ char * gravity_eop_get_ftp_file(int sockfd, int * data_length)
     cpl_msg_info(cpl_func, "Get the data");
     while( ( n = recv(sockfd, buffer, BUFFER_LENGTH - 1, 0) ) > 0)
     {
-        if(msg == NULL)
-            msg = strndup(buffer, n);
-        else 
+        void * tmp = realloc(msg, length + n + 1);
+        if(tmp == NULL)
         {
-            msg = realloc(msg, length + n + 1);
-            strncpy(msg + length, buffer, n);
+            free(msg);
+            return 0;
         }
+        else
+        {
+            msg =tmp;
+        }
+
+        strncpy(msg + length, buffer, n);
         length += n;
+
         cpl_msg_debug(cpl_func, "Received %d bytes so far",length);
     }
     if(length == 0)
