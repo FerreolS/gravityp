@@ -702,6 +702,17 @@ cpl_error_code gravi_compute_snr (gravi_data * p2vmred_data,
       cpl_table_erase_column (oi_vis_p2, "PHASOR_VAR_SMT");
       CPLCHECK_MSG("Cannot erase column for polarisation 2");
     }
+
+    /* Add the QC */
+    char qc_name[100];
+    double qc_value;
+        
+    for (cpl_size base = 0; base < nbase; base++) {
+        snprintf (qc_name, 100, "ESO QC SNRB_%s%s AVG", GRAVI_TYPE(type_data), GRAVI_BASE_NAME[base]);
+        qc_value = gravi_table_get_column_mean (oi_vis_p1, "SNR_BOOT", base, nbase);
+        cpl_propertylist_update_double (p2vmred_header, qc_name, qc_value);
+        cpl_propertylist_set_comment (p2vmred_header, qc_name, "mean bootstrapped SNR");
+    }
   
   } /* End loop on type_data */
 
