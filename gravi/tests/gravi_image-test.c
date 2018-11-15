@@ -23,6 +23,9 @@
  * $Date: 2007/07/30 07:08:14 $
  * $Revision: 1.3 $
  * $Name: HEAD $
+ *
+ * History :
+ * ekw   15/11/2018 clean for Jenkins report
  */
 
 #ifdef HAVE_CONFIG_H
@@ -57,6 +60,7 @@
   @return   textual representation
  */
 /*----------------------------------------------------------------------------*/
+/* ekw 15/11/2018
 static const char *
 frame_group_to_string(cpl_frame_group group)
 {
@@ -78,6 +82,7 @@ frame_group_to_string(cpl_frame_group group)
         break;
     }
 }
+*/
 
 /*----------------------------------------------------------------------------*/
 /**
@@ -107,7 +112,7 @@ static void test_image(void)
     /* Test with valid input */
     {
         cpl_frame *frame = cpl_frame_new();
-        cpl_parameter *p;
+        /* ekw 15/11/2018 cpl_parameter *p; */
         cpl_parameterlist *parlist;
 
         cpl_frame_set_filename(frame, DATADIR "data1.oifits");
