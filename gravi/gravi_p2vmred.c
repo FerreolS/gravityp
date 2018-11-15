@@ -1184,14 +1184,13 @@ cpl_error_code gravi_compute_qc_injection (gravi_data * data)
   cpl_table * table = gravi_data_get_oi_flux (data, GRAVI_FT, 0, npol);
   cpl_size nrow = cpl_table_get_nrow (table) / ntel;
 
-  /* Create an empty vector to hold the data and be sorted later */
-  cpl_vector * flux = cpl_vector_new (nrow);
 
   /* For each telescope */
   for (int tel = 0; tel<ntel; tel++) {
 
     /* Build a vector of total flux */
-    cpl_vector_fill (flux, 0.0);
+    cpl_vector * raw_flux = cpl_vector_new (nrow);
+    cpl_vector_fill (raw_flux, 0.0);
     
     for (int pol = 0; pol<npol; pol++) {
 
@@ -1200,19 +1199,20 @@ cpl_error_code gravi_compute_qc_injection (gravi_data * data)
         const cpl_array ** flux_array = cpl_table_get_data_array_const (table, "FLUX");
         
         for (int row = 0; row<nrow; row++)
-            cpl_vector_set (flux, row, cpl_vector_get (flux, row) +
+            cpl_vector_set (raw_flux, row, cpl_vector_get (raw_flux, row) +
                             cpl_array_get_mean (flux_array[tel+row*ntel]));
     }
     
-    /* Convolve to filter noise */
-    cpl_vector * flux_smooth;
-    flux_smooth = cpl_vector_filter_lowpass_create (flux, CPL_LOWPASS_GAUSSIAN, hw);
+    /* Convolve to filter noise, delete raw flux */
+    cpl_vector * flux;
+    flux = cpl_vector_filter_lowpass_create (raw_flux, CPL_LOWPASS_GAUSSIAN, hw);
+    cpl_vector_delete (raw_flux);
 
     /* Define positive */
     for (int row = 0; row<nrow; row++) 
         cpl_vector_set (flux, row, CPL_MAX (0.0, cpl_vector_get (flux, row)));
 
-    /* Sort the flux array and normalise*/
+    /* Sort the flux array and normalise */
     cpl_vector_sort (flux, CPL_SORT_ASCENDING);
     cpl_vector_divide_scalar (flux, cpl_vector_get_max (flux) / 100);
         
@@ -1243,11 +1243,11 @@ cpl_error_code gravi_compute_qc_injection (gravi_data * data)
     sprintf (qc_name, "ESO QC FLUX_FT%d P05P95", tel+1);
     cpl_propertylist_update_double (header, qc_name, p05/p95);
     cpl_propertylist_set_comment (header, qc_name, "injected flux 5 percentile over 95 percentile");
+
+    /* Deleve vector */
+    cpl_vector_delete (flux);
   }
 
-  /* Free the flux vector and the convolution kernel */
-  cpl_vector_delete (flux);
-  
   gravi_msg_function_exit(1);
   return CPL_ERROR_NONE;
 }
