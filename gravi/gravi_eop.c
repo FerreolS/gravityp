@@ -659,6 +659,7 @@ int gravity_get_socket_connection (const char * host, const char * port)
     /* Set the hints. First we initialize to 0 the structure.
        Only retrieve IPv4 or IPv6 if configured in the system */
     struct addrinfo hints = { 0 };
+    hints.ai_family = AF_UNSPEC;
     hints.ai_flags = AI_ADDRCONFIG;
     hints.ai_socktype = SOCK_STREAM;
     /* Getting the list of IP addresses */
@@ -754,6 +755,9 @@ int gravity_eop_send_pasv (int sockfd, const char *cmd)
             "Problem during FTP transaction");
         return 0;
     }
+    if (msg == NULL)
+      return 0;
+
     new_con = strchr(msg,'(');
     if (new_con == NULL)
         return 0;
@@ -764,8 +768,7 @@ int gravity_eop_send_pasv (int sockfd, const char *cmd)
     //See http://www.freefire.org/articles/ftpexample.php
     int data_port = v[0] * 256 + v[1]; 
 
-    if (msg != NULL)
-        free(msg);
+    free(msg);
 	
     gravi_msg_function_exit(0);
     return data_port;
