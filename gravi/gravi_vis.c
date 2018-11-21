@@ -32,6 +32,11 @@
  */
 /**@{*/
 
+/*
+ * History
+ *    ekw  21.11.2018   memory leak in gravi_average_self_visphi
+ *                      changes marked as 'EKW'
+ */
 /*-----------------------------------------------------------------------------
                                    Includes
  -----------------------------------------------------------------------------*/
@@ -1441,6 +1446,7 @@ cpl_error_code gravi_average_self_visphi(cpl_table * oi_vis_avg,
     /* Compute mean VisPhi as average of selected frames. */
     for (int w = 0; w < nwave; w++) {
       cpl_array *cpxVisVect = cpl_array_new(nvalid, CPL_TYPE_DOUBLE_COMPLEX);
+
       /* The W1 vector */
       for (int irow = 0; irow < nvalid; irow++) {
         const double complex *pW1 = cpl_array_get_data_double_complex_const(W1[irow]);
@@ -1464,6 +1470,10 @@ cpl_error_code gravi_average_self_visphi(cpl_table * oi_vis_avg,
       double x = cpl_array_get_stdev(Vect);
       /* Err on Phi must be corrected with an abacus*/
       pPhiErr[w] = gdAbacusErrPhi(x / sqrt(nvalid));
+      /* START EKW 21/11/2018 */
+      FREE(cpl_array_delete,  cpxVisVect);
+      FREE(cpl_array_delete,  Vect);
+      /* END EKW 21/11/2018 */
     }
 
     gravi_table_set_array_phase(oi_vis_avg, "VISPHI", base, visPhi_res[0]);
@@ -1471,6 +1481,11 @@ cpl_error_code gravi_average_self_visphi(cpl_table * oi_vis_avg,
     CPLCHECK_MSG("filling VISPHI");
     /* Free variance */
     FREELOOP(cpl_array_delete, visPhi_res, 2);
+    /* START EKW 21/11/2018 */
+    FREELOOP(cpl_array_delete, EW1 , nvalid);
+    FREELOOP(cpl_array_delete, W1  , nvalid);
+    /* END EKW 21/11/2018 */
+
   }
 
   /* End loop on bases */
