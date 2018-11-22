@@ -24,9 +24,10 @@
  *
  *  Created on: 16 août 2011
  *      Author: nabih
- * 
+ *
  *  History :
- *  ekw  14/11/2018  correct unused variable warnings 
+ *  ekw  14/11/2018  correct unused variable warnings
+ *  ekw  12/11/2018  add gravi_data *static_param_data
  */
 
 #ifdef HAVE_CONFIG_H
@@ -58,17 +59,25 @@
 #include "gravi-test.c"
 
 /* declaration of functions to test */
-double gravi_metrology_get_fc_focus (cpl_propertylist * header, int gv);
-double gravi_metrology_get_fc_shift (cpl_propertylist * header, int gv);
-cpl_error_code gravi_metrology_get_astig (cpl_propertylist * header, int gv,
-                                          double * amplitude, double * angle, double * radius);
+double gravi_metrology_get_fc_focus (cpl_propertylist * header, int gv, gravi_data* gravi_data_focus);
+double gravi_metrology_get_fc_shift (cpl_propertylist * header, int gv, gravi_data* gravi_data_focus);
+cpl_error_code gravi_metrology_get_astig (cpl_propertylist * header, int gv, double * amplitude, double * angle, double * radius);
 
 int gravi_metrology_test(void);
+
+#define STR(x) x
 
 int gravi_metrology_test(void){
 	cpl_msg_info (cpl_func,"EKKI ENTER gravity_metrology-test\n");
     int flag = EXIT_SUCCESS;
 
+    /* Prepare gravi_data *static_param_data with the default focus data */
+    char filename[128];
+    sprintf(filename, "%s%s", STR(DATADIR), "/GRAVI_STATIC_CALIB.fits");
+    //sprintf(filename, "%s","/home/grav/pipeline_ekki/execute/GRAVI_STATIC_CALIB.fits");
+    gravi_data * gravi_data_focus = gravi_data_load_ext(filename,"FOCUSPAR");
+
+    /* Treat header keywords */
     cpl_propertylist *propertylist = cpl_propertylist_new();
     cpl_propertylist_prepend_int (propertylist,"ESO ISS CONF INPUT1", 1);
     cpl_propertylist_prepend_int (propertylist,"ESO ISS CONF INPUT2", 3);
@@ -84,11 +93,10 @@ int gravi_metrology_test(void){
     cpl_msg_info (cpl_func,"gravi_metrology_get_fc_focus \n---------------------------------------------------\n");
     double defocus[4];
 
-
-    defocus[0] = gravi_metrology_get_fc_focus (propertylist, 0);
-    defocus[1] = gravi_metrology_get_fc_focus (propertylist, 1);
-    defocus[2] = gravi_metrology_get_fc_focus (propertylist, 2);
-    defocus[3] = gravi_metrology_get_fc_focus (propertylist, 3);
+    defocus[0] = gravi_metrology_get_fc_focus (propertylist, 0, gravi_data_focus);
+    defocus[1] = gravi_metrology_get_fc_focus (propertylist, 1,  gravi_data_focus);
+    defocus[2] = gravi_metrology_get_fc_focus (propertylist, 2,  gravi_data_focus);
+    defocus[3] = gravi_metrology_get_fc_focus (propertylist, 3,  gravi_data_focus);
     cpl_msg_info (cpl_func,"Defocus : %e %e %e %e \n", defocus[0], defocus[1], defocus[2], defocus[3]);
 
     cpl_propertylist_prepend_float (propertylist,"ESO MET GV1 AT FC FOCUS", -70.0);
@@ -96,12 +104,12 @@ int gravi_metrology_test(void){
     cpl_propertylist_prepend_float (propertylist,"ESO MET GV3 AT FC FOCUS",  30.0);
     cpl_propertylist_prepend_float (propertylist,"ESO MET GV4 AT FC FOCUS", -70.0);
 
-    //const char * telname = gravi_conf_get_telname(1, propertylist );
+    const char * telname = gravi_conf_get_telname(1, propertylist );
 
-    defocus[0] = gravi_metrology_get_fc_focus (propertylist, 0);
-    defocus[1] = gravi_metrology_get_fc_focus (propertylist, 1);
-    defocus[2] = gravi_metrology_get_fc_focus (propertylist, 2);
-    defocus[3] = gravi_metrology_get_fc_focus (propertylist, 3);
+    defocus[0] = gravi_metrology_get_fc_focus (propertylist, 0,  gravi_data_focus);
+    defocus[1] = gravi_metrology_get_fc_focus (propertylist, 1,  gravi_data_focus);
+    defocus[2] = gravi_metrology_get_fc_focus (propertylist, 2,  gravi_data_focus);
+    defocus[3] = gravi_metrology_get_fc_focus (propertylist, 3,  gravi_data_focus);
 
     cpl_msg_info (cpl_func,"Defocus with header : %e %e %e %e\n", defocus[0], defocus[1], defocus[2], defocus[3]);
 
@@ -111,10 +119,10 @@ int gravi_metrology_test(void){
     /* test without header keywords for default values */
     double shift[4];
 
-    shift[0] = gravi_metrology_get_fc_shift (propertylist, 0);
-    shift[1] = gravi_metrology_get_fc_shift (propertylist, 1);
-    shift[2] = gravi_metrology_get_fc_shift (propertylist, 2);
-    shift[3] = gravi_metrology_get_fc_shift (propertylist, 3);
+    shift[0] = gravi_metrology_get_fc_shift (propertylist, 0,  gravi_data_focus);
+    shift[1] = gravi_metrology_get_fc_shift (propertylist, 1,  gravi_data_focus);
+    shift[2] = gravi_metrology_get_fc_shift (propertylist, 2,  gravi_data_focus);
+    shift[3] = gravi_metrology_get_fc_shift (propertylist, 3,  gravi_data_focus);
 
     cpl_msg_info (cpl_func,"Shift  : %e  %e %e %e \n", shift[0], shift[1], shift[2], shift[3]);
 
@@ -129,10 +137,10 @@ int gravi_metrology_test(void){
     cpl_propertylist_prepend_float (propertylist,"ESO MET GV3 AT FC SHIFT",   45.0 *1.8/8.0);
     cpl_propertylist_prepend_float (propertylist,"ESO MET GV4 AT FC SHIFT",  -50.0 *1.8/8.0);
 
-    shift[0] = gravi_metrology_get_fc_shift (propertylist, 0);
-    shift[1] = gravi_metrology_get_fc_shift (propertylist, 1);
-    shift[2] = gravi_metrology_get_fc_shift (propertylist, 2);
-    shift[3] = gravi_metrology_get_fc_shift (propertylist, 3);
+    shift[0] = gravi_metrology_get_fc_shift (propertylist, 0,  gravi_data_focus);
+    shift[1] = gravi_metrology_get_fc_shift (propertylist, 1,  gravi_data_focus);
+    shift[2] = gravi_metrology_get_fc_shift (propertylist, 2,  gravi_data_focus);
+    shift[3] = gravi_metrology_get_fc_shift (propertylist, 3,  gravi_data_focus);
 
     cpl_msg_info (cpl_func,"Shift with header %e %e %e %e \n", shift[0],shift[1], shift[2],shift[3]);
 
@@ -181,9 +189,11 @@ int gravi_metrology_test(void){
     gravi_metrology_get_astig (propertylist, 3, &AstigmAmplitude, &AstigmTheta, &AstigmRadius);
     printf ("3  with header AstigmAmplitude %e  - AstigmTheta %e  - AstigmRadius %e \n",AstigmAmplitude,AstigmTheta, AstigmRadius);
 
-    FREE(cpl_propertylist_delete, propertylist  );
 
     /* gravi_pfits_get_fangle_acqcam */
+
+    FREE(cpl_propertylist_delete, propertylist  );
+    gravi_data_delete(gravi_data_focus);
 
  return flag;
 }
@@ -196,9 +206,13 @@ int gravi_metrology_test(void){
 
 int main(void)
 {
-    int flag;
+	int flag;
 
+#if defined CPL_VERSION_CODE && CPL_VERSION_CODE >= CPL_VERSION(4, 0, 0)
     cpl_test_init(PACKAGE_BUGREPORT, CPL_MSG_INFO);
+#else
+    cpl_init();
+#endif
 
     flag=gravi_metrology_test();
 
