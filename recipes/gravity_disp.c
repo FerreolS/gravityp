@@ -23,6 +23,10 @@
  * $Date: 2015/01/10 09:16:12 $
  * $Revision: 1.29 $
  * $Name:  $
+ *
+ * History
+ * ekw 12/11/2018 add static_param_frameset / static_param_data
+ *
  */
 
 #ifdef HAVE_CONFIG_H
@@ -310,13 +314,13 @@ static int gravity_disp(cpl_frameset            * frameset,
 	  * dark_frameset=NULL, * wavecalib_frameset=NULL,
 	  * badcalib_frameset=NULL, * flatcalib_frameset=NULL, * dispvis_frameset=NULL,
 	  * p2vmcalib_frameset=NULL, * wavelampcalib_frameset=NULL, *used_frameset=NULL,
-	  * current_frameset=NULL;
+	  * current_frameset=NULL, *static_param_frameset=NULL;
 
 	cpl_frame * frame=NULL;
 	
 	gravi_data * disp_map = NULL, * data = NULL, * dark_map = NULL, * wave_map = NULL,
 	  * profile_map = NULL, * badpix_map = NULL, * p2vmred_data = NULL, * preproc_data = NULL,
-        * p2vm_map = NULL, * vis_data = NULL, * tmpvis_data=NULL, * argon_data=NULL;
+        * p2vm_map = NULL, * vis_data = NULL, * tmpvis_data=NULL, * argon_data=NULL, * static_param_data=NULL;
 	
 	int nb_frame;
 
@@ -336,6 +340,19 @@ static int gravity_disp(cpl_frameset            * frameset,
 
 	/* Insert calibration frame into the used frameset */
 	used_frameset = cpl_frameset_new();
+
+	/* EKW 12/11/2018 START */
+	/* Extract static param frameset */
+        static_param_frameset = gravi_frameset_extract_static_param (frameset);
+
+	/* Load the STATIC_PARAM Parameter */
+        if (!cpl_frameset_is_empty (static_param_frameset)) {
+	  frame = cpl_frameset_get_position (static_param_frameset, 0);
+	  static_param_data = gravi_data_load_frame (frame, used_frameset);
+	}
+	else
+	  cpl_msg_info (cpl_func, "There is no STATIC_PARAM in the frameset");
+	/* EKW 12/11/2018 END */
 
 	/* No DISP_VIS, reduce all data */
 	if (cpl_frameset_is_empty (dispvis_frameset)){
@@ -481,7 +498,7 @@ static int gravity_disp(cpl_frameset            * frameset,
             CPLCHECK_CLEAN ("Cannot reduce OPDC");
         
 			/* Reduce the metrology */
-			gravi_metrology_reduce (p2vmred_data, NULL, NULL, parlist);
+			gravi_metrology_reduce (p2vmred_data, NULL, static_param_data, NULL, parlist);
             CPLCHECK_CLEAN ("Cannot reduce metrology");
 
 			/* Compute the SNR_SMT and GDELAY_SMT columns */
