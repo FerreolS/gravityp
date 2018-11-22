@@ -31,6 +31,13 @@
  */
 /**@{*/
 
+/*
+ *
+ * History :
+ * ekw 12/11/2018 add gravi_data *static_param_data to gravi_metrology_telfc
+ *                add gravi_data *static_param_data to  gravi_metrology_get_fc_focus
+ */
+
 /*-----------------------------------------------------------------------------
                                    Includes
  -----------------------------------------------------------------------------*/
@@ -68,6 +75,7 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
 
 cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                                       cpl_table * vismet_table,
+				      gravi_data *static_param_data,
                                       cpl_propertylist * header);
 
 cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
@@ -84,9 +92,9 @@ double  gravi_metrology_get_posx (cpl_propertylist * header,
 double  gravi_metrology_get_posy (cpl_propertylist * header,
                                   int tel, int diode);
 
-double gravi_metrology_get_fc_focus (cpl_propertylist * header, int gv);
+double gravi_metrology_get_fc_focus (cpl_propertylist * header, int gv, gravi_data *static_param_data);
 
-double gravi_metrology_get_fc_shift (cpl_propertylist * header, int gv);
+double gravi_metrology_get_fc_shift (cpl_propertylist * header, int gv, gravi_data *default_focus_data);
 
 cpl_error_code gravi_metrology_get_astig (cpl_propertylist * header, int gv,
                                           double * ampltiude, double * angle,
@@ -1434,7 +1442,7 @@ double  gravi_metrology_get_posy (cpl_propertylist * header,
  * @return Fiber coupler focus offset in nanometer
  */
 /*----------------------------------------------------------------------------*/
-double gravi_metrology_get_fc_focus (cpl_propertylist * header, int gv)
+double gravi_metrology_get_fc_focus (cpl_propertylist * header, int gv, gravi_data *static_param_data)
 {
     gravi_msg_function_start(0);
     cpl_ensure (header, CPL_ERROR_NULL_INPUT, 0);
@@ -1456,8 +1464,40 @@ double gravi_metrology_get_fc_focus (cpl_propertylist * header, int gv)
     
     /* If keyword available, read it, otherwise use defaults with warning */
     double defocus;
-    const double defocus_at[4] = {-75.0, -100.0, 25.0, -75.0}; // Measured 2017-11-17
-    const double defocus_ut[4] = {-50.0, -125.0, -150.0, -175.0}; // Measured 2018-02-15
+
+    /* ----------------- START EKW 12/11/2018 read constant parameter from calibration file */
+    //const double defocus_at[4] = {-75.0, -100.0, 25.0, -75.0}; // Measured 2017-11-17
+    //const double defocus_ut[4] = {-50.0, -125.0, -150.0, -175.0}; // Measured 2018-02-15
+
+    cpl_table * default_focus_table = gravi_data_get_table (static_param_data, "FOCUSPAR");
+
+    double *defocus_at;
+    if ( cpl_table_has_column(default_focus_table , "fc_focus_at") ) {
+      defocus_at = cpl_table_get_data_double (default_focus_table, "fc_focus_at");
+      cpl_msg_debug(cpl_func,"defocus_at [0] : %e \n",defocus_at[0] );
+      cpl_msg_debug(cpl_func,"defocus_at [1] : %e \n",defocus_at[1] );
+      cpl_msg_debug(cpl_func,"defocus_at [2] : %e \n",defocus_at[2] );
+      cpl_msg_debug(cpl_func,"defocus_at [3] : %e \n",defocus_at[3] );
+    }
+    else {
+      cpl_msg_warning(cpl_func,"Cannot get the default values for fc_focus_at ");
+    }
+
+    double *defocus_ut;
+    if ( cpl_table_has_column(default_focus_table , "fc_focus_ut") ) {
+      defocus_ut = cpl_table_get_data_double (default_focus_table, "fc_focus_ut");
+      cpl_msg_debug(cpl_func,"defocus_focus_ut [0] : %e \n",defocus_ut[0] );
+      cpl_msg_debug(cpl_func,"defocus_focus_ut [1] : %e \n",defocus_ut[1] );
+      cpl_msg_debug(cpl_func,"defocus_focus_ut [2] : %e \n",defocus_ut[2] );
+      cpl_msg_debug(cpl_func,"defocus_focus_ut [3] : %e \n",defocus_ut[3] );
+    }
+    else {
+      cpl_msg_warning(cpl_func,"Cannot get the default values for fc_focus_ut ");
+    }
+   /* ------------------ END EKW 12/11/2018 read constant parameter from calibration file */
+
+
+
     if (cpl_propertylist_has(header, name)) {
         defocus = cpl_propertylist_get_double (header, name);
     } else {
@@ -1479,11 +1519,12 @@ double gravi_metrology_get_fc_focus (cpl_propertylist * header, int gv)
  *
  * @param header input header
  * @param gv gravity input [0...3]
+ * @param static_param_data default values for focus and focus shift
  *
  * @return Fiber coupler focus offset in nanometer
  */
 /*----------------------------------------------------------------------------*/
-double gravi_metrology_get_fc_shift (cpl_propertylist * header, int gv)
+double gravi_metrology_get_fc_shift (cpl_propertylist * header, int gv, gravi_data *static_param_data)
 {
     gravi_msg_function_start(0);
     cpl_ensure (header, CPL_ERROR_NULL_INPUT, 0);
@@ -1503,10 +1544,39 @@ double gravi_metrology_get_fc_shift (cpl_propertylist * header, int gv)
         sprintf (name, "ESO MET GV%i AT FC SHIFT", gv+1);
     }
     
+    /* ----------------- START EKW 12/11/2018 read constant parameter from calibration file */
     /* If keyword available, read it, otherwise use defaults with warning */
     double shift;
-    const double shift_ut[4] = {-450.0, -350.0, -50.0, -525.0}; // Measured 2018-02-15
-    const double shift_at[4] = {-100.0*1.8/8.0, 50.0*1.8/8.0, 150.0*1.8/8.0, -100.0*1.8/8.0}; // Measured 2017-11-17
+    //const double shift_ut[4] = {-450.0, -350.0, -50.0, -525.0}; // Measured 2018-02-15
+    //const double shift_at[4] = {-100.0*1.8/8.0, 50.0*1.8/8.0, 150.0*1.8/8.0, -100.0*1.8/8.0}; // Measured 2017-11-17
+
+    cpl_table * default_focus_table = gravi_data_get_table (static_param_data, "FOCUSPAR");
+
+    double *shift_at;
+    if ( cpl_table_has_column(default_focus_table , "fc_focus_at") ) {
+      shift_at = cpl_table_get_data_double (default_focus_table, "fc_focus_shift_at");
+      cpl_msg_debug(cpl_func,"shift_at [0] : %e \n",shift_at[0] );
+      cpl_msg_debug(cpl_func,"shift_at [1] : %e \n",shift_at[1] );
+      cpl_msg_debug(cpl_func,"shift_at [2] : %e \n",shift_at[2] );
+      cpl_msg_debug(cpl_func,"shift_at [3] : %e \n",shift_at[3] );
+    }
+    else {
+      cpl_msg_warning(cpl_func,"Cannot get the default values for fc_focus_at ");
+    }
+
+    double *shift_ut;
+    if ( cpl_table_has_column(default_focus_table , "fc_focus_ut") ) {
+      shift_ut = cpl_table_get_data_double (default_focus_table, "fc_focus_shift_ut");
+      cpl_msg_debug(cpl_func,"shift_ut [0] : %e \n", shift_ut[0] );
+      cpl_msg_debug(cpl_func,"shift_ut [1] : %e \n", shift_ut[1] );
+      cpl_msg_debug(cpl_func,"shift_ut [2] : %e \n", shift_ut[2] );
+      cpl_msg_debug(cpl_func,"shift_ut [3] : %e \n", shift_ut[3] );
+    }
+    else {
+      cpl_msg_warning(cpl_func,"Cannot get the default values for fc_focus_ut ");
+    }
+   /* ------------------ END EKW 12/11/2018 read constant parameter from calibration file */
+
     if (cpl_propertylist_has(header, name)) {
         shift = cpl_propertylist_get_double (header, name);
     } else {
@@ -2398,6 +2468,7 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
 /*----------------------------------------------------------------------------*/
 cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                                       cpl_table * vismet_table,
+				      gravi_data * default_focus_data,
                                       cpl_propertylist * header)
 {
     gravi_msg_function_start(1);
@@ -2456,8 +2527,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     /* Apply pupil, focus and pickup offsets */
     for (int tel = 0; tel < ntel; tel++) {
         
-        double opd_fc_focus = gravi_metrology_get_fc_focus (header, tel); // [m]
-        double opd_fc_shift = gravi_metrology_get_fc_shift (header, tel) * (rho_in/1000.0); // [m/arcsec] x [arcsec] = [m]
+        double opd_fc_focus = gravi_metrology_get_fc_focus (header, tel, default_focus_data); // [m]
+        double opd_fc_shift = gravi_metrology_get_fc_shift (header, tel, default_focus_data) * (rho_in/1000.0); // [m/arcsec] x [arcsec] = [m]
         
         cpl_msg_info (cpl_func, "FE: Tel %d Pupil %g Focus %g Shift %g",
                       tel,
@@ -3229,10 +3300,13 @@ cpl_table * gravi_metrology_compute_p2vm (cpl_table * metrology_table, double wa
  * 
  * The resulting VIS_MET table is created from the METROLOGY table
  * and added this data. It is then updated with the TAC algorithm.
+ *
+ * EKW : Attention met_pos is called diode_pos in call
  */
 /* -------------------------------------------------------------------- */
 cpl_error_code gravi_metrology_reduce (gravi_data * data,
                                        gravi_data * eop_data,
+				       gravi_data * static_param_data,
                                        gravi_data * met_pos,
                                        const cpl_parameterlist * parlist)
 {
@@ -3281,7 +3355,7 @@ cpl_error_code gravi_metrology_reduce (gravi_data * data,
     CPLCHECK_MSG ("Cannot reduce metrology with TAC algo");
     
     /* Compute TEL vs FC corrections */
-    gravi_metrology_telfc (metrology_table, vismet_table, header);
+    gravi_metrology_telfc (metrology_table, vismet_table, static_param_data, header);
     CPLCHECK_MSG ("Cannot compute TEL vs FC reference");
     
     /* Add the VISMET_TABLE table to the gravi_data */
