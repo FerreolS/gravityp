@@ -24,6 +24,9 @@
  *
  *  Created on: 16 août 2011
  *      Author: nabih
+ *
+ *      History :
+ *      ekw 13/11/2018 add parameter to gravi_metrology_reduced
  */
 
 #ifdef HAVE_CONFIG_H
@@ -56,6 +59,7 @@
 
 #define DATADIR_TEST DATADIR
 //#define DATADIR_TEST ""
+#define STR(x) x
 
 int gravi_calib_test(void);
 int gravi_calib_test(void){
@@ -741,9 +745,13 @@ int gravi_calib_test(void){
 			"gravi_compute_opdc_state :  ...", flag);
 
 	/* Reduce the metrology */
-    test (gravi_metrology_reduce (p2vm_reduced, NULL, NULL, parlist),
-			"gravi_metrology_reduce : reduce the metrology ...", flag);
-
+    /* Prepare gravi_data *static_param_data with the default focus data */
+    char filename2[128];
+	sprintf(filename2, "%s%s", STR(DATADIR), "/GRAVI_STATIC_CALIB.fits");
+    /* sprintf(filename2, "%s","/home/grav/pipeline_ekki/execute/GRAVI_STATIC_CALIB.fits"); */
+    gravi_data * gravi_data_focus = gravi_data_load_ext(filename2,"FOCUSPAR");
+    //ekw test (gravi_metrology_reduce (p2vm_reduced, NULL, gravi_data_focus, NULL, parlist), "gravi_metrology_reduce : reduce the metrology ...", flag);
+    flag = gravi_metrology_reduce (p2vm_reduced, NULL, gravi_data_focus, NULL, parlist);
     //gravi_data_save_data (p2vm_reduced, "test_files/p2vm_reduced.fits", CPL_IO_CREATE);
 
 	gravi_parameter_add_compute_snr (parlist, 0);
