@@ -23,6 +23,9 @@
  * $Date: 2011/12/3 09:16:12 $
  * $Revision: 1.29 $
  * $Name:  $
+ *
+ * History
+ * ekw      12/11/2018  add static_param_frameset
  */
 
 #ifdef HAVE_CONFIG_H
@@ -376,7 +379,8 @@ static int gravity_vis(cpl_frameset * frameset,
     cpl_frameset * recipe_frameset=NULL, * wavecalib_frameset=NULL, * dark_frameset=NULL,
 	  * darkcalib_frameset=NULL, * sky_frameset=NULL, * flatcalib_frameset=NULL, * p2vmcalib_frameset=NULL,
 	  * badcalib_frameset=NULL, *used_frameset=NULL, * current_frameset=NULL, * dispcalib_frameset=NULL,
-	  * metpos_frameset=NULL, * diamcat_frameset = NULL, *eop_frameset = NULL, *patch_frameset = NULL;
+	  * metpos_frameset=NULL, * diamcat_frameset = NULL, *eop_frameset = NULL, *patch_frameset = NULL,
+	  * static_param_frameset=NULL;
 	
 	cpl_frame * frame=NULL;
 	
@@ -385,7 +389,7 @@ static int gravity_vis(cpl_frameset * frameset,
 	
 	gravi_data * p2vm_map=NULL, * data=NULL, * wave_map=NULL, * dark_map=NULL,
         * profile_map=NULL, * badpix_map=NULL, * preproc_data=NULL, * p2vmred_data=NULL, * tmpvis_data=NULL,
-        * vis_data=NULL, * disp_map=NULL, * diodepos_data=NULL, * diamcat_data=NULL, *eop_map=NULL;
+        * vis_data=NULL, * disp_map=NULL, * diodepos_data=NULL, * diamcat_data=NULL, *eop_map=NULL, *static_param_data=NULL;
 	gravi_data ** sky_maps = NULL;
 	
 	int nb_frame, nb_sky;
@@ -411,6 +415,7 @@ static int gravity_vis(cpl_frameset * frameset,
 	diamcat_frameset = gravi_frameset_extract_diamcat_map (frameset);
 	eop_frameset = gravi_frameset_extract_eop_map (frameset);
 	patch_frameset = gravi_frameset_extract_patch (frameset);
+    static_param_frameset = gravi_frameset_extract_static_param (frameset);
 
     recipe_frameset = gravi_frameset_extract_fringe_data (frameset);
     sky_frameset = gravi_frameset_extract_sky_data (frameset);
@@ -509,6 +514,15 @@ static int gravity_vis(cpl_frameset * frameset,
 	else
 	  cpl_msg_info (cpl_func, "There is no EOP_PARAM in the frameset");
 	
+        /* START EKW 12/11/2018 read constant parameter from calibration file */
+	/* Load the STATIC_PARAM Parameter */
+        if (!cpl_frameset_is_empty (static_param_frameset)) {
+	  frame = cpl_frameset_get_position (static_param_frameset, 0);
+	  static_param_data = gravi_data_load_frame (frame, used_frameset);
+	}
+	else
+	  cpl_msg_info (cpl_func, "There is no STATIC_PARAM in the frameset");
+
 	/* Load the DIAMETER_CAT */
 	if ( !cpl_frameset_is_empty (diamcat_frameset) ) {
 		frame = cpl_frameset_get_position (diamcat_frameset, 0);
@@ -750,7 +764,7 @@ static int gravity_vis(cpl_frameset * frameset,
 		CPLCHECK_CLEAN ("Cannot reduce OPDC");
         
 		/* Reduce the metrology into OI_VIS_MET */
-		gravi_metrology_reduce (p2vmred_data, eop_map, diodepos_data, parlist);
+		gravi_metrology_reduce (p2vmred_data, eop_map, static_param_data, diodepos_data, parlist);
 		CPLCHECK_CLEAN ("Cannot reduce metrology");
 
 		/* Compute the uv and pointing directions with ERFA */
