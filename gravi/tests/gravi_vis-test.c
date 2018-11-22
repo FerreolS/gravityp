@@ -25,7 +25,7 @@
  *  Created on: 16 août 2011
  *      Author: nabih
  *
- *  History 
+ *  History
  *  ekw  14/11/2018 correct unused variable / forward declaration of gravi_average_self_visphi / cmin-cmax pointer
  */
 
@@ -85,16 +85,15 @@ int gravi_vis_test(void){
 	double * waven_double = cpl_table_get_data_double(wavenumber_sc_tab, "TEST");
 	cpl_array *wavenumber_sc = cpl_array_wrap_double(waven_double,14);
 
-	flag = gravi_average_self_visphi(oi_vis_SC, vis_SC, wavenumber_sc, "SELF_REF", &cmin, &cmax, nrange);
-	
-        FREE(cpl_table_delete,  oi_vis_SC);
-	
+	gravi_average_self_visphi(oi_vis_SC, vis_SC, wavenumber_sc, "SELF_REF", &cmin, &cmax, nrange);
+
+	FREE(cpl_table_delete,  oi_vis_SC);
+
 	FREE(cpl_table_delete,  vis_SC);
-	
+
 	cpl_array_unwrap(wavenumber_sc);
 	FREE(cpl_table_delete,  wavenumber_sc_tab );
 
-	
  return flag;
 }
 /*----------------------------------------------------------------------------*/
@@ -105,9 +104,12 @@ int gravi_vis_test(void){
 
 int main(void)
 {
-    int flag;
-
+	int flag;
+#if defined CPL_VERSION_CODE && CPL_VERSION_CODE >= CPL_VERSION(4, 0, 0)
     cpl_test_init(PACKAGE_BUGREPORT, CPL_MSG_INFO);
+#else
+    cpl_init();
+#endif
 
     flag=gravi_vis_test();
 
