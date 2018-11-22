@@ -18,6 +18,11 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+/*
+ * History :
+ * ekw 12/11/2018  Add one gravi_Data* to  gravi_metrology_reduce
+ */
+
 #ifndef METREDLIB_H
 #define METREDLIB_H
 
@@ -35,6 +40,7 @@
 
 cpl_error_code gravi_metrology_reduce (gravi_data *,
                                        gravi_data *,
+				       gravi_data *,
                                        gravi_data * met_pos,
                                        const cpl_parameterlist * parlist);
 
