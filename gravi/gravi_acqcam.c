@@ -30,6 +30,10 @@
  */
 /**@{*/
 
+/*
+ * History :
+ *    ekw 26/11/2016 Read parameter roof_x, roof_y, sot_x, spot_y and roof_pos from calibration file
+ */
 /*-----------------------------------------------------------------------------
                                    Includes
  -----------------------------------------------------------------------------*/
@@ -95,7 +99,8 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
                                    cpl_imagelist * acqcam_imglist,
                                    cpl_propertylist * header,
                                    cpl_table * acqcam_table,
-                                   cpl_propertylist * o_header);
+                                   cpl_propertylist * o_header,
+                                   gravi_data *static_param_data);
 
 cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y,
                                        double *ex, double *ey, cpl_size size);
@@ -1224,7 +1229,8 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
                                    cpl_imagelist * acqcam_imglist,
                                    cpl_propertylist * header,
                                    cpl_table * acqcam_table,
-                                   cpl_propertylist * o_header)
+                                   cpl_propertylist * o_header,
+                                   gravi_data *static_param_data)
 {
     gravi_msg_function_start(1);
     cpl_ensure_code (mean_img,       CPL_ERROR_NULL_INPUT);
@@ -1256,17 +1262,83 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
     gravi_table_new_column (acqcam_table, "FIELD_FIBER_DYERR", "pix", CPL_TYPE_DOUBLE);
     gravi_table_new_column (acqcam_table, "FIELD_STREHL", "ratio", CPL_TYPE_DOUBLE);
 
+    /* ----------------- START EKW 26/11/2018 read constant parameter from calibration file */
     /* Position of roof center on full frame */
-    double roof_x[] = {274.4, 787.1, 1236.1, 1673.4};
-    double roof_y[] = {242.3, 247.7, 225.8, 235.6};
+    //double roof_x[] = {274.4, 787.1, 1236.1, 1673.4};
+    //double roof_y[] = {242.3, 247.7, 225.8, 235.6};
+    double *roof_x;
+    double *roof_y;
     
     /* Position of single-field spot on full frame */
-    double spot_x[] = {289. , 798.2, 1245.5, 1696.};
-    double spot_y[] = {186.5, 187.5,  172.5,  178.};
+    //double spot_x[] = {289. , 798.2, 1245.5, 1696.};
+    //double spot_y[] = {186.5, 187.5,  172.5,  178.};
+    double *spot_x;
+    double *spot_y;
     
     /* Default position angle of roof */
-    double roof_pos[] = {38.49, 38.54, 38.76, 39.80};
-    
+    //double roof_pos[] = {38.49, 38.54, 38.76, 39.80};
+    double *roof_pos;
+
+    cpl_table * roof_pos_table = gravi_data_get_table (static_param_data, "ROOFPOS");
+
+     if ( cpl_table_has_column(roof_pos_table , "roof_x") ) {
+         roof_x= cpl_table_get_data_double (roof_pos_table, "roof_x");
+         cpl_msg_info(cpl_func,"roof_x [0] : %e \n", roof_x[0] );
+         cpl_msg_info(cpl_func,"roof_x [1] : %e \n", roof_x[1] );
+         cpl_msg_info(cpl_func,"roof_x [2] : %e \n", roof_x[2] );
+         cpl_msg_info(cpl_func,"roof_x [3] : %e \n", roof_x[3] );
+     }
+     else {
+       cpl_msg_warning(cpl_func,"Cannot get the default values for roof_x ");
+     }
+
+     if ( cpl_table_has_column(roof_pos_table , "roof_y") ) {
+         roof_y= cpl_table_get_data_double (roof_pos_table, "roof_y");
+         cpl_msg_info(cpl_func,"roof_y [0] : %e \n", roof_y[0] );
+         cpl_msg_info(cpl_func,"roof_y [1] : %e \n", roof_y[1] );
+         cpl_msg_info(cpl_func,"roof_y [2] : %e \n", roof_y[2] );
+         cpl_msg_info(cpl_func,"roof_y [3] : %e \n", roof_y[3] );
+     }
+     else {
+       cpl_msg_warning(cpl_func,"Cannot get the default values for roof_y ");
+     }
+
+     if ( cpl_table_has_column(roof_pos_table , "spot_x") ) {
+         spot_x= cpl_table_get_data_double (roof_pos_table, "spot_x");
+         cpl_msg_info(cpl_func,"spot_x [0] : %e \n", spot_x[0] );
+         cpl_msg_info(cpl_func,"spot_x [1] : %e \n", spot_x[1] );
+         cpl_msg_info(cpl_func,"spot_x [2] : %e \n", spot_x[2] );
+         cpl_msg_info(cpl_func,"spot_x [3] : %e \n", spot_x[3] );
+     }
+     else {
+       cpl_msg_warning(cpl_func,"Cannot get the default values for spot_x ");
+     }
+
+     if ( cpl_table_has_column(roof_pos_table , "spot_y") ) {
+         spot_y= cpl_table_get_data_double (roof_pos_table, "spot_y");
+         cpl_msg_info(cpl_func,"spot_y [0] : %e \n", spot_y[0] );
+         cpl_msg_info(cpl_func,"spot_y [1] : %e \n", spot_y[1] );
+         cpl_msg_info(cpl_func,"spot_y [2] : %e \n", spot_y[2] );
+         cpl_msg_info(cpl_func,"spot_y [3] : %e \n", spot_y[3] );
+     }
+     else {
+       cpl_msg_warning(cpl_func,"Cannot get the default values for spot_y ");
+     }
+
+     if ( cpl_table_has_column(roof_pos_table , "roof_pos") ) {
+         roof_pos= cpl_table_get_data_double (roof_pos_table, "roof_pos");
+         cpl_msg_info(cpl_func,"roof_pos [0] : %e \n", roof_pos[0] );
+         cpl_msg_info(cpl_func,"roof_pos [1] : %e \n", roof_pos[1] );
+         cpl_msg_info(cpl_func,"roof_pos [2] : %e \n", roof_pos[2] );
+         cpl_msg_info(cpl_func,"roof_pos [3] : %e \n", roof_pos[3] );
+     }
+     else {
+       cpl_msg_warning(cpl_func,"Cannot get the default values for roof_pos ");
+     }
+    /* ------------------ END EKW 26/11/2018 read constant parameter from calibration file */
+
+
+
     /* Static acqcam field calibration error */
     /* calibration from Frank, March 2017, using Marcel      	
     double calib_dx[] = {-0.3483, -1.0251, -0.5432, -0.2024} ;
@@ -1722,7 +1794,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         cpl_propertylist_set_comment (o_header, qc_name, "Std of FT strehl");
         
     } /* End loop on tel */
-    
+
     gravi_msg_function_exit(1);
     return CPL_ERROR_NONE;
 }
@@ -1747,12 +1819,13 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
 /*----------------------------------------------------------------------------*/
 
 cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
-                                    gravi_data * input_data)
+                                    gravi_data * input_data,
+                                    gravi_data * static_param_data)
 {
     gravi_msg_function_start(1);
     cpl_ensure_code (output_data, CPL_ERROR_NULL_INPUT);
     cpl_ensure_code (input_data,  CPL_ERROR_NULL_INPUT);
-    
+
     /* Check if extension exist */
     if (!gravi_data_has_extension (input_data, GRAVI_IMAGING_DATA_ACQ_EXT)) {
         gravi_msg_warning (cpl_func, "Cannot reduce the ACQCAM, not data");
@@ -1786,16 +1859,17 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
         for (int tel = 0; tel < ntel; tel ++)
             cpl_table_set (acqcam_table, "TIME", row*ntel+tel, time);
     }
-    
+
     /* Compute mean image */
     cpl_image * mean_img = cpl_imagelist_collapse_create (acqcam_imglist);
 
     /* Compute FIELD columns */
     gravi_acqcam_field (mean_img, acqcam_imglist, header,
-                        acqcam_table, o_header);
+                        acqcam_table, o_header, static_param_data);
+
 	CPLCHECK_MSG ("Cannot reduce field images");
-    
-    
+
+
     /* Compute PUPIL columns */
     gravi_acqcam_pupil (mean_img, acqcam_imglist, header,
                         acqcam_table, o_header);
@@ -1807,7 +1881,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
     
 	gravi_data_add_table (output_data, NULL, GRAVI_OI_VIS_ACQ_EXT, acqcam_table);
 	CPLCHECK_MSG ("Cannot add acqcam_table in data");
-    
+
     gravi_msg_function_exit(1);
     return CPL_ERROR_NONE;   
 }
