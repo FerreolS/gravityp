@@ -18,6 +18,10 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
+/*
+ * History :
+ * 	ekw   26/11/2018   add static_param_frameset to gravi_reduce_acqcam
+ */
 #ifndef GRAVI_ACQCAM_H
 #define GRAVI_ACQCAM_H
 
@@ -37,6 +41,7 @@ cpl_error_code gravi_preproc_acqcam (gravi_data *output_data,
                                      gravi_data *bad_data);
 
 cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
-                                    gravi_data * input_data);
+                                    gravi_data * input_data,
+                                    gravi_data * static_param_frameset);
 
 #endif 	/* !GRAVI_ACQCAM_H */
