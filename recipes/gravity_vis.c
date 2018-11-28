@@ -26,6 +26,7 @@
  *
  * History
  * ekw      12/11/2018  add static_param_frameset
+ * ekw      26/11/2018  add static_param_frameset to call of gravi_reduce_acqcam
  */
 
 #ifdef HAVE_CONFIG_H
@@ -514,9 +515,9 @@ static int gravity_vis(cpl_frameset * frameset,
 	else
 	  cpl_msg_info (cpl_func, "There is no EOP_PARAM in the frameset");
 	
-        /* START EKW 12/11/2018 read constant parameter from calibration file */
+    /* START EKW 12/11/2018 read constant parameter from calibration file */
 	/* Load the STATIC_PARAM Parameter */
-        if (!cpl_frameset_is_empty (static_param_frameset)) {
+    if (!cpl_frameset_is_empty (static_param_frameset)) {
 	  frame = cpl_frameset_get_position (static_param_frameset, 0);
 	  static_param_data = gravi_data_load_frame (frame, used_frameset);
 	}
@@ -688,8 +689,7 @@ static int gravity_vis(cpl_frameset * frameset,
 
 			CPLCHECK_CLEAN ("Cannot save the BIAS_SUBTRACTED product");
 		}
-		
-		
+
 		/* Check the shutters */
 		if ( !gravi_data_check_shutter_open (data) ) {
 		  cpl_msg_warning (cpl_func, "Shutter problem in the OBJECT");
@@ -748,9 +748,9 @@ static int gravity_vis(cpl_frameset * frameset,
 
         /* Reduce the Acquisition Camera and delete data */
         if (gravi_param_get_bool (parlist,"gravity.test.reduce-acq-cam")) {
-            gravi_reduce_acqcam (p2vmred_data, preproc_data);
+            gravi_reduce_acqcam (p2vmred_data, preproc_data, static_param_data);
         }
-        
+
         /* Move extensions and delete preproc */
         gravi_data_move_ext (p2vmred_data, preproc_data, GRAVI_IMAGING_DATA_ACQ_EXT);
         gravi_data_move_ext (p2vmred_data, preproc_data, GRAVI_METROLOGY_EXT);
