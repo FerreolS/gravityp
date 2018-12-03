@@ -642,7 +642,7 @@ gravi_data * gravi_extract_spectrum (gravi_data * raw_data,
 		}
 
 		/* Get the FT gain in [ADU/e] */
-		double gain_ft = gravi_pfits_get_ft_gain (profile_header);
+		double gain_ft = gravi_pfits_get_ft_gain (raw_header);
 		cpl_propertylist_update_double (spectrum_header, "ESO QC USEDGAIN FT", gain_ft);
 		cpl_propertylist_set_comment (spectrum_header, "ESO QC USEDGAIN FT", "[ADU/e-] value used for reduction");
 
@@ -695,7 +695,7 @@ gravi_data * gravi_extract_spectrum (gravi_data * raw_data,
         CPLCHECK_NUL ("Cannot get data");
 
         /* Get the SC gain in [ADU/e] */
-        double gain_sc = gravi_pfits_get_sc_gain (profile_header);
+        double gain_sc = gravi_pfits_get_sc_gain (raw_header);
         cpl_propertylist_update_double (spectrum_header, "ESO QC USEDGAIN SC", gain_sc);
         cpl_propertylist_set_comment (spectrum_header, "ESO QC USEDGAIN SC", "[ADU/e-] value used for reduction");
         
