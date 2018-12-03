@@ -32,7 +32,8 @@
 
 /*
  * History :
- *    ekw 26/11/2016 Read parameter roof_x, roof_y, sot_x, spot_y and roof_pos from calibration file
+ *    ekw 26/11/2018 Read parameter roof_x, roof_y, sot_x, spot_y and roof_pos from calibration file
+ *    ekw 28/11/2018 Read parameter plate scale from calibration file
  */
 /*-----------------------------------------------------------------------------
                                    Includes
@@ -1419,9 +1420,16 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         
         /* Hardcoded approx. plate-scale in mas/pix. */
         double scale = 0.0;
+        char telid[128];
         if (telname[0] == 'U') {
-            scale = 18.;
+            /* scale = 18.; */
+            scale = cpl_propertylist_get_double (gravi_data_get_plist(static_param_data,GRAVI_PRIMARY_HDR_EXT), "ESO PLATE SCALE UT");
+            cpl_msg_info (cpl_func,"PLATE SCALE UT is  : %e \n",scale);
         } else if (telname[0] == 'A') {
+            sprintf(telid, "ESO PLATE SCALE AT%d", tel+1);
+            scale = cpl_propertylist_get_double (gravi_data_get_plist(static_param_data,GRAVI_PRIMARY_HDR_EXT), telid);
+            cpl_msg_info (cpl_func,"PLATE SCALE AT%d is : %e \n",tel+1, scale);
+            /*
             if (tel == 0) {
                 scale = 76.8;
             } else if (tel == 1) {
@@ -1431,6 +1439,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             } else if (tel == 3) {
                 scale = 84.6;
             }
+            */
         }
         
         /* Position of the fibres */
