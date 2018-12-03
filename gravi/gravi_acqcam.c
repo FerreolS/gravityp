@@ -1280,13 +1280,14 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
     double *roof_pos;
 
     cpl_table * roof_pos_table = gravi_data_get_table (static_param_data, "ROOFPOS");
+    CPLCHECK_MSG ("STATIC_CALIB not available in the SOF. It is mandatory for acqcam reduction.");
 
      if ( cpl_table_has_column(roof_pos_table , "roof_x") ) {
          roof_x= cpl_table_get_data_double (roof_pos_table, "roof_x");
-         cpl_msg_info(cpl_func,"roof_x [0] : %e \n", roof_x[0] );
-         cpl_msg_info(cpl_func,"roof_x [1] : %e \n", roof_x[1] );
-         cpl_msg_info(cpl_func,"roof_x [2] : %e \n", roof_x[2] );
-         cpl_msg_info(cpl_func,"roof_x [3] : %e \n", roof_x[3] );
+         cpl_msg_info(cpl_func,"roof_x [0] : %e", roof_x[0] );
+         cpl_msg_info(cpl_func,"roof_x [1] : %e", roof_x[1] );
+         cpl_msg_info(cpl_func,"roof_x [2] : %e", roof_x[2] );
+         cpl_msg_info(cpl_func,"roof_x [3] : %e", roof_x[3] );
      }
      else {
        cpl_msg_warning(cpl_func,"Cannot get the default values for roof_x ");
@@ -1294,10 +1295,10 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
 
      if ( cpl_table_has_column(roof_pos_table , "roof_y") ) {
          roof_y= cpl_table_get_data_double (roof_pos_table, "roof_y");
-         cpl_msg_info(cpl_func,"roof_y [0] : %e \n", roof_y[0] );
-         cpl_msg_info(cpl_func,"roof_y [1] : %e \n", roof_y[1] );
-         cpl_msg_info(cpl_func,"roof_y [2] : %e \n", roof_y[2] );
-         cpl_msg_info(cpl_func,"roof_y [3] : %e \n", roof_y[3] );
+         cpl_msg_info(cpl_func,"roof_y [0] : %e", roof_y[0] );
+         cpl_msg_info(cpl_func,"roof_y [1] : %e", roof_y[1] );
+         cpl_msg_info(cpl_func,"roof_y [2] : %e", roof_y[2] );
+         cpl_msg_info(cpl_func,"roof_y [3] : %e", roof_y[3] );
      }
      else {
        cpl_msg_warning(cpl_func,"Cannot get the default values for roof_y ");
@@ -1305,10 +1306,10 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
 
      if ( cpl_table_has_column(roof_pos_table , "spot_x") ) {
          spot_x= cpl_table_get_data_double (roof_pos_table, "spot_x");
-         cpl_msg_info(cpl_func,"spot_x [0] : %e \n", spot_x[0] );
-         cpl_msg_info(cpl_func,"spot_x [1] : %e \n", spot_x[1] );
-         cpl_msg_info(cpl_func,"spot_x [2] : %e \n", spot_x[2] );
-         cpl_msg_info(cpl_func,"spot_x [3] : %e \n", spot_x[3] );
+         cpl_msg_info(cpl_func,"spot_x [0] : %e", spot_x[0] );
+         cpl_msg_info(cpl_func,"spot_x [1] : %e", spot_x[1] );
+         cpl_msg_info(cpl_func,"spot_x [2] : %e", spot_x[2] );
+         cpl_msg_info(cpl_func,"spot_x [3] : %e", spot_x[3] );
      }
      else {
        cpl_msg_warning(cpl_func,"Cannot get the default values for spot_x ");
@@ -1316,10 +1317,10 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
 
      if ( cpl_table_has_column(roof_pos_table , "spot_y") ) {
          spot_y= cpl_table_get_data_double (roof_pos_table, "spot_y");
-         cpl_msg_info(cpl_func,"spot_y [0] : %e \n", spot_y[0] );
-         cpl_msg_info(cpl_func,"spot_y [1] : %e \n", spot_y[1] );
-         cpl_msg_info(cpl_func,"spot_y [2] : %e \n", spot_y[2] );
-         cpl_msg_info(cpl_func,"spot_y [3] : %e \n", spot_y[3] );
+         cpl_msg_info(cpl_func,"spot_y [0] : %e", spot_y[0] );
+         cpl_msg_info(cpl_func,"spot_y [1] : %e", spot_y[1] );
+         cpl_msg_info(cpl_func,"spot_y [2] : %e", spot_y[2] );
+         cpl_msg_info(cpl_func,"spot_y [3] : %e", spot_y[3] );
      }
      else {
        cpl_msg_warning(cpl_func,"Cannot get the default values for spot_y ");
@@ -1327,10 +1328,10 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
 
      if ( cpl_table_has_column(roof_pos_table , "roof_pos") ) {
          roof_pos= cpl_table_get_data_double (roof_pos_table, "roof_pos");
-         cpl_msg_info(cpl_func,"roof_pos [0] : %e \n", roof_pos[0] );
-         cpl_msg_info(cpl_func,"roof_pos [1] : %e \n", roof_pos[1] );
-         cpl_msg_info(cpl_func,"roof_pos [2] : %e \n", roof_pos[2] );
-         cpl_msg_info(cpl_func,"roof_pos [3] : %e \n", roof_pos[3] );
+         cpl_msg_info(cpl_func,"roof_pos [0] : %e", roof_pos[0] );
+         cpl_msg_info(cpl_func,"roof_pos [1] : %e", roof_pos[1] );
+         cpl_msg_info(cpl_func,"roof_pos [2] : %e", roof_pos[2] );
+         cpl_msg_info(cpl_func,"roof_pos [3] : %e", roof_pos[3] );
      }
      else {
        cpl_msg_warning(cpl_func,"Cannot get the default values for roof_pos ");
