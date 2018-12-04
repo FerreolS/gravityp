@@ -34,6 +34,7 @@
  * History :
  *    ekw 26/11/2018 Read parameter roof_x, roof_y, sot_x, spot_y and roof_pos from calibration file
  *    ekw 28/11/2018 Read parameter plate scale from calibration file
+ *    ekw 03/12/2018 Read gravi_acqcam_pupil parameter from calibration file
  */
 /*-----------------------------------------------------------------------------
                                    Includes
@@ -88,13 +89,14 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img, cpl_size ntry,
                                       int fitAll,
                                       int * nspot);
 
-double gravi_acqcam_z2meter (double PositionPixels);
+double gravi_acqcam_z2meter (double PositionPixels, gravi_data *static_param_data);
 
 cpl_error_code gravi_acqcam_pupil (cpl_image * mean_img,
                                    cpl_imagelist * acqcam_imglist,
                                    cpl_propertylist * header,
                                    cpl_table * acqcam_table,
-                                   cpl_propertylist * o_header);
+                                   cpl_propertylist * o_header,
+								   gravi_data *static_param_data);
 
 cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
                                    cpl_imagelist * acqcam_imglist,
@@ -1017,7 +1019,8 @@ cpl_error_code gravi_acqcam_pupil (cpl_image * mean_img,
                                    cpl_imagelist * acqcam_imglist,
                                    cpl_propertylist * header,
                                    cpl_table * acqcam_table,
-                                   cpl_propertylist * o_header)
+                                   cpl_propertylist * o_header,
+								   gravi_data *static_param_data)
 {
     gravi_msg_function_start(1);
     cpl_ensure_code (mean_img,       CPL_ERROR_NULL_INPUT);
@@ -1179,7 +1182,7 @@ cpl_error_code gravi_acqcam_pupil (cpl_image * mean_img,
                 /* In UV [m] */
                 double u_shift = (cfangle * x_shift - sfangle * y_shift) / scale;
                 double v_shift = (sfangle * x_shift + cfangle * y_shift) / scale;               
-                double w_shift = gravi_acqcam_z2meter (z_shift);
+                double w_shift = gravi_acqcam_z2meter (z_shift, static_param_data);
                 
                 cpl_table_set (acqcam_table, "PUPIL_NSPOT", row*ntel+tel, nspot);
                 cpl_table_set (acqcam_table, "PUPIL_X", row*ntel+tel, x_shift);
@@ -1882,7 +1885,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
 
     /* Compute PUPIL columns */
     gravi_acqcam_pupil (mean_img, acqcam_imglist, header,
-                        acqcam_table, o_header);
+                        acqcam_table, o_header, static_param_data);
 	CPLCHECK_MSG ("Cannot reduce pupil images");
     
     /* Add this output table in the gravi_data */
@@ -1903,16 +1906,38 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
  */
 /*----------------------------------------------------------------------------*/
 
-double gravi_acqcam_z2meter (double PositionPixels)
+double gravi_acqcam_z2meter (double PositionPixels, gravi_data * static_param_data)
 {
-    double f_PT      = 14e-3;    /* pupil tracker lenslet FL*/
-    double f_lens    = 467e-3;   /* folding optics lens FL */
-    double Llambda   = 1.2e-6;   /* laser diode wavelength */
-    double D_beam    = 18e-3;    /* meter */
-    double D_pixel   = 18e-6;
-    double D_AT      = 1.8;      /* m */
-    double D_lenslet = 2 * 1.015e-3;
-    
+    double f_PT      ; /*  = 14e-3;        */ /* pupil tracker lenslet FL*/
+    double f_lens    ; /*  = 467e-3;       */ /* folding optics lens FL */
+    double Llambda   ; /*  = 1.2e-6;       */  /* laser diode wavelength */
+    double D_beam    ; /*  = 18e-3;        */  /* meter */
+    double D_pixel   ; /*  = 18e-6;        */
+    double D_AT      ; /*  = 1.8;          */  /* m */
+    double D_lenslet ; /*  = 2 * 1.015e-3; */
+
+    f_PT = cpl_propertylist_get_double (gravi_data_get_plist(static_param_data,GRAVI_PRIMARY_HDR_EXT), "ESO LENS fPT");
+    cpl_msg_info (cpl_func,"ESO LENS fPT is   : %e", f_PT);
+
+    f_lens = cpl_propertylist_get_double (gravi_data_get_plist(static_param_data,GRAVI_PRIMARY_HDR_EXT), "ESO LENS flens");
+    cpl_msg_info (cpl_func,"ESO LENS f_lens is  : %e", f_lens);
+
+    Llambda = cpl_propertylist_get_double (gravi_data_get_plist(static_param_data,GRAVI_PRIMARY_HDR_EXT), "ESO LENS Llambda");
+    cpl_msg_info (cpl_func,"ESO LENS Llambda is  : %e", Llambda);
+
+    D_beam = cpl_propertylist_get_double (gravi_data_get_plist(static_param_data,GRAVI_PRIMARY_HDR_EXT), "ESO LENS Dbeam");
+    cpl_msg_info (cpl_func,"ESO LENS D_beam is  : %e", D_beam);
+
+    D_pixel = cpl_propertylist_get_double (gravi_data_get_plist(static_param_data,GRAVI_PRIMARY_HDR_EXT), "ESO LENS Dpixel");
+    cpl_msg_info (cpl_func,"ESO LENS D_pixel is  : %e", D_pixel);
+
+    D_AT = cpl_propertylist_get_double (gravi_data_get_plist(static_param_data,GRAVI_PRIMARY_HDR_EXT), "ESO LENS DAT");
+    cpl_msg_info (cpl_func,"ESO LENS D_AT is  : %e", D_AT);
+
+    D_lenslet = cpl_propertylist_get_double (gravi_data_get_plist(static_param_data,GRAVI_PRIMARY_HDR_EXT), "ESO LENS Dlenslet");
+    cpl_msg_info (cpl_func,"ESO LENS D_lenslet is  : %e", D_lenslet);
+
+
     double longDef;
     longDef = 8 * (f_PT / D_lenslet) * (f_PT / D_lenslet) * 3.5 * D_pixel *
         D_beam / (f_PT * D_lenslet) * Llambda / CPL_MATH_2PI * PositionPixels;
