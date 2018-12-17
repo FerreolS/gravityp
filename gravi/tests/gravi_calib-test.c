@@ -28,6 +28,7 @@
  *      History :
  *      ekw 13/11/2018 add parameter to gravi_metrology_reduced
  *      ekw   04/12/2018 use GRAVITY_WAVE.fits calibration file instead of hardcoded values
+ *      ekw   17/12/2018 correct GRAVI_WAVE.fits access
  */
 
 #ifdef HAVE_CONFIG_H
@@ -555,10 +556,10 @@ int gravi_calib_test(void){
 
 		/* Construction of the p2vm data. */
 	    /* Prepare gravi_data *static_param_data with the default focus data */
-		char filename[128];
-	    sprintf(filename, "%s%s", STR(DATADIR), "/GRAVI_WAVE.fits");
-	    //sprintf(filename, "%s","/home/grav/pipeline_ekki/execute/GRAVI_WAVE.fits");
-	    gravi_data * gravi_wave = gravi_data_load(filename);
+		//char filename[128];
+	    //sprintf(filename, "%s%s", STR(DATADIR), "/GRAVI_WAVE.fits");
+	    //gravi_data * gravi_wave = gravi_data_load(filename);
+		gravi_data *gravi_wave  = gravi_data_load (DATADIR_TEST "GRAVI_WAVE.fits");
 		if ( p2vm_data == NULL) {
 			test_data(p2vm_data, gravi_create_p2vm (data_wave, gravi_wave),
 							   "gravi_create_p2vm: create the p2vm table... ", flag);
@@ -753,8 +754,9 @@ int gravi_calib_test(void){
 	/* Reduce the metrology */
     /* Prepare gravi_data *static_param_data with the default focus data */
     char filename2[128];
-	sprintf(filename2, "%s%s", STR(DATADIR), "/GRAVI_STATIC_CALIB.fits");
-    /* sprintf(filename2, "%s","/home/grav/pipeline_ekki/execute/GRAVI_STATIC_CALIB.fits"); */
+	snprintf(filename2,sizeof(filename2),  "%s%s", STR(DATADIR), "/GRAVI_STATIC_CALIB.fits");
+	cpl_msg_info (cpl_func, "Ekki : %s", filename2);
+	//gravi_data * gravi_data_focus = gravi_data_load (DATADIR_TEST "GRAVI_STATIC_CALIB.fits");
     gravi_data * gravi_data_focus = gravi_data_load_ext(filename2,"FOCUSPAR");
     //ekw test (gravi_metrology_reduce (p2vm_reduced, NULL, gravi_data_focus, NULL, parlist), "gravi_metrology_reduce : reduce the metrology ...", flag);
     flag = gravi_metrology_reduce (p2vm_reduced, NULL, gravi_data_focus, NULL, parlist);
