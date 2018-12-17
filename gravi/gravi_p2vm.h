@@ -17,7 +17,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-
+/*
+ * History
+ * ekw  04/12/2018 add *gravi_data wave_param to gravi_create_p2vm
+ */
 #ifndef GRAVI_P2VM_H_
 #define GRAVI_P2VM_H_
 
@@ -32,7 +35,7 @@
                                Public prototypes
  -----------------------------------------------------------------------------*/
 
-gravi_data * gravi_create_p2vm (gravi_data * wave_data);
+gravi_data * gravi_create_p2vm (gravi_data * wave_cal_data, gravi_data *wave_param);
 cpl_table* gravi_create_p2vm_table (cpl_table * detector_table, int n_wave);
 cpl_error_code gravi_compute_p2vm (gravi_data * , gravi_data * , int ** , int ** ,
                                    enum gravi_detector_type det_type);
