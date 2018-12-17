@@ -17,7 +17,10 @@
  * along with this program; if not, write to the Free Software
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
-
+/*
+ * History
+ * ekw 07/12/2018 add wave_param to gravi_compute_argon_pos
+ */
 #ifndef GRAVI_DISP_H_
 #define GRAVI_DISP_H_
 
@@ -40,6 +43,6 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data);
 
 cpl_error_code gravi_disp_cleanup (gravi_data * vis_data);
 
-cpl_error_code gravi_compute_argon_pos (gravi_data * preproc_data);
+cpl_error_code gravi_compute_argon_pos (gravi_data * preproc_data, gravi_data *wave_param);
 
 #endif /* GRAVI_DISP_H_ */
