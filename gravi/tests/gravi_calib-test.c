@@ -27,6 +27,7 @@
  *
  *      History :
  *      ekw 13/11/2018 add parameter to gravi_metrology_reduced
+ *      ekw   04/12/2018 use GRAVITY_WAVE.fits calibration file instead of hardcoded values
  */
 
 #ifdef HAVE_CONFIG_H
@@ -460,7 +461,6 @@ int gravi_calib_test(void){
 										GRAVI_PRIMARY_HDR_EXT);
 	cpl_propertylist_append_string(plist_dark, CPL_DFS_PRO_CATG, GRAVI_DARK_MAP);
 
-
 	calib_data[1] = data_wave;
 	plist_wave = gravi_data_get_plist(calib_data[1],
 										GRAVI_PRIMARY_HDR_EXT);
@@ -554,15 +554,21 @@ int gravi_calib_test(void){
 
 
 		/* Construction of the p2vm data. */
+	    /* Prepare gravi_data *static_param_data with the default focus data */
+		char filename[128];
+	    sprintf(filename, "%s%s", STR(DATADIR), "/GRAVI_WAVE.fits");
+	    //sprintf(filename, "%s","/home/grav/pipeline_ekki/execute/GRAVI_WAVE.fits");
+	    gravi_data * gravi_wave = gravi_data_load(filename);
 		if ( p2vm_data == NULL) {
-			test_data(p2vm_data, gravi_create_p2vm (data_wave),
+			test_data(p2vm_data, gravi_create_p2vm (data_wave, gravi_wave),
 							   "gravi_create_p2vm: create the p2vm table... ", flag);
 
-		/* Rescale to common wavelength */
-		gravi_align_spectrum (preproc_data, data_wave, p2vm_data, GRAVI_DET_ALL, parlist);
+
+		    /* Rescale to common wavelength */
+		    gravi_align_spectrum (preproc_data, data_wave, p2vm_data, GRAVI_DET_ALL, parlist);
 
 		}
-
+		gravi_data_delete(gravi_wave);
 //		if (i == 0){
 //			cpl_msg_info (NULL, "Construction of the p2vm map");
 //			p2vm_data = gravi_data_new(0);
@@ -753,6 +759,7 @@ int gravi_calib_test(void){
     //ekw test (gravi_metrology_reduce (p2vm_reduced, NULL, gravi_data_focus, NULL, parlist), "gravi_metrology_reduce : reduce the metrology ...", flag);
     flag = gravi_metrology_reduce (p2vm_reduced, NULL, gravi_data_focus, NULL, parlist);
     //gravi_data_save_data (p2vm_reduced, "test_files/p2vm_reduced.fits", CPL_IO_CREATE);
+    gravi_data_delete(gravi_data_focus);
 
 	gravi_parameter_add_compute_snr (parlist, 0);
 	gravi_parameter_add_rejection (parlist, 0);
@@ -797,6 +804,7 @@ int gravi_calib_test(void){
 	cpl_frameset_delete(wave_frameset);
 
 	cpl_parameterlist_delete (parlist);
+
 
 //	for (i = 0; i < 1; i++){
 //		gravi_data_delete (p2vm_reduce[i]);
