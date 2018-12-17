@@ -35,6 +35,7 @@
 /*
  * History :
  * ekw  12/11/2018  add gravi_frameset_extract_static_param
+ * ekw  04/12/2018  add gravi_frameset_extract_wave_param
  */
 
 /*-----------------------------------------------------------------------------
@@ -1015,6 +1016,12 @@ cpl_frameset * gravi_frameset_extract_static_param (cpl_frameset * frameset) {
   const char *tags[] = {GRAVI_STATIC_PARAM};
   return gravi_frameset_extract (frameset, tags, 1);
 }
+
+cpl_frameset * gravi_frameset_extract_wave_param (cpl_frameset * frameset) {
+  const char *tags[] = {GRAVI_WAVE_PARAM};
+  return gravi_frameset_extract (frameset, tags, 1);
+}
+
 /*---------------------------------------------------------------------------*/
 /* 
  * Get the parameter from the list. Provide a default in case the parameter
