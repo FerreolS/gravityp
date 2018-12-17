@@ -34,6 +34,10 @@
  */
 /**@{*/
 
+/*
+ *  History
+ *    ekw   04/12/2018 use GRAVITY_WAVE.fits calibration file instead of hardcoded values
+ */
 /*-----------------------------------------------------------------------------
                                    Includes
  -----------------------------------------------------------------------------*/
@@ -75,7 +79,8 @@ cpl_table* gravi_create_p2vm_table (cpl_table * detector_table,
                                     int nwave);
 
 cpl_table * gravi_create_oiwave_table_sc (cpl_table * wave_table,
-                                          cpl_propertylist * header);
+                                          cpl_propertylist * header,
+                                          gravi_data *wave_param);
 
 cpl_table * gravi_create_oiwave_table_ft (cpl_table * wave_table,
                                           cpl_table * detector_table,
@@ -190,18 +195,21 @@ cpl_table* gravi_create_p2vm_table (cpl_table * detector_table,
 /*---------------------------------------------------------------------------*/
 
 cpl_table * gravi_create_oiwave_table_sc (cpl_table * wave_table,
-                                          cpl_propertylist * header)
+                                          cpl_propertylist * header,
+                                          gravi_data *wave_param)
 {
     gravi_msg_function_start(1);
     cpl_ensure (wave_table, CPL_ERROR_NULL_INPUT, NULL);
     cpl_ensure (header,     CPL_ERROR_NULL_INPUT, NULL);
 
 
+    /* EKW START 04/12/2018 */
     /* set the calibrated eff_wave for LOW res*/
     /* OP 2018-02-12: new bandwidths measured for 3pix interpolation 
                       average of the six P1 baselines
 		      also valid for P2
     */
+/*
     double calib_eff_wave[14] = {7.046E-08,
                                  1.243E-07,
                                  1.342E-07,
@@ -216,6 +224,50 @@ cpl_table * gravi_create_oiwave_table_sc (cpl_table * wave_table,
                                  1.157E-07,
                                  1.120E-07,
                                  9.597E-08};
+
+*/
+    double *roof_pos;
+    double * calib_eff_wave;
+    cpl_table * calib_eff_table = gravi_data_get_table (wave_param, "WAVE_TAB");
+   // CPLCHECK_MSG ("STATIC_CALIB not available in the SOF. It is mandatory for acqcam reduction.");
+
+     if ( cpl_table_has_column(calib_eff_table , "FBAND_WAVE") ) {
+         calib_eff_wave = cpl_table_get_data_double (calib_eff_table, "FBAND_WAVE");
+         cpl_msg_info(cpl_func,"calib_eff_wave [0] : %e", calib_eff_wave[0] );
+         cpl_msg_info(cpl_func,"calib_eff_wave [1] : %e", calib_eff_wave[1] );
+         cpl_msg_info(cpl_func,"calib_eff_wave [2] : %e", calib_eff_wave[2] );
+         cpl_msg_info(cpl_func,"calib_eff_wave [3] : %e", calib_eff_wave[3] );
+     }
+     else {
+       cpl_msg_error(cpl_func,"Cannot get the default values for calib_eff_wave");
+     }
+
+     /* from the Define at the begin
+      * #define GRAVI_DEFAULT_LBD_MIN 1.99e-6
+      * #define GRAVI_DEFAULT_LBD_MAX 2.45e-6
+      * #define GRAVI_LOW_LBD_MIN 2.0000e-6
+      * #define GRAVI_LOW_LBD_MAX 2.481e-6
+      * Additionally a MEDIAN entry was also requested by Sylvestre
+      * */
+     double gravi_high_lbd_min = cpl_propertylist_get_double (gravi_data_get_plist(wave_param,GRAVI_PRIMARY_HDR_EXT), "ESO OIWAVE HIGH LBD MIN");
+     cpl_msg_info (cpl_func,"gravi_high_lbd_min   : %e", gravi_high_lbd_min);
+
+     double gravi_high_lbd_max = cpl_propertylist_get_double (gravi_data_get_plist(wave_param,GRAVI_PRIMARY_HDR_EXT), "ESO OIWAVE HIGH LBD MAX");
+     cpl_msg_info (cpl_func,"gravi_high_lbd_max   : %e", gravi_high_lbd_max);
+
+     double gravi_med_lbd_min = cpl_propertylist_get_double (gravi_data_get_plist(wave_param,GRAVI_PRIMARY_HDR_EXT), "ESO OIWAVE MED LBD MIN");
+     cpl_msg_info (cpl_func,"gravi_med_lbd_min   : %e", gravi_med_lbd_min);
+
+     double gravi_med_lbd_max = cpl_propertylist_get_double (gravi_data_get_plist(wave_param,GRAVI_PRIMARY_HDR_EXT), "ESO OIWAVE MED LBD MAX");
+     cpl_msg_info (cpl_func,"gravi_med_lbd_max   : %e", gravi_med_lbd_max);
+
+     double gravi_low_lbd_min = cpl_propertylist_get_double (gravi_data_get_plist(wave_param,GRAVI_PRIMARY_HDR_EXT), "ESO OIWAVE LOW LBD MIN");
+     cpl_msg_info (cpl_func,"gravi_low_lbd_min   : %e", gravi_low_lbd_min);
+
+     double gravi_low_lbd_max = cpl_propertylist_get_double (gravi_data_get_plist(wave_param,GRAVI_PRIMARY_HDR_EXT), "ESO OIWAVE LOW LBD MAX");
+     cpl_msg_info (cpl_func,"gravi_low_lbd_max   : %e", gravi_low_lbd_max);
+
+    /* EKW END 04/12/2018 */
     
     /* Get the QC */
     double qc_min, qc_max;
@@ -229,13 +281,17 @@ cpl_table * gravi_create_oiwave_table_sc (cpl_table * wave_table,
     double max_wave ,min_wave ;
     if (n_element<20)
     {
-        max_wave = GRAVI_LOW_LBD_MAX;
-        min_wave = GRAVI_LOW_LBD_MIN;
+       /* EKW  max_wave = GRAVI_LOW_LBD_MAX;
+        min_wave = GRAVI_LOW_LBD_MIN; */
+    	max_wave = gravi_low_lbd_max;
+    	min_wave = gravi_low_lbd_min;
         cpl_msg_info (cpl_func,"Using Low resolution wavelength table");
         
     }else{
-        max_wave = GRAVI_DEFAULT_LBD_MAX;
-        min_wave = GRAVI_DEFAULT_LBD_MIN;
+        /*max_wave = GRAVI_DEFAULT_LBD_MAX;
+        min_wave = GRAVI_DEFAULT_LBD_MIN; */
+    	max_wave = gravi_high_lbd_max;
+    	min_wave = gravi_high_lbd_min;
         cpl_msg_info (cpl_func,"Using High/Med resolution wavelength table");
     }
     CPLCHECK_NUL ("Cannot get the max_wave and min_wave");
@@ -264,6 +320,9 @@ cpl_table * gravi_create_oiwave_table_sc (cpl_table * wave_table,
         if (nwave == 14) cpl_table_set (oiwave_table, "EFF_BAND", wave, calib_eff_wave[wave]);
     }
 
+	//FREE(cpl_table_delete, calib_eff_table); /* EKW 04/12/2018 */
+
+    //free(calib_eff_wave2); /* EKW 04/12/2018 */
     gravi_msg_function_exit(1);
     return oiwave_table;
 }
@@ -350,7 +409,7 @@ cpl_table * gravi_create_oiwave_table_ft (cpl_table * wave_table,
  */
 /*----------------------------------------------------------------------------*/
 
-gravi_data * gravi_create_p2vm (gravi_data * wave_map)
+gravi_data * gravi_create_p2vm (gravi_data * wave_map, gravi_data *wave_param)
 {
   cpl_table * oiwave_table;
   
@@ -398,7 +457,8 @@ gravi_data * gravi_create_p2vm (gravi_data * wave_map)
               /* Create the SC OI_WAVELENGTH, will be the same for
                * both polarisations, and static from user requirement */
               oiwave_table = gravi_create_oiwave_table_sc (wave_table,
-                                                           wave_header);
+                                                           wave_header,
+                                                           wave_param);
           else 
               /* Create the FT OI_WAVELENGTH, as a meach of each channel */
               oiwave_table = gravi_create_oiwave_table_ft (wave_table,
