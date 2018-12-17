@@ -23,6 +23,9 @@
  * $Date: 2009/02/10 09:16:12 $
  * $Revision: 1.29 $
  * $Name:  $
+ *
+ * History :
+ *    ekw   04/12/2018 use GRAVITY_WAVE.fits calibration file instead of hardcoded values
  */
 
 #ifdef HAVE_CONFIG_H
@@ -327,12 +330,13 @@ static int gravity_p2vm(cpl_frameset            * frameset,
 {
     cpl_frameset * p2vm_frameset=NULL, * wavecalib_frameset=NULL, * darkcalib_frameset=NULL,
             * flatcalib_frameset=NULL, * dark_frameset=NULL, * wave_frameset=NULL, * wavesc_frameset=NULL,
-            * badcalib_frameset=NULL, * flat_frameset=NULL, * used_frameset=NULL, * current_frameset=NULL;
+            * badcalib_frameset=NULL, * flat_frameset=NULL, * used_frameset=NULL, * current_frameset=NULL,
+			* wave_param_frameset=NULL;
 
     cpl_frame * frame=NULL, * frame_p2vm=NULL;
 
     gravi_data * p2vm_map=NULL, * data=NULL, * dark_map=NULL, * wave_map=NULL,
-            * profile_map=NULL, * badpix_map=NULL;
+            * profile_map=NULL, * badpix_map=NULL, * wave_param=NULL;
     gravi_data * spectrum_data=NULL;
     gravi_data * preproc_data=NULL;
     gravi_data ** raw_data=NULL;
@@ -383,7 +387,8 @@ static int gravity_p2vm(cpl_frameset            * frameset,
     /* Extract P2VM frameset */
     p2vm_frameset = gravi_frameset_extract_p2vm_data (frameset);
 
-
+    /* EKW 04/12/2018 Extract new calibration file wave_param frameset */
+    wave_param_frameset = gravi_frameset_extract_wave_param (frameset);
 
     /*
      * (1) Identify and extract the dark file
@@ -732,8 +737,16 @@ static int gravity_p2vm(cpl_frameset            * frameset,
      */
 
     /* Construction of the p2vm data. */
+    /* START EKW 04/12/2018 read wave parameter from calibration file - Load the WAVE_PARAM Parameter */
+    if (!cpl_frameset_is_empty (wave_param_frameset)) {
+	  frame = cpl_frameset_get_position (wave_param_frameset, 0);
+	  wave_param = gravi_data_load_frame (frame, used_frameset);
+	}
+	else
+	  cpl_msg_error (cpl_func, "There is no WAVE_PARAM in the frameset");
+
     cpl_msg_info (cpl_func, " ***** Create the P2VM ***** ");
-    p2vm_map = gravi_create_p2vm (wave_map);
+    p2vm_map = gravi_create_p2vm (wave_map,wave_param);
     CPLCHECK_CLEAN ("Cannot create the P2VM data");
 
     /* Loop on files */
@@ -979,6 +992,8 @@ static int gravity_p2vm(cpl_frameset            * frameset,
     FREE (gravi_data_delete, p2vm_map);
     FREE (cpl_frameset_delete, p2vm_frameset);
     FREE (cpl_frameset_delete, current_frameset);
+    FREE (cpl_frameset_delete, wave_param_frameset);
+    FREE (gravi_data_delete, wave_param);
 
     /* FIXME: check a *change* of cpl_state instead */
     CPLCHECK_INT ("Could not cleanup memory");
