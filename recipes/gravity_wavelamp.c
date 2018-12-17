@@ -23,6 +23,9 @@
  * $Date: 2015/01/10 09:16:12 $
  * $Revision: 1.29 $
  * $Name:  $
+ *
+ * History :
+ * ekw  07/12/2018  Add wave_param frameset
  */
 
 #ifdef HAVE_CONFIG_H
@@ -288,12 +291,13 @@ static int gravity_wavelamp(cpl_frameset            * frameset,
 	  * badcalib_frameset = NULL, * flatcalib_frameset = NULL,
 	  * p2vmcalib_frameset = NULL, * dark_frameset = NULL,
 	  * wavelamp_frameset = NULL, * used_frameset = NULL,
-	  * darkcalib_frameset = NULL;
+	  * darkcalib_frameset = NULL, *wave_param_frameset= NULL;
 	
 	cpl_frame * frame;
 	
 	gravi_data * data = NULL, * dark_map = NULL, * wave_map = NULL,
-	  * profile_map = NULL, * badpix_map = NULL, * preproc_data = NULL, * p2vm_map = NULL;
+	  * profile_map = NULL, * badpix_map = NULL, * preproc_data = NULL, * p2vm_map = NULL,
+	  * wave_param = NULL;
 	
 	/* Message */
 	gravity_print_banner (); 
@@ -312,7 +316,9 @@ static int gravity_wavelamp(cpl_frameset            * frameset,
 	wavecalib_frameset = gravi_frameset_extract_wave_map (frameset);
 	flatcalib_frameset = gravi_frameset_extract_flat_map (frameset);
 	badcalib_frameset = gravi_frameset_extract_bad_map (frameset);
-	
+    /* EKW 07/12/2018 Extract new calibration file wave_param frameset */
+    wave_param_frameset = gravi_frameset_extract_wave_param (frameset);
+
 	/* Check input framesets */
 	if ( (cpl_frameset_is_empty (dark_frameset) &&
 		  cpl_frameset_is_empty (darkcalib_frameset)) ||
@@ -430,9 +436,20 @@ static int gravity_wavelamp(cpl_frameset            * frameset,
     //spectrum_table = gravi_data_get_spectrum_data (preproc_data, GRAVI_SC);
 	//argonwave_table = gravi_compute_argon_wave (spectrum_table);
     //gravi_data_add_table (preproc_data, NULL, "WAVE_ARGON_RESAMP", argonwave_table);
-	
+
+    /* START EKW 07/12/2018 read wave parameter from calibration file - Load the WAVE_PARAM Parameter */
+    cpl_frame *frame2;
+    if (!cpl_frameset_is_empty (wave_param_frameset)) {
+	  frame2 = cpl_frameset_get_position (wave_param_frameset, 0);
+	  wave_param = gravi_data_load_frame (frame2, used_frameset);
+	}
+	else
+	  cpl_msg_error (cpl_func, "There is no WAVE_PARAM in the frameset");
+
+    /* END EKW 07/12/2018 read wave parameter from calibration file - Load the WAVE_PARAM Parameter */
+
 	/* Compute position */
-	gravi_compute_argon_pos (preproc_data);
+	gravi_compute_argon_pos (preproc_data, wave_param);
 
 	CPLCHECK_CLEAN ("Cannot compute the positions");
 
@@ -456,12 +473,15 @@ cleanup :
     FREE (cpl_frameset_delete, used_frameset);
     FREE (cpl_frameset_delete, dark_frameset);
     FREE (cpl_frameset_delete, darkcalib_frameset);
+    FREE (cpl_frameset_delete, wave_param_frameset);
+
     FREE (gravi_data_delete, dark_map);
     FREE (gravi_data_delete, wave_map);
     FREE (gravi_data_delete, profile_map);
     FREE (gravi_data_delete, badpix_map);
     FREE (gravi_data_delete, p2vm_map);
     FREE (gravi_data_delete, preproc_data);
+    FREE (gravi_data_delete, wave_param);
 	
 	gravi_msg_function_exit(1);
     return (int)cpl_error_get_code();
