@@ -37,6 +37,7 @@
 /*
  *  History
  *    ekw   04/12/2018 use GRAVITY_WAVE.fits calibration file instead of hardcoded values
+ *    ekw   10/01/2019 fix a few warnings : roof_pos, qc_min, qc_max parameter usage
  */
 /*-----------------------------------------------------------------------------
                                    Includes
@@ -226,7 +227,7 @@ cpl_table * gravi_create_oiwave_table_sc (cpl_table * wave_table,
                                  9.597E-08};
 
 */
-    double *roof_pos;
+    /* double *roof_pos; */
     double * calib_eff_wave;
     cpl_table * calib_eff_table = gravi_data_get_table (wave_param, "WAVE_TAB");
    // CPLCHECK_MSG ("STATIC_CALIB not available in the SOF. It is mandatory for acqcam reduction.");
@@ -270,9 +271,10 @@ cpl_table * gravi_create_oiwave_table_sc (cpl_table * wave_table,
     /* EKW END 04/12/2018 */
     
     /* Get the QC */
-    double qc_min, qc_max;
+    /*double qc_min, qc_max;
     qc_min = cpl_propertylist_get_double (header, QC_MINWAVE(GRAVI_SC));
     qc_max = cpl_propertylist_get_double (header, QC_MAXWAVE(GRAVI_SC));
+    */
     CPLCHECK_NUL ("Cannot read the QC MINWAVE MAXWAVE");
     
     /* Get the max_wave and min_wave*/

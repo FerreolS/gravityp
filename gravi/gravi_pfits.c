@@ -29,6 +29,10 @@
  */
 /**@{*/
 
+/*
+ * History :
+ * ekw 10/01/2019  fix Warning : unused parameter : power 
+ */
 /*-----------------------------------------------------------------------------
                                    Includes
  -----------------------------------------------------------------------------*/
@@ -287,7 +291,7 @@ double gravi_pfits_get_met_wavelength (const cpl_propertylist * plist)
 {
     cpl_errorstate prestate = cpl_errorstate_get();
     
-    double power;
+    /* double power; */
     double wavelength;
     
     /*
@@ -308,7 +312,7 @@ double gravi_pfits_get_met_wavelength (const cpl_propertylist * plist)
      * If MLAS laser ON
      */
     else if (gravi_pfits_get_double(plist, "ESO INS MLAS LPOW") != 0) {
-        power=gravi_pfits_get_double(plist, "ESO INS MLAS LPOW");
+        /*  power=gravi_pfits_get_double(plist, "ESO INS MLAS LPOW"); */
         wavelength = cpl_propertylist_get_double(plist, "ESO INS MLAS LWAV");
         cpl_msg_info(cpl_func, "Using laser MLAS wavelength : %f ", wavelength);
     }

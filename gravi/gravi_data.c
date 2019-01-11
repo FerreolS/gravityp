@@ -32,6 +32,10 @@
  */
 /**@{*/
 
+/*
+ * History :
+ *   ekw 10/01/2019  Remove x in int gravi_data_get_dark_pos(cpl_table * detector_table, int reg, int x);
+ */
 /*-----------------------------------------------------------------------------
                                    Includes
  -----------------------------------------------------------------------------*/
@@ -71,7 +75,7 @@ struct _gravi_data_{
 
 int gravi_data_is_oi_ext (cpl_propertylist * hdr);
 cpl_error_code gravi_data_check_savetypes(cpl_propertylist * hdr, cpl_table * oi_table);
-int gravi_data_get_dark_pos(cpl_table * detector_table, int reg, int x);
+int gravi_data_get_dark_pos(cpl_table * detector_table, int reg);
 
 /*-----------------------------------------------------------------------------
                              Functions code
@@ -1043,7 +1047,7 @@ cpl_error_code gravi_data_save_new (gravi_data 		  * self,
  * given region at x position
  */
 /*----------------------------------------------------------------------------*/
-int gravi_data_get_dark_pos(cpl_table * detector_table, int reg, int x)
+int gravi_data_get_dark_pos(cpl_table * detector_table, int reg)
 {
     cpl_ensure_code (detector_table, CPL_ERROR_NULL_INPUT);
 
@@ -1223,7 +1227,7 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
           }
 */
           for (cpl_size reg = 0; reg < nreg-1; reg++) {
-              int starty=gravi_data_get_dark_pos(detector_table, reg, x)-n_bias_line/2;
+              int starty=gravi_data_get_dark_pos(detector_table, reg)-n_bias_line/2;
               for (cpl_size y = 0; y < n_bias_line; y++){
                   double value = cpl_image_get (frame, x+1, starty+y+1, &nv);
                   cpl_vector_set (bias_column, bias_index, value);

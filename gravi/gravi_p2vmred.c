@@ -30,6 +30,11 @@
  */
 /**@{*/
 
+/*
+ * History :
+ *      ekw 11/01/2019 Fix Warnings , unused parameter :  npol_ft, npol_sc, p2vmreducedFlag ,init_type_data, end_type_data
+ */
+
 /*-----------------------------------------------------------------------------
                                    Includes
  -----------------------------------------------------------------------------*/
@@ -335,7 +340,7 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
 
 	char qc_name[90];
     int ntel = 4, nbase = 6;
-	int nv, npol_ft, npol_sc;
+	int nv; /* npol_ft, npol_sc; */
 
 	/* Timers */
 	clock_t timer_ft = 0, timer_sc = 0, timer_other = 0, timer_start = 0;
@@ -345,13 +350,13 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
 	cpl_propertylist * preproc_header = gravi_data_get_header (preproc_data);
 
 	/* Flag if the p2vmreduced-file is requested */
-	int p2vmreducedFlag = 0;
+	/* int p2vmreducedFlag = 0; */
     if ( (cpl_parameterlist_find_const (parlist, "gravity.dfs.p2vmred-file") != NULL &&
           gravi_param_get_bool (parlist,"gravity.dfs.p2vmred-file")) ||
          (cpl_parameterlist_find_const (parlist, "gravity.dfs.astro-file") != NULL &&
           gravi_param_get_bool (parlist,"gravity.dfs.astro-file")) ) {
         cpl_msg_info (cpl_func, "p2vmreduced-file is requested, will add computation time.");
-        p2vmreducedFlag = 1;
+        /* p2vmreducedFlag = 1; */
     } else {
         cpl_msg_info (cpl_func, "p2vmreduced-file is not requested.");
 	}
@@ -426,12 +431,14 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
 	/*
 	 * For each type of data SC / FT 
 	 */
-    int init_type_data = 1;
+    /* int init_type_data = 1;
     int end_type_data = 1;
+
     if(det_type == GRAVI_DET_SC || det_type == GRAVI_DET_ALL)
         init_type_data = 0;
     if(det_type == GRAVI_DET_FT || det_type == GRAVI_DET_ALL)
         end_type_data = 1;
+    */
 	for (int type_data = 0; type_data < 2; type_data ++){
 
         /* Check if this data is present */
@@ -459,8 +466,8 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
 		/* Guess the number of polarisation by looking at the number of region 
          * Save the number of polarisation for further use */
 		int npol = (n_detregion>24 ? 2 : 1);
-		if (type_data == GRAVI_FT) npol_ft = npol;
-		if (type_data == GRAVI_SC) npol_sc = npol;
+		/*if (type_data == GRAVI_FT) npol_ft = npol;
+		if (type_data == GRAVI_SC) npol_sc = npol; */
 
 		/* FIXME: Here we assume the two polarisation (if any)
 		 * have the same number of channels ? */

@@ -36,6 +36,7 @@
  * History :
  * ekw 12/11/2018 add gravi_data *static_param_data to gravi_metrology_telfc
  *                add gravi_data *static_param_data to  gravi_metrology_get_fc_focus
+ * ekw 10/01/2019 remove   int old_flag_telescope[4][4][2]; int old_flag_fiber_coupler[4][2];
  */
 
 /*-----------------------------------------------------------------------------
@@ -674,8 +675,8 @@ int metrology_algorithm(structTacData * tacData)
     int err = 0;
     long tel, diode, side;
     long i, idx;
-    int old_flag_telescope[4][4][2];
-    int old_flag_fiber_coupler[4][2];
+    /* int old_flag_telescope[4][4][2];
+    int old_flag_fiber_coupler[4][2]; */
     double x0, y0, x1, y1, xc, yc, delta_phase, sum_cos, sum_sin, new_phase, sq1, rms, tmp, speed;
 
     int flag, comb_flag, sum_flag;
@@ -1203,7 +1204,7 @@ int metrology_algorithm(structTacData * tacData)
             comb_flag = 0;
             sum_flag = 0;
             for (diode = 0; diode < 4; diode++) {
-                old_flag_telescope[tel][diode][side] = tacData->total_flag_telescope[tel][diode][side];
+                /* old_flag_telescope[tel][diode][side] = tacData->total_flag_telescope[tel][diode][side]; */
                 tacData->total_flag_telescope[tel][diode][side] =
                 tacData->flag_flux_telescope[tel][diode][side]
                 + tacData->flag_unwrap_telescope[tel][diode][side]
@@ -1216,7 +1217,7 @@ int metrology_algorithm(structTacData * tacData)
                 if( tacData->total_flag_telescope[tel][diode][side] != 0) sum_flag++;
             } /* end loop diode */
             
-            old_flag_fiber_coupler[tel][side] = tacData->total_flag_fiber_coupler[tel][side];
+            /* old_flag_fiber_coupler[tel][side] = tacData->total_flag_fiber_coupler[tel][side]; */
             tacData->total_flag_fiber_coupler[tel][side] =
             tacData->flag_flux_fiber_coupler[tel][side]
             + tacData->flag_unwrap_fiber_coupler[tel][side]
@@ -1478,10 +1479,10 @@ double gravi_metrology_get_fc_focus (cpl_propertylist * header, int gv, gravi_da
 
 		if ( cpl_table_has_column(default_focus_table , "fc_focus_at") ) {
 		  defocus_at = cpl_table_get_data_double (default_focus_table, "fc_focus_at");
-		  cpl_msg_debug(cpl_func,"defocus_at [0] : %e \n",defocus_at[0] );
-		  cpl_msg_debug(cpl_func,"defocus_at [1] : %e \n",defocus_at[1] );
-		  cpl_msg_debug(cpl_func,"defocus_at [2] : %e \n",defocus_at[2] );
-		  cpl_msg_debug(cpl_func,"defocus_at [3] : %e \n",defocus_at[3] );
+		  cpl_msg_info(cpl_func,"defocus_at [0] : %e \n",defocus_at[0] );
+		  cpl_msg_info(cpl_func,"defocus_at [1] : %e \n",defocus_at[1] );
+		  cpl_msg_info(cpl_func,"defocus_at [2] : %e \n",defocus_at[2] );
+		  cpl_msg_info(cpl_func,"defocus_at [3] : %e \n",defocus_at[3] );
 		}
 		else {
 		  cpl_msg_warning(cpl_func,"Cannot get the default values for fc_focus_at ");
@@ -1489,10 +1490,10 @@ double gravi_metrology_get_fc_focus (cpl_propertylist * header, int gv, gravi_da
 
 		if ( cpl_table_has_column(default_focus_table , "fc_focus_ut") ) {
 		  defocus_ut = cpl_table_get_data_double (default_focus_table, "fc_focus_ut");
-		  cpl_msg_debug(cpl_func,"defocus_focus_ut [0] : %e \n",defocus_ut[0] );
-		  cpl_msg_debug(cpl_func,"defocus_focus_ut [1] : %e \n",defocus_ut[1] );
-		  cpl_msg_debug(cpl_func,"defocus_focus_ut [2] : %e \n",defocus_ut[2] );
-		  cpl_msg_debug(cpl_func,"defocus_focus_ut [3] : %e \n",defocus_ut[3] );
+		  cpl_msg_info(cpl_func,"defocus_focus_ut [0] : %e \n",defocus_ut[0] );
+		  cpl_msg_info(cpl_func,"defocus_focus_ut [1] : %e \n",defocus_ut[1] );
+		  cpl_msg_info(cpl_func,"defocus_focus_ut [2] : %e \n",defocus_ut[2] );
+		  cpl_msg_info(cpl_func,"defocus_focus_ut [3] : %e \n",defocus_ut[3] );
 		}
 		else {
 		  cpl_msg_warning(cpl_func,"Cannot get the default values for fc_focus_ut ");
@@ -1565,10 +1566,10 @@ double gravi_metrology_get_fc_shift (cpl_propertylist * header, int gv, gravi_da
 
 		if ( cpl_table_has_column(default_focus_table , "fc_focus_at") ) {
 		  shift_at = cpl_table_get_data_double (default_focus_table, "fc_focus_shift_at");
-		  cpl_msg_debug(cpl_func,"shift_at [0] : %e \n",shift_at[0] );
-		  cpl_msg_debug(cpl_func,"shift_at [1] : %e \n",shift_at[1] );
-		  cpl_msg_debug(cpl_func,"shift_at [2] : %e \n",shift_at[2] );
-		  cpl_msg_debug(cpl_func,"shift_at [3] : %e \n",shift_at[3] );
+		  cpl_msg_info(cpl_func,"shift_at [0] : %e \n",shift_at[0] );
+		  cpl_msg_info(cpl_func,"shift_at [1] : %e \n",shift_at[1] );
+		  cpl_msg_info(cpl_func,"shift_at [2] : %e \n",shift_at[2] );
+		  cpl_msg_info(cpl_func,"shift_at [3] : %e \n",shift_at[3] );
 		}
 		else {
 		  cpl_msg_warning(cpl_func,"Cannot get the default values for fc_focus_shift_at ");
@@ -1576,10 +1577,10 @@ double gravi_metrology_get_fc_shift (cpl_propertylist * header, int gv, gravi_da
 
 		if ( cpl_table_has_column(default_focus_table , "fc_focus_ut") ) {
 		  shift_ut = cpl_table_get_data_double (default_focus_table, "fc_focus_shift_ut");
-		  cpl_msg_debug(cpl_func,"shift_ut [0] : %e \n", shift_ut[0] );
-		  cpl_msg_debug(cpl_func,"shift_ut [1] : %e \n", shift_ut[1] );
-		  cpl_msg_debug(cpl_func,"shift_ut [2] : %e \n", shift_ut[2] );
-		  cpl_msg_debug(cpl_func,"shift_ut [3] : %e \n", shift_ut[3] );
+		  cpl_msg_info(cpl_func,"shift_ut [0] : %e \n", shift_ut[0] );
+		  cpl_msg_info(cpl_func,"shift_ut [1] : %e \n", shift_ut[1] );
+		  cpl_msg_info(cpl_func,"shift_ut [2] : %e \n", shift_ut[2] );
+		  cpl_msg_info(cpl_func,"shift_ut [3] : %e \n", shift_ut[3] );
 		}
 		else {
 		  cpl_msg_warning(cpl_func,"Cannot get the default values for fc_focus_shift_ut ");

@@ -30,6 +30,12 @@
  */
 /**@{*/
 
+/*
+ * History 
+ *    ekw 11/01/2019  Fix Warnings , unused parameter : profile_header 
+ *                                   brackets of if statements 
+ */
+
 /*-----------------------------------------------------------------------------
                                    Includes
  -----------------------------------------------------------------------------*/
@@ -598,7 +604,7 @@ gravi_data * gravi_extract_spectrum (gravi_data * raw_data,
 
     /* Get header of input gravi_data */
     cpl_propertylist * raw_header = gravi_data_get_header (raw_data);
-	cpl_propertylist * profile_header = gravi_data_get_header (profile_map);
+	/* cpl_propertylist * profile_header = gravi_data_get_header (profile_map); */
 
     /* Create output gravi_data */
 	gravi_data * spectrum_data = gravi_data_new(0);
@@ -1371,10 +1377,12 @@ cpl_error_code gravi_align_spectrum (gravi_data * spectrum_data,
 	/* Loop on FT/SC */
     int init_type_data = 1;
     int end_type_data = 1;
-    if(det_type == GRAVI_DET_SC || det_type == GRAVI_DET_ALL)
+    if(det_type == GRAVI_DET_SC || det_type == GRAVI_DET_ALL) {
         init_type_data = 0;
-    if(det_type == GRAVI_DET_FT || det_type == GRAVI_DET_ALL)
+    }
+    if(det_type == GRAVI_DET_FT || det_type == GRAVI_DET_ALL) {
         end_type_data = 1;
+    }
 	for (int type_data = init_type_data; type_data <= end_type_data; type_data++ ) {
 
 		/* Check if SPECTRUM data exists */

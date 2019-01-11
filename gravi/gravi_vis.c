@@ -36,6 +36,7 @@
  * History
  *    ekw  21.11.2018   memory leak in gravi_average_self_visphi
  *                      changes marked as 'EKW'
+ *    ekw  11/01/2019   Fix Warning parameter 'ret'
  */
 /*-----------------------------------------------------------------------------
                                    Includes
@@ -1931,7 +1932,7 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
                          subtoken = strtok_r(str2, ":", &saveptr2);
                          if (subtoken == NULL)
                              break;
-                         int ret=sscanf(subtoken,"%d", (i==0)?&(cmin[j]):&(cmax[j]));
+                         /* int ret=sscanf(subtoken,"%d", (i==0)?&(cmin[j]):&(cmax[j])); */
                       }
                   }
                 }

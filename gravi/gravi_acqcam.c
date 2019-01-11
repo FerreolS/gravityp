@@ -35,6 +35,8 @@
  *    ekw 26/11/2018 Read parameter roof_x, roof_y, sot_x, spot_y and roof_pos from calibration file
  *    ekw 28/11/2018 Read parameter plate scale from calibration file
  *    ekw 03/12/2018 Read gravi_acqcam_pupil parameter from calibration file
+ *    ekw 10/01/2019 Fix compiler Warnings : inititialize with NULL : roof_x, roof_y, sot_x, spot_y and roof_pos
+ *                                           unused parameter nsy
  */
 /*-----------------------------------------------------------------------------
                                    Includes
@@ -1270,18 +1272,18 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
     /* Position of roof center on full frame */
     //double roof_x[] = {274.4, 787.1, 1236.1, 1673.4};
     //double roof_y[] = {242.3, 247.7, 225.8, 235.6};
-    double *roof_x;
-    double *roof_y;
+    double *roof_x = NULL;
+    double *roof_y = NULL;
     
     /* Position of single-field spot on full frame */
     //double spot_x[] = {289. , 798.2, 1245.5, 1696.};
     //double spot_y[] = {186.5, 187.5,  172.5,  178.};
-    double *spot_x;
-    double *spot_y;
+    double *spot_x = NULL;
+    double *spot_y = NULL;
     
     /* Default position angle of roof */
     //double roof_pos[] = {38.49, 38.54, 38.76, 39.80};
-    double *roof_pos;
+    double *roof_pos = NULL;
 
     cpl_table * roof_pos_table = gravi_data_get_table (static_param_data, "ROOFPOS");
     CPLCHECK_MSG ("STATIC_CALIB not available in the SOF. It is mandatory for acqcam reduction.");
@@ -1361,10 +1363,10 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
     
     /* If sub-windowing, we read the sub-window size */
     cpl_size nsx = 512;
-    cpl_size nsy = 512;
+    /* EKW 10/01/2019 cpl_size nsy = 512; */
     if ( cpl_propertylist_has (header, "ESO DET1 FRAMES NX") ) {
       nsx = cpl_propertylist_get_int (header, "ESO DET1 FRAMES NX");
-      nsy = cpl_propertylist_get_int (header, "ESO DET1 FRAMES NY");
+      /* EKW 10/01/2019  nsy = cpl_propertylist_get_int (header, "ESO DET1 FRAMES NY"); */
     }
     
     /* Compute separation */
