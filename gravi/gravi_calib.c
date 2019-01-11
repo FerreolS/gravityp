@@ -25,9 +25,9 @@
  * These functions characterize the pixels of the detectors.
  * They are call by the recipe gravity_dark or gravity_p2vm.
  * - function dedicated to dark computation @c gravi_compute_dark(),
- * @c gravi_average_dark ()
- * - function dedicated to flat computation : @c gravi_compute_profile,
- * @c gravi_create_profile(), @c gravi_fit_profile(), @c gravi_create_profile_image()
+ * @c gravi_average_dark()
+ * - function dedicated to flat computation : @c gravi_compute_profile(),
+ * @c gravi_fit_profile(), @c gravi_create_profile_image()
  * - computation of the gain : @c gravi_compute_gain()
  * - computation of the bad pixels : @c gravi_compute_badpix()
  */

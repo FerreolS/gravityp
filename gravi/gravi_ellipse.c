@@ -19,7 +19,7 @@
  */
 
 /**
- * @defgroup gravi_ellipse  Compute phase and OPDs from data without P2VM
+ * @defgroup gravi_ellipse  Phase and OPD estimation with ellipse
  *
  * This module implements the computation of the phase with the ellipse methode.
  * See @c gravi_ellipse_phase_create(). It also implement the function

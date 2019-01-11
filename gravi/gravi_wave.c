@@ -22,12 +22,12 @@
  * @defgroup gravi_wave     Spectral calibration
  *
  * This module implements functions involved in the spectral calibration. The
- * function @c gravi_compute_wave do the calibration itself :
+ * function @c gravi_compute_wave() do the calibration itself :
  *
  * The wavelength of each spectral element is computed by comparing the measured
  * phases of this spectral element with the realized OPD: OPDFT or OPDSC.
  * The measured phases are computed from the A, B, C and D measurements with ellipse
- * methode ().
+ * methode (see module Phase and OPD estimation with ellipse).
  *
  * For each computed phase we know the expected OPD, OPDFT or OPD_SC from the metrology (@c gravi_compute_opds()).
  * The slope of the phase versus OPD gives us the wavelength of the spectral element.
