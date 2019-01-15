@@ -122,4 +122,7 @@ p2vm_map.fits \
 vis_data.fits \
 oi_vis_SC.fits \
 vis_SC.fits \
-wavenumber_sc_table.fits
+wavenumber_sc_table.fits \
+GRAVI_STATIC_CALIB.fits \
+GRAVI_WAVE.fits
+
