@@ -357,6 +357,7 @@ static int gravity_eop(cpl_frameset            * frameset,
     /* Cleanup */
     cpl_propertylist_delete (applist);
     cpl_table_delete (eop_table);
+    free(eop_data);
     cpl_free (filename);
     cpl_free (timestamp_lastfinal);
 
