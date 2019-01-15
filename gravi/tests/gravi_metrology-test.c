@@ -28,6 +28,7 @@
  *  History :
  *  ekw  14/11/2018  correct unused variable warnings
  *  ekw  12/11/2018  add gravi_data *static_param_data
+ *  ekw  15/01/2019  unused parameter telname
  */
 
 #ifdef HAVE_CONFIG_H
@@ -104,7 +105,7 @@ int gravi_metrology_test(void){
     cpl_propertylist_prepend_float (propertylist,"ESO MET GV3 AT FC FOCUS",  30.0);
     cpl_propertylist_prepend_float (propertylist,"ESO MET GV4 AT FC FOCUS", -70.0);
 
-    const char * telname = gravi_conf_get_telname(1, propertylist );
+    /* const char * telname = gravi_conf_get_telname(1, propertylist ); */
 
     defocus[0] = gravi_metrology_get_fc_focus (propertylist, 0,  gravi_data_focus);
     defocus[1] = gravi_metrology_get_fc_focus (propertylist, 1,  gravi_data_focus);

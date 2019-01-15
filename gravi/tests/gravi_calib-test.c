@@ -29,6 +29,7 @@
  *      ekw 13/11/2018 add parameter to gravi_metrology_reduced
  *      ekw   04/12/2018 use GRAVITY_WAVE.fits calibration file instead of hardcoded values
  *      ekw   17/12/2018 correct GRAVI_WAVE.fits access
+ *      ekw   15/01/2019 midj_obs not used
  */
 
 #ifdef HAVE_CONFIG_H
@@ -363,7 +364,7 @@ int gravi_calib_test(void){
      */
 
 	gravi_data * data_wave = gravi_data_new (0);
-	double mjd_obs;
+	/* double mjd_obs; */
 
     test_data(data, gravi_data_load(DATADIR_TEST "Wave.fits"),
     		               "gravi_compute_wave: Load the data...", flag);
@@ -375,8 +376,8 @@ int gravi_calib_test(void){
 	cpl_propertylist * met_plist = cpl_propertylist_duplicate(gravi_data_get_plist(data,
 			GRAVI_METROLOGY_EXT));
     opl_table = cpl_table_new (cpl_table_get_nrow(metrology_table));
-    mjd_obs = gravi_pfits_get_mjd (gravi_data_get_plist(data,
-			GRAVI_PRIMARY_HDR_EXT));
+    /* mjd_obs = gravi_pfits_get_mjd (gravi_data_get_plist(data,
+			GRAVI_PRIMARY_HDR_EXT)); */
     double wave_met = gravi_pfits_get_met_wavelength_mean(
     		gravi_data_get_plist(data, GRAVI_PRIMARY_HDR_EXT), metrology_table);
 	cpl_table * p2vm_met = gravi_metrology_compute_p2vm (metrology_table, wave_met);

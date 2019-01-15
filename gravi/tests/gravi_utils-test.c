@@ -298,7 +298,7 @@ int gravi_utils_test(void){
     /*
 	 * gravi_imglist_sc_collapse
 	 */
-	cpl_propertylist * profile_plist=gravi_data_get_plist(profile_map, GRAVI_PROFILE_DATA_EXT);
+	/* cpl_propertylist * profile_plist=gravi_data_get_plist(profile_map, GRAVI_PROFILE_DATA_EXT); */
 	cpl_size startx = 22;//gravi_pfits_get_startx (profile_plist);
 	test_pfailure (CPL_ERROR_NULL_INPUT, gravi_imglist_sc_collapse(
 			NULL,
