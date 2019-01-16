@@ -26,9 +26,9 @@
  *      Author: nabih
  *
  *  History :
- *  ekw  14/11/2018  correct unused variable warnings
- *  ekw  12/11/2018  add gravi_data *static_param_data
- *  ekw  15/01/2019  unused parameter telname
+ *  14/11/2018  correct unused variable warnings
+ *  12/11/2018  add gravi_data *static_param_data
+ *  15/01/2019  unused parameter telname
  */
 
 #ifdef HAVE_CONFIG_H

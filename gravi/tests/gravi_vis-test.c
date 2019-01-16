@@ -26,7 +26,7 @@
  *      Author: nabih
  *
  *  History
- *  ekw  14/11/2018 correct unused variable / forward declaration of gravi_average_self_visphi / cmin-cmax pointer
+ *  14/11/2018 correct unused variable / forward declaration of gravi_average_self_visphi / cmin-cmax pointer
  */
 
 #ifdef HAVE_CONFIG_H

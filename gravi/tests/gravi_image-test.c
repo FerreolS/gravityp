@@ -25,7 +25,7 @@
  * $Name: HEAD $
  *
  * History :
- * ekw   15/11/2018 clean for Jenkins report
+ * 15/11/2018 clean for Jenkins report
  */
 
 #ifdef HAVE_CONFIG_H
