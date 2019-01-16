@@ -25,7 +25,7 @@
  * $Name:  $
  *
  * History :
- *    ekw   04/12/2018 use GRAVITY_WAVE.fits calibration file instead of hardcoded values
+ *    04/12/2018 use GRAVITY_WAVE.fits calibration file instead of hardcoded values
  */
 
 #ifdef HAVE_CONFIG_H

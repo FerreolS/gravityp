@@ -25,7 +25,7 @@
  * $Name:  $
  *
  * History
- * ekw 12/11/2018 add static_param_frameset / static_param_data
+ * 12/11/2018 add static_param_frameset / static_param_data
  *
  */
 

@@ -25,8 +25,8 @@
  * $Name:  $
  *
  * History
- * ekw      12/11/2018  add static_param_frameset
- * ekw      26/11/2018  add static_param_frameset to call of gravi_reduce_acqcam
+ * 12/11/2018  add static_param_frameset
+ * 26/11/2018  add static_param_frameset to call of gravi_reduce_acqcam
  */
 
 #ifdef HAVE_CONFIG_H
