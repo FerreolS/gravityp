@@ -35,7 +35,7 @@
 
 /*
  * History :
- *               ekw 11/01/2019 : Move global parameter from gravi_calib.h
+ *               11/01/2019 : Move global parameter from gravi_calib.h
  *                                initialize sigma with 0
  *                                add brackets to 'for' statements
  */

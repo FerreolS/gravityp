@@ -20,7 +20,7 @@
 
 /*-----------------------------------------------------------------------------
  * History :
- *            ekw 11/01/2019 : Global parameter to gravi_calib.c
+ *            11/01/2019 : Global parameter to gravi_calib.c
  -----------------------------------------------------------------------------*/
 #ifndef GRAVI_CALIB_H_
 #define GRAVI_CALIB_H_
