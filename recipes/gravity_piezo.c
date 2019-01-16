@@ -25,6 +25,10 @@
  * $Name:  $
  */
 
+/*
+ * History :
+ *    16/01/2019 fix warning unused parameter isCalib
+ */
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
@@ -170,7 +174,7 @@ static int gravity_piezo_create(cpl_plugin * plugin)
     }                                                                  
 
     /* Fill the parameters list */
-    int isCalib = 1;
+    /* int isCalib = 1; */
 
     /* Use static names (output_procatg.fits) */
     gravi_parameter_add_static_name (recipe->parameters);
