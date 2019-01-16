@@ -20,7 +20,7 @@
 
 /*
  * History :
- * ekw 12/11/2018  Add one gravi_Data* to  gravi_metrology_reduce
+ * 12/11/2018  Add one gravi_Data* to  gravi_metrology_reduce
  */
 
 #ifndef METREDLIB_H

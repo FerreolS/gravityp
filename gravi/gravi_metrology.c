@@ -34,9 +34,9 @@
 /*
  *
  * History :
- * ekw 12/11/2018 add gravi_data *static_param_data to gravi_metrology_telfc
+ * 12/11/2018 add gravi_data *static_param_data to gravi_metrology_telfc
  *                add gravi_data *static_param_data to  gravi_metrology_get_fc_focus
- * ekw 10/01/2019 remove   int old_flag_telescope[4][4][2]; int old_flag_fiber_coupler[4][2];
+ * 10/01/2019 remove   int old_flag_telescope[4][4][2]; int old_flag_fiber_coupler[4][2];
  */
 
 /*-----------------------------------------------------------------------------

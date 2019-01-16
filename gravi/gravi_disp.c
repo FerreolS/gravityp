@@ -35,7 +35,7 @@
 
 /*
  * History
- * ekw 07/12/208 add wave_param to  gravi_compute_argon_pos
+ * 07/12/208 add wave_param to  gravi_compute_argon_pos
  */
 /*----------------------------------------------------------------------------
                                     DEBUG

@@ -20,7 +20,7 @@
 
 /*
  * History :
- * 	ekw   26/11/2018   add static_param_frameset to gravi_reduce_acqcam
+ * 	  26/11/2018   add static_param_frameset to gravi_reduce_acqcam
  */
 #ifndef GRAVI_ACQCAM_H
 #define GRAVI_ACQCAM_H

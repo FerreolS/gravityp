@@ -31,7 +31,7 @@
 
 /*
  * History :
- * ekw 10/01/2019  fix Warning : unused parameter : power 
+ * 10/01/2019  fix Warning : unused parameter : power
  */
 /*-----------------------------------------------------------------------------
                                    Includes

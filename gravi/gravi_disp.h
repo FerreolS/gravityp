@@ -19,7 +19,7 @@
  */
 /*
  * History
- * ekw 07/12/2018 add wave_param to gravi_compute_argon_pos
+ * 07/12/2018 add wave_param to gravi_compute_argon_pos
  */
 #ifndef GRAVI_DISP_H_
 #define GRAVI_DISP_H_

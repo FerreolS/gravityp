@@ -20,9 +20,9 @@
 
 /*
  * History
- * ekw    12/11/2018 add cpl_frameset * gravi_frameset_extract_static_param 
+ *     12/11/2018 add cpl_frameset * gravi_frameset_extract_static_param
  *                   add STATIC_PARAM
- * ekw    04/12/2018 add cpl_frameset * gravi_frameset_extract_wave_param (cpl_frameset * frameset);
+ *     04/12/2018 add cpl_frameset * gravi_frameset_extract_wave_param (cpl_frameset * frameset);
  *                   add WAVE_PARAM
  */
 #ifndef GRAVI_DFS_H

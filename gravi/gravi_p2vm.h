@@ -19,7 +19,7 @@
  */
 /*
  * History
- * ekw  04/12/2018 add *gravi_data wave_param to gravi_create_p2vm
+ * 04/12/2018 add *gravi_data wave_param to gravi_create_p2vm
  */
 #ifndef GRAVI_P2VM_H_
 #define GRAVI_P2VM_H_

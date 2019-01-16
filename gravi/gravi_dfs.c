@@ -34,8 +34,8 @@
 
 /*
  * History :
- * ekw  12/11/2018  add gravi_frameset_extract_static_param
- * ekw  04/12/2018  add gravi_frameset_extract_wave_param
+ *  12/11/2018  add gravi_frameset_extract_static_param
+ *  04/12/2018  add gravi_frameset_extract_wave_param
  */
 
 /*-----------------------------------------------------------------------------

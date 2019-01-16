@@ -36,8 +36,8 @@
 
 /*
  *  History
- *    ekw   04/12/2018 use GRAVITY_WAVE.fits calibration file instead of hardcoded values
- *    ekw   10/01/2019 fix a few warnings : roof_pos, qc_min, qc_max parameter usage
+ *    04/12/2018 use GRAVITY_WAVE.fits calibration file instead of hardcoded values
+ *    10/01/2019 fix a few warnings : roof_pos, qc_min, qc_max parameter usage
  */
 /*-----------------------------------------------------------------------------
                                    Includes

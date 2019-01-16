@@ -34,9 +34,9 @@
 
 /*
  * History
- *    ekw  21.11.2018   memory leak in gravi_average_self_visphi
+ *    21.11.2018   memory leak in gravi_average_self_visphi
  *                      changes marked as 'EKW'
- *    ekw  11/01/2019   Fix Warning parameter 'ret'
+ *    11/01/2019   Fix Warning parameter 'ret'
  */
 /*-----------------------------------------------------------------------------
                                    Includes
