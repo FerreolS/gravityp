@@ -32,10 +32,10 @@
 
 /*
  * History :
- *    ekw 26/11/2018 Read parameter roof_x, roof_y, sot_x, spot_y and roof_pos from calibration file
- *    ekw 28/11/2018 Read parameter plate scale from calibration file
- *    ekw 03/12/2018 Read gravi_acqcam_pupil parameter from calibration file
- *    ekw 10/01/2019 Fix compiler Warnings : inititialize with NULL : roof_x, roof_y, sot_x, spot_y and roof_pos
+ *    26/11/2018 Read parameter roof_x, roof_y, sot_x, spot_y and roof_pos from calibration file
+ *    28/11/2018 Read parameter plate scale from calibration file
+ *    03/12/2018 Read gravi_acqcam_pupil parameter from calibration file
+ *    10/01/2019 Fix compiler Warnings : inititialize with NULL : roof_x, roof_y, sot_x, spot_y and roof_pos
  *                                           unused parameter nsy
  */
 /*-----------------------------------------------------------------------------
