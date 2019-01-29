@@ -733,7 +733,7 @@ gravi_data * gravi_data_load_rawframe (cpl_frame * frame,
 /*----------------------------------------------------------------------------*/
 gravi_data * gravi_data_load_rawframe_ext (cpl_frame * frame,
                                            cpl_frameset * used_frameset,
-                                           char * extensions_regexp)
+                                           const char * extensions_regexp)
 {
   cpl_ensure (frame, CPL_ERROR_NULL_INPUT, NULL);
   
