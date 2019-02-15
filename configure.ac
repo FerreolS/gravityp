@@ -66,7 +66,6 @@ AC_C_INLINE
 
 # Checks for library functions.
 AC_CHECK_FUNCS([floor pow sqrt isinf isnan])
-ESO_FUNC_STRDUP
 
 # mark hdrl folder as containing a configurable package
 AC_CONFIG_SUBDIRS([hdrl])
