@@ -38,6 +38,7 @@
  *  History
  *    04/12/2018 use GRAVITY_WAVE.fits calibration file instead of hardcoded values
  *    10/01/2019 fix a few warnings : roof_pos, qc_min, qc_max parameter usage
+ *    14/03/2019 fix the selection for the medium wavelength range; remove unused DEFINE
  */
 /*-----------------------------------------------------------------------------
                                    Includes
@@ -63,14 +64,6 @@
 #include "gravi_ellipse.h"
 #include "gravi_p2vm.h"
 
-/*-----------------------------------------------------------------------------
-                                  Defines
- -----------------------------------------------------------------------------*/
-
-#define GRAVI_DEFAULT_LBD_MIN 1.99e-6
-#define GRAVI_DEFAULT_LBD_MAX 2.45e-6
-#define GRAVI_LOW_LBD_MIN 2.0000e-6
-#define GRAVI_LOW_LBD_MAX 2.481e-6
 
 /*-----------------------------------------------------------------------------
                               Private prototypes
@@ -243,12 +236,7 @@ cpl_table * gravi_create_oiwave_table_sc (cpl_table * wave_table,
        cpl_msg_error(cpl_func,"Cannot get the default values for calib_eff_wave");
      }
 
-     /* from the Define at the begin
-      * #define GRAVI_DEFAULT_LBD_MIN 1.99e-6
-      * #define GRAVI_DEFAULT_LBD_MAX 2.45e-6
-      * #define GRAVI_LOW_LBD_MIN 2.0000e-6
-      * #define GRAVI_LOW_LBD_MAX 2.481e-6
-      * Additionally a MEDIAN entry was also requested by Sylvestre
+     /* Read the minimum and maximum wavelength values from the wave_param fits file
       * */
      double gravi_high_lbd_min = cpl_propertylist_get_double (gravi_data_get_plist(wave_param,GRAVI_PRIMARY_HDR_EXT), "ESO OIWAVE HIGH LBD MIN");
      cpl_msg_info (cpl_func,"gravi_high_lbd_min   : %e", gravi_high_lbd_min);
@@ -283,18 +271,27 @@ cpl_table * gravi_create_oiwave_table_sc (cpl_table * wave_table,
     double max_wave ,min_wave ;
     if (n_element<20)
     {
-       /* EKW  max_wave = GRAVI_LOW_LBD_MAX;
-        min_wave = GRAVI_LOW_LBD_MIN; */
+       /* EKW  max_wave = ESO OIWAVE LOW LBD MAX
+        min_wave = ESO OIWAVE LOW LBD MIN; */
     	max_wave = gravi_low_lbd_max;
     	min_wave = gravi_low_lbd_min;
         cpl_msg_info (cpl_func,"Using Low resolution wavelength table");
         
-    }else{
-        /*max_wave = GRAVI_DEFAULT_LBD_MAX;
-        min_wave = GRAVI_DEFAULT_LBD_MIN; */
-    	max_wave = gravi_high_lbd_max;
-    	min_wave = gravi_high_lbd_min;
-        cpl_msg_info (cpl_func,"Using High/Med resolution wavelength table");
+    } else if (n_element<500)
+    {
+        /* EKW  max_wave = ESO OIWAVE MED LBD MAX;
+         min_wave = ESO OIWAVE MED LBD MAX; */
+        max_wave = gravi_med_lbd_max;
+        min_wave = gravi_med_lbd_min;
+        cpl_msg_info (cpl_func,"Using Med resolution wavelength table");
+        
+    } else
+    {
+        /*max_wave = ESO OIWAVE HIGH LBD MAX;
+         min_wave = ESO OIWAVE HIGH LBD MAX; */
+        max_wave = gravi_high_lbd_max;
+        min_wave = gravi_high_lbd_min;
+        cpl_msg_info (cpl_func,"Using High resolution wavelength table");
     }
     CPLCHECK_NUL ("Cannot get the max_wave and min_wave");
     
