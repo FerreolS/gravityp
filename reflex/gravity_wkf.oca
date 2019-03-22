@@ -314,6 +314,9 @@ action ACTION_CALIB_P2VM
 minRet = 1; maxRet = 1;
 select file as DARK from calibFiles where PRO.CATG == "DARK_P2VM" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.DET2.SEQ1.DIT==DET2.SEQ1.DIT and inputFile.DET3.SEQ1.DIT==DET3.SEQ1.DIT and inputFile.INS.FDDL.WINDOW==INS.FDDL.WINDOW and inputFile.INSTRUME==INSTRUME;
 
+minRet = 0; maxRet = 1;
+select file as WAVE_PARAM from calibFiles where PRO.CATG == "WAVE_PARAM" and inputFile.INSTRUME==INSTRUME;
+
 recipe gravity_p2vm;
 //product DARK { PRO.CATG = "DARK"; PRO.EXT="dark.fits";}
 product FLAT { PRO.CATG = "FLAT_WKF"; PRO.EXT="flat.fits";}
@@ -339,6 +342,9 @@ select file as P2VM from calibFiles where PRO.CATG == "P2VM_WKF" and inputFile.I
 minRet = 0; maxRet = 1;
 select file as DISP_MODEL from calibFiles where PRO.CATG == "DISP_MODEL" and inputFile.INSTRUME==INSTRUME;
 
+minRet = 0; maxRet = 1;
+select file as STATIC_PARAM from calibFiles where PRO.CATG == "STATIC_PARAM" and inputFile.INSTRUME==INSTRUME;
+
 recipe gravity_vis;
 product SINGLE_SCI_VIS { PRO.CATG = "SINGLE_SCI_VIS"; PRO.EXT="single_sci_vis.fits";}
 }
@@ -359,6 +365,9 @@ select file as P2VM from calibFiles where PRO.CATG == "P2VM_WKF" and inputFile.I
 
 minRet = 0; maxRet = 1;
 select file as DISP_MODEL from calibFiles where PRO.CATG == "DISP_MODEL" and inputFile.INSTRUME==INSTRUME;
+
+minRet = 0; maxRet = 1;
+select file as STATIC_PARAM from calibFiles where PRO.CATG == "STATIC_PARAM" and inputFile.INSTRUME==INSTRUME;
 
 recipe gravity_vis;
 product SINGLE_CAL_VIS { PRO.CATG = "SINGLE_CAL_VIS"; PRO.EXT="single_cal_vis.fits";}
@@ -381,6 +390,9 @@ select file as P2VM from calibFiles where PRO.CATG == "P2VM_WKF" and inputFile.I
 minRet = 0; maxRet = 1;
 select file as DISP_MODEL from calibFiles where PRO.CATG == "DISP_MODEL" and inputFile.INSTRUME==INSTRUME;
 
+minRet = 0; maxRet = 1;
+select file as STATIC_PARAM from calibFiles where PRO.CATG == "STATIC_PARAM" and inputFile.INSTRUME==INSTRUME;
+
 recipe gravity_vis;
 product DUAL_SCI_VIS { PRO.CATG = "DUAL_SCI_VIS"; PRO.EXT="dual_sci_vis.fits";}
 }
@@ -401,6 +413,9 @@ select file as P2VM from calibFiles where PRO.CATG == "P2VM_WKF" and inputFile.I
 
 minRet = 0; maxRet = 1;
 select file as DISP_MODEL from calibFiles where PRO.CATG == "DISP_MODEL" and inputFile.INSTRUME==INSTRUME;
+
+minRet = 0; maxRet = 1;
+select file as STATIC_PARAM from calibFiles where PRO.CATG == "STATIC_PARAM" and inputFile.INSTRUME==INSTRUME;
 
 recipe gravity_vis;
 product DUAL_CAL_VIS { PRO.CATG = "DUAL_CAL_VIS"; PRO.EXT="dual_cal_vis.fits";}
