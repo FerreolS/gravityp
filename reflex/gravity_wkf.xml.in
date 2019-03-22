@@ -3271,13 +3271,13 @@
         </property>
         <property name="derivedFrom" class="org.kepler.moml.NamedObjIdReferralList" value="urn:lsid:kepler-project.org:actor:903:1:urn:lsid:kepler-project.org/ns/:52924:7:99:urn:lsid:kepler-project.org/ns/:80550:67:11">
         </property>
-        <property name="P2VM_config" class="ptolemy.data.expr.StringParameter" value="WAVE_RAW,WAVESC_RAW,FLAT_RAW,P2VM_RAW">
+        <property name="P2VM_config" class="ptolemy.data.expr.StringParameter" value="WAVE_RAW,WAVESC_RAW,FLAT_RAW,P2VM_RAW,WAVE_PARAM">
         </property>
         <property name="P2VM_min_number" class="ptolemy.data.expr.Parameter" value="12">
         </property>
         <property name="DARK_config" class="ptolemy.data.expr.StringParameter" value="DARK_RAW">
         </property>
-        <property name="SCIENCE-CALIBRATOR_config" class="ptolemy.data.expr.StringParameter" value="SINGLE_SCI_RAW,SINGLE_SKY_RAW,SINGLE_CAL_RAW,DUAL_SCI_RAW,DUAL_SKY_RAW,DUAL_CAL_RAW,DISP_MODEL,DIODE_POSITION">
+        <property name="SCIENCE-CALIBRATOR_config" class="ptolemy.data.expr.StringParameter" value="SINGLE_SCI_RAW,SINGLE_SKY_RAW,SINGLE_CAL_RAW,DUAL_SCI_RAW,DUAL_SKY_RAW,DUAL_CAL_RAW,DISP_MODEL,DIODE_POSITION,STATIC_PARAM">
         </property>
         <port name="in" class="ptolemy.actor.TypedIOPort">
             <property name="input"/>
