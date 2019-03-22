@@ -222,11 +222,23 @@ if DPR.CATG like "%CALIB%" and DPR.TECH like "%INTERFEROMETRY%" and DPR.TYPE lik
   REFLEX.CATG = "P2VM_RAW";
 }
 
-// Calibrations
+// Static calibrations
 if PRO.CATG=="DISP_MODEL" and INSTRUME=="GRAVITY" then
 {
   REFLEX.CATG = "DISP_MODEL";
   DO.CATG = "DISP_MODEL";
+}
+
+if PRO.CATG=="STATIC_PARAM" and INSTRUME=="GRAVITY" then
+{
+  REFLEX.CATG = "STATIC_PARAM";
+  DO.CATG = "STATIC_PARAM";
+}
+
+if PRO.CATG=="WAVE_PARAM" and INSTRUME=="GRAVITY" then
+{
+  REFLEX.CATG = "WAVE_PARAM";
+  DO.CATG = "WAVE_PARAM";
 }
 
 // Product
