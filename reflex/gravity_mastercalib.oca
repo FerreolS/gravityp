@@ -134,6 +134,12 @@ if DPR.CATG like "%CALIB%" and DPR.TECH like "%SPECTRUM%" and DPR.TYPE like "%SK
   RAW.TYPE = "DUAL_CAL_RAW";
 }
 
+if PRO.CATG=="STATIC_PARAM" and INSTRUME=="GRAVITY" then
+{
+  REFLEX.CATG = "STATIC_PARAM";
+  DO.CATG = "STATIC_PARAM";
+}
+
 // Product
 if PRO.CATG like "%BAD%" then
 {
@@ -199,6 +205,9 @@ select file as WAVE from calibFiles where PRO.CATG == "WAVE" and inputFile.INS.S
 minRet = 1; maxRet = 1;
 select file as P2VM from calibFiles where PRO.CATG == "P2VM" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.INSTRUME==INSTRUME;
 
+minRet = 0; maxRet = 1;
+select file as STATIC_PARAM from calibFiles where PRO.CATG == "STATIC_PARAM" and inputFile.INSTRUME==INSTRUME;
+
 recipe gravity_vis;
 product SINGLE_SCI_VIS { PRO.CATG = "SINGLE_SCI_VIS"; PRO.EXT="single_sci_vis.fits";}
 }
@@ -219,6 +228,9 @@ select file as WAVE from calibFiles where PRO.CATG == "WAVE" and inputFile.INS.S
 
 minRet = 1; maxRet = 1;
 select file as P2VM from calibFiles where PRO.CATG == "P2VM" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.INSTRUME==INSTRUME;
+
+minRet = 0; maxRet = 1;
+select file as STATIC_PARAM from calibFiles where PRO.CATG == "STATIC_PARAM" and inputFile.INSTRUME==INSTRUME;
 
 recipe gravity_vis;
 product SINGLE_CAL_VIS { PRO.CATG = "SINGLE_CAL_VIS"; PRO.EXT="single_cal_vis.fits";}
@@ -241,6 +253,9 @@ select file as WAVE from calibFiles where PRO.CATG == "WAVE" and inputFile.INS.S
 minRet = 1; maxRet = 1;
 select file as P2VM from calibFiles where PRO.CATG == "P2VM" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.INSTRUME==INSTRUME;
 
+minRet = 0; maxRet = 1;
+select file as STATIC_PARAM from calibFiles where PRO.CATG == "STATIC_PARAM" and inputFile.INSTRUME==INSTRUME;
+
 recipe gravity_vis;
 product DUAL_SCI_VIS { PRO.CATG = "DUAL_SCI_VIS"; PRO.EXT="dual_sci_vis.fits";}
 }
@@ -261,6 +276,9 @@ select file as WAVE from calibFiles where PRO.CATG == "WAVE" and inputFile.INS.S
 
 minRet = 1; maxRet = 1;
 select file as P2VM from calibFiles where PRO.CATG == "P2VM" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.INSTRUME==INSTRUME;
+
+minRet = 0; maxRet = 1;
+select file as STATIC_PARAM from calibFiles where PRO.CATG == "STATIC_PARAM" and inputFile.INSTRUME==INSTRUME;
 
 recipe gravity_vis;
 product DUAL_CAL_VIS { PRO.CATG = "DUAL_CAL_VIS"; PRO.EXT="dual_cal_vis.fits";}
