@@ -524,7 +524,6 @@ int gravi_calib_test(void){
 
 
 	gravi_data * p2vm_data=NULL;
-	cpl_propertylist * primary_hdr;
 	int ** valid_trans = cpl_malloc (2 * sizeof (int*));
 	int ** valid_CP = cpl_malloc (2 * sizeof (int*));
 
@@ -549,8 +548,6 @@ int gravi_calib_test(void){
                                                         badpix_data, NULL,paralist,
                                                         GRAVI_DET_ALL),
 				   "gravi_preproc: Compute the preproc data... ", flag);
-		primary_hdr = gravi_data_get_plist(data,
-											GRAVI_PRIMARY_HDR_EXT);
 		gravi_data_delete(data);
 
 
