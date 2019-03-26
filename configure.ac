@@ -31,7 +31,8 @@ AM_MAINTAINER_MODE
 #           AGE = 0;
 #   }
 
-GRAVI_SET_VERSION_INFO([$VERSION])
+# Order of arguments: VERSION, CURRENT, REVISION, AGE
+GRAVI_SET_VERSION_INFO([$VERSION], [0], [0], [0])
 
 # Checks for programs.
 AC_PROG_CC
