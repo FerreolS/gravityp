@@ -127,7 +127,7 @@ cpl_table* gravi_create_p2vm_table (cpl_table * detector_table,
 	cpl_table_new_column_array (p2vm_table,"PHASE", CPL_TYPE_FLOAT,
                                 nwave * (ntel * (ntel - 1) / 2));
 	/** C_matrix **/
-	cpl_table_new_column_array (p2vm_table,"C MATRIX", CPL_TYPE_FLOAT,
+	cpl_table_new_column_array (p2vm_table,"C_MATRIX", CPL_TYPE_FLOAT,
                                 nwave * (ntel * (ntel - 1) / 2));
 
 	/* Initialization of all these columns  */
@@ -145,7 +145,7 @@ cpl_table* gravi_create_p2vm_table (cpl_table * detector_table,
 		cpl_table_set_array (p2vm_table, "TRANSMISSION", i, zero_array_transmission);
 		cpl_table_set_array (p2vm_table, "COHERENCE", i, zero_array);
 		cpl_table_set_array (p2vm_table, "PHASE", i, zero_array);
-		cpl_table_set_array (p2vm_table, "C MATRIX", i, zero_array);
+		cpl_table_set_array (p2vm_table, "C_MATRIX", i, zero_array);
 	}
 
     cpl_array * dimensions;
@@ -164,7 +164,7 @@ cpl_table* gravi_create_p2vm_table (cpl_table * detector_table,
 	cpl_array_set_int (dimensions, 1, (ntel*(ntel-1)/2));
 	cpl_table_set_column_dimensions	(p2vm_table, "PHASE", dimensions);
 
-	cpl_table_set_column_dimensions	(p2vm_table, "C MATRIX", dimensions);
+	cpl_table_set_column_dimensions	(p2vm_table, "C_MATRIX", dimensions);
 
 	FREE (cpl_array_delete, zero_array_transmission);
 	FREE (cpl_array_delete, zero_array);
@@ -595,7 +595,7 @@ cpl_error_code gravi_compute_p2vm (gravi_data * p2vm_map, gravi_data * preproc_d
         cpl_array ** transmission, ** coherence, ** phase, ** norma_m;
         coherence = cpl_table_get_data_array (p2vm_table, "COHERENCE");
         phase = cpl_table_get_data_array (p2vm_table, "PHASE");
-        norma_m = cpl_table_get_data_array (p2vm_table, "C MATRIX");
+        norma_m = cpl_table_get_data_array (p2vm_table, "C_MATRIX");
         transmission = cpl_table_get_data_array (p2vm_table, "TRANSMISSION");
 
         /* Get if a single telescope or baseline is open */
@@ -961,7 +961,7 @@ cpl_error_code gravi_p2vm_normalisation (gravi_data * p2vm_map,
                 cpl_matrix * matrix_T = cpl_matrix_new (n_region, 4);
                 
                 /* Get index of each tranmission on the matrix */
-                cpl_vector * vector_c  = gravi_table_get_vector (p2vm_table, wave+nwave*base, "C MATRIX");
+                cpl_vector * vector_c  = gravi_table_get_vector (p2vm_table, wave+nwave*base, "C_MATRIX");
                 cpl_matrix * matrix_c = cpl_matrix_new (n_region, 1);
                 for(cpl_size region = 0; region < n_region; region++) {
                     cpl_matrix_set (matrix_c, region, 0, cpl_vector_get (vector_c, region));
