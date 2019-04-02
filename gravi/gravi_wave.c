@@ -2121,8 +2121,8 @@ cpl_error_code  gravi_compute_wave (gravi_data * wave_map,
     
     
     double rms_fit=cpl_propertylist_get_double (raw_header, QC_PHASECHI2);
-    cpl_propertylist_update_double (wave_header, QC_CHI2WAVE(type_data),rms_fit);
-    cpl_propertylist_set_comment (wave_header, QC_CHI2WAVE(type_data),"chi2 of a.SC-b.FT+c=MET");
+    cpl_propertylist_update_double (wave_header, QC_CHI2WAVE(type_data),rms_fit*1e9);
+    cpl_propertylist_set_comment (wave_header, QC_CHI2WAVE(type_data),"[nm]rms a.SC-b.FT+c=MET");
 
     CPLCHECK_MSG ("Cannot fit 2d data");
     
