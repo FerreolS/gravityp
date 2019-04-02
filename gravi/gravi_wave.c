@@ -893,9 +893,9 @@ cpl_error_code gravi_wave_compute_opds (gravi_data * spectrum_data,
 	CPLCHECK_MSG ("Cannot fit opdmet");
     
 	/* Set the CHI2 of the fit in the QC parameters */
-	cpl_propertylist_update_double (spectrum_header, "ESO QC PHASE_CALIBRATION_CHI2",
+	cpl_propertylist_update_double (spectrum_header, QC_PHASECHI2,
                                     cpl_vector_get (coeff_vector, 2));
-	cpl_propertylist_set_comment (spectrum_header, "ESO QC PHASE_CALIBRATION_CHI2",
+	cpl_propertylist_set_comment (spectrum_header, QC_PHASECHI2,
                                   "chi2 of a.SC-b.FT+c=MET");
 
     /* Add the OPD COEFF in QC parameters */
@@ -2118,6 +2118,11 @@ cpl_error_code  gravi_compute_wave (gravi_data * wave_map,
                                         detector_table,
                                         fullstartx, spatial_order, spectral_order,  &rms_residuals);
 	cpl_propertylist_update_double (wave_header, QC_RMS_RESIDUALS(type_data), rms_residuals);
+    
+    
+    double rms_fit=cpl_propertylist_get_double (raw_header, QC_PHASECHI2);
+    cpl_propertylist_update_double (wave_header, QC_CHI2WAVE(type_data),rms_fit);
+    cpl_propertylist_set_comment (wave_header, QC_CHI2WAVE(type_data),"chi2 of a.SC-b.FT+c=MET");
 
     CPLCHECK_MSG ("Cannot fit 2d data");
     
