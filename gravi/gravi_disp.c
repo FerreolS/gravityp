@@ -931,7 +931,6 @@ cpl_error_code gravi_compute_argon_pos (gravi_data * preproc_data, gravi_data *w
 
 	cpl_array_divide_scalar (argon, n_region);
 
-	/* EKW START 07/12/2018 */
 	/* 
      * Wavelengths of the argon emission lines [m]
      */
@@ -955,30 +954,32 @@ cpl_error_code gravi_compute_argon_pos (gravi_data * preproc_data, gravi_data *w
 
     double *line_wave;
     int nlines;
-    cpl_msg_info(cpl_func,"Vor line_wave2" );
+    cpl_msg_info (cpl_func, "Vor line_wave2");
 
 	cpl_table * line_wave_table = gravi_data_get_table (wave_param, "ARGON_TAB");
-    if ( cpl_table_has_column(line_wave_table , "ARGON_LINES") ) {
+    if ( cpl_table_has_column (line_wave_table , "ARGON_LINES") ) {
+        
         line_wave = cpl_table_get_data_double (line_wave_table, "ARGON_LINES");
         nlines = cpl_table_get_nrow (line_wave_table);
 
-        cpl_msg_info(cpl_func,"line_wave [0] : %e", line_wave[0] );
-        cpl_msg_info(cpl_func,"line_wave [1] : %e", line_wave[1] );
-        cpl_msg_info(cpl_func,"line_wave [2] : %e", line_wave[2] );
-        cpl_msg_info(cpl_func,"line_wave [3] : %e", line_wave[3] );
-        cpl_msg_info(cpl_func,"line_wave [4] : %e", line_wave[4] );
-        cpl_msg_info(cpl_func,"line_wave [5] : %e", line_wave[5] );
-        cpl_msg_info(cpl_func,"line_wave [6] : %e", line_wave[6] );
-        cpl_msg_info(cpl_func,"line_wave [7] : %e", line_wave[7] );
-        cpl_msg_info(cpl_func,"line_wave [8] : %e", line_wave[8] );
-        cpl_msg_info(cpl_func,"line_wave [9] : %e", line_wave[9] );
-        cpl_msg_info(cpl_func,"nlines        : %d", nlines );
+        cpl_msg_info (cpl_func,"line_wave [0] : %e", line_wave[0]);
+        cpl_msg_info (cpl_func,"line_wave [1] : %e", line_wave[1]);
+        cpl_msg_info (cpl_func,"line_wave [2] : %e", line_wave[2]);
+        cpl_msg_info (cpl_func,"line_wave [3] : %e", line_wave[3]);
+        cpl_msg_info (cpl_func,"line_wave [4] : %e", line_wave[4]);
+        cpl_msg_info (cpl_func,"line_wave [5] : %e", line_wave[5]);
+        cpl_msg_info (cpl_func,"line_wave [6] : %e", line_wave[6]);
+        cpl_msg_info (cpl_func,"line_wave [7] : %e", line_wave[7]);
+        cpl_msg_info (cpl_func,"line_wave [8] : %e", line_wave[8]);
+        cpl_msg_info (cpl_func,"line_wave [9] : %e", line_wave[9]);
+        cpl_msg_info (cpl_func,"nlines        : %d", nlines);
     }
     else {
-      cpl_msg_error(cpl_func,"Cannot get the default values for Argon line_wave");
+        /* We cannot continue without line information */
+        cpl_msg_error(cpl_func,"Cannot get the default values for Argon line_wave");
+        return CPL_ERROR_ILLEGAL_INPUT;
     }
 
-	/* EKW END 07/12/2018 */
 	/*
 	 * Fit the position of each emission line
      */
