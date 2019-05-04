@@ -115,6 +115,13 @@ cpl_error_code gravi_vis_compute_column_mean (cpl_table * out_table,
 
 cpl_error_code gravi_vis_flag_median (cpl_table * oi_table, const char * data, const char *flag, double value);
 
+cpl_error_code gravi_average_self_visphi(cpl_table * oi_vis_avg,
+                                         cpl_table * oi_vis,
+                                         cpl_array * wavenumber,
+                                         const char * phase_ref, int* cmin, int* cmax, int nrange);
+
+double gdAbacusErrPhi(double x);
+
 /*-----------------------------------------------------------------------------
                                   Function code
  -----------------------------------------------------------------------------*/
