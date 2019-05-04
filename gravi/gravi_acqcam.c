@@ -1919,25 +1919,25 @@ double gravi_acqcam_z2meter (double PositionPixels, gravi_data * static_param_da
     double D_lenslet ; /*  = 2 * 1.015e-3; */
 
     f_PT = cpl_propertylist_get_double (gravi_data_get_plist(static_param_data,GRAVI_PRIMARY_HDR_EXT), "ESO LENS fPT");
-    cpl_msg_info (cpl_func,"ESO LENS fPT is   : %e", f_PT);
+    cpl_msg_debug (cpl_func,"ESO LENS fPT is   : %e", f_PT);
 
     f_lens = cpl_propertylist_get_double (gravi_data_get_plist(static_param_data,GRAVI_PRIMARY_HDR_EXT), "ESO LENS flens");
-    cpl_msg_info (cpl_func,"ESO LENS f_lens is  : %e", f_lens);
+    cpl_msg_debug (cpl_func,"ESO LENS f_lens is  : %e", f_lens);
 
     Llambda = cpl_propertylist_get_double (gravi_data_get_plist(static_param_data,GRAVI_PRIMARY_HDR_EXT), "ESO LENS Llambda");
-    cpl_msg_info (cpl_func,"ESO LENS Llambda is  : %e", Llambda);
+    cpl_msg_debug (cpl_func,"ESO LENS Llambda is  : %e", Llambda);
 
     D_beam = cpl_propertylist_get_double (gravi_data_get_plist(static_param_data,GRAVI_PRIMARY_HDR_EXT), "ESO LENS Dbeam");
-    cpl_msg_info (cpl_func,"ESO LENS D_beam is  : %e", D_beam);
+    cpl_msg_debug (cpl_func,"ESO LENS D_beam is  : %e", D_beam);
 
     D_pixel = cpl_propertylist_get_double (gravi_data_get_plist(static_param_data,GRAVI_PRIMARY_HDR_EXT), "ESO LENS Dpixel");
-    cpl_msg_info (cpl_func,"ESO LENS D_pixel is  : %e", D_pixel);
+    cpl_msg_debug (cpl_func,"ESO LENS D_pixel is  : %e", D_pixel);
 
     D_AT = cpl_propertylist_get_double (gravi_data_get_plist(static_param_data,GRAVI_PRIMARY_HDR_EXT), "ESO LENS DAT");
-    cpl_msg_info (cpl_func,"ESO LENS D_AT is  : %e", D_AT);
+    cpl_msg_debug (cpl_func,"ESO LENS D_AT is  : %e", D_AT);
 
     D_lenslet = cpl_propertylist_get_double (gravi_data_get_plist(static_param_data,GRAVI_PRIMARY_HDR_EXT), "ESO LENS Dlenslet");
-    cpl_msg_info (cpl_func,"ESO LENS D_lenslet is  : %e", D_lenslet);
+    cpl_msg_debug (cpl_func,"ESO LENS D_lenslet is  : %e", D_lenslet);
 
 
     double longDef;
