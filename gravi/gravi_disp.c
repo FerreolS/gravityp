@@ -1075,7 +1075,7 @@ cpl_error_code gravi_compute_argon_pos (gravi_data * preproc_data, gravi_data *w
 
     /* Set the table in gravi_data */
     gravi_data_add_table (preproc_data, NULL, "POS_ARGON", outTable);
-    cpl_msg_error(cpl_func,"Ekki und raus hier");
+    
 	gravi_msg_function_exit(1);
 	return CPL_ERROR_NONE;
 }
