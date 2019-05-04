@@ -1286,7 +1286,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
     double *roof_pos = NULL;
 
     cpl_table * roof_pos_table = gravi_data_get_table (static_param_data, "ROOFPOS");
-    CPLCHECK_MSG ("STATIC_CALIB not available in the SOF. It is mandatory for acqcam reduction.");
+    CPLCHECK_MSG ("STATIC_PARAM not available in the SOF. It is mandatory for acqcam reduction.");
 
      if ( cpl_table_has_column(roof_pos_table , "roof_x") ) {
          roof_x= cpl_table_get_data_double (roof_pos_table, "roof_x");

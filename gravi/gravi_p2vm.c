@@ -223,7 +223,7 @@ cpl_table * gravi_create_oiwave_table_sc (cpl_table * wave_table,
     /* double *roof_pos; */
     double * calib_eff_wave;
     cpl_table * calib_eff_table = gravi_data_get_table (wave_param, "WAVE_TAB");
-   // CPLCHECK_MSG ("STATIC_CALIB not available in the SOF. It is mandatory for acqcam reduction.");
+   // CPLCHECK_MSG ("STATIC_PARAM not available in the SOF. It is mandatory for acqcam reduction.");
 
      if ( cpl_table_has_column(calib_eff_table , "FBAND_WAVE") ) {
          calib_eff_wave = cpl_table_get_data_double (calib_eff_table, "FBAND_WAVE");
