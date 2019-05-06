@@ -77,7 +77,8 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
 cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                                       cpl_table * vismet_table,
 				      gravi_data *static_param_data,
-                                      cpl_propertylist * header);
+                                      cpl_propertylist * header,
+                                      int use_fiber_dxy);
 
 cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
                                     cpl_table * vismet_table,
@@ -2474,6 +2475,7 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
  * @param metrology_table  The input METROLOGY table
  * @param vismet_table     The input/output OI_VIS_MET table
  * @param header           The corresponding HEADER
+ * @param use_fiber_dxy    Use the fiber position in OPD_TEL_CORR
  *
  * FE start
  * "tel" referes to "GV" all through this function
@@ -2483,7 +2485,8 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
 cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                                       cpl_table * vismet_table,
 				      gravi_data * default_focus_data,
-                                      cpl_propertylist * header)
+                                      cpl_propertylist * header,
+                                      int use_fiber_dxy)
 {
     gravi_msg_function_start(1);
     
@@ -2550,6 +2553,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                       (opd_pupil?opd_pupil[0*ntel+tel]:0)*1e9,
                       opd_fc_focus*1e9,
                       opd_fc_shift*1e9 );
+
         for (cpl_size row = 0; row < nrow_met; row++) {
             opd_fc_corr[row*ntel+tel] = (opd_pupil?opd_pupil[row*ntel+tel]:0)
                                         + opd_fc_focus
@@ -2632,7 +2636,10 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
             cpl_array_get (E_ZD[0*ntel+0], 0, NULL),
             cpl_array_get (E_ZD[0*ntel+0], 1, NULL),
             cpl_array_get (E_ZD[0*ntel+0], 2, NULL));
-    
+
+    /* Verbose about option before the loop */    
+    cpl_msg_info (cpl_func,"Use fiber dxy is set to %s", use_fiber_dxy ? "TRUE" : "FALSE");
+
     /* loop over all column and diodes */
     for (int tel = 0; tel < ntel; tel++) {
         
@@ -2647,8 +2654,9 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         
         for (cpl_size row = 0; row < nrow_met; row++) {
             
-            /* If available, transform field fiber offset from (x,y) acqcam [pix] to (U,V) sky [mas] */
-            if (field_dX && field_dY) {
+            /* If available, transform field fiber offset from (x,y) acqcam [pix] to (U,V) sky [mas].
+	       FE 20190504: add the parameter use_fiber_dxy to ignore this correction */
+	    if ((field_dX && field_dY) && use_fiber_dxy != 0) {
                 field_dU = (field_dX[row*ntel+tel] * sin( (northangle+90.) * CPL_MATH_RAD_DEG )
                            +field_dY[row*ntel+tel] * cos( (northangle+90.) * CPL_MATH_RAD_DEG ))*scale;
                 field_dV = (field_dX[row*ntel+tel] * sin( (northangle    ) * CPL_MATH_RAD_DEG )
@@ -2657,7 +2665,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                 field_dU = 0.0;
                 field_dV = 0.0;
             }
-            
+
             for (int diode = 0; diode < ndiode; diode++) {
                 
                 /* Filling vectors of Julien's formula */
@@ -3010,16 +3018,17 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     
     for (int tel=0; tel<ntel; tel++) {
         
-        /* in acquisition camera X/Y pixel */
+        /* In acquisition camera X/Y pixel */
+	/* FE 20190504: if use_fiber_dxy is FALSE then ignore fiber_dxy */
         sprintf (card,"ESO QC ACQ FIELD%d SC_FIBER_DX", tel+1);
-        if (cpl_propertylist_has (header, card)) {
+        if (cpl_propertylist_has (header, card) && use_fiber_dxy != 0) {
             sc_fiber_dx[tel] = cpl_propertylist_get_double (header, card);
             sobj_dx[tel] = sc_fiber_dx[tel] - mttdx[tel];
         } else {
             sobj_dx[tel] = - mttdx[tel];
         }
         sprintf (card,"ESO QC ACQ FIELD%d SC_FIBER_DY", tel+1);
-        if (cpl_propertylist_has (header, card)) {
+        if (cpl_propertylist_has (header, card) && use_fiber_dxy != 0) {
             sc_fiber_dy[tel] = cpl_propertylist_get_double (header, card);
             sobj_dy[tel] = sc_fiber_dy[tel] - mttdy[tel];
         } else {
@@ -3371,7 +3380,8 @@ cpl_error_code gravi_metrology_reduce (gravi_data * data,
     CPLCHECK_MSG ("Cannot reduce metrology with TAC algo");
     
     /* Compute TEL vs FC corrections */
-    gravi_metrology_telfc (metrology_table, vismet_table, static_param_data, header);
+    int use_fiber_dxy = gravi_param_get_bool (parlist, "gravity.metrology.use-fiber-dxy");
+    gravi_metrology_telfc (metrology_table, vismet_table, static_param_data, header, use_fiber_dxy);
     CPLCHECK_MSG ("Cannot compute TEL vs FC reference");
     
     /* Add the VISMET_TABLE table to the gravi_data */
