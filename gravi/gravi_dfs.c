@@ -676,6 +676,23 @@ cpl_error_code gravi_parameter_add_rejection (cpl_parameterlist *self, int isCal
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "imaging-ref-met");
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
     cpl_parameterlist_append (self, p);
+
+    /* Threshold for OPD_PUPIL and OPD_PUPIL_STDDEV */    
+    p = cpl_parameter_new_value ("gravity.signal.opd-pupil-max-sc", CPL_TYPE_DOUBLE,
+                                 "Maximum OPD_PUPIL (abs) to accept SC frames. It raises the third bit\n "
+                                 "(<<2) of column REJECTION_FLAG of SC.",
+                                 "gravity.signal", 9999.0);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "opd-pupil-max-sc");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (self, p);
+
+    p = cpl_parameter_new_value ("gravity.signal.opd-pupil-stddev-max-sc", CPL_TYPE_DOUBLE,
+                                 "Maximum OPD_PUPIL_STDDEV to accept SC frames. It\n "
+                                 "raises the fourth bit (<<3) of REJECTION_FLAG of SC.",
+                                 "gravity.signal", 2.9e-7);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "opd-pupil-stddev-max-sc");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (self, p);
     
     return CPL_ERROR_NONE;
 }
