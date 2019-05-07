@@ -1429,11 +1429,11 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         if (telname[0] == 'U') {
             /* scale = 18.; */
             scale = cpl_propertylist_get_double (gravi_data_get_plist(static_param_data,GRAVI_PRIMARY_HDR_EXT), "ESO PLATE SCALE UT");
-            cpl_msg_info (cpl_func,"PLATE SCALE UT is  : %e \n",scale);
+            cpl_msg_info (cpl_func,"PLATE SCALE UT is  : %e",scale);
         } else if (telname[0] == 'A') {
             sprintf(telid, "ESO PLATE SCALE AT%d", tel+1);
             scale = cpl_propertylist_get_double (gravi_data_get_plist(static_param_data,GRAVI_PRIMARY_HDR_EXT), telid);
-            cpl_msg_info (cpl_func,"PLATE SCALE AT%d is : %e \n",tel+1, scale);
+            cpl_msg_info (cpl_func,"PLATE SCALE AT%d is : %e",tel+1, scale);
             /*
             if (tel == 0) {
                 scale = 76.8;
