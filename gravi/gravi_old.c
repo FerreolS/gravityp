@@ -3763,7 +3763,7 @@ cpl_table * gravi_metrology_reform (cpl_table * vis_met)
 	/* Create the output table for OPD_MET */
 	cpl_table * opd_met = cpl_table_new (nrow);
 	cpl_table_new_column (opd_met, "TIME", CPL_TYPE_INT);
-	cpl_table_set_column_unit (opd_met, "TIME", "usec");
+	cpl_table_set_column_unit (opd_met, "TIME", "us");
 
 	/* Create and get the pointer of the table columns */
 	double **p_opd_met;

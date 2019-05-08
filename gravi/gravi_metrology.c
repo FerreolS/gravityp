@@ -1707,11 +1707,11 @@ cpl_table * gravi_metrology_create (cpl_table * metrology_table,
 
     /* Create the TIME column */
 	cpl_table_new_column (vismet_table, "TIME", CPL_TYPE_INT);
-	cpl_table_set_column_unit (vismet_table, "TIME", "usec");
+	cpl_table_set_column_unit (vismet_table, "TIME", "us");
     
     /* Create the MJD column */
 	cpl_table_new_column (vismet_table, "MJD", CPL_TYPE_DOUBLE);
-	cpl_table_set_column_unit (vismet_table, "MJD", "day");
+	cpl_table_set_column_unit (vismet_table, "MJD", "d");
 
     /* Fill the TIME and MJD column */
     for (cpl_size row = 0; row < nrow; row++) {

@@ -627,8 +627,8 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
 			/* We keep the TIME column of the P2VMRED in [us] from
              * the PCR.ACQ.START, in order to correlate with RMN tables.
              * Thus this TIME column is *not* at the OIFITS standart */
-			cpl_table_set_column_unit (oi_vis,  "TIME", "usec");
-			cpl_table_set_column_unit (oi_flux, "TIME", "usec");
+			cpl_table_set_column_unit (oi_vis,  "TIME", "us");
+			cpl_table_set_column_unit (oi_flux, "TIME", "us");
 
 			/* Fill STA_INDEX and times for OI_VIS */
 			cpl_array * sta_index = cpl_array_new (2, CPL_TYPE_INT);
@@ -1111,7 +1111,7 @@ cpl_error_code gravi_compute_tau0 (gravi_data * data)
   /* Compute the delays to explore */
   cpl_size max_delay = 200;
 
-  /* Time in [usec] and offset in [V] */
+  /* Time in microseconds [us] and offset in [V] */
   int *time    = cpl_table_get_data_int (opdc, "TIME");
   CPLCHECK_MSG("Cannot load the TIME column");
   

@@ -1621,9 +1621,9 @@ cpl_propertylist * gravi_compute_gain (gravi_data ** flats_data,
 
         /* Get the slope */
         double slope = cpl_polynomial_get_coeff (fit_slope, &slope_deg);
-        cpl_msg_info (cpl_func, "mean gain SC = %.4f [ADU/e-] Mean gain of detector", slope);
+        cpl_msg_info (cpl_func, "mean gain SC = %.4f [adu/e-] Mean gain of detector", slope);
         cpl_propertylist_append_double (output_plist, QC_MEANGAIN_SC, slope);
-        cpl_propertylist_set_comment (output_plist, QC_MEANGAIN_SC, "[ADU/e-] Mean gain of SC detector" );
+        cpl_propertylist_set_comment (output_plist, QC_MEANGAIN_SC, "[adu/e-] Mean gain of SC detector" );
         
         /* Delete */
         cpl_vector_delete (vector_var);
@@ -1706,9 +1706,9 @@ cpl_propertylist * gravi_compute_gain (gravi_data ** flats_data,
 
         /* Get the slope */
         double slope = cpl_polynomial_get_coeff (fit_slope, &slope_deg);
-        cpl_msg_info (cpl_func, "mean gain FT = %.4f [ADU/e-] Mean gain of detector", slope);
+        cpl_msg_info (cpl_func, "mean gain FT = %.4f [adu/e-] Mean gain of detector", slope);
         cpl_propertylist_append_double (output_plist, QC_MEANGAIN_FT, slope);
-        cpl_propertylist_set_comment (output_plist, QC_MEANGAIN_FT, "[ADU/e-] Mean gain of FT detector");
+        cpl_propertylist_set_comment (output_plist, QC_MEANGAIN_FT, "[adu/e-] Mean gain of FT detector");
         
         /* Delete */
         FREE (cpl_vector_delete, vector_var);

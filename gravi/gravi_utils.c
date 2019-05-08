@@ -177,7 +177,7 @@ cpl_table * gravi_table_oi_create (int nwave, int nrow, const char * oi_name)
 
 		cpl_table_new_column (oi_table, "MJD", CPL_TYPE_DOUBLE);
 		if (init) cpl_table_fill_column_window_double (oi_table, "MJD", 0, nrow * 6, 0.0);
-		cpl_table_set_column_unit (oi_table, "MJD", "day");
+		cpl_table_set_column_unit (oi_table, "MJD", "d");
 		
 		cpl_table_new_column (oi_table, "INT_TIME", CPL_TYPE_DOUBLE);
 		if(init) cpl_table_fill_column_window_double (oi_table, "INT_TIME", 0, nrow * 6, 0.0);
@@ -230,7 +230,7 @@ cpl_table * gravi_table_oi_create (int nwave, int nrow, const char * oi_name)
 		cpl_table_set_column_unit (oi_table, "TIME", "s");
 		cpl_table_new_column (oi_table, "MJD", CPL_TYPE_DOUBLE);
 		if(init) cpl_table_fill_column_window_double (oi_table, "MJD", 0, nrow * 6, 0.0);
-		cpl_table_set_column_unit (oi_table, "MJD", "day");
+		cpl_table_set_column_unit (oi_table, "MJD", "d");
 		cpl_table_new_column (oi_table, "INT_TIME", CPL_TYPE_DOUBLE);
 		if(init) cpl_table_fill_column_window_double (oi_table, "INT_TIME",
 															  0, nrow * 6, 0.0);
@@ -263,7 +263,7 @@ cpl_table * gravi_table_oi_create (int nwave, int nrow, const char * oi_name)
 		cpl_table_set_column_unit (oi_table, "TIME", "s");
 		cpl_table_new_column (oi_table, "MJD", CPL_TYPE_DOUBLE);
 		if(init) cpl_table_fill_column_window_double (oi_table, "MJD", 0, nrow * 4, 0.0);
-		cpl_table_set_column_unit (oi_table, "MJD", "day");
+		cpl_table_set_column_unit (oi_table, "MJD", "d");
 		cpl_table_new_column (oi_table, "INT_TIME", CPL_TYPE_DOUBLE);
 		cpl_table_set_column_unit (oi_table, "INT_TIME", "s");
 		if(init) cpl_table_fill_column_window_double (oi_table, "INT_TIME",
@@ -304,7 +304,7 @@ cpl_table * gravi_table_oi_create (int nwave, int nrow, const char * oi_name)
 		cpl_table_set_column_unit (oi_table, "TIME", "s");
 		if(init) cpl_table_fill_column_window_double (oi_table, "TIME", 0, nrow * 4, 0);
 		cpl_table_new_column (oi_table, "MJD", CPL_TYPE_DOUBLE);
-		cpl_table_set_column_unit (oi_table, "MJD", "day");
+		cpl_table_set_column_unit (oi_table, "MJD", "d");
 		if(init) cpl_table_fill_column_window_double (oi_table, "MJD", 0, nrow * 4, 0.0);
 		cpl_table_new_column (oi_table, "INT_TIME", CPL_TYPE_DOUBLE);
 		cpl_table_set_column_unit (oi_table, "INT_TIME", "s");

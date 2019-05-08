@@ -2,8 +2,8 @@
 Columns in the OI_VIS of the SC
 
 TARGET_ID : id listed in OI_TARGET
-TIME [usec] : timestamp
-MJD [day] : 
+TIME [us] : timestamp
+MJD [d] : 
 INT_TIME [s] : integration time of this frame
 VISERR [e,e] : complex error on the coherent flux spectra
 UCOORD [m] : uv-plane of this SC frame
@@ -51,8 +51,8 @@ TARGET_PHASE [rad] : target phase of the loop, including the Sylvester modulatio
 Columns in the OI_FLUX of the SC
 
 TARGET_ID : id listed in OI_TARGET
-TIME [usec] : timestamp
-MJD [day] : 
+TIME [us] : timestamp
+MJD [d] : 
 INT_TIME [s] : integration time of this frame
 FLUX [e] : flux spectra
 FLUXERR [e] : error on flux spectra
@@ -78,7 +78,7 @@ VAMP_FC_FT, VAMP_FC_SC, VAMP_TEL_FT, VAMP_TEL_SC: Volt amplitude
 -------------------------
 Columns in the OPDC table
 
-TIME [usec] : timestamp
+TIME [us] : timestamp
 PIEZO_DL_OFFSET
 VLTI_DL_OFFSET
 STATE : global fringe tracking state
