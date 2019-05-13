@@ -1248,7 +1248,6 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
 
   double * opd_met_fc_corr        = cpl_table_get_data_double (vis_MET, "OPD_FC_CORR");
   double * opd_met_telfc_mcorr    = cpl_table_get_data_double (vis_MET, "OPD_TELFC_MCORR");
-  double * opd_met_pupil          = cpl_table_get_data_double (vis_MET, "OPD_PUPIL");
   cpl_array ** opd_met_telfc_corr = cpl_table_get_data_array (vis_MET, "OPD_TELFC_CORR");
 
   CPLCHECK_MSG("Cannot get direct pointer to data");
@@ -1272,18 +1271,11 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
   gravi_table_new_column (vis_SC, "OPD_MET_FC_CORR", "m", CPL_TYPE_DOUBLE);
   double * opd_metdit_fc_corr = cpl_table_get_data_double (vis_SC, "OPD_MET_FC_CORR");
 
-  gravi_table_new_column (vis_SC, "OPD_MET_PUPIL", "m", CPL_TYPE_DOUBLE);
-  double * opd_metdit_pupil = cpl_table_get_data_double (vis_SC, "OPD_MET_PUPIL");
-
-  gravi_table_new_column (vis_SC, "OPD_MET_PUPIL_STDDEV", "m", CPL_TYPE_DOUBLE);
-  double * opd_metdit_pupil_stddev = cpl_table_get_data_double (vis_SC, "OPD_MET_PUPIL_STDDEV");
-
   gravi_table_new_column (vis_SC, "OPD_MET_TELFC_MCORR", "m", CPL_TYPE_DOUBLE);
   double * opd_metdit_telfc_mcorr = cpl_table_get_data_double (vis_SC, "OPD_MET_TELFC_MCORR");
 
   gravi_table_new_column_array (vis_SC, "OPD_MET_TELFC_CORR", "m", CPL_TYPE_DOUBLE, ndiode);
   cpl_array ** opd_metdit_telfc_corr = cpl_table_get_data_array (vis_SC, "OPD_MET_TELFC_CORR");
-
 
   CPLCHECK_MSG("Cannot create columns");
 
@@ -1328,9 +1320,6 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
 				     phasor_met_telfc[nmet0],
 				     phasor_met_telfc[nmet1]);
 
-	    /* Mean OPD_PUPIL */
-	    opd_metdit_pupil[nsc] += opd_met_pupil[nmet0] - opd_met_pupil[nmet1];
-
 	    CPLCHECK_MSG ("Fail to integrate the metrology");
 	  }
 	  
@@ -1346,25 +1335,6 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
 	    phase_metdit_fc[nsc]  /= nframe;
 	    opd_metdit_fc[nsc]  /= nframe;
 	    cpl_array_divide_scalar (phasor_metdit_telfc[nsc], (double)nframe);
-	    opd_metdit_pupil[nsc]  /= nframe;
-
-	  }
-
-	  /* Sum over synch MET frames again, to compute STDDEV */
-	  for (cpl_size row_met = first_met[nsc] ; row_met < last_met[nsc]; row_met++) {
-	    cpl_size nmet0 = row_met * ntel + GRAVI_BASE_TEL[base][0];
-	    cpl_size nmet1 = row_met * ntel + GRAVI_BASE_TEL[base][1];
-	    
-	    /* Mean OPD_PUPIL_STDDEV (still sum variance here, sqrt below) */
-	    double tmp = opd_met_pupil[nmet0] - opd_met_pupil[nmet1] - opd_metdit_pupil[nsc];
-	    opd_metdit_pupil_stddev[nsc] += tmp * tmp;
-
-	    CPLCHECK_MSG ("Fail to integrate the metrology");
-	  }
-	  
-	  /* Normalize the STDDEV  (if nframe <= 1, values are zero) */
-	  if (nframe > 1 ){
-	    opd_metdit_pupil_stddev[nsc]  = sqrt (opd_metdit_pupil_stddev[nsc]  / (nframe-1));
 	  }
 
 	  CPLCHECK_MSG ("Fail to compute metrology per base from metrology per tel");
@@ -1410,6 +1380,65 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
               
           } /* End loop on SC frames */
       }/* End loop on bases */
+  }
+
+  /* Compute mean OPD_PUP and PUP_STDEV only if OPD_PUPIL exists (ACQ option)*/
+  if (cpl_table_has_column (vis_MET,"OPD_PUPIL")) {
+
+	  double * opd_met_pupil = cpl_table_get_data_double (vis_MET, "OPD_PUPIL");
+
+	  gravi_table_new_column (vis_SC, "OPD_MET_PUPIL", "m", CPL_TYPE_DOUBLE);
+	  double * opd_metdit_pupil = cpl_table_get_data_double (vis_SC, "OPD_MET_PUPIL");
+
+	  gravi_table_new_column (vis_SC, "OPD_MET_PUPIL_STDDEV", "m", CPL_TYPE_DOUBLE);
+	  double * opd_metdit_pupil_stddev = cpl_table_get_data_double (vis_SC, "OPD_MET_PUPIL_STDDEV");
+
+	  CPLCHECK_MSG("Cannot create columns");
+
+	  /* Loop on base and rows */
+	  for (cpl_size base = 0; base < nbase; base++) {
+		for (cpl_size row_sc = 0; row_sc < nrow_sc; row_sc ++) {
+		  cpl_size nsc = row_sc * nbase + base;
+
+		  /* Sum over synch MET frames */
+		  for (cpl_size row_met = first_met[nsc] ; row_met < last_met[nsc]; row_met++) {
+		    cpl_size nmet0 = row_met * ntel + GRAVI_BASE_TEL[base][0];
+		    cpl_size nmet1 = row_met * ntel + GRAVI_BASE_TEL[base][1];
+
+		    /* Mean OPD_PUPIL */
+		    opd_metdit_pupil[nsc] += opd_met_pupil[nmet0] - opd_met_pupil[nmet1];
+
+		    CPLCHECK_MSG ("Fail to integrate the metrology");
+		  }
+
+		  /* Normalize the means  (if nframe == 0, values are zero) */
+		  cpl_size nframe = last_met[nsc] - first_met[nsc];
+		  if (nframe != 0 ){
+		    opd_metdit_pupil[nsc]  /= nframe;
+		  }
+
+		  /* Sum over synch MET frames again, to compute STDDEV */
+		  for (cpl_size row_met = first_met[nsc] ; row_met < last_met[nsc]; row_met++) {
+		    cpl_size nmet0 = row_met * ntel + GRAVI_BASE_TEL[base][0];
+		    cpl_size nmet1 = row_met * ntel + GRAVI_BASE_TEL[base][1];
+
+		    /* Mean OPD_PUPIL_STDDEV (still sum variance here, sqrt below) */
+		    double tmp = opd_met_pupil[nmet0] - opd_met_pupil[nmet1] - opd_metdit_pupil[nsc];
+		    opd_metdit_pupil_stddev[nsc] += tmp * tmp;
+
+		    CPLCHECK_MSG ("Fail to integrate the metrology");
+		  }
+
+		  /* Normalize the STDDEV  (if nframe <= 1, values are zero) */
+		  if (nframe > 1 ){
+		    opd_metdit_pupil_stddev[nsc]  = sqrt (opd_metdit_pupil_stddev[nsc]  / (nframe-1));
+		  }
+
+          CPLCHECK_MSG ("Fail to compute metrology per base from metrology per tel");
+
+		} /* End loop on SC frames */
+	  } /* End loop on bases */
+
   }
 
 
@@ -3039,8 +3068,18 @@ cpl_error_code gravi_compute_rejection (gravi_data * p2vmred_data,
           cpl_table * vis_SC = gravi_data_get_oi_vis (p2vmred_data, GRAVI_SC, pol, npol_sc);
           double * vFactor_wl = cpl_table_get_data_double (vis_SC, "V_FACTOR_WL");
           double * fringedet_ftdit = cpl_table_get_data_double (vis_SC, "FRINGEDET_RATIO");
-          double * opd_metdit_pupil = cpl_table_get_data_double (vis_SC, "OPD_MET_PUPIL");
-          double * opd_metdit_pupil_stddev = cpl_table_get_data_double (vis_SC, "OPD_MET_PUPIL_STDDEV");
+
+          CPLCHECK_MSG("Cannot load data");
+
+          double * opd_metdit_pupil = NULL;
+          if ( cpl_table_has_column (vis_SC, "OPD_MET_PUPIL") )
+        	  opd_metdit_pupil = cpl_table_get_data_double (vis_SC, "OPD_MET_PUPIL");
+
+          double * opd_metdit_pupil_stddev = NULL;
+          if ( cpl_table_has_column (vis_SC, "OPD_MET_PUPIL_STDDEV") )
+        	  opd_metdit_pupil_stddev = cpl_table_get_data_double (vis_SC, "OPD_MET_PUPIL_STDDEV");
+
+          CPLCHECK_MSG("Cannot load data");
 
           gravi_table_new_column (vis_SC, "REJECTION_FLAG", NULL, CPL_TYPE_INT);
           int * reject_flag_sc = cpl_table_get_data_int (vis_SC, "REJECTION_FLAG");
@@ -3067,18 +3106,21 @@ cpl_error_code gravi_compute_rejection (gravi_data * p2vmred_data,
 
               /* Rejection based on OPD_PUPIL (third bit) */
               int opd_pupil_bit = 2;
-              if ( fabs(opd_metdit_pupil[row_sc]) > opd_pupil_max_sc )
-                  gravi_bit_set (reject_flag_sc[row_sc], opd_pupil_bit);
-              else 
-                  gravi_bit_clear (reject_flag_sc[row_sc], opd_pupil_bit);
+    	      if ( opd_metdit_pupil ) {
+    	    	  if ( fabs(opd_metdit_pupil[row_sc]) > opd_pupil_max_sc )
+                      gravi_bit_set (reject_flag_sc[row_sc], opd_pupil_bit);
+                  else
+                      gravi_bit_clear (reject_flag_sc[row_sc], opd_pupil_bit);
+    	      }
 
               /* Rejection based on OPD_PUPIL_STDDEV (fourth bit) */
               int opd_pupil_stddev_bit = 3;
-              if ( opd_metdit_pupil_stddev[row_sc] > opd_pupil_stddev_max_sc )
-                  gravi_bit_set (reject_flag_sc[row_sc], opd_pupil_stddev_bit);
-              else
-                  gravi_bit_clear (reject_flag_sc[row_sc], opd_pupil_stddev_bit);
-
+    	      if ( opd_metdit_pupil_stddev ) {
+    	    	  if ( opd_metdit_pupil_stddev[row_sc] > opd_pupil_stddev_max_sc )
+                      gravi_bit_set (reject_flag_sc[row_sc], opd_pupil_stddev_bit);
+                  else
+                      gravi_bit_clear (reject_flag_sc[row_sc], opd_pupil_stddev_bit);
+    	      }
           }
           
       } /* End loop on pol */
