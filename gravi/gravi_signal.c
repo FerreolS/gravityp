@@ -1382,16 +1382,21 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
       }/* End loop on bases */
   }
 
-  /* Compute mean OPD_PUP and PUP_STDEV only if OPD_PUPIL exists (ACQ option)*/
-  if (cpl_table_has_column (vis_MET,"OPD_PUPIL")) {
+  /* Compute mean OPD_MET_PUPIL, OPD_MET_PUPIL_STDDEV and OPD_MET_TTPUP 
+  only if OPD_PUPIL exists (ACQ option)*/
+  if (cpl_table_has_column (vis_MET,"OPD_PUPIL") && cpl_table_has_column (vis_MET,"OPD_TTPUP")) {
 
 	  double * opd_met_pupil = cpl_table_get_data_double (vis_MET, "OPD_PUPIL");
+	  double * opd_met_ttpup          = cpl_table_get_data_double (vis_MET, "OPD_TTPUP");
 
 	  gravi_table_new_column (vis_SC, "OPD_MET_PUPIL", "m", CPL_TYPE_DOUBLE);
 	  double * opd_metdit_pupil = cpl_table_get_data_double (vis_SC, "OPD_MET_PUPIL");
 
 	  gravi_table_new_column (vis_SC, "OPD_MET_PUPIL_STDDEV", "m", CPL_TYPE_DOUBLE);
 	  double * opd_metdit_pupil_stddev = cpl_table_get_data_double (vis_SC, "OPD_MET_PUPIL_STDDEV");
+
+	  gravi_table_new_column (vis_SC, "OPD_MET_TTPUP", "m", CPL_TYPE_DOUBLE);
+	  double * opd_metdit_ttpup = cpl_table_get_data_double (vis_SC, "OPD_MET_TTPUP");
 
 	  CPLCHECK_MSG("Cannot create columns");
 
@@ -1408,6 +1413,9 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
 		    /* Mean OPD_PUPIL */
 		    opd_metdit_pupil[nsc] += opd_met_pupil[nmet0] - opd_met_pupil[nmet1];
 
+		    /* Mean OPD_TTPUP */
+		    opd_metdit_ttpup[nsc] += opd_met_ttpup[nmet0] - opd_met_ttpup[nmet1];
+
 		    CPLCHECK_MSG ("Fail to integrate the metrology");
 		  }
 
@@ -1415,6 +1423,7 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
 		  cpl_size nframe = last_met[nsc] - first_met[nsc];
 		  if (nframe != 0 ){
 		    opd_metdit_pupil[nsc]  /= nframe;
+		    opd_metdit_ttpup[nsc]  /= nframe;
 		  }
 
 		  /* Sum over synch MET frames again, to compute STDDEV */
@@ -1433,6 +1442,8 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
 		  if (nframe > 1 ){
 		    opd_metdit_pupil_stddev[nsc]  = sqrt (opd_metdit_pupil_stddev[nsc]  / (nframe-1));
 		  }
+
+		  
 
           CPLCHECK_MSG ("Fail to compute metrology per base from metrology per tel");
 
@@ -2625,6 +2636,8 @@ cpl_error_code gravi_vis_create_imagingref_sc (cpl_table * vis_SC,
     cpl_array ** phase_ref = cpl_table_get_data_array  (vis_SC, "PHASE_REF");
     double * opd_met_telfc_mcorr = NULL;
     double * opd_met_fc_corr     = NULL;
+    double * opd_met_ttpup       = NULL;
+
     CPLCHECK_MSG ("Cannot get input data");
 
     /* If OPD_DISP is not computed, we cannot compute IMAGING_REF neither */
@@ -2653,6 +2666,7 @@ cpl_error_code gravi_vis_create_imagingref_sc (cpl_table * vis_SC,
         cpl_msg_info (cpl_func,"Use telescope metrology for IMAGING_REF computation");
         opd_met_telfc_mcorr = cpl_table_get_data_double (vis_SC, "OPD_MET_TELFC_MCORR");
         opd_met_fc_corr = cpl_table_get_data_double (vis_SC, "OPD_MET_FC_CORR");
+        opd_met_ttpup = cpl_table_get_data_double (vis_SC, "OPD_MET_TTPUP");
     } else if (!strcmp (imaging_ref_met,"FC_CORR")) {
         cpl_msg_info (cpl_func,"Use corrected fiber coupler metrology for IMAGING_REF computation");
         opd_met_fc_corr = cpl_table_get_data_double (vis_SC, "OPD_MET_FC_CORR");
@@ -2670,8 +2684,10 @@ cpl_error_code gravi_vis_create_imagingref_sc (cpl_table * vis_SC,
         imaging_ref[row] = cpl_array_new (nwave, CPL_TYPE_DOUBLE);
 
         /* If requested, use fiber coupler correction or telescope metrology */
+	// TODO : FE 20190509 added opd_met_ttpup (commented)?
         double opd_met_corr = (opd_met_telfc_mcorr ? opd_met_telfc_mcorr[row] : 0.0)
-                            + (opd_met_fc_corr ? opd_met_fc_corr[row] : 0.0);
+	                          + (opd_met_fc_corr ? opd_met_fc_corr[row] : 0.0);
+    //                            + (opd_met_ttpup ? opd_met_ttpup[row] : 0.0);
 
         /* Compute VISPHI for each wavelength */
         for (int w = 0; w < nwave; w++) {

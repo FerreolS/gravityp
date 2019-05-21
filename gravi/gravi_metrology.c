@@ -1778,6 +1778,11 @@ cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
     cpl_table_duplicate_column (visacq_tmp, "FIELD_FIBER_DY",
                                 visacq_table, "FIELD_FIBER_DY");
 
+    cpl_table_duplicate_column (visacq_tmp, "PUPIL_U",
+                                visacq_table, "PUPIL_U");
+    cpl_table_duplicate_column (visacq_tmp, "PUPIL_V",
+                                visacq_table, "PUPIL_V");
+
     /* Get the ACQ DIT in [us] */
     double dit_acq = gravi_pfits_get_dit_acqcam (header) * 1e6;
     cpl_msg_info (cpl_func,"dit_acq = %g [us]", dit_acq);
@@ -1796,6 +1801,11 @@ cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
 	gravi_table_new_column (vismet_table, "FIELD_FIBER_DY", "pix", CPL_TYPE_DOUBLE);
     double * fdy_met = cpl_table_get_data_double (vismet_table, "FIELD_FIBER_DY");
     
+	gravi_table_new_column (vismet_table, "PUPIL_U", "m", CPL_TYPE_DOUBLE);
+    double * pupil_u = cpl_table_get_data_double (vismet_table, "PUPIL_U");
+	gravi_table_new_column (vismet_table, "PUPIL_V", "m", CPL_TYPE_DOUBLE);
+    double * pupil_v = cpl_table_get_data_double (vismet_table, "PUPIL_V");
+
     /* Get data from input table */
     double * opd_acq = cpl_table_get_data_double (visacq_tmp, "OPD_PUPIL");
     double * fdx_acq = cpl_table_get_data_double (visacq_tmp, "FIELD_FIBER_DX");
@@ -1803,6 +1813,9 @@ cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
     int * nspot = cpl_table_get_data_int (visacq_tmp, "PUPIL_NSPOT");
     int * first = cpl_table_get_data_int (visacq_tmp, "FIRST_MET");
     int * last  = cpl_table_get_data_int (visacq_tmp, "LAST_MET");
+    double * pupil_u_acq = cpl_table_get_data_double (visacq_tmp, "PUPIL_U");
+    double * pupil_v_acq = cpl_table_get_data_double (visacq_tmp, "PUPIL_V");
+
     CPLCHECK_MSG ("Cannot load data");
 
     /* Loop on beam */
@@ -1816,6 +1829,8 @@ cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
                     nspot[(row-1)*ntel+tel] > 0 &&
                     nspot[(row+1)*ntel+tel] > 0) {
                     opd_acq[row*ntel+tel] = 0.5* (opd_acq[(row-1)*ntel+tel] + opd_acq[(row+1)*ntel+tel]);
+		    pupil_u_acq[row*ntel+tel] = 0.5* (pupil_u_acq[(row-1)*ntel+tel] + pupil_u_acq[(row+1)*ntel+tel]);
+		    pupil_v_acq[row*ntel+tel] = 0.5* (pupil_v_acq[(row-1)*ntel+tel] + pupil_v_acq[(row+1)*ntel+tel]);
                 }
             }
         }
@@ -1826,6 +1841,8 @@ cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
                 opd_met[row_met*ntel+tel] = opd_acq[row*ntel+tel];
                 fdx_met[row_met*ntel+tel] = fdx_acq[row*ntel+tel];
                 fdy_met[row_met*ntel+tel] = fdy_acq[row*ntel+tel];
+                pupil_u[row_met*ntel+tel] = pupil_u_acq[row*ntel+tel];
+                pupil_v[row_met*ntel+tel] = pupil_v_acq[row*ntel+tel];
             }
         }
 
@@ -1833,6 +1850,9 @@ cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
         double opd = opd_met[nrow_acq*ntel+tel];
         double fdx = fdx_met[nrow_acq*ntel+tel];
         double fdy = fdy_met[nrow_acq*ntel+tel];
+        double pupu = pupil_u[nrow_acq*ntel+tel];
+        double pupv = pupil_v[nrow_acq*ntel+tel];
+
         for (cpl_size row = nrow_met-1; row >= 0; row--) {
             if (opd_met[row*ntel+tel] != 0 ) opd = opd_met[row*ntel+tel];
             else opd_met[row*ntel+tel] = opd;
@@ -1840,12 +1860,19 @@ cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
             else fdx_met[row*ntel+tel] = fdx;
             if (fdy_met[row*ntel+tel] != 0 ) fdy = fdy_met[row*ntel+tel];
             else fdy_met[row*ntel+tel] = fdy;
+            if (pupil_u[row*ntel+tel] != 0 ) pupu = pupil_u[row*ntel+tel];
+            else pupil_u[row*ntel+tel] = pupu;
+            if (pupil_v[row*ntel+tel] != 0 ) pupv = pupil_v[row*ntel+tel];
+            else pupil_v[row*ntel+tel] = pupv;
         }
 
         /* Loop on MET rows, to fill the empty by the closet past value */
         opd = opd_met[0*ntel+tel];
         fdx = fdx_met[0*ntel+tel];
         fdy = fdy_met[0*ntel+tel];
+        pupu = pupil_u[0*ntel+tel];
+        pupv = pupil_v[0*ntel+tel];
+
         for (cpl_size row = 0; row < nrow_met; row++) {
             if (opd_met[row*ntel+tel] != 0) opd = opd_met[row*ntel+tel];
             else opd_met[row*ntel+tel] = opd;
@@ -1853,6 +1880,10 @@ cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
             else fdx_met[row*ntel+tel] = fdx;
             if (fdy_met[row*ntel+tel] != 0) fdy = fdy_met[row*ntel+tel];
             else fdy_met[row*ntel+tel] = fdy;
+            if (pupil_u[row*ntel+tel] != 0) pupu = pupil_u[row*ntel+tel];
+            else pupil_u[row*ntel+tel] = pupu;
+            if (pupil_v[row*ntel+tel] != 0) pupv = pupil_v[row*ntel+tel];
+            else pupil_v[row*ntel+tel] = pupv;
         }
         
     }/* End loop on beam */
@@ -2974,10 +3005,11 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         mttdy[tel] = mttn[tel]*cos(northangle * CPL_MATH_RAD_DEG ) - mtte[tel]*sin(northangle * CPL_MATH_RAD_DEG );
     }
     
-    cpl_msg_info (cpl_func,"FE: mttx, mtty in uvw coordinates of GV1: %g %g pixel", mttx[0], mtty[0]);
-    cpl_msg_info (cpl_func,"FE: mttx, mtty in uvw coordinates of GV2: %g %g pixel", mttx[1], mtty[1]);
-    cpl_msg_info (cpl_func,"FE: mttx, mtty in uvw coordinates of GV3: %g %g pixel", mttx[2], mtty[2]);
-    cpl_msg_info (cpl_func,"FE: mttx, mtty in uvw coordinates of GV4: %g %g pixel", mttx[3], mtty[3]);
+    // FE 20190509 changed uvw -> telescope, beause I think mttxy are in telescope coordinate system, not uvw (which is aligned to N/E 
+    cpl_msg_info (cpl_func,"FE: mttx, mtty in telescope coordinates of GV1: %g %g pixel", mttx[0], mtty[0]);
+    cpl_msg_info (cpl_func,"FE: mttx, mtty in telescope coordinates of GV2: %g %g pixel", mttx[1], mtty[1]);
+    cpl_msg_info (cpl_func,"FE: mttx, mtty in telescope coordinates of GV3: %g %g pixel", mttx[2], mtty[2]);
+    cpl_msg_info (cpl_func,"FE: mttx, mtty in telescope coordinates of GV4: %g %g pixel", mttx[3], mtty[3]);
     cpl_msg_info (cpl_func,"FE: mttx, mtty in RA DEC coordinates of GV1: %g %g pixel", mtte[0], mttn[0]);
     cpl_msg_info (cpl_func,"FE: mttx, mtty in RA DEC coordinates of GV2: %g %g pixel", mtte[1], mttn[1]);
     cpl_msg_info (cpl_func,"FE: mttx, mtty in RA DEC coordinates of GV3: %g %g pixel", mtte[2], mttn[2]);
@@ -3078,7 +3110,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     /* Note: could also be other combinations, e.g. the less noisy   */
     /*       mean of opposite diodes.                                */ 
     /*****************************************************************/
-    
+    // FE 2019-05-15 remark: using less noisy mean of opposite diodes 
+    // show systematic differences in the one case I carefully checked    
     
     cpl_msg_info (cpl_func,"FE: calculate OPD_TELFC_MCORR.");
     
@@ -3097,10 +3130,134 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         }
     }
     
+    // FE 2019-05-15 wrap around median might help
+    /* /\* wrap around median to lambda/4 range *\/ */
+
+    /* for (int tel = 0; tel < ntel; tel++) { */
+    /*     /\* fill tmp_vector with opd_telfc_corr for given telescope and diode *\/ */
+    /*     for (cpl_size row = 0; row < nrow_met; row++) { */
+    /* 	    cpl_vector_set (tmp_vector, row, opd_telfc_mcorr[row*ntel+tel]); */
+    /*         } */
+    /*         /\* calculate median *\/ */
+    /*         tmp_median =  cpl_vector_get_median_const(tmp_vector); */
+    /*         high_limit = (tmp_median + lambda_met_mean / 8.); */
+    /*         low_limit = (tmp_median - lambda_met_mean / 8.); */
+    /*         /\* wrap to median *\/ */
+    /*         for (cpl_size row = 0; row < nrow_met; row++) { */
+    /*             if (opd_telfc_mcorr[row*ntel+tel] > high_limit) { */
+    /*                 opd_telfc_mcorr[row*ntel+tel] -= lambda_met_mean / 4.; */
+    /*             } */
+    /*             if (opd_telfc_mcorr[row*ntel+tel] < low_limit) { */
+    /*                 opd_telfc_mcorr[row*ntel+tel] += lambda_met_mean / 4.; */
+    /*             } */
+    /*         } */
+    /*         /\* do a second wrap around median for better estimate *\/ */
+    /*         for (cpl_size row = 0; row < nrow_met; row++) { */
+    /*             cpl_vector_set (tmp_vector, row, opd_telfc_mcorr[row*ntel+tel]); */
+    /*         } */
+    /*         tmp_median =  cpl_vector_get_median_const(tmp_vector); */
+    /*         high_limit = (tmp_median + lambda_met_mean / 8.); */
+    /*         low_limit = (tmp_median - lambda_met_mean / 8.); */
+    /*         for (cpl_size row = 0; row < nrow_met; row++) { */
+    /*             if (opd_telfc_mcorr[row*ntel+tel] > high_limit) { */
+    /*                 opd_telfc_mcorr[row*ntel+tel] -= lambda_met_mean / 4.; */
+    /*             } */
+    /*             if (opd_telfc_mcorr[row*ntel+tel] < low_limit) { */
+    /*                 opd_telfc_mcorr[row*ntel+tel] += lambda_met_mean / 4.; */
+    /*             } */
+    /* 	    } */
+    /* } */
+
     FREE (cpl_vector_delete, tmp_vector);
     
     cpl_msg_info (cpl_func,"FE: end.");
     
+
+    /*****************************************************************/
+    /*                   PART V:  OPD_TTPUP                          */
+    /*****************************************************************/
+    /* Calculate the combined tip/tilt*pupil error                   */
+    /*****************************************************************/
+    /* FE 2019-05-07: calculate metrology tip/tilt error = fiber mispointing 
+       currently as above for the QC parameter */
+
+    gravi_table_new_column (vismet_table, "FIBER_DU", "rad", CPL_TYPE_DOUBLE);
+    double * fiber_du = cpl_table_get_data_double (vismet_table, "FIBER_DU");
+    gravi_table_new_column (vismet_table, "FIBER_DV", "rad", CPL_TYPE_DOUBLE);
+    double * fiber_dv = cpl_table_get_data_double (vismet_table, "FIBER_DV");
+    double met_ttx, met_tty;  /* temporary variables */    
+
+    /* to speed up calculation, pre-calculate sine and cosine of paralactic angle */
+    float sparang = sin(parang);
+    float cparang = cos(parang);
+
+    for (int tel = 0; tel < ntel; tel++) {
+      for (cpl_size row = 0; row < nrow_met; row++) {
+	/* calculate terology tip/tilt error telescope coordinate system in radians */
+	met_ttx = (opd_telfc_corr[row*ntel+tel][3]*rec_az[tel][3]*pow(rec_zd[tel][0],2) - opd_telfc_corr[row*ntel+tel][0]*rec_az[tel][1]*rec_zd[tel][0]*rec_zd[tel][1] + opd_telfc_corr[row*ntel+tel][0]*rec_az[tel][0]*pow(rec_zd[tel][1],2) + 
+		   opd_telfc_corr[row*ntel+tel][3]*rec_az[tel][3]*pow(rec_zd[tel][1],2) - opd_telfc_corr[row*ntel+tel][0]*rec_az[tel][2]*rec_zd[tel][0]*rec_zd[tel][2] + opd_telfc_corr[row*ntel+tel][0]*rec_az[tel][0]*pow(rec_zd[tel][2],2) + 
+               opd_telfc_corr[row*ntel+tel][3]*rec_az[tel][3]*pow(rec_zd[tel][2],2) - opd_telfc_corr[row*ntel+tel][3]*rec_az[tel][0]*rec_zd[tel][0]*rec_zd[tel][3] - opd_telfc_corr[row*ntel+tel][0]*rec_az[tel][3]*rec_zd[tel][0]*rec_zd[tel][3] - 
+               opd_telfc_corr[row*ntel+tel][3]*rec_az[tel][1]*rec_zd[tel][1]*rec_zd[tel][3] - opd_telfc_corr[row*ntel+tel][3]*rec_az[tel][2]*rec_zd[tel][2]*rec_zd[tel][3] + opd_telfc_corr[row*ntel+tel][0]*rec_az[tel][0]*pow(rec_zd[tel][3],2) - 
+               opd_telfc_corr[row*ntel+tel][2]*rec_zd[tel][2]*(rec_az[tel][0]*rec_zd[tel][0] + rec_az[tel][1]*rec_zd[tel][1] + rec_az[tel][3]*rec_zd[tel][3]) - 
+               opd_telfc_corr[row*ntel+tel][1]*rec_zd[tel][1]*(rec_az[tel][0]*rec_zd[tel][0] + rec_az[tel][2]*rec_zd[tel][2] + rec_az[tel][3]*rec_zd[tel][3]) + 
+               opd_telfc_corr[row*ntel+tel][2]*rec_az[tel][2]*(pow(rec_zd[tel][0],2) + pow(rec_zd[tel][1],2) + pow(rec_zd[tel][3],2)) + 
+               opd_telfc_corr[row*ntel+tel][1]*rec_az[tel][1]*(pow(rec_zd[tel][0],2) + pow(rec_zd[tel][2],2) + pow(rec_zd[tel][3],2))) /
+                    (pow(rec_az[tel][3],2)*pow(rec_zd[tel][0],2) + pow(rec_az[tel][0],2)*pow(rec_zd[tel][1],2) + 
+               pow(rec_az[tel][3],2)*pow(rec_zd[tel][1],2) + pow(rec_az[tel][0],2)*pow(rec_zd[tel][2],2) + 
+               pow(rec_az[tel][3],2)*pow(rec_zd[tel][2],2) - 2*rec_az[tel][0]*rec_az[tel][3]*rec_zd[tel][0]*rec_zd[tel][3] + 
+               pow(rec_az[tel][0],2)*pow(rec_zd[tel][3],2) - 2*rec_az[tel][2]*rec_zd[tel][2]*(rec_az[tel][0]*rec_zd[tel][0] + rec_az[tel][3]*rec_zd[tel][3]) - 
+               2*rec_az[tel][1]*rec_zd[tel][1]*(rec_az[tel][0]*rec_zd[tel][0] + rec_az[tel][2]*rec_zd[tel][2] + rec_az[tel][3]*rec_zd[tel][3]) + 
+               pow(rec_az[tel][2],2)*(pow(rec_zd[tel][0],2) + pow(rec_zd[tel][1],2) + pow(rec_zd[tel][3],2)) + 
+               pow(rec_az[tel][1],2)*(pow(rec_zd[tel][0],2) + pow(rec_zd[tel][2],2) + pow(rec_zd[tel][3],2)));
+        met_tty = (-(opd_telfc_corr[row*ntel+tel][2]*rec_az[tel][0]*rec_az[tel][2]*rec_zd[tel][0]) - opd_telfc_corr[row*ntel+tel][3]*rec_az[tel][0]*rec_az[tel][3]*rec_zd[tel][0] - opd_telfc_corr[row*ntel+tel][2]*rec_az[tel][1]*rec_az[tel][2]*rec_zd[tel][1] - 
+               opd_telfc_corr[row*ntel+tel][3]*rec_az[tel][1]*rec_az[tel][3]*rec_zd[tel][1] + opd_telfc_corr[row*ntel+tel][2]*pow(rec_az[tel][0],2)*rec_zd[tel][2] + opd_telfc_corr[row*ntel+tel][2]*pow(rec_az[tel][1],2)*rec_zd[tel][2] - 
+               opd_telfc_corr[row*ntel+tel][3]*rec_az[tel][2]*rec_az[tel][3]*rec_zd[tel][2] + opd_telfc_corr[row*ntel+tel][2]*pow(rec_az[tel][3],2)*rec_zd[tel][2] + opd_telfc_corr[row*ntel+tel][3]*pow(rec_az[tel][0],2)*rec_zd[tel][3] + 
+               opd_telfc_corr[row*ntel+tel][3]*pow(rec_az[tel][1],2)*rec_zd[tel][3] + opd_telfc_corr[row*ntel+tel][3]*pow(rec_az[tel][2],2)*rec_zd[tel][3] - opd_telfc_corr[row*ntel+tel][2]*rec_az[tel][2]*rec_az[tel][3]*rec_zd[tel][3] + 
+               opd_telfc_corr[row*ntel+tel][0]*(pow(rec_az[tel][1],2)*rec_zd[tel][0] + pow(rec_az[tel][2],2)*rec_zd[tel][0] + pow(rec_az[tel][3],2)*rec_zd[tel][0] - 
+                 rec_az[tel][0]*rec_az[tel][1]*rec_zd[tel][1] - rec_az[tel][0]*rec_az[tel][2]*rec_zd[tel][2] - rec_az[tel][0]*rec_az[tel][3]*rec_zd[tel][3]) + 
+               opd_telfc_corr[row*ntel+tel][1]*(-(rec_az[tel][0]*rec_az[tel][1]*rec_zd[tel][0]) + pow(rec_az[tel][0],2)*rec_zd[tel][1] + pow(rec_az[tel][2],2)*rec_zd[tel][1] + 
+               pow(rec_az[tel][3],2)*rec_zd[tel][1] - rec_az[tel][1]*rec_az[tel][2]*rec_zd[tel][2] - rec_az[tel][1]*rec_az[tel][3]*rec_zd[tel][3]))/
+                    (pow(rec_az[tel][3],2)*pow(rec_zd[tel][0],2) + pow(rec_az[tel][0],2)*pow(rec_zd[tel][1],2) + 
+               pow(rec_az[tel][3],2)*pow(rec_zd[tel][1],2) + pow(rec_az[tel][0],2)*pow(rec_zd[tel][2],2) + 
+               pow(rec_az[tel][3],2)*pow(rec_zd[tel][2],2) - 2*rec_az[tel][0]*rec_az[tel][3]*rec_zd[tel][0]*rec_zd[tel][3] + 
+               pow(rec_az[tel][0],2)*pow(rec_zd[tel][3],2) - 2*rec_az[tel][2]*rec_zd[tel][2]*(rec_az[tel][0]*rec_zd[tel][0] + rec_az[tel][3]*rec_zd[tel][3]) - 
+               2*rec_az[tel][1]*rec_zd[tel][1]*(rec_az[tel][0]*rec_zd[tel][0] + rec_az[tel][2]*rec_zd[tel][2] + rec_az[tel][3]*rec_zd[tel][3]) + 
+               pow(rec_az[tel][2],2)*(pow(rec_zd[tel][0],2) + pow(rec_zd[tel][1],2) + pow(rec_zd[tel][3],2)) + 
+               pow(rec_az[tel][1],2)*(pow(rec_zd[tel][0],2) + pow(rec_zd[tel][2],2) + pow(rec_zd[tel][3],2)));
+        // rotate to sky (north, east) using parang (like for QC parameter)
+        fiber_du[row*ntel+tel] =   met_ttx*cparang + met_tty*sparang;
+        fiber_dv[row*ntel+tel] = - met_ttx*sparang + met_tty*cparang;
+	}
+    }
+
+    /* calculate correction for combined tip/tilt*pupil term 
+       were we are doing the vector product in uvw coordinates (rahter than sky coordinates), 
+       because both pupil and fiber mispointing already avalable */
+
+    double * pupil_u = NULL;
+    double * pupil_v = NULL;
+    if ( cpl_table_has_column(vismet_table, "PUPIL_U") && cpl_table_has_column(vismet_table, "PUPIL_V") ) {
+      pupil_u = cpl_table_get_data_double (vismet_table, "PUPIL_U");
+      pupil_v = cpl_table_get_data_double (vismet_table, "PUPIL_V");
+    }
+    else {
+        cpl_msg_warning(cpl_func,"Cannot get the PUPIL_U/V (not computed) so will"
+                "not correct for pupil opd (check the --reduce-acq-cam option)");
+    }
+    
+
+    gravi_table_new_column (vismet_table, "OPD_TTPUP", "m", CPL_TYPE_DOUBLE);
+    double * opd_ttpup = cpl_table_get_data_double (vismet_table, "OPD_TTPUP");
+
+    for (int tel = 0; tel < ntel; tel++) {
+      for (cpl_size row = 0; row < nrow_met; row++) {
+	opd_ttpup[row*ntel+tel] =  (pupil_u && pupil_v) ? 
+	  fiber_du[row*ntel+tel] * pupil_u[row*ntel+tel] +
+	  fiber_dv[row*ntel+tel] * pupil_v[row*ntel+tel] : 0. ;
+	}
+    }
+
+
     /*----------------------------------------------------------------*/
     /* FE end                                                         */
     /*----------------------------------------------------------------*/
