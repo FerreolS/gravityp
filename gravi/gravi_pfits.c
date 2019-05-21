@@ -376,6 +376,20 @@ double gravi_pfits_get_sobj_y (const cpl_propertylist * plist)
     return value;
 }
 
+// FE 20190415
+double gravi_pfits_get_sobj_offx (const cpl_propertylist * plist)
+{
+    double value = gravi_pfits_get_double_default (plist, "ESO INS SOBJ OFFX", 0.0);
+    return value;
+}
+
+double gravi_pfits_get_sobj_offy (const cpl_propertylist * plist)
+{
+    double value = gravi_pfits_get_double_default (plist, "ESO INS SOBJ OFFY", 0.0);
+    return value;
+}
+//
+
 const char * gravi_pfits_get_robj (const cpl_propertylist * plist)
 {
     const char * value = gravi_pfits_get_string_default (plist, "ESO FT ROBJ NAME", "UNKNOWN_FT");
