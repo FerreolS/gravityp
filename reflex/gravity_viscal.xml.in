@@ -116,7 +116,7 @@
     </property>
     <property name="_vergilCenter" class="ptolemy.data.expr.ExpertParameter" value="{887.5555555555554, 563.7777777777777}">
     </property>
-    <property name="RAWDATA_DIR" class="ptolemy.data.expr.FileParameter" value="$ROOT_DATA_DIR/reflex_input/gravity">
+    <property name="RAW_DATA_DIR" class="ptolemy.data.expr.FileParameter" value="$ROOT_DATA_DIR/reflex_input/gravity">
 <property name="KeplerDocumentation" class="ptolemy.vergil.basic.KeplerDocumentationAttribute">
 <property name="description" class="ptolemy.kernel.util.ConfigurableAttribute"><configure>none</configure></property>
 <property name="author" class="ptolemy.kernel.util.ConfigurableAttribute"><configure>yang zhao, edward lee</configure></property>
@@ -3435,7 +3435,7 @@
             </property>
         </entity>
         <entity name="String Constant2" class="ptolemy.actor.lib.StringConst">
-            <property name="value" class="ptolemy.data.expr.Parameter" value="$RAWDATA_DIR">
+            <property name="value" class="ptolemy.data.expr.Parameter" value="$RAW_DATA_DIR">
             </property>
             <property name="firingCountLimit" class="ptolemy.data.expr.Parameter" value="1">
             </property>

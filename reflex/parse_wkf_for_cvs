@@ -6,7 +6,7 @@ wkf_file=gravity_viscal.xml.for_svn
 # Input directories
 sed -i -e 's#\(<property name="ROOT_DATA_DIR" class="ptolemy.data.expr.FileParameter" value="\).*">#\1ROOT_DATA_PATH_TO_REPLACE/">#' $wkf_file
 sed -i -e 's#\(<property name="CALIB_DATA_DIR" class="ptolemy.data.expr.FileParameter" value="\).*">#\1CALIB_DATA_PATH_TO_REPLACE/gravity-@VERSION@/">#' $wkf_file
-sed -i -e 's#\(<property name="RAWDATA_DIR" class="ptolemy.data.expr.FileParameter" value="\).*">#\1$ROOT_DATA_DIR/reflex_input/gravity">#' $wkf_file
+sed -i -e 's#\(<property name="RAW_DATA_DIR" class="ptolemy.data.expr.FileParameter" value="\).*">#\1$ROOT_DATA_DIR/reflex_input/gravity">#' $wkf_file
 
 # Working directories
 sed -i -e 's#\(<property name="BOOKKEEPING_DIR" class="ptolemy.data.expr.FileParameter" value="\).*">#\1$ROOT_DATA_DIR/reflex_book_keeping/gravity">#' $wkf_file
@@ -45,7 +45,7 @@ wkf_file=gravity_wkf.xml.for_svn
 # Input directories
 sed -i -e 's#\(<property name="ROOT_DATA_DIR" class="ptolemy.data.expr.FileParameter" value="\).*">#\1ROOT_DATA_PATH_TO_REPLACE/">#' $wkf_file
 sed -i -e 's#\(<property name="CALIB_DATA_DIR" class="ptolemy.data.expr.FileParameter" value="\).*">#\1CALIB_DATA_PATH_TO_REPLACE/gravity-@VERSION@/">#' $wkf_file
-sed -i -e 's#\(<property name="RAWDATA_DIR" class="ptolemy.data.expr.FileParameter" value="\).*">#\1$ROOT_DATA_DIR/reflex_input/gravity">#' $wkf_file
+sed -i -e 's#\(<property name="RAW_DATA_DIR" class="ptolemy.data.expr.FileParameter" value="\).*">#\1$ROOT_DATA_DIR/reflex_input/gravity">#' $wkf_file
 
 # Working directories
 sed -i -e 's#\(<property name="BOOKKEEPING_DIR" class="ptolemy.data.expr.FileParameter" value="\).*">#\1$ROOT_DATA_DIR/reflex_book_keeping/gravity">#' $wkf_file
