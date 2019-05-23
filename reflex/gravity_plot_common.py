@@ -173,7 +173,7 @@ class PlotableRawCalibratorTF:
         else:
           this_xlab = ''
         if isub == 2 :
-          this_ylab = 'Transfer function of squared visibilities'
+          this_ylab = 'Median transfer function of squared visibilities'
         else:
           this_ylab = ''
         self.tfdisp.setLabels(this_xlab, this_ylab)
