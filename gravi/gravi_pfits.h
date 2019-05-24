@@ -160,6 +160,8 @@ enum gravi_detector_type
 /* Modes */
 #define MODE_SINGLE 1
 #define MODE_DUAL   2
+#define MODE_ONAXIS  1
+#define MODE_OFFAXIS 2
 
 /* INSNAME_SC or INSNAME_FT. Deal with polar */
 #define INSNAME_FT_P1 "GRAVITY_FT_P1"
@@ -238,6 +240,7 @@ const char * gravi_pfits_get_pola_mode(const cpl_propertylist * plist, int type_
 int gravi_pfits_is_calib (const cpl_propertylist * plist);
 int gravi_pfits_get_pola_num(const cpl_propertylist * plist, int type_data );
 int gravi_pfits_get_mode (const cpl_propertylist * plist);
+int gravi_pfits_get_axis (const cpl_propertylist * plist);
 const char * gravi_pfits_get_mode_name (const cpl_propertylist * plist);
 int gravi_data_frame_get_mode(const cpl_frame * frame);
 

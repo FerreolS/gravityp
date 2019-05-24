@@ -208,6 +208,24 @@ int gravi_pfits_get_mode (const cpl_propertylist * plist)
     return 0;
 }
 
+int gravi_pfits_get_axis (const cpl_propertylist * plist)
+{
+    const char * type;
+    
+    if (cpl_propertylist_has (plist, "ESO INS OPTI11 ID"))
+        type = cpl_propertylist_get_string (plist,"ESO INS OPTI11 ID");
+    else return -1;
+    
+    if (strstr (type,"OFFAXIS")) {
+        return MODE_OFFAXIS;
+    }
+    if (strstr (type, "ONAXIS")) {
+        return MODE_ONAXIS;
+    }
+    
+    return 0;
+}
+
 const char * gravi_pfits_get_mode_name (const cpl_propertylist * plist)
 {
     cpl_ensure (plist, CPL_ERROR_NULL_INPUT, NULL);

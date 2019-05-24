@@ -1457,64 +1457,46 @@ double gravi_metrology_get_fc_focus (cpl_propertylist * header, int gv, gravi_da
         return 0.0;
     }
     
-    /* Assemble header keyword */
-//    char name[100];
-//    if (telname[0] == 'U') {
-//        sprintf (name, "ESO MET GV%i UT FC FOCUS", gv+1);
-//    } else {
-//        sprintf (name, "ESO MET GV%i AT FC FOCUS", gv+1);
-//    }
-    
-    /* If keyword available, read it, otherwise use defaults with warning */
-    double defocus;
-
-    /* ----------------- START EKW 12/11/2018 read constant parameter from calibration file */
+    /* Loading defaults which will be used if no other choice with warning */
+    double defocus=0.0;
     double defocus_at_default[4] = {-75.0, -100.0, 25.0, -75.0}; // Measured 2017-11-17
     double defocus_ut_default[4] = {-50.0, -125.0, -150.0, -175.0}; // Measured 2018-02-15
-	double *defocus_at;
-	double *defocus_ut;
-
+    
+    char column_name[80];
+    int get_default=1;
+    
+    /* Assemble column name */
+    if (telname[0] == 'U') strcpy(column_name,"fc_focus_ut");
+    else strcpy(column_name,"fc_focus_ut");
+    if (gravi_pfits_get_axis (header) == MODE_ONAXIS) strcat(column_name,"_onaxis");
+    
+    /* read value from calibration file */
     if (static_param_data)
     {
-		cpl_table * default_focus_table = gravi_data_get_table (static_param_data, "FOCUSPAR");
-
-		if ( cpl_table_has_column(default_focus_table , "fc_focus_at") ) {
-		  defocus_at = cpl_table_get_data_double (default_focus_table, "fc_focus_at");
-		  cpl_msg_info(cpl_func,"defocus_at [0] : %e",defocus_at[0] );
-		  cpl_msg_info(cpl_func,"defocus_at [1] : %e",defocus_at[1] );
-		  cpl_msg_info(cpl_func,"defocus_at [2] : %e",defocus_at[2] );
-		  cpl_msg_info(cpl_func,"defocus_at [3] : %e",defocus_at[3] );
-		}
-		else {
-		  cpl_msg_warning(cpl_func,"Cannot get the default values for fc_focus_at ");
-		}
-
-		if ( cpl_table_has_column(default_focus_table , "fc_focus_ut") ) {
-		  defocus_ut = cpl_table_get_data_double (default_focus_table, "fc_focus_ut");
-		  cpl_msg_info(cpl_func,"defocus_focus_ut [0] : %e",defocus_ut[0] );
-		  cpl_msg_info(cpl_func,"defocus_focus_ut [1] : %e",defocus_ut[1] );
-		  cpl_msg_info(cpl_func,"defocus_focus_ut [2] : %e",defocus_ut[2] );
-		  cpl_msg_info(cpl_func,"defocus_focus_ut [3] : %e",defocus_ut[3] );
-		}
-		else {
-		  cpl_msg_warning(cpl_func,"Cannot get the default values for fc_focus_ut ");
-		}
-	   /* ------------------ END EKW 12/11/2018 read constant parameter from calibration file */
-
-        cpl_msg_info (cpl_func,"Using static calibration for fiber coupler focus for GV%i!", gv+1);
-    }
-    else
-    {
-        defocus_at = defocus_at_default;
-        defocus_ut = defocus_ut_default;
-        cpl_msg_error (cpl_func,"Cannot find static calibration file, using hard-coded values for fiber coupler focus for GV%i!", gv+1);
-    }
-
-    if (telname[0] == 'U') {
-        defocus = defocus_ut[gv];
+        cpl_table * default_focus_table = gravi_data_get_table (static_param_data, "FOCUSPAR");
+        if  ( cpl_table_has_column(default_focus_table , column_name) )
+        {
+            defocus = cpl_table_get_data_double (default_focus_table, column_name)[gv];
+            get_default=0;
+        } else {
+            cpl_msg_warning(cpl_func,"Cannot get the column %s from the calibration file",column_name);
+        }
     } else {
-        defocus = defocus_at[gv];
+        cpl_msg_error (cpl_func,"Cannot find static calibration file, using hard-coded values for fiber coupler focus shift for GV%i!", gv+1);
     }
+    
+    /* if could not get the value for whatever reason, default to hardcoded values */
+    if (get_default == 1)
+    {
+        cpl_msg_warning(cpl_func,"Using the default values for %s for GV%i",column_name,gv+1);
+        if (telname[0] == 'U') {
+            defocus=defocus_ut_default[gv];
+        } else {
+            defocus=defocus_at_default[gv];
+        }
+    }
+    
+    cpl_msg_info(cpl_func,"value for %s on GV%i : %e",column_name,gv+1,defocus);
     
     gravi_msg_function_exit(0);
     return defocus*1e-9; // Convert from [nm] in header to [m] in pipeline
@@ -1544,64 +1526,46 @@ double gravi_metrology_get_fc_shift (cpl_propertylist * header, int gv, gravi_da
         return 0.0;
     }
     
-    /* Assemble header keyword */
-//    char name[100];
-//    if (telname[0] == 'U') {
-//        sprintf (name, "ESO MET GV%i UT FC SHIFT", gv+1);
-//    } else {
-//        sprintf (name, "ESO MET GV%i AT FC SHIFT", gv+1);
-//    }
-    
-    /* ----------------- START EKW 12/11/2018 read constant parameter from calibration file */
-    /* If keyword available, read it, otherwise use defaults with warning */
-    double shift;
+    /* Loading defaults which will be used if no other choice with warning */
+    double shift=0.0;
     double shift_ut_default[4] = {-450.0, -350.0, -50.0, -525.0}; // Measured 2018-02-15
     double shift_at_default[4] = {-100.0*1.8/8.0, 50.0*1.8/8.0, 150.0*1.8/8.0, -100.0*1.8/8.0}; // Measured 2017-11-17
-
-    double *shift_at;
-    double *shift_ut;
-
+    
+    char column_name[80];
+    int get_default=1;
+    
+    /* Assemble column name */
+    if (telname[0] == 'U') strcpy(column_name,"fc_focus_shift_ut");
+    else strcpy(column_name,"fc_focus_shift_ut");
+    if (gravi_pfits_get_axis (header) == MODE_ONAXIS) strcat(column_name,"_onaxis");
+    
+    /* read value from calibration file */
     if (static_param_data)
     {
         cpl_table * default_focus_table = gravi_data_get_table (static_param_data, "FOCUSPAR");
-
-		if ( cpl_table_has_column(default_focus_table , "fc_focus_at") ) {
-		  shift_at = cpl_table_get_data_double (default_focus_table, "fc_focus_shift_at");
-		  cpl_msg_info(cpl_func,"shift_at [0] : %e",shift_at[0] );
-		  cpl_msg_info(cpl_func,"shift_at [1] : %e",shift_at[1] );
-		  cpl_msg_info(cpl_func,"shift_at [2] : %e",shift_at[2] );
-		  cpl_msg_info(cpl_func,"shift_at [3] : %e",shift_at[3] );
-		}
-		else {
-		  cpl_msg_warning(cpl_func,"Cannot get the default values for fc_focus_shift_at ");
-		}
-
-		if ( cpl_table_has_column(default_focus_table , "fc_focus_ut") ) {
-		  shift_ut = cpl_table_get_data_double (default_focus_table, "fc_focus_shift_ut");
-		  cpl_msg_info(cpl_func,"shift_ut [0] : %e", shift_ut[0] );
-		  cpl_msg_info(cpl_func,"shift_ut [1] : %e", shift_ut[1] );
-		  cpl_msg_info(cpl_func,"shift_ut [2] : %e", shift_ut[2] );
-		  cpl_msg_info(cpl_func,"shift_ut [3] : %e", shift_ut[3] );
-		}
-		else {
-		  cpl_msg_warning(cpl_func,"Cannot get the default values for fc_focus_shift_ut ");
-		}
-	   /* ------------------ END EKW 12/11/2018 read constant parameter from calibration file */
-
-        cpl_msg_info (cpl_func,"Using static calibration for fiber coupler shift for GV%i!", gv+1);
-    }
-    else
-    {
-    	shift_at = shift_at_default;
-        shift_ut = shift_ut_default;
+        if  ( cpl_table_has_column(default_focus_table , column_name) )
+        {
+            shift = cpl_table_get_data_double (default_focus_table, column_name)[gv];
+            get_default=0;
+        } else {
+            cpl_msg_warning(cpl_func,"Cannot get the column %s from the calibration file",column_name);
+        }
+    } else {
         cpl_msg_error (cpl_func,"Cannot find static calibration file, using hard-coded values for fiber coupler focus shift for GV%i!", gv+1);
     }
-
-    if (telname[0] == 'U') {
-        shift = shift_ut[gv];
-    } else {
-        shift = shift_at[gv];
+    
+    /* if could not get the value for whatever reason, default to hardcoded values */
+    if (get_default == 1)
+    {
+        cpl_msg_warning(cpl_func,"Using the default values for %s for GV%i",column_name,gv+1);
+        if (telname[0] == 'U') {
+            shift=shift_ut_default[gv];
+        } else {
+            shift=shift_at_default[gv];
+        }
     }
+    
+    cpl_msg_info(cpl_func,"value for %s on GV%i : %e",column_name,gv+1,shift);
 
     gravi_msg_function_exit(0);
     return shift*1e-9;  // Convert from [nm/arcsec] in header to [m/arcsec] in pipeline
@@ -1646,6 +1610,14 @@ cpl_error_code gravi_metrology_get_astig (cpl_propertylist * header, int gv,
         sprintf (name_amp, "ESO MET GV%i AT ASTIG AMP", gv+1);
         sprintf (name_ang, "ESO MET GV%i AT ASTIG ANG", gv+1);
         *radius = 0.9; // radius if an AT [m]
+    }
+    if (gravi_pfits_get_axis (header) == MODE_ONAXIS)
+    {
+        strcat(name_amp," ONA");
+        strcat(name_ang," ONA");
+    } else {
+        strcat(name_amp," OFA");
+        strcat(name_ang," OFA");
     }
     
     /* If keywords available, read it, otherwise use defaults with warning */
