@@ -2286,23 +2286,27 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
      */
     
     int DIT_smooth=10;
-    double** volts_smooth = cpl_malloc (nrow_met * sizeof(double*));
     if (gravi_pfits_get_axis (header) == MODE_ONAXIS)  DIT_smooth=40;
+    
+    /* avoid segmentation fault if nrow < DIT_smooth */
+    if (nrow_met-DIT_smooth*2-1<0) DIT_smooth=nrow_met/2;
     
     cpl_msg_info (cpl_func,"Smoothing volts for a lower correlation bias by %d metrology DITS",DIT_smooth*2+1);
     
-    for (cpl_size row = DIT_smooth; row < nrow_met-DIT_smooth; row ++) {
-        volts_smooth[row] = cpl_malloc (80 * sizeof(double));
-        for (cpl_size diode = 0; diode < 80; diode ++) {
+    double** volts_smooth = cpl_malloc ((nrow_met-DIT_smooth*2) * sizeof(double*));
+    
+    for (cpl_size row = 0; row < nrow_met-DIT_smooth*2; row ++) {
+        volts_smooth[row] = cpl_malloc (64 * sizeof(double));
+        for (cpl_size diode = 0; diode < 64; diode ++) {
             volts_smooth[row][diode]=0.0;
-            for (int row_smooth = -DIT_smooth; row_smooth <= DIT_smooth; row_smooth ++)
+            for (int row_smooth = 0; row_smooth < DIT_smooth*2+1; row_smooth ++)
                 volts_smooth[row][diode]+=volts[row+row_smooth][diode];
         }
     }
     
     for (cpl_size row = DIT_smooth; row < nrow_met-DIT_smooth; row ++)
-        for (cpl_size diode = 0; diode < 80; diode ++)
-            volts[row][diode]=volts_smooth[row][diode];
+        for (cpl_size diode = 0; diode < 64; diode ++)
+            volts[row][diode]=volts_smooth[row-DIT_smooth][diode];
     
     CPLCHECK_MSG ("Cannot smooth the metrology data");
     
@@ -2482,6 +2486,7 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
     
     /* Free the pointer to pointer to data */
     FREELOOP (cpl_free, volts, nrow_met);
+    FREELOOP (cpl_free, volts_smooth, nrow_met-DIT_smooth*2);
     FREE (cpl_free, opd_tel);
     FREE (cpl_free, flag_tel);
     FREE (cpl_free, coher_tel_ft);
