@@ -2280,6 +2280,32 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
     
     CPLCHECK_MSG ("Cannot load metrology data");
     
+    /*
+     * Perform initial smoothing of the voltage values
+     * By 21 DITS in off-axis (42ms), and by 81 DITS in on-axis (162ms)
+     */
+    
+    int DIT_smooth=10;
+    double** volts_smooth = cpl_malloc (nrow_met * sizeof(double*));
+    if (gravi_pfits_get_axis (header) == MODE_ONAXIS)  DIT_smooth=40;
+    
+    cpl_msg_info (cpl_func,"Smoothing volts for a lower correlation bias by %d metrology DITS",DIT_smooth*2+1);
+    
+    for (cpl_size row = DIT_smooth; row < nrow_met-DIT_smooth; row ++) {
+        volts_smooth[row] = cpl_malloc (80 * sizeof(double));
+        for (cpl_size diode = 0; diode < 80; diode ++) {
+            volts_smooth[row][diode]=0.0;
+            for (int row_smooth = -DIT_smooth; row_smooth <= DIT_smooth; row_smooth ++)
+                volts_smooth[row][diode]+=volts[row+row_smooth][diode];
+        }
+    }
+    
+    for (cpl_size row = DIT_smooth; row < nrow_met-DIT_smooth; row ++)
+        for (cpl_size diode = 0; diode < 80; diode ++)
+            volts[row][diode]=volts_smooth[row][diode];
+    
+    CPLCHECK_MSG ("Cannot smooth the metrology data");
+    
     /* 
      * Allocate memory for FC the output
      *     opd_fc[nrow*ntel] 
