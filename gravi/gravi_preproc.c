@@ -1061,83 +1061,114 @@ cpl_error_code gravi_interpolate_spectrum_table (cpl_table * spectrum_table,
 
                 for (cpl_size iw = 0 ; iw < nb_oiwave ; iw ++)
                 {
-                    // xo is the wavenumber of the targeted wavelength (of indice iw)
-                    double l0=cpl_table_get (oiwave_tables[pol], "EFF_WAVE", iw, NULL);
+                	// xo is the wavenumber of the targeted wavelength (of indice iw)
+                	double l0=cpl_table_get (oiwave_tables[pol], "EFF_WAVE", iw, NULL);
 
-                    // id[iw] is the index of the closest wavenumber to xo
-                    // id[iw] must be above 1, and below nb_wave-1
-                    // wave is assumed to be in increasing order
+                	// id[iw] is the index of the closest wavenumber to xo
+                	// id[iw] must be above 1, and below nb_wave-1
+                	// wave is assumed to be in increasing order
 
-                    if (iw == 0) id[iw] = 1;
-                    else id[iw] = id[iw-1];
-                    while ( (1./l0 < 0.5/wave_ref[id[iw]]+0.5/wave_ref[id[iw]+1]) && ( id[iw] < nb_wave-2 ) ){
-                        id[iw]++;
-                    }
+                	if (iw == 0) id[iw] = 1;
+                	else id[iw] = id[iw-1];
+                	while ( (1./l0 < 0.5/wave_ref[id[iw]]+0.5/wave_ref[id[iw]+1]) && ( id[iw] < nb_wave-2 ) ){
+                		id[iw]++;
+                	}
 
-                    // compute the wavenumbers (normalized to x0)
-		    // FE: declaration should be further up
-                    double xm=l0/wave_ref[id[iw]-1]-1.;
-                    double xi=l0/wave_ref[id[iw]]-1.;
-                    double xp=l0/wave_ref[id[iw]+1]-1.;
-                    double xT=(xp-xm)/2;
-                    double Fm = 1.;
-                    double Fi = 1.;
-                    double Fp = 1.;
-                    double norm= 1.;
-                    
-		    if (specflat_table)
-		      {
-			 Fm=cpl_array_get (flat, id[iw]-1, NULL);
-			 Fi=cpl_array_get (flat, id[iw], NULL);
-			 Fp=cpl_array_get (flat, id[iw]+1, NULL);
-		      }
+                	// compute the wavenumbers (normalized to x0)
+                	// FE: declaration should be further up
+                	double xm=l0/wave_ref[id[iw]-1]-1.;
+                	double xi=l0/wave_ref[id[iw]]-1.;
+                	double xp=l0/wave_ref[id[iw]+1]-1.;
+                	double xT=(xp-xm)/2;
+                	double Fm = 1.;
+                	double Fi = 1.;
+                	double Fp = 1.;
+                	double norm= 1.;
 
-                    // Compute the weigths (initialized at zero)
-                    weight_m[iw]=0;
-                    weight_i[iw]=0;
-                    weight_p[iw]=0;
-		    
-                    // only compute the weights if the three flats are not null (bad pixel)
-                    //  and if xo is below (xm+xi)/2
-                    //  and if xo is above (xi+xp)/2
-                    if ( (Fi>1e-4) && (Fp>1e-4) && (Fm>1e-4) && (xm-xi>1e-4) && (xi-xp>1e-4) )
-                    {
-                        
-                        /* The three equations
-                        * 1-> fi = 1 =>  conservation
-                        * 2-> fm*xm + fi*xi + fp*xp = 0  => First moment
-                        * 3-> fm*xm^3 + fi*xi^3 + fp*xp^3 = 0 => Third moment
+                	if (specflat_table)
+                	{
+                		Fm=cpl_array_get (flat, id[iw]-1, NULL);
+                		Fi=cpl_array_get (flat, id[iw], NULL);
+                		Fp=cpl_array_get (flat, id[iw]+1, NULL);
+                	}
+
+                	// Compute the weigths (initialized at zero)
+                	weight_m[iw]=0;
+                	weight_i[iw]=0;
+                	weight_p[iw]=0;
+
+                	// only compute the weights if the three flats are not null (bad pixel)
+                	//  and if xo is below (xm+xi)/2
+                	//  and if xo is above (xi+xp)/2
+                	double fluxLimit = 40 ; // below this value the pixel is consider dead
+                	if ( (Fi > fluxLimit) && (Fp > fluxLimit) && (Fm > fluxLimit) && (xm-xi>1e-4) && (xi-xp>1e-4) )
+                	{
+
+                		/* The three equations
+                		 * 1-> fi = 1 =>  conservation
+                		 * 2-> fm*xm + fi*xi + fp*xp = 0  => First moment
+                		 * 3-> fm*xm^3 + fi*xi^3 + fp*xp^3 = 0 => Third moment
                          are now approximated by:
-                         * 1-> fi = 1 =>  conservation
-                         * 2-> fm*xm + fi*xi + fp*xp = 0  => First moment
-                         * 3-> fm*xm*(-xT-xi)^2 + fi*xi^3 + fp*xp*(xT-xi)^2 = 0 => Third moment
-                        * so the solution is simpler, and do not diverge: */
-                        
-                        weight_p[iw]= (xT-2*xi)/(4*xp) ;
-                        weight_i[iw]= 1. ;
-                        weight_m[iw]= -(xT+2*xi)/(4*xm);
+                		 * 1-> fi = 1 =>  conservation
+                		 * 2-> fm*xm + fi*xi + fp*xp = 0  => First moment
+                		 * 3-> fm*xm*(-xT-xi)^2 + fi*xi^3 + fp*xp*(xT-xi)^2 = 0 => Third moment
+                		 * so the solution is simpler, and do not diverge: */
 
-                        /* Acounting for flat 
-                         * W/=Flat
-                         */
-                        weight_p[iw]/=Fp;
-                        weight_i[iw]/=Fi;
-                        weight_m[iw]/=Fm;
-                        
-                        // normalize the weight to conserve the variance
-                        //norm = sqrt( pow(weight_m[iw],2) +  pow(weight_i[iw],2) + pow(weight_p[iw],2));
-			/* FE: the original 2 pixel interpolation applies normalization to preserve photon noise) */
-                        norm = weight_m[iw] +  weight_i[iw] + weight_p[iw];
-                        /* SL: changed to simple sum(weights) =1 */
-                        weight_p[iw]/=norm;
-                        weight_i[iw]/=norm;
-                        weight_m[iw]/=norm;
-                        
-			}
+                		weight_p[iw]= (xT-2*xi)/(4*xp) ;
+                		weight_i[iw]= 1. ;
+                		weight_m[iw]= -(xT+2*xi)/(4*xm);
 
-		    /* FE: for debugging puposes*/
-			 // cpl_msg_info(cpl_func," iw: %i l0: %g id[iw]: %i wm: %g wi: %g wp: %g Fm: %g Fi: %g Fp: %g xm: %g xi: %g xp: %g norm: %g\n",
-			//	 iw, l0, id[iw], weight_m[iw], weight_i[iw], weight_p[iw], Fm, Fi, Fp, xm, xi, xp,norm);
+                		/* Acounting for flat
+                		 * W/=Flat
+                		 */
+                		weight_p[iw]/=Fp;
+                		weight_i[iw]/=Fi;
+                		weight_m[iw]/=Fm;
+                	}
+                	else if ((Fi > fluxLimit) && (Fp > fluxLimit) && (xi>1e-4) && (xi-xp>1e-4) )
+                	{ // left pixel is dead but the interpolation is between 2 good pixels
+                		weight_p[iw]= -xi/xp ;
+                		weight_i[iw]= 1. ;
+                		weight_m[iw]= 0;
+
+                		/* Acounting for flat
+                		 * W/=Flat
+                		 */
+                		weight_p[iw]/=Fp;
+                		weight_i[iw]/=Fi;
+                		//cpl_msg_info(cpl_func,"Reg %d pix %d 2 right : i %g %g %g x %g %g %g", reg, iw, Fp, Fi, Fm, xp, xi, xm);
+                	}
+                    else if ( (Fm > fluxLimit) && (Fi > fluxLimit) && (xi<1e-4) && (xm-xi>1e-4))
+                    { // right pixel is dead but the interpolation is between 2 good pixels
+
+                		weight_p[iw]= 0;
+                		weight_i[iw]= 1. ;
+                		weight_m[iw]= -xi/xm ;
+
+                		/* Acounting for flat
+                		 * W/=Flat
+                		 */
+                		weight_m[iw]/=Fm;
+                		weight_i[iw]/=Fi;
+                		//cpl_msg_info(cpl_func,"Reg %d pix %d 2 left : i %g %g %g x %g %g %g", reg, iw, Fp, Fi, Fm, xp, xi, xm);
+                    }
+                    //else cpl_msg_info(cpl_func,"Reg %d pix %d no iterp : i %g %g %g x %g %g %g", reg, iw, Fp, Fi, Fm, xp, xi, xm);
+
+                	// normalize the weight to conserve the variance
+                	//norm = sqrt( pow(weight_m[iw],2) +  pow(weight_i[iw],2) + pow(weight_p[iw],2));
+                	/* FE: the original 2 pixel interpolation applies normalization to preserve photon noise) */
+                	norm = weight_m[iw] +  weight_i[iw] + weight_p[iw];
+                	/* SL: changed to simple sum(weights) =1 */
+                	if ( norm > 1e-7 )
+                	{
+                    	weight_p[iw]/=norm;
+                    	weight_i[iw]/=norm;
+                    	weight_m[iw]/=norm;
+                	}
+
+                	/* FE: for debugging puposes*/
+                	// cpl_msg_info(cpl_func," iw: %i l0: %g id[iw]: %i wm: %g wi: %g wp: %g Fm: %g Fi: %g Fp: %g xm: %g xi: %g xp: %g norm: %g\n",
+                	//	 iw, l0, id[iw], weight_m[iw], weight_i[iw], weight_p[iw], Fm, Fi, Fp, xm, xi, xp,norm);
 
 
                 }// End loop on nb_oiwave
