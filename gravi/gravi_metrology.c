@@ -1451,7 +1451,7 @@ double gravi_metrology_get_fc_focus (cpl_propertylist * header, int gv, gravi_da
 //    cpl_ensure (static_param_data, CPL_ERROR_NULL_INPUT, 0);
     
     /* Identify telescope name of requested GV input */
-    const char * telname = gravi_conf_get_telname (3-gv, header);
+    const char * telname = gravi_conf_get_telname (gv, header);
     if (telname == NULL) {
         cpl_msg_warning (cpl_func,"Cannot read fiber coupler focus offset for GV%i", gv+1);
         return 0.0;
@@ -1520,7 +1520,7 @@ double gravi_metrology_get_fc_shift (cpl_propertylist * header, int gv, gravi_da
     //cpl_ensure (static_param_data, CPL_ERROR_NULL_INPUT, 0);
 
     /* Identify telescope name of requested GV input */
-    const char * telname = gravi_conf_get_telname (3-gv, header);
+    const char * telname = gravi_conf_get_telname (gv, header);
     if (telname == NULL) {
         cpl_msg_warning (cpl_func,"Cannot read fiber coupler shift offset for GV%i", gv+1);
         return 0.0;
@@ -1591,7 +1591,7 @@ cpl_error_code gravi_metrology_get_astig (cpl_propertylist * header, int gv,
     cpl_ensure (header, CPL_ERROR_NULL_INPUT, 0);
     
     /* Identify telescope name of requested GV input */
-    const char * telname = gravi_conf_get_telname (3-gv, header);
+    const char * telname = gravi_conf_get_telname (gv, header);
     if (telname == NULL) {
         cpl_msg_warning (cpl_func,"Cannot read the astigmatism offset for GV%i", gv+1);
         *amplitude = 0.0;
@@ -2621,8 +2621,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     double rec_zd[4][4]; 
     for (int tel=0;tel<4;tel++) {
         for (int diode=0;diode<4;diode++) {
-            rec_az[tel][diode] = gravi_metrology_get_posx (header, 3-tel, diode); /* in [m] in order GV 1,2,3,4 */
-            rec_zd[tel][diode] = gravi_metrology_get_posy (header, 3-tel, diode); /* in [m] in order GV 1,2,3,4 */
+            rec_az[tel][diode] = gravi_metrology_get_posx (header, tel, diode); /* in [m] in order GV 1,2,3,4 */
+            rec_zd[tel][diode] = gravi_metrology_get_posy (header, tel, diode); /* in [m] in order GV 1,2,3,4 */
         }
     }
     
@@ -2700,6 +2700,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                 field_dV = 0.0;
             }
 
+                
             for (int diode = 0; diode < ndiode; diode++) {
                 
                 /* Filling vectors of Julien's formula */
