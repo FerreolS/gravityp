@@ -2862,50 +2862,44 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     }
     
     /* wrap around median */
-    cpl_vector *tmp_vector;
-    tmp_vector = cpl_vector_new (nrow_met);
-    double tmp_median;
-    double low_limit;
-    double high_limit;
+    cpl_vector * phasor_real ;
+    phasor_real = cpl_vector_new (nrow_met);
+    cpl_vector * phasor_imag ;
+    phasor_imag = cpl_vector_new (nrow_met);
+    double real_median;
+    double imag_median;
+    double phi_median,cos_phi,sin_phi;
     
     for (int tel = 0; tel < ntel; tel++) {
         for (int diode = 0; diode < ndiode; diode++) {
             /* fill tmp_vector with opd_telfc_corr for given telescope and diode */
             for (cpl_size row = 0; row < nrow_met; row++) {
-              cpl_vector_set (tmp_vector, row, opd_telfc_corr[row*ntel+tel][diode]);
+                phi=opd_telfc_corr[row*ntel+tel][diode] * TWOPI / lambda_met_mean;
+                cpl_vector_set (phasor_real, row, cos(phi) );
+                cpl_vector_set (phasor_imag, row, sin(phi) );
             }
             /* calculate median */
-            tmp_median =  cpl_vector_get_median_const(tmp_vector);
-            high_limit = (tmp_median + lambda_met_mean / 2.);
-            low_limit = (tmp_median - lambda_met_mean / 2.);
+            real_median =  cpl_vector_get_median_const(phasor_real);
+            imag_median =  cpl_vector_get_median_const(phasor_imag);
+            
+            phi_median=atan2(imag_median,real_median);
+            
             /* wrap to median */
             for (cpl_size row = 0; row < nrow_met; row++) {
-                if (opd_telfc_corr[row*ntel+tel][diode] > high_limit) {
-                    opd_telfc_corr[row*ntel+tel][diode] -= lambda_met_mean;
-                }
-                if (opd_telfc_corr[row*ntel+tel][diode] < low_limit) {
-                    opd_telfc_corr[row*ntel+tel][diode] += lambda_met_mean;
-                }
-            }
-            /* do a second wrap around median for better estimate */
-            for (cpl_size row = 0; row < nrow_met; row++) {
-                cpl_vector_set (tmp_vector, row, opd_telfc_corr[row*ntel+tel][diode]);
-            }
-            tmp_median =  cpl_vector_get_median_const(tmp_vector);
-            high_limit = (tmp_median + lambda_met_mean / 2.);
-            low_limit = (tmp_median - lambda_met_mean / 2.);
-            for (cpl_size row = 0; row < nrow_met; row++) {
-                if (opd_telfc_corr[row*ntel+tel][diode] > high_limit) {
-                    opd_telfc_corr[row*ntel+tel][diode] -= lambda_met_mean;
-                }
-                if (opd_telfc_corr[row*ntel+tel][diode] < low_limit) {
-                    opd_telfc_corr[row*ntel+tel][diode] += lambda_met_mean;
-                }
+                
+                phi = opd_telfc_corr[row*ntel+tel][diode] * TWOPI / lambda_met_mean;
+                cos_phi=cos(phi);
+                sin_phi=sin(phi);
+                dphasor = cos_phi*real_median + sin_phi*imag_median + I * ( sin_phi*real_median - cos_phi*imag_median );
+                opd_telfc_corr[row*ntel+tel][diode] = (carg(dphasor)+phi_median) / TWOPI * lambda_met_mean ;
             }
         }
     }
-    
-    double mmet[4][4]; 
+
+    cpl_vector * tmp_vector;
+    tmp_vector = cpl_vector_new (nrow_met);
+    double tmp_median;
+    double mmet[4][4];
     
     /* report final median for each telescope and diode */
     for (int tel = 0; tel < ntel; tel++) {
@@ -3192,6 +3186,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     /* } */
 
     FREE (cpl_vector_delete, tmp_vector);
+    FREE (cpl_vector_delete, phasor_real);
+    FREE (cpl_vector_delete, phasor_imag);
     
     cpl_msg_info (cpl_func,"FE: end.");
     
