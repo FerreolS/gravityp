@@ -2677,6 +2677,14 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     /* loop over all column and diodes */
     for (int tel = 0; tel < ntel; tel++) {
         
+        double RA=0.0;
+        double RZ=0.0;
+        for (int diode = 0; diode < ndiode; diode++) {
+            RA+=rec_az[tel][diode];
+            RZ+=rec_zd[tel][diode];
+        }
+        cpl_msg_info (cpl_func,"Tel %i; diodes RA=%g, RZ=%g, ABS=%g", tel, RA, RZ, sqrt(RA*RA+RZ*RZ));
+        
         /* compute the north angle on acqcam [deg] */
         northangle =  gravi_pfits_get_fangle_acqcam (header, tel);
         
@@ -2767,12 +2775,24 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
        x,y are exchanged following coordinate systems in Stefan's slide */
     int flag;
     double posang = myAtan (dy_in,dx_in, &flag);
+    
+    /* the posang which matters is the one calculated at acquisition*/
+    if (cpl_propertylist_has(header, "ESO INS SOBJ OFFX") &&
+        cpl_propertylist_has(header, "ESO INS SOBJ OFFY")) {
+        
+        double dx_off = gravi_pfits_get_double_default (header, "ESO INS SOBJ OFFX", 0.0);
+        double dy_off = gravi_pfits_get_double_default (header, "ESO INS SOBJ OFFY", 0.0);
+        posang = myAtan (dy_in-dy_off,dx_in-dx_off, &flag);
+    }
+    
     cpl_msg_info (cpl_func,"FE: position angle in degrees: %g ", posang / TWOPI * 360. );
     
     /* loop over all diodes and beams */
     for (int tel = 0; tel < ntel; tel++) {
         
         gravi_metrology_get_astig (header, tel, &AstigmAmplitude, &AstigmTheta, &AstigmRadius);
+        
+        cpl_msg_info (cpl_func,"Astigmatism params GV%i : %5g [nm], %5g [deg]", tel, AstigmAmplitude ,AstigmTheta);
         
         for (cpl_size row = 0; row < nrow_met; row++) {
             for (int diode = 0; diode < ndiode; diode++) {
@@ -2799,7 +2819,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                 }
                 
                 /* apply astigmatism */
-                opd_tel_corr[row*ntel+tel][diode] -= astigm; 
+                opd_tel_corr[row*ntel+tel][diode] -= astigm;
             }
         }
     }
@@ -3136,7 +3156,6 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     
     // FE 2019-05-15 wrap around median might help
     /* /\* wrap around median to lambda/4 range *\/ */
-
     /* for (int tel = 0; tel < ntel; tel++) { */
     /*     /\* fill tmp_vector with opd_telfc_corr for given telescope and diode *\/ */
     /*     for (cpl_size row = 0; row < nrow_met; row++) { */
