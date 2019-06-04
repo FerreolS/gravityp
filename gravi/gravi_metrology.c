@@ -3543,6 +3543,9 @@ cpl_error_code gravi_metrology_reduce (gravi_data * data,
         cpl_table * visacq_table;        
         visacq_table = gravi_data_get_table (data, GRAVI_OI_VIS_ACQ_EXT);
         double delay = gravi_param_get_double_default (parlist, "gravity.metrology.acq-correction-delay",0.0);
+        double period    = gravi_pfits_get_period_acqcam (header);
+        /* delay is increase by half of the camera period */
+        delay += period/2;
         gravi_metrology_acq (visacq_table, vismet_table, delay, header);
     }
     

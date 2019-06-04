@@ -476,14 +476,14 @@ cpl_parameter * gravi_parameter_add_metrology (cpl_parameterlist *self)
                                  CPL_TYPE_DOUBLE,
                                  "Delay between the end of ACQ frame and correction\n "
                                  "offset seen by the metrology diodes, in seconds.",
-                                 "gravity.metrology", 0.1);
+                                 "gravity.metrology", 0.25);
 	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "acq-correction-delay");
 	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
 	cpl_parameterlist_append (self, p);
     
 	p = cpl_parameter_new_value ("gravity.metrology.use-fiber-dxy", CPL_TYPE_BOOL,
                                  "Use the fiber position when computing OPD_TEL_CORR.",
-                                 "gravity.metrology", TRUE);
+                                 "gravity.metrology", FALSE);
 	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "use-fiber-dxy");
 	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
 	cpl_parameterlist_append (self, p);
