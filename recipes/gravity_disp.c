@@ -189,10 +189,17 @@ static int gravity_disp_create(cpl_plugin * plugin)
     gravi_parameter_add_static_name (recipe->parameters);
     
     /* Intermediate files */
+    gravi_parameter_add_biassub_file (recipe->parameters);
+    gravi_parameter_add_spectrum_file (recipe->parameters);
     gravi_parameter_add_preproc_file (recipe->parameters);
     gravi_parameter_add_p2vmred_file (recipe->parameters);
+    gravi_parameter_add_astro_file (recipe->parameters);
     gravi_parameter_add_vis_file (recipe->parameters);
 
+    /* Extraction */
+    gravi_parameter_add_extract (recipe->parameters);
+    gravi_parameter_add_metrology (recipe->parameters);
+    
     /* Snr, signal, rejection, vis */
     gravi_parameter_add_compute_snr (recipe->parameters, isCalib);
     gravi_parameter_add_compute_signal (recipe->parameters, isCalib);
