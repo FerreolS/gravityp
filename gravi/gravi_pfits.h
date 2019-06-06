@@ -96,7 +96,9 @@
 #define GRAVI_NAN_INT -99
 
 //#define LAMBDA_MET 0.000001908287 /* updated with actual valeur - pkervell - 19aug15 */
-#define LAMBDA_MET 0.000001908254
+//#define LAMBDA_MET 0.000001908254 Quick fix, change value manually, but this define should diseaper to be read from gravi_pfits_get_met_wavelength routine
+#define LAMBDA_MET 0.000001908287
+
 
 /* QC WAVE*/
 #define QC_PHASECHI2 "ESO QC PHASE_CALIBRATION_CHI2"
