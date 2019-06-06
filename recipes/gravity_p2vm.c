@@ -743,7 +743,7 @@ static int gravity_p2vm(cpl_frameset            * frameset,
 	  wave_param = gravi_data_load_frame (frame, used_frameset);
 	}
 	else
-	  cpl_msg_error (cpl_func, "There is no WAVE_PARAM in the frameset");
+	  cpl_msg_error (cpl_func, "There is no WAVE_PARAM in the frameset (did you forget the static calibration files?)");
 
     cpl_msg_info (cpl_func, " ***** Create the P2VM ***** ");
     p2vm_map = gravi_create_p2vm (wave_map,wave_param);
