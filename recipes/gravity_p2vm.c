@@ -371,24 +371,47 @@ static int gravity_p2vm(cpl_frameset            * frameset,
     /* Extract DARK frameset */
     dark_frameset = gravi_frameset_extract_dark_data (frameset);
     darkcalib_frameset = gravi_frameset_extract_dark_map (frameset);
+    
+    /* Extract BAD frameset */
+    badcalib_frameset = gravi_frameset_extract_bad_map (frameset);
+    if ( cpl_frameset_is_empty (badcalib_frameset) && cpl_frameset_is_empty (dark_frameset) &&
+          cpl_frameset_is_empty (darkcalib_frameset) ) {
+        cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,"Missing DARK or BAD on the frameset");
+        goto cleanup;
+    }
 
     /* Extract FLAT frameset */
     flat_frameset = gravi_frameset_extract_flat_data (frameset);
     flatcalib_frameset = gravi_frameset_extract_flat_map (frameset);
-
-    /* Extract BAD frameset */
-    badcalib_frameset = gravi_frameset_extract_bad_map (frameset);
+    if ( cpl_frameset_is_empty (flat_frameset) &&
+              cpl_frameset_is_empty (flatcalib_frameset) ) {
+        cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,"Missing FLAT on the frameset");
+        goto cleanup;
+    }
 
     /* Extract WAVE frameset */
     wave_frameset = gravi_frameset_extract_wave_data (frameset);
     wavesc_frameset = gravi_frameset_extract_wavesc_data (frameset);
     wavecalib_frameset = gravi_frameset_extract_wave_map (frameset);
+    if ( cpl_frameset_is_empty (wave_frameset) &&
+              cpl_frameset_is_empty (wavecalib_frameset) ) {
+        cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,"Missing WAVE on the frameset");
+        goto cleanup;
+    }
 
     /* Extract P2VM frameset */
     p2vm_frameset = gravi_frameset_extract_p2vm_data (frameset);
-
-    /* EKW 04/12/2018 Extract new calibration file wave_param frameset */
+    if ( cpl_frameset_get_size (p2vm_frameset) !=6) {
+        cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,"Illegal number of P2VM on the frameset");
+        goto cleanup;
+    }
+        
+    /* Extract calibration file wave_param frameset */
     wave_param_frameset = gravi_frameset_extract_wave_param (frameset);
+        if ( cpl_frameset_is_empty (wave_param_frameset) ) {
+        cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,"Missing WAVE_PARAM static calibration file");
+        goto cleanup;
+    }
 
     /*
      * (1) Identify and extract the dark file
@@ -869,8 +892,13 @@ static int gravity_p2vm(cpl_frameset            * frameset,
 
     cpl_msg_info (cpl_func, " ***** Analyse the WAVE file to calibrate the internal closure and transmission ***** ");
 
-    /* Get the WAVE frame */
-    frame = cpl_frameset_get_position (p2vm_frameset, i_wave);
+    /* Get the WAVE_SC frame (or WAVE if WAVE_SC does not exist)*/
+    if (!cpl_frameset_is_empty (wavesc_frameset)) {
+        /* TODO: using wavesc instead of wave, but does not work for now (wrapping issue?) */
+        frame = cpl_frameset_get_position (wave_frameset, 0);
+    } else {
+        frame = cpl_frameset_get_position (wave_frameset, 0);
+    }
 
     /* Load SC WAVE */
     snprintf(ext_regexp, 499, "^(%s|%s|%s|%s)$", GRAVI_ARRAY_GEOMETRY_EXT, GRAVI_OPTICAL_TRAIN_EXT, GRAVI_IMAGING_DATA_SC_EXT, GRAVI_IMAGING_DETECTOR_SC_EXT);
@@ -963,8 +991,11 @@ static int gravity_p2vm(cpl_frameset            * frameset,
 
     CPLCHECK_CLEAN("Could not save the P2VM on the output file");
 
+    /* Terminate the function */
+    goto cleanup;
+    
+cleanup:
     /* Deallocation of all variables */
-    cleanup:
     cpl_msg_info (cpl_func,"Cleanup memory");
 
     FREE (cpl_frameset_delete, dark_frameset);
@@ -994,9 +1025,6 @@ static int gravity_p2vm(cpl_frameset            * frameset,
     FREE (cpl_frameset_delete, current_frameset);
     FREE (cpl_frameset_delete, wave_param_frameset);
     FREE (gravi_data_delete, wave_param);
-
-    /* FIXME: check a *change* of cpl_state instead */
-    CPLCHECK_INT ("Could not cleanup memory");
 
     //This is a workaround to aliviate PIPE-6316. For some reason the allocation
     //pattern of the recipe causes malloc to keep many pages in the allocation
