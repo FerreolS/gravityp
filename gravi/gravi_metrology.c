@@ -2530,7 +2530,9 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     
     /* get OPD_FC and OPD_TEL */
     double * opd_fc = cpl_table_get_data_double (vismet_table, "OPD_FC");
+    CPLCHECK_MSG ("Cannot get OPD_FC from vismet_table");
     double ** opd_tel = gravi_table_get_data_array_double (vismet_table, "OPD_TEL");
+    CPLCHECK_MSG ("Cannot get OPD_TEL from vismet_table");
     
     /* get the laser wavelength data */
     double lambda_met_mean =  gravi_pfits_get_met_wavelength_mean(header, metrology_table);
@@ -2878,9 +2880,9 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                 cpl_vector_set (phasor_real, row, cos(phi) );
                 cpl_vector_set (phasor_imag, row, sin(phi) );
             }
-            /* calculate median */
-            real_median =  cpl_vector_get_median_const(phasor_real);
-            imag_median =  cpl_vector_get_median_const(phasor_imag);
+            /* calculate mean ; mean is better than median */
+            real_median =  cpl_vector_get_mean(phasor_real);
+            imag_median =  cpl_vector_get_mean(phasor_imag);
             
             phi_median=atan2(imag_median,real_median);
             

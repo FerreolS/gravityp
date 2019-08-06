@@ -1045,8 +1045,8 @@ cpl_error_code gravi_acqcam_pupil (cpl_image * mean_img,
         Remark: checking the angles for the GC easter flare night, we get an offset of 45.75 degrees */
 	double parang = 0.5 * ( cpl_propertylist_get_double (header, "ESO ISS PARANG START") +
 				cpl_propertylist_get_double (header, "ESO ISS PARANG END") ) ;
-        double angle = fangle + parang + 45. ;
-	// FE Todo handle case of calibration unit //
+        // TODO: FE handle case of calibration unit //
+        double angle = fangle + parang + 45.;
         if (angle < 0)   angle += 180;
         if (angle > 180) angle -= 180;
 	cpl_vector_set (a_initial, GRAVI_SPOT_ANGLE, angle);			
@@ -1497,7 +1497,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         
         double xFT, yFT, xSC, ySC;
         
-        if (rho_in == 0.) {
+        if (gravi_pfits_get_axis (header) == MODE_ONAXIS) {
             /* TODO: close dual-field */
             /* Single-field case */
             /* Simply shift the best spot from full frame to cut-out */
@@ -1581,7 +1581,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         /* Measure FT target position in mean image */
         /*------------------------------------------*/
         
-        if (rho_in != 0.) {
+        if ((gravi_pfits_get_axis (header) != MODE_ONAXIS)) {
             /* Detec FT */
             gravi_acq_fit_gaussian (mean_img, &xFT, &yFT, &ex, &ey, size);
             CPLCHECK_MSG("Error fitting FT");
@@ -1624,7 +1624,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         /* If in dual field, measure plate scale */
         /*---------------------------------------*/
         
-        if (rho_in != 0.) {
+        if (gravi_pfits_get_axis (header) != MODE_ONAXIS) {
             sprintf (qc_name, "ESO QC ACQ FIELD%i SCALE", tel+1);
             double sep = sqrt((ySC-yFT)*(ySC-yFT)+(xSC-xFT)*(xSC-xFT));
             double pscale = sep ? rho_in/sep : 0.;
@@ -1640,7 +1640,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         /* If in dual field, measure fibre position error */
         /*------------------------------------------------*/
         
-        if (rho_in != 0.) {
+        if (gravi_pfits_get_axis (header) != MODE_ONAXIS) {
             /* Error in SC fibre positioning */
             /* The three terms are */
             /*  - offset from FT target as detected to original SC */
@@ -1719,7 +1719,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             /* FT target position computation of current frame */
             /*-------------------------------------------------*/
             double xft = xFT, yft = yFT, exft=0., eyft=0.;
-            if (rho_in != 0.) {
+            if (gravi_pfits_get_axis (header) != MODE_ONAXIS) {
                 gravi_acq_fit_gaussian (img, &xft, &yft, &exft, &eyft, size);
                 CPLCHECK_MSG("Error fitting FT");
                 /* Shift back positions to full frame */
@@ -1856,6 +1856,12 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
     header = gravi_data_get_header (input_data);
     o_header = gravi_data_get_header (output_data);
     
+    /* Check if ISS data present (to avoid crash) */
+    if (!gravi_conf_get_telname (0, header)) {
+        gravi_msg_warning (cpl_func, "Cannot reduce the ACQCAM, no ISS keywords");
+        return CPL_ERROR_NONE;
+    }
+    
     cpl_imagelist * acqcam_imglist;
     acqcam_imglist = gravi_data_get_cube (input_data, GRAVI_IMAGING_DATA_ACQ_EXT);
     CPLCHECK_MSG ("Cannot get data or header");
@@ -1887,7 +1893,6 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
                         acqcam_table, o_header, static_param_data);
 
 	CPLCHECK_MSG ("Cannot reduce field images");
-
 
     /* Compute PUPIL columns */
     gravi_acqcam_pupil (mean_img, acqcam_imglist, header,
