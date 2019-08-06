@@ -257,11 +257,12 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
     
     
     /* 
-     * Fit dispersion by a polynomial of order 2 and fill
+     * Fit dispersion by a polynomial of order 3 and fill
      * the output table
+     * SG 2019-08-02: increased order from 2 to 3
      */
     
-    cpl_size mindeg = 0, maxdeg = 2;
+    cpl_size mindeg = 0, maxdeg = 3;
     gravi_table_new_column_array (disp_table, "N_MEAN", NULL, CPL_TYPE_DOUBLE, maxdeg+1);
     gravi_table_new_column_array (disp_table, "N_DIFF", NULL, CPL_TYPE_DOUBLE, maxdeg+1);
     gravi_table_new_column (disp_table, "WAVE0", "m", CPL_TYPE_DOUBLE);
