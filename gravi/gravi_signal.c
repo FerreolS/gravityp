@@ -2239,7 +2239,10 @@ cpl_error_code gravi_vis_create_phaseref_sc (cpl_table * vis_SC,
   CPLCHECK_MSG ("Cannot get data");
 
   /* Variable for fit */
-  cpl_size mindeg = 0, maxdeg = 2;
+
+  /* FE 2019-08-01: proper imaging phase requires higher order phase reference */
+  cpl_size mindeg = 0, maxdeg = 3; 
+  /*  cpl_size mindeg = 0, maxdeg = 2; */
   cpl_polynomial * fit = cpl_polynomial_new (1);
 
   /* Create the vectors and matrix only once to be faster */
