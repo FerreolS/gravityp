@@ -86,7 +86,7 @@ cpl_error_code gravi_acqcam_spot_imprint (cpl_image * img, cpl_vector * a);
 
 static int gravi_acqcam_spot_dfda (const double x_in[], const double v[], double result[]);
 
-cpl_error_code gravi_acqcam_fit_spot (cpl_image * img, cpl_size ntry,
+cpl_error_code gravi_acqcam_fit_spot (cpl_image * img, 
                                       cpl_vector * a, 
                                       int fitAll,
                                       int * nspot);
@@ -114,6 +114,10 @@ cpl_error_code gravi_acq_measure_strehl(cpl_image * img, double x, double y,
                                         double pscale, double *SR, cpl_propertylist * header);
 
 cpl_error_code gravi_acq_measure_max(cpl_image * img, double x, double y, double size, double * img_max);
+
+// FE added function for calculating maximum position in crosscorrelation
+cpl_error_code FFTcorrelate(cpl_image *ia, cpl_image *ib, cpl_size *xd, cpl_size *yd);
+
 
 /* This global variable optimises the computation
  * of partial derivative on fitted parameters */
@@ -505,13 +509,23 @@ cpl_error_code gravi_acqcam_get_diode_ref (cpl_propertylist * header,
 
     /* If UTs or ATs, select scaling, rotation, and spacing */
     if (telname[0] == 'U') {
-        cpl_vector_set (output, GRAVI_SPOT_ANGLE,  0.0);
-        cpl_vector_set (output, GRAVI_SPOT_SCALE, 16.225);
+        cpl_vector_set (output, GRAVI_SPOT_ANGLE,   0.0);
+	// FE 2019-05-15 replaced with median measured for the whole 2017-2018 
+        // Galactic Center data set, which should be the best information at hand
+        // cpl_vector_set (output, GRAVI_SPOT_SCALE, 16.225);
+	if ( tel == 0 ) cpl_vector_set (output, GRAVI_SPOT_SCALE, 16.83);
+	if ( tel == 1 ) cpl_vector_set (output, GRAVI_SPOT_SCALE, 17.42);
+	if ( tel == 2 ) cpl_vector_set (output, GRAVI_SPOT_SCALE, 16.85);
+	if ( tel == 3 ) cpl_vector_set (output, GRAVI_SPOT_SCALE, 17.41);
+	// below information could be calculated from diode position in header
+        // this would also give the 45 offset angle introduced above to calculate
+	// the spot angle
         cpl_vector_set (output, GRAVI_SPOT_DIODE+0, 0.363);
         cpl_vector_set (output, GRAVI_SPOT_DIODE+1, 0.823);
         cpl_vector_set (output, GRAVI_SPOT_DIODE+2, 0);
     } else if (telname[0] == 'A') {
         cpl_vector_set (output, GRAVI_SPOT_ANGLE,  0.0);
+	// FE 2019-05-15 maybe we should also update the AT numbers 
         cpl_vector_set (output, GRAVI_SPOT_SCALE, 73.0154);
         cpl_vector_set (output, GRAVI_SPOT_DIODE+0, 0.122);
         cpl_vector_set (output, GRAVI_SPOT_DIODE+1, 0.158);
@@ -611,7 +625,6 @@ cpl_error_code gravi_acqcam_get_pup_ref (cpl_propertylist * header,
  * @brief Fit a pupil spot pattern into an image.
  * 
  * @param img:    input image
- * @param ntry:   number of random starting point
  * @param a:      vector of parameter, modified in-place
  * @param fitAll: if set to 1, the high order of sub-aperture position (more
  *                than center and focus), the diode scaling, and the diode
@@ -619,17 +632,12 @@ cpl_error_code gravi_acqcam_get_pup_ref (cpl_propertylist * header,
  * @param nspot:  is filled with the number of detected spots.
  * 
  * Fit a pupil spot pattern into an image. The global minimum is found
- * first with a fit with a large capture range in the whole image (after
- * a 5x5 binning to minimize the computation time).
- * The number of random starting point is given by
- * the ntry parameter. If ntry==1, the starting is kept unmodified.
- * Then 10x10 pixels around each expected spot are extracted and fit
- * with true Gaussian (free FWHM and amplitude).
+ * by initializing the fit from a crosscorrelation with an initial model
+ * based on the know spot geometry and angle of the pattern
  */
 /*----------------------------------------------------------------------------*/
 
 cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
-                                      cpl_size ntry,
                                       cpl_vector * a,
                                       int fitAll,
                                       int * nspot)
@@ -637,9 +645,9 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
     gravi_msg_function_start(0);
     cpl_ensure_code (img, CPL_ERROR_NULL_INPUT);
     cpl_ensure_code (a,   CPL_ERROR_NULL_INPUT);
-    cpl_ensure_code (ntry>0, CPL_ERROR_ILLEGAL_INPUT);
     cpl_ensure_code (nspot, CPL_ERROR_NULL_INPUT);
 
+    int F = fitAll;
     int nv = 0;
     cpl_size x0 = cpl_vector_get (a, GRAVI_SPOT_SUB+0);
     cpl_size y0 = cpl_vector_get (a, GRAVI_SPOT_SUB+4);
@@ -652,116 +660,64 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
     if (RMS == 0) { *nspot = 0; return CPL_ERROR_NONE;}
 
     /*
-     * Coarse: fit with a re-bin image
+     * FE 20190627 derive initial guess from cross-correlation with model 
      */
 
-    /* To lower the number of point, we extract a window of 175x175
-     * around the center of sub-apertures, rebin with 5x5 pixels */
-    cpl_size nw = 175, n_mean = 5;
-    cpl_size nc = nw/n_mean, nint = n_mean*n_mean;
-    
-    /* Allocate vector and matrix for the fit */
-    cpl_matrix * x_matrix  = cpl_matrix_new (nc*nc, 2);
-    cpl_vector * y_vector  = cpl_vector_new (nc*nc);
-    cpl_vector * sy_vector = cpl_vector_new (nc*nc);
+    /* We work on 160 x 160 subimage to optimize speed of FFT */
+    cpl_size nx    = 160;
+    cpl_size ny    = 160;
+    cpl_size x00   = x0 - nx / 2;
+    cpl_size y00   = y0 - nx / 2;
 
-    /* Loop on pixel in the considered window */
-    for (cpl_size x = 0; x < nc; x++) {
-      for (cpl_size y = 0; y < nc; y++) {
-	/* Average 3x3 pixels */
-	double z_mean = 0.0, x_mean = 0.0, y_mean = 0.0;
-	for (int i=-2; i<=2; i++) {
-	  for (int j=-2; j<=2; j++) {
-	    cpl_size x1 = x*n_mean+i+x0-(n_mean*nc)/2;
-	    cpl_size y1 = y*n_mean+j+y0-(n_mean*nc)/2;
-	    z_mean += cpl_image_get (img, x1+1, y1+1, &nv);
-	    x_mean += x1; y_mean += y1;
-	  }
-	}
-	/* Set in matrix and vectors */
-	cpl_matrix_set (x_matrix, x*nc+y, 0, x_mean/nint);
-	cpl_matrix_set (x_matrix, x*nc+y, 1, y_mean/nint);
-	cpl_vector_set (y_vector, x*nc+y, z_mean/nint);
-	cpl_vector_set (sy_vector, x*nc+y, RMS);
-	CPLCHECK_MSG ("Cannot fill matrix/vector");
+    /* x00,y00 in definition of model coordinates, i.e. lower left pixel = 0,0 
+       but CPL in fits convention, i.e. lower left pixel = 1,1 */
+    cpl_image *ia  = cpl_image_extract(img, x00 + 1, y00 + 1, x00 + nx, y00 + ny);
+
+    /* Create model image */
+    cpl_image *ib  = cpl_image_new(nx, ny, CPL_TYPE_DOUBLE);
+    double   *a_vector;
+    /* convert cpl_vector a to normal c vector */
+    a_vector = cpl_vector_get_data(a);   
+
+    int    ii, jj;
+    double x_in[2];
+    double result = 0.0;
+    int    ret = 0;
+
+    for (ii = 0; ii < nx ; ii++) {
+      for (jj = 0; jj < ny; jj++) {
+	x_in[0] = ii + (double) x00 ;
+	x_in[1] = jj + (double) y00 ;
+	ret = gravi_acqcam_spot(x_in, a_vector, &result);
+	// FE ToDo add error handling if routine fails for some reason //
+	/* x_in in definition of model coordinates, i.e. lower left pixel = 0,0 
+	   but CPL in fits convention, i.e. lower left pixel = 1,1 */
+	cpl_error_code err = cpl_image_set(ib, ii + 1, jj + 1, result);
       }
-    } /* End loop on re-sampled pixels*/
+    }
 
-    /* Output for global minimisation */
-    cpl_vector * a_start = cpl_vector_duplicate (a);
-    cpl_vector * a_tmp = cpl_vector_duplicate (a);
-    double chisq_final = 1e10;
-    srand(1);
-
-    /* Set the fwhm to 6 to force a large capture range */
-    cpl_vector_set (a_start, GRAVI_SPOT_FWHM, 6.*6.);
-
-    /* If needed, define a realistic value for the amplitude (for numerical stability) */
-    if (fitAll) for (int d=0;d<16;d++) cpl_vector_set (a_start, GRAVI_SPOT_FLUX+d, RMS);
-
-    /* Fit sub-aperture mean position; and diode rotation */
-    const int ia_global[] = {1,0,0,0, 1,0,0,0, 1,0, 0,0,0, 0,
-                             0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    GRAVI_LVMQ_FREE = ia_global;
-
-    /* Loop on various starting points */
-    for (cpl_size try = 0; try < ntry; try++) {
-
-        /* Move starting point in position (+-10pix) and angle (entire circle) */
-        cpl_vector_copy (a_tmp, a_start);
-        if (try > 0) {
-            cpl_vector_set (a_tmp, GRAVI_SPOT_SUB+0,
-                            cpl_vector_get (a_tmp, GRAVI_SPOT_SUB+0) +
-                            (rand()%20) - 10);
-            cpl_vector_set (a_tmp, GRAVI_SPOT_SUB+4,
-                            cpl_vector_get (a_tmp, GRAVI_SPOT_SUB+4) +
-                            (rand()%20) - 10);
-            cpl_vector_set (a_tmp, GRAVI_SPOT_ANGLE,
-                            cpl_vector_get (a_tmp, GRAVI_SPOT_ANGLE) +
-                            (rand()%180));
-        }
-
-        /* Fit from this starting point */
-        double chisq;
-        cpl_fit_lvmq (x_matrix, NULL, y_vector, sy_vector,
-                      a_tmp, GRAVI_LVMQ_FREE,
-                      gravi_acqcam_spot,
-                      gravi_acqcam_spot_dfda,
-                      CPL_FIT_LVMQ_TOLERANCE,
-                      CPL_FIT_LVMQ_COUNT,
-                      CPL_FIT_LVMQ_MAXITER,
-                      NULL, &chisq, NULL);
-        CPLCHECK_MSG ("Cannot fit global minimum");
-
-        /* Check chi2 and keep if lowest so far */
-        if (chisq < chisq_final) {
-            cpl_msg_debug (cpl_func, "chisq_final = %f -> %f", chisq_final, chisq);
-            chisq_final = chisq;
-            cpl_vector_copy (a, a_tmp);
-        }
-
-    } /* End loop on try starting points */
-
-    FREE (cpl_matrix_delete, x_matrix);
-    FREE (cpl_vector_delete, y_vector);
-    FREE (cpl_vector_delete, sy_vector);
-    FREE (cpl_vector_delete, a_tmp);
-    FREE (cpl_vector_delete, a_start);
-
+    /* shift determined from cross corellation */
+    cpl_size xout = 0;
+    cpl_size yout = 0;
+    cpl_error_code err = FFTcorrelate(ia, ib, &xout, &yout);
     
-    /* 
+     /* update model for subsequent model fitting */
+    cpl_vector_set(a, GRAVI_SPOT_SUB + 0, cpl_vector_get(a, GRAVI_SPOT_SUB + 0) + (double) xout);
+    cpl_vector_set(a, GRAVI_SPOT_SUB + 4, cpl_vector_get(a, GRAVI_SPOT_SUB + 4) + (double) yout);
+
+    /*
      * Fine: fit 10 pixel around each spot with true Gaussian
      */
     
     cpl_size nf = 10, ndiode = 4, nsub = 4;
-    x_matrix  = cpl_matrix_new (nf*nf*ndiode*nsub, 2);
-    y_vector  = cpl_vector_new (nf*nf*ndiode*nsub);
-    sy_vector = cpl_vector_new (nf*nf*ndiode*nsub);
+    cpl_matrix * x_matrix  = cpl_matrix_new (nf*nf*ndiode*nsub, 2);
+    cpl_vector * y_vector  = cpl_vector_new (nf*nf*ndiode*nsub);
+    cpl_vector * sy_vector = cpl_vector_new (nf*nf*ndiode*nsub);
     
     double xd[4], yd[4], xsub[4], ysub[4];
     gravi_acqcam_xy_diode (cpl_vector_get_data (a), xd, yd);
     gravi_acqcam_xy_sub (cpl_vector_get_data (a), xsub, ysub);
-    
+
     /* Loop on diode and appertures to fill the matrix and
      * vector for the fine fit */
     for (cpl_size v = 0, diode = 0; diode < ndiode ; diode++) {
@@ -793,12 +749,12 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
     /* Set FWHM to a realist value in [pix**2] */
     cpl_vector_set (a, GRAVI_SPOT_FWHM, 2.3*2.3);
 
-    /* Fit all sub-aperture position; rotation and scaling of diodes;
-     * and individual intensities of spots. (high order and scaling
+    /* Fit all sub-aperture position, rotation and scaling of diodes,
+     * and individual intensities of spots. (high order, rotation and scaling
      * are only fitted if fitAll != 0) */
-    int F = fitAll;
-    const int ia_fine[] = {1,F,1,F, 1,1,F,F, 1,F, 0,0,0, 0,
+    const int ia_fine[] = {1,F,1,F, 1,1,F,F, F,F, 0,0,0, 0,
                            1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
+
     GRAVI_LVMQ_FREE = ia_fine;
 
     /* Fit from this starting point */
@@ -822,9 +778,6 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
     
     CPLCHECK_MSG ("Cannot fit fine");
 
-    cpl_msg_debug (cpl_func, "chisq_final = %.2f -> fine = %.2f",
-                   chisq_final, chisq_fine);
-    
     FREE (cpl_matrix_delete, x_matrix);
     FREE (cpl_vector_delete, y_vector);
     FREE (cpl_vector_delete, sy_vector);
@@ -1060,7 +1013,7 @@ cpl_error_code gravi_acqcam_pupil (cpl_image * mean_img,
         double fangle = gravi_pfits_get_fangle_acqcam (header, tel);
         double cfangle = cos(fangle * CPL_MATH_RAD_DEG);
         double sfangle = sin(fangle * CPL_MATH_RAD_DEG);
-        CPLCHECK_MSG ("Cannot read ESO INS DROTOFF#");
+        CPLCHECK_MSG ("Cannot determine field angle#");
         
         /* Get the orientation of star */
         double drotoff = gravi_pfits_get_drotoff (header, tel);
@@ -1079,13 +1032,37 @@ cpl_error_code gravi_acqcam_pupil (cpl_image * mean_img,
         gravi_acqcam_get_diode_ref (header, tel, a_start);
         CPLCHECK_MSG ("Cannot read ACQ data for pupil in header");
 
-        cpl_vector * a_final = cpl_vector_duplicate (a_start);
-        CPLCHECK_MSG ("Cannot prepare parameters");
+	/* a_start is the reference position, which will be subtracted to 
+	   get pupil shift, focus, and rotation */
+
+	/* copy to initial guess, to then also include pupil rotation, fwhm, and flux */
+        cpl_vector * a_initial = cpl_vector_duplicate (a_start);
+
+        /* We see that fitting the spot angle fails if one spot is fainter than reflection from brightest spot
+        resulting in wrong pupil_x,y, therefore we calculate angle from header information
+        by design of telescope spiders. This model angle should be
+        angle = north_angle + paralactic angle + 45 
+        Remark: checking the angles for the GC easter flare night, we get an offset of 45.75 degrees */
+	double parang = 0.5 * ( cpl_propertylist_get_double (header, "ESO ISS PARANG START") +
+				cpl_propertylist_get_double (header, "ESO ISS PARANG END") ) ;
+        double angle = fangle + parang + 45. ;
+	// FE Todo handle case of calibration unit //
+        if (angle < 0)   angle += 180;
+        if (angle > 180) angle -= 180;
+	cpl_vector_set (a_initial, GRAVI_SPOT_ANGLE, angle);			
                 
-        /* Fit pupil sensor spots in this image, with various
-         * starting points to converge to the global minimum */
-        gravi_acqcam_fit_spot (mean_img, 30, a_final, 1, &nspot);
-        CPLCHECK_MSG ("Cannot fit rotation and center");
+	/* set initial flux of model spots to 1 such that model is not equal zero */
+	for (int d=0;d<16;d++) cpl_vector_set (a_initial, GRAVI_SPOT_FLUX+d, 1.0);
+	
+	/* set FWHM to a realist value in [pix**2] */
+	cpl_vector_set (a_initial, GRAVI_SPOT_FWHM, 2.3*2.3);
+
+	/* copy initial guess for the fit of the average image in a_final */
+        cpl_vector * a_final = cpl_vector_duplicate (a_initial);
+
+	/* fit all model parameters for average image */
+        gravi_acqcam_fit_spot (mean_img, a_final, 1, &nspot);
+        CPLCHECK_MSG ("Cannot fit average pupil image");
 
         /* Offsets in pixels */
         double xpos = cpl_vector_get (a_final,GRAVI_SPOT_SUB+0) -
@@ -1093,9 +1070,11 @@ cpl_error_code gravi_acqcam_pupil (cpl_image * mean_img,
         double ypos = cpl_vector_get (a_final,GRAVI_SPOT_SUB+4) -
                       cpl_vector_get (a_start,GRAVI_SPOT_SUB+4);
 
-        /* Scale and rotation in deg (rectangle, thus 180deg symetrie) */
+        /* Scale */
         double scale = cpl_vector_get (a_final,GRAVI_SPOT_SCALE);
-        double angle = cpl_vector_get (a_final,GRAVI_SPOT_ANGLE);
+
+	/* Angle in degree, taking out 180 deg symmetry */
+        angle = cpl_vector_get (a_final,GRAVI_SPOT_ANGLE);
         if (angle < 0)   angle += 180;
         if (angle > 180) angle -= 180;
         cpl_vector_set (a_final,GRAVI_SPOT_ANGLE,angle);
@@ -1150,18 +1129,39 @@ cpl_error_code gravi_acqcam_pupil (cpl_image * mean_img,
         cpl_propertylist_update_double (o_header, qc_name, vpos);
         cpl_propertylist_set_comment (o_header, qc_name, "[m] pupil v-shift in ACQ");
 
+	for (int ispot = 0; ispot<4; ispot++) {
+	  sprintf (qc_name, "ESO QC ACQ PUP%i SPOT_FLUX%i", tel+1,ispot+1);
+	  cpl_msg_info (cpl_func, "%s = %f", qc_name,
+		      (cpl_vector_get (a_final,GRAVI_SPOT_FLUX+ispot+0)+
+		       cpl_vector_get (a_final,GRAVI_SPOT_FLUX+ispot+4)+
+		       cpl_vector_get (a_final,GRAVI_SPOT_FLUX+ispot+8)+
+		       cpl_vector_get (a_final,GRAVI_SPOT_FLUX+ispot+12))/4.);
+	  cpl_propertylist_update_double (o_header, qc_name,
+		      (cpl_vector_get (a_final,GRAVI_SPOT_FLUX+ispot+0)+
+		       cpl_vector_get (a_final,GRAVI_SPOT_FLUX+ispot+4)+
+		       cpl_vector_get (a_final,GRAVI_SPOT_FLUX+ispot+8)+
+		       cpl_vector_get (a_final,GRAVI_SPOT_FLUX+ispot+12))/4.);
+	  cpl_propertylist_set_comment (o_header, qc_name, "[ADU] mean spot flux");
+	}
+
         /* Loop on all images */
         for (cpl_size row = 0; row < nrow; row++) {
             if (row %10 == 0 || row == (nrow-1))
                 cpl_msg_info_overwritable (cpl_func, "Fit image %lld over %lld", row+1, nrow);
             
-            /* Get data and first guess */
+            /* Get data and initialize model fit */
             cpl_image * img = cpl_imagelist_get (acqcam_imglist, row);
-            cpl_vector * a_row = cpl_vector_duplicate (a_final);
+	    cpl_vector * a_row = cpl_vector_duplicate (a_initial);
 
             /* Fit pupil sensor spots in this image. */
-            gravi_acqcam_fit_spot (img, 1, a_row, 0, &nspot);
+            gravi_acqcam_fit_spot (img, a_row, 1, &nspot);
             CPLCHECK_MSG ("Cannot fit sub-appertures of image");
+
+	    /* Angle in degree, taking out 180 deg symmetry */
+	    angle = cpl_vector_get (a_row,GRAVI_SPOT_ANGLE);
+	    if (angle < 0)   angle += 180;
+	    if (angle > 180) angle -= 180;
+	    cpl_vector_set (a_row,GRAVI_SPOT_ANGLE,angle);
 
             /* If spot detected */
             if (nspot < 4) {
@@ -1196,8 +1196,12 @@ cpl_error_code gravi_acqcam_pupil (cpl_image * mean_img,
                 cpl_table_set (acqcam_table, "PUPIL_W", row*ntel+tel, w_shift);
 
                 /* Compute the OPD_PUPIL */
-                double opd_pupil = sobj_sep * GRAVI_MATH_RAD_MAS / scale * 
-                                   (x_shift * cdrotoff + y_shift * sdrotoff);
+                // FE 2019-05-15 replacing opd_pupil calculation with more accurate formula,
+		// the calculation using the drotoff angle doens't know about the fiber offsets,
+		// but the above fangle in the caclulation of uv_shift includes the fiber offsets
+		double opd_pupil = -(u_shift * sobj_x + v_shift * sobj_y) * GRAVI_MATH_RAD_MAS;
+		// double opd_pupil = sobj_sep * GRAVI_MATH_RAD_MAS / scale * 
+		//                (x_shift * cdrotoff + y_shift * sdrotoff);
                 cpl_table_set (acqcam_table, "OPD_PUPIL", row*ntel+tel, opd_pupil);
             }
             
@@ -1945,6 +1949,79 @@ double gravi_acqcam_z2meter (double PositionPixels, gravi_data * static_param_da
         D_beam / (f_PT * D_lenslet) * Llambda / CPL_MATH_2PI * PositionPixels;
     
     return f_lens * f_lens * longDef / (f_PT + longDef) / f_PT * (D_AT / D_lenslet);
+}
+
+
+/*
+ * Correlate two images using FFT
+ * ia Input image cut down to one telescope
+ * ib Input Model
+ * xd Output x shift
+ * yd Output y shift
+ */
+
+cpl_error_code FFTcorrelate(cpl_image *ia, cpl_image *ib, cpl_size *xd, cpl_size *yd) {
+
+  cpl_error_code error = CPL_ERROR_NONE;
+  cpl_type type  = cpl_image_get_type(ia);
+  cpl_size nx    = cpl_image_get_size_x(ia);
+  cpl_size ny    = cpl_image_get_size_y(ia);
+
+  cpl_image * ic = cpl_image_new(nx, ny, type);
+  cpl_image * fa = cpl_image_new(nx, ny, type | CPL_TYPE_COMPLEX);
+  cpl_image * fb = cpl_image_new(nx, ny, type | CPL_TYPE_COMPLEX);
+  cpl_image * fc = cpl_image_new(nx, ny, type | CPL_TYPE_COMPLEX);
+
+  cpl_imagelist * iab = cpl_imagelist_new();
+  cpl_imagelist * fab = cpl_imagelist_new();
+
+  /* Put image ia into imagelist iab */
+  error = cpl_imagelist_set(iab, ia, 0);
+
+  /* Put image ib into imagelist iab */
+  error = cpl_imagelist_set(iab, ib, 1);
+
+  /* Put empty Fourier image fa in imagelist fab */
+  error = cpl_imagelist_set(fab, fa, 0);
+
+  /* Put empty Fourier image fb in imagelist fab*/
+  error = cpl_imagelist_set(fab, fb, 1);
+
+  /* FFT on the image list iab and fill FFT image list fab */
+  error = cpl_fft_imagelist(fab, iab, CPL_FFT_FORWARD);
+
+  /* conjugate fourier image list fb to fc */
+  error = cpl_image_conjugate(fc, fb);
+
+  /* Multiply fourier image list fa and fc*/
+  error = cpl_image_multiply(fc, fa);
+
+  /* Reverse FFT */
+  error = cpl_fft_image(ic, fc, CPL_FFT_BACKWARD | CPL_FFT_NOSCALE);
+
+  /* Find max position -> shift*/
+  error = cpl_image_get_maxpos(ic, xd, yd);
+
+  /* Unwrap for "negative" maximum position */
+  if (*xd > nx/2) *xd = *xd - nx;
+  if (*yd > ny/2) *yd = *yd - ny;
+
+  /* subtract one for come from fits convention (lower left pixel = 1,1) to shift vector */
+
+  (*xd)--;
+  (*yd)--;
+
+  //  cpl_image_save (ia, "ia.fits", CPL_TYPE_DOUBLE,NULL, CPL_IO_DEFAULT);
+  //  cpl_image_save (ib, "ib.fits", CPL_TYPE_DOUBLE,NULL, CPL_IO_DEFAULT);
+  //  cpl_image_save (ic, "ic.fits", CPL_TYPE_DOUBLE,NULL, CPL_IO_DEFAULT);
+
+
+  cpl_imagelist_delete(iab);
+  cpl_imagelist_delete(fab);
+  cpl_image_delete(ic);
+  cpl_image_delete(fc);
+
+  return (error);
 }
 
 /**@}*/
