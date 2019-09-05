@@ -2280,12 +2280,12 @@ gravi_data * gravi_compute_piezotf (gravi_data * data,
     // Unwrap phase of OPD
     for (cpl_size dit = 0 ; dit < ndit-1 ; dit ++)
         for (cpl_size base = 0 ; base < nbase; base ++)
-    {
-        phase=cpl_array_get(opd[dit+1],base, NULL)-cpl_array_get(opd[dit],base, NULL);
-        phase-= twoPi * floor( phase / twoPi );
-        if (phase > CPL_MATH_PI) phase -= twoPi;
-        cpl_array_set(opd[dit+1],base, phase+cpl_array_get(opd[dit],base, NULL));
-    }
+        {
+            phase=cpl_array_get(opd[dit+1],base, NULL)-cpl_array_get(opd[dit],base, NULL);
+            phase-= twoPi * floor( phase / twoPi );
+            if (phase > CPL_MATH_PI) phase -= twoPi;
+            cpl_array_set(opd[dit+1],base, phase+cpl_array_get(opd[dit],base, NULL));
+        }
     
     // filter OPDs, Commands and create Matrixes
     
@@ -2352,17 +2352,17 @@ gravi_data * gravi_compute_piezotf (gravi_data * data,
                     sign3=1;
                     break;
             }
-                    
-                for (cpl_size resp = 0 ; resp < nresp; resp ++)
-                    if (( dit-(nresp+1)+(1+resp) >= 0 )&( dit-(nresp+1)+(1+resp) < ndit_small))
-                        {
-                            dit_matrix =dit-(nresp+1)+(1+resp)+base1*ndit_small;
-                            cpl_matrix_set(piezo_matrix,dit_matrix,resp*ntel+tel,sign1*cpl_array_get(piezo_array, tel, NULL));
-                            dit_matrix =dit-(nresp+1)+(1+resp)+base2*ndit_small;
-                            cpl_matrix_set(piezo_matrix,dit_matrix,resp*ntel+tel,sign2*cpl_array_get(piezo_array, tel, NULL));
-                            dit_matrix =dit-(nresp+1)+(1+resp)+base3*ndit_small;
-                            cpl_matrix_set(piezo_matrix,dit_matrix,resp*ntel+tel,sign3*cpl_array_get(piezo_array, tel, NULL));
-                        }
+            
+            for (cpl_size resp = 0 ; resp < nresp; resp ++)
+                if (( dit-(nresp+1)+(1+resp) >= 0 )&( dit-(nresp+1)+(1+resp) < ndit_small))
+                {
+                    dit_matrix =dit-(nresp+1)+(1+resp)+base1*ndit_small;
+                    cpl_matrix_set(piezo_matrix,dit_matrix,resp*ntel+tel,sign1*cpl_array_get(piezo_array, tel, NULL));
+                    dit_matrix =dit-(nresp+1)+(1+resp)+base2*ndit_small;
+                    cpl_matrix_set(piezo_matrix,dit_matrix,resp*ntel+tel,sign2*cpl_array_get(piezo_array, tel, NULL));
+                    dit_matrix =dit-(nresp+1)+(1+resp)+base3*ndit_small;
+                    cpl_matrix_set(piezo_matrix,dit_matrix,resp*ntel+tel,sign3*cpl_array_get(piezo_array, tel, NULL));
+                }
         }
     }
     CPLCHECK_NUL ("Cannot create matrix for SVD inversion");
@@ -2396,15 +2396,15 @@ gravi_data * gravi_compute_piezotf (gravi_data * data,
     
     for (cpl_size tel = 0 ; tel < ntel; tel ++)
     {
-            for (cpl_size resp = 0 ; resp < nresp; resp ++)
-                {
+        for (cpl_size resp = 0 ; resp < nresp; resp ++)
+            {
             sprintf (qc_name, "ESO QC FT KAL P%lld_RESP%lld", tel+1, resp+1);
             cpl_propertylist_update_double (piezotf_header, qc_name, cpl_matrix_get( piezo_resp, resp*ntel+ tel,0 ) );
             cpl_propertylist_set_comment (piezotf_header, qc_name, "Kalman piezo response");
-                    
+            
             cpl_msg_info (cpl_func, "QC FT KAL P%lld_RESP%lld = %5.5g [rad/Volts]", tel+1, resp+1, cpl_matrix_get( piezo_resp, resp*ntel+ tel,0 ));
-                    
-                }
+            
+            }
         
         // Get gain in rad/Volts
         
