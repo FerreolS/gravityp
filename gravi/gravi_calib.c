@@ -2260,13 +2260,28 @@ gravi_data * gravi_compute_piezotf (gravi_data * data,
     
     /* DO THE COMPUTATION*/
     
+    //  Determine the actuator to use, and associated gain, based on ESO.DPR.TYPE
+    
+    char * actuator;
+    const char * dpr_type = cpl_propertylist_get_string(data_header, "ESO DPR TYPE");
+    if (strcmp(dpr_type, "PIEZOTF") == 0)
+        actuator = cpl_strdup("PIEZO_DL_OFFSET");
+    else if (strcmp(dpr_type, "VLTITF") == 0)
+        actuator = cpl_strdup("VLTI_DL_OFFSET");
+    else
+    {
+        cpl_msg_error(cpl_func, "ESO DPR TYPE = %s is not supported!!!", dpr_type);
+        return NULL;
+    }
+    cpl_msg_info(cpl_func, "Using %s actuator (DPR.TYPE=%s)", actuator, dpr_type);
+    
     //  Read data array from OPDC table
     
     cpl_size ndit   = cpl_table_get_nrow (opdc);
     ndit_small=ndit-nsmooth-(nresp+1);
     cpl_msg_info (cpl_func, "Preparing matrix inversion with NDIT = %lld",ndit);
     cpl_array** opd   = cpl_table_get_data_array (opdc, "OPD");
-    cpl_array** piezo = cpl_table_get_data_array (opdc, "PIEZO_DL_OFFSET");
+    cpl_array** piezo = cpl_table_get_data_array (opdc, actuator);
     CPLCHECK_NUL ("Cannot read the OPDC data");
     
     // create temporary arrays
@@ -2451,7 +2466,7 @@ gravi_data * gravi_compute_piezotf (gravi_data * data,
     cpl_matrix_delete(piezo_header_resp);
     cpl_matrix_delete(piezo_resp);
     cpl_matrix_delete(residuals_fit);
-
+    cpl_free(actuator);
 
     /* Verbose */
     gravi_msg_function_exit(1);
