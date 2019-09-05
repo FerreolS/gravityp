@@ -2380,7 +2380,10 @@ gravi_data * gravi_compute_piezotf (gravi_data * data,
         for (cpl_size resp = 0 ; resp < nresp; resp ++)
         {
             sprintf (name, "ESO FT KAL P%lld_RESP%lld", tel+1, resp+1);
-            cpl_matrix_set( piezo_header_resp, resp*ntel+ tel, 0, cpl_propertylist_get_double (piezotf_header, name));
+            if (cpl_propertylist_has (piezotf_header, name))
+                cpl_matrix_set( piezo_header_resp, resp*ntel+ tel, 0, cpl_propertylist_get_double (piezotf_header, name));
+            else
+                cpl_matrix_set( piezo_header_resp, resp*ntel+ tel, 0, 0.0);
         }
     
     // output QC parameters
