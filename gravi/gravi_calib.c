@@ -2389,6 +2389,20 @@ gravi_data * gravi_compute_piezotf (gravi_data * data,
     cpl_matrix_subtract (residuals_fit,phase_matrix); //residuals_fit is (ndit-5)*nbase
     CPLCHECK_NUL ("Failed to do SVD inversion");
     
+    // Scale DL response to arbitrary PIEZO response of 17.4 rad/Volt
+    if (strcmp(dpr_type, "VLTITF") == 0)
+    {
+        for (cpl_size tel = 0 ; tel < ntel; tel ++)
+        {
+            double gain = 0.0;
+            for (cpl_size resp = 0 ; resp < nresp; resp ++)
+                gain += cpl_matrix_get (piezo_resp, resp*ntel+tel, 0);
+            gain /= 17.4;
+            for (cpl_size resp = 0 ; resp < nresp; resp ++)
+                cpl_matrix_set (piezo_resp, resp*ntel+tel, 0, cpl_matrix_get (piezo_resp, resp*ntel+tel, 0) / gain );
+        }
+    }
+    
     // Get piezo response from header
     
     for (cpl_size tel = 0 ; tel < ntel; tel ++)
