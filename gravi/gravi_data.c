@@ -2059,11 +2059,12 @@ cpl_error_code gravi_data_clean_for_astro (gravi_data * data)
 	/* Loop on extension in file ?? */
 	for (int i = 0; i < gravi_data_get_size (data); i++) {
 
-	    /* Keep OI_ARRAY and OI_TARGET */
+	    /* Keep OI_ARRAY, OI_TARGET and OI_VIS_ACQ */
 		cpl_propertylist * plist = gravi_data_get_plist_x (data, i);
 		const char * plist_name = gravi_pfits_get_extname (plist);
 		if (!(strcmp (plist_name, GRAVI_OI_ARRAY_EXT)) ||
-			!(strcmp (plist_name, GRAVI_OI_TARGET_EXT)) ) {
+			!(strcmp (plist_name, GRAVI_OI_TARGET_EXT)) ||
+            !(strcmp (plist_name, GRAVI_OI_VIS_ACQ_EXT)) ) {
 		  cpl_msg_debug (cpl_func,"NAME: %s kept", plist_name);
 		  continue;
 		}
@@ -2076,6 +2077,7 @@ cpl_error_code gravi_data_clean_for_astro (gravi_data * data)
 		  cpl_msg_debug (cpl_func,"NAME: %s kept", plist_name);
 		  continue;
 		}
+
 
 		/* Delete */
 		cpl_msg_debug (cpl_func,"NAME: %s deleted", plist_name);

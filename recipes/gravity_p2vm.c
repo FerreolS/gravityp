@@ -216,7 +216,7 @@ static int gravity_p2vm_create(cpl_plugin * plugin)
                                 "spectral-dispersion of the beam combiner);\n "
                                 "FULL defines phiA(lbd) to have zero-GD for baselines (01,02,03)",
                                 "(P2VM calibrates the full phase with respect to zero-astrometry);\n "
-                                "gravi.p2vm", "CLOSURE", 4, "NONE", "CLOSURE", "DISP", "FULL");
+                                "gravi.p2vm", "FULL", 4, "NONE", "CLOSURE", "DISP", "FULL");
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "phase-calibration");
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
     cpl_parameterlist_append (recipe->parameters, p);

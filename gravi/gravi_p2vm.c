@@ -1352,6 +1352,59 @@ cpl_error_code gravi_p2vm_phase_correction (gravi_data * p2vm_map,
 		  gravi_array_multiply_conj (visphase[base + pol*6], ref[GRAVI_BASE_TEL[base][1]]);
 		}
 		
+          
+          /* SL: 7 Sept 2019
+           * Filter visphase to remove "wiggles", ie, high frequency oscilations
+           */
+          if (nwave>100) /* Only for MED and HIGH with SCIENCE SPECTROMETER */
+              for ( int base = 0 ; base < 6 ; base++ ) {
+                  
+                  cpl_msg_info (cpl_func,"Performing wiggle removal on baseline %i (pol %i over %i)",
+                                base+1, pol+1, npol);
+                  
+                  /* initialise polynomial of order 6 */
+                  cpl_size mindeg = 0, maxdeg = 6;
+                  cpl_polynomial * fit = cpl_polynomial_new (1);
+                  
+                  /* visphase will be added to the phase of the P2VM
+                   * Need to be unwrapped before interpolation, and removal of the wiggles */
+                  cpl_array * phase_unwraped = cpl_array_cast (visphase[base + pol*6], CPL_TYPE_DOUBLE_COMPLEX);
+                  
+                  /* Compute group-delay */
+                  double gd = 0.0;
+                  gravi_array_get_group_delay_loop (&phase_unwraped, sigma,
+                                                    &gd, 1, 2e-3, CPL_FALSE);
+                  
+                  /* Remove mean group-delay and phase-delay to unwrap */
+                  gravi_array_multiply_phasor (phase_unwraped, - 2*I*CPL_MATH_PI * gd, sigma);
+                  double mean_phase = carg (cpl_array_get_mean_complex (phase_unwraped));
+                  cpl_array_multiply_scalar_complex (phase_unwraped, cexp(- I * mean_phase));
+                  
+                  /* Compute argument and add back the delay and the phase [rad] */
+                  cpl_array_arg (phase_unwraped);
+                  gravi_array_add_phase (phase_unwraped, 2.*CPL_MATH_PI * gd, sigma);
+                  cpl_array_add_scalar (phase_unwraped, mean_phase);
+                  
+                  /* Create the wavenumber matrix */
+                  cpl_matrix * sigma_matrix = cpl_matrix_new (1,nwave);
+                  for (cpl_size wave = 0; wave < nwave; wave ++) {
+                      cpl_matrix_set (sigma_matrix, 0, wave, cpl_array_get (sigma,wave,&nv));
+                  }
+                  
+                  /* Polynomial fit */
+                  cpl_vector * input = cpl_vector_wrap (nwave, cpl_array_get_data_double (phase_unwraped));
+                  cpl_polynomial_fit (fit, sigma_matrix, NULL, input, NULL, CPL_FALSE, &mindeg, &maxdeg);
+                  cpl_vector_unwrap (input);
+                  cpl_array_delete (phase_unwraped);
+                  
+                  /* Evaluate phase of visPhase */
+                  for (cpl_size wave=0; wave<nwave;wave++) {
+                      cpl_array_set_complex (visphase[base + pol*6], wave, cexp( I * cpl_polynomial_eval_1d (fit, cpl_array_get (sigma,wave,&nv), NULL)));
+                  }
+                  
+                  FREE (cpl_matrix_delete, sigma_matrix);
+              }
+          
 		FREELOOP (cpl_array_delete, ref, 4);
 		FREELOOP (cpl_free, opl, nrow);
 		FREE (cpl_array_delete, sigma);
@@ -1359,6 +1412,10 @@ cpl_error_code gravi_p2vm_phase_correction (gravi_data * p2vm_map,
 
 	  CPLCHECK_MSG("Cannot perform coherent integration");
 	  
+        
+            
+        
+        
 	  /*
 	   * Apply these phase corrections to the P2VM phases
 	   */
