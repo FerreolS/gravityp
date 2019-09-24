@@ -331,15 +331,21 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
         
         /* Compute the QC parameters RMS and MEDIAN */
         cpl_msg_info (cpl_func, "Compute QC parameters");
-        double mean_qc = cpl_image_get_mean (median_img);
-        double darkrms = cpl_image_get_mean (stdev_img);
+        double mean_qc = cpl_image_get_mean_window (median_img,1,1,64,1);
+        double darkrms = cpl_image_get_mean_window (stdev_img,1,1,64,1);
+        double darkmin = cpl_image_get_min_window (median_img,1,1,64,1);
+        double darkmax = cpl_image_get_max_window (median_img,1,1,64,1);
+        if (darkmin>0) darkmin=0;
+        if (darkmax<0) darkmax=0;
         cpl_propertylist_update_double (dark_header, QC_MEANDARK_MET, mean_qc);
         cpl_propertylist_update_double (dark_header, QC_DARKRMS_MET, darkrms);
+        cpl_propertylist_update_double (dark_header, QC_DARKRANGE_MET, darkmax-darkmin);
         CPLCHECK_NUL ("Cannot compute the QC");
         
         /* Verbose */
         cpl_msg_info (cpl_func, "QC_MEDIAN%s_MET = %e","DARK", mean_qc);
         cpl_msg_info (cpl_func, "QC_%sRMS_MET = %e","DARK", darkrms);
+        cpl_msg_info (cpl_func, "QC_%sRANGE_MET = %e","DARK", darkmax-darkmin);
         
         /* Create the output DARK table, with a single row */
         cpl_table * median_table = cpl_table_extract (table_met, 0, 1);
