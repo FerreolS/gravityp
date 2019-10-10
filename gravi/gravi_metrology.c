@@ -34,6 +34,7 @@
 /*
  *
  * History :
+ * 08/10/2019 two places : correct bug for AT values : fc_focus_at
  * 12/11/2018 add gravi_data *static_param_data to gravi_metrology_telfc
  *                add gravi_data *static_param_data to  gravi_metrology_get_fc_focus
  * 10/01/2019 remove   int old_flag_telescope[4][4][2]; int old_flag_fiber_coupler[4][2];
@@ -1465,9 +1466,10 @@ double gravi_metrology_get_fc_focus (cpl_propertylist * header, int gv, gravi_da
     char column_name[80];
     int get_default=1;
     
-    /* Assemble column name */
+    /* Assemble column name
+     * EKW 07/10/2019 : else shall be _at */
     if (telname[0] == 'U') strcpy(column_name,"fc_focus_ut");
-    else strcpy(column_name,"fc_focus_ut");
+    else strcpy(column_name,"fc_focus_at");
     if (gravi_pfits_get_axis (header) == MODE_ONAXIS) strcat(column_name,"_onaxis");
     
     /* read value from calibration file */
@@ -1534,9 +1536,10 @@ double gravi_metrology_get_fc_shift (cpl_propertylist * header, int gv, gravi_da
     char column_name[80];
     int get_default=1;
     
-    /* Assemble column name */
+    /* Assemble column name
+     * 08/10/2019 ug fix else fc_focus_shift_at */
     if (telname[0] == 'U') strcpy(column_name,"fc_focus_shift_ut");
-    else strcpy(column_name,"fc_focus_shift_ut");
+    else strcpy(column_name,"fc_focus_shift_at");
     if (gravi_pfits_get_axis (header) == MODE_ONAXIS) strcat(column_name,"_onaxis");
     
     /* read value from calibration file */
