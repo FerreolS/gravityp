@@ -2248,7 +2248,7 @@ cpl_error_code gravi_vis_create_phaseref_sc (cpl_table * vis_SC,
   cpl_polynomial * fit = cpl_polynomial_new (1);
 
   /* Create the vectors and matrix only once to be faster */
-  cpl_matrix * wave_ft = cpl_matrix_new (1,nwave_ft);
+  cpl_matrix * sigma_ft = cpl_matrix_new (1,nwave_ft);
   cpl_vector * wave_sc = cpl_vector_new (nwave_sc);
   cpl_array * wavenumber_ft = cpl_array_new (nwave_ft, CPL_TYPE_DOUBLE);
 
@@ -2257,7 +2257,7 @@ cpl_error_code gravi_vis_create_phaseref_sc (cpl_table * vis_SC,
                   cpl_table_get_column_min (waveft_table, "EFF_WAVE");
   for (cpl_size wave = 0; wave < nwave_ft; wave ++) {
       double lbd = cpl_table_get (waveft_table, "EFF_WAVE", wave, NULL);
-      cpl_matrix_set (wave_ft, 0, wave, (lbd - lbd0) / delta0);
+      cpl_matrix_set (sigma_ft, 0, wave, (lbd0/lbd - 1.) * lbd0/delta0 );
       cpl_array_set (wavenumber_ft, wave, 1./lbd);
   }
   for (cpl_size wave = 0; wave < nwave_sc; wave ++) {
@@ -2300,7 +2300,7 @@ cpl_error_code gravi_vis_create_phaseref_sc (cpl_table * vis_SC,
 
       /* Polynomial fit */
       cpl_vector * input = cpl_vector_wrap (nwave_ft, cpl_array_get_data_double (phaseref_ftdit));
-      cpl_polynomial_fit (fit, wave_ft, NULL, input, NULL, CPL_FALSE, &mindeg, &maxdeg);
+      cpl_polynomial_fit (fit, sigma_ft, NULL, input, NULL, CPL_FALSE, &mindeg, &maxdeg);
       cpl_vector_unwrap (input);
 	  cpl_array_delete (phaseref_ftdit);
 
@@ -2312,7 +2312,7 @@ cpl_error_code gravi_vis_create_phaseref_sc (cpl_table * vis_SC,
       /* Evaluate polynomial at the output sampling */
       phaseref[nsc] = cpl_array_new (nwave_sc, CPL_TYPE_DOUBLE);
       for (cpl_size w = 0; w < nwave_sc; w++) {
-          double delta = (cpl_vector_get(wave_sc, w) - lbd0) / delta0;
+          double delta = (lbd0/cpl_vector_get(wave_sc, w) - 1.) * lbd0/delta0 ;
           cpl_array_set (phaseref[nsc], w, cpl_polynomial_eval_1d (fit, delta, NULL));
       }
 
@@ -2324,7 +2324,7 @@ cpl_error_code gravi_vis_create_phaseref_sc (cpl_table * vis_SC,
   } /* End loop on base */
 
   FREE (cpl_vector_delete, wave_sc);
-  FREE (cpl_matrix_delete, wave_ft);
+  FREE (cpl_matrix_delete, sigma_ft);
   FREE (cpl_array_delete, wavenumber_ft);
   FREE (cpl_polynomial_delete, fit);
 
@@ -2768,9 +2768,9 @@ cpl_error_code gravi_compute_signals (gravi_data * p2vmred_data,
 	/* verbose */
 	cpl_msg_info (cpl_func, "Start polarisation %d over %d",pol+1, CPL_MAX(npol_sc,npol_ft));
 	cpl_msg_info(cpl_func, "Insname FT : %s, pol %d npol %d",
-                 GRAVI_INSNAME(GRAVI_FT,pol,npol_ft), pol, npol_ft);
+                 GRAVI_INSNAME(GRAVI_FT,pol,npol_ft), pol+1, npol_ft);
 	cpl_msg_info(cpl_func, "Insname SC : %s, pol %d npol %d",
-                 GRAVI_INSNAME(GRAVI_SC,pol,npol_sc), pol, npol_sc);
+                 GRAVI_INSNAME(GRAVI_SC,pol,npol_sc), pol+1, npol_sc);
 
 	/* Get the table of reduced data from FT */
 	cpl_table * vis_FT = gravi_data_get_oi_vis (p2vmred_data, GRAVI_FT, pol, npol_ft);

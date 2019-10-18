@@ -1386,9 +1386,13 @@ cpl_error_code gravi_p2vm_phase_correction (gravi_data * p2vm_map,
                   cpl_array_add_scalar (phase_unwraped, mean_phase);
                   
                   /* Create the wavenumber matrix */
+                  
+                  double sigma0 = cpl_array_get_mean (sigma);
+                  double delta0 = cpl_array_get_max (sigma)-cpl_array_get_min (sigma);
+                  
                   cpl_matrix * sigma_matrix = cpl_matrix_new (1,nwave);
                   for (cpl_size wave = 0; wave < nwave; wave ++) {
-                      cpl_matrix_set (sigma_matrix, 0, wave, cpl_array_get (sigma,wave,&nv));
+                      cpl_matrix_set (sigma_matrix, 0, wave, (cpl_array_get (sigma,wave,&nv) - sigma0)/delta0 );
                   }
                   
                   /* Polynomial fit */
@@ -1399,7 +1403,7 @@ cpl_error_code gravi_p2vm_phase_correction (gravi_data * p2vm_map,
                   
                   /* Evaluate phase of visPhase */
                   for (cpl_size wave=0; wave<nwave;wave++) {
-                      cpl_array_set_complex (visphase[base + pol*6], wave, cexp( I * cpl_polynomial_eval_1d (fit, cpl_array_get (sigma,wave,&nv), NULL)));
+                      cpl_array_set_complex (visphase[base + pol*6], wave, cexp( I * cpl_polynomial_eval_1d (fit, cpl_matrix_get (sigma_matrix,0,wave), NULL)));
                   }
                   
                   FREE (cpl_matrix_delete, sigma_matrix);
