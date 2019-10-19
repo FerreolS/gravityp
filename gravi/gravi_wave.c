@@ -103,6 +103,7 @@ cpl_table * gravi_wave_fibre (cpl_table * spectrum_table,
 
 cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
                                cpl_table * detector_table,
+                               gravi_data * wave_param,
                                cpl_size fullstartx,
                                int spatial_order,
                                int spectral_order,
@@ -1176,6 +1177,7 @@ cpl_table * gravi_wave_fibre (cpl_table * spectrum_table,
 
 cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
                                cpl_table * detector_table,
+                               gravi_data * wave_param,
                                cpl_size fullstartx,
                                int spatial_order,
                                int spectral_order,
@@ -1195,6 +1197,9 @@ cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
     cpl_size nwave = cpl_table_get_column_depth (wavefibre_table, npol > 1 ? "BASE_12_S" : "BASE_12_C");
     CPLCHECK_NUL ("Cannot get data");
     
+    /* get the wave param */
+    cpl_propertylist * wave_param_plist = gravi_data_get_plist(wave_param,GRAVI_PRIMARY_HDR_EXT);
+
     /* Odd index, for SC only */
     cpl_vector * odd_index = cpl_vector_new (nwave);
     for (int i = fullstartx; i < fullstartx + nwave; i++)  {
@@ -1250,19 +1255,26 @@ cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
                 /* The FT accept all channel for the 2D fit */
                 cpl_vector_set (all_valid, pos, 1);
 
-                if (nwave > 100) {
-                    /* SC HIGH and MEDIUM */
+                if (nwave > 1000) {
+                    /* SC HIGH */
                     if ((chi2_value > M_PI_4 ||
-                         wave_value < 2.01e-6 ||
-                         wave_value > 2.43e-6))
+                         wave_value < gravi_pfits_get_double_default(wave_param_plist, "ESO OIWAVE HIGH LBD MIN", 2.01e-6) ||
+                         wave_value > gravi_pfits_get_double_default(wave_param_plist, "ESO OIWAVE HIGH LBD MAX", 2.43e-6)))
                         cpl_vector_set (all_valid, pos, 0);
                 }
-                else if (nwave > GRAVI_LBD_FTSC) {
+                else if (nwave > 100) {
+                    /* SC MEDIUM */
+                    if ((chi2_value > M_PI_4 ||
+                         wave_value < gravi_pfits_get_double_default(wave_param_plist, "ESO OIWAVE MED LBD MIN", 2.01e-6) ||
+                         wave_value > gravi_pfits_get_double_default(wave_param_plist, "ESO OIWAVE MED LBD MAX", 2.43e-6)))
+                        cpl_vector_set (all_valid, pos, 0);
+                }
+               else if (nwave > GRAVI_LBD_FTSC) {
                     /* SC LOW */
                     if ((chi2_value > M_PI_4 ||
                          //wave_value < 2.01e-6 ||
-                         wave_value < 1.99e-6 ||
-                         wave_value > 2.5e-6 ||
+                         wave_value < gravi_pfits_get_double_default(wave_param_plist, "ESO OIWAVE LOW LBD MIN", 1.99e-6) ||
+                         wave_value > gravi_pfits_get_double_default(wave_param_plist, "ESO OIWAVE LOW LBD MAX", 2.5e-6) ||
                          wave == 0 || wave == nwave-1))
                         cpl_vector_set (all_valid, pos, 0);
                 }
@@ -2045,7 +2057,8 @@ cpl_error_code gravi_wave_qc (gravi_data * wave_map, gravi_data * profile_map)
 
 cpl_error_code  gravi_compute_wave (gravi_data * wave_map,
                                     gravi_data * spectrum_data,
-                                    int type_data, const cpl_parameterlist * parlist)
+                                    int type_data, const cpl_parameterlist * parlist,
+                                    gravi_data * wave_param)
 {
 	gravi_msg_function_start(1);
 	cpl_ensure_code (wave_map,      CPL_ERROR_NULL_INPUT);
@@ -2124,6 +2137,7 @@ cpl_error_code  gravi_compute_wave (gravi_data * wave_map,
 
     wavedata_table = gravi_wave_fit_2d (wavefibre_table,
                                         detector_table,
+                                        wave_param,
                                         fullstartx, spatial_order, spectral_order,  &rms_residuals);
 	cpl_propertylist_update_double (wave_header, QC_RMS_RESIDUALS(type_data), rms_residuals);
     

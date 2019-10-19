@@ -40,7 +40,8 @@ cpl_error_code gravi_wave_compute_opds (gravi_data * spectrum_data,
 
 cpl_error_code  gravi_compute_wave (gravi_data * wave_map,
                                     gravi_data * spectrum_data,
-                                    int type_data, const cpl_parameterlist * parlist);
+                                    int type_data, const cpl_parameterlist * parlist,
+                                    gravi_data * wave_param);
 
 cpl_error_code gravi_wave_qc (gravi_data * wave_map,
                               gravi_data * profile_map);

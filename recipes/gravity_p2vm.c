@@ -558,6 +558,13 @@ static int gravity_p2vm(cpl_frameset            * frameset,
      * (4) Check and get the WAVE frame
      */
 
+    if (!cpl_frameset_is_empty (wave_param_frameset)) {
+        frame = cpl_frameset_get_position (wave_param_frameset, 0);
+        wave_param = gravi_data_load_frame (frame, used_frameset);
+    }
+    else
+        cpl_msg_error (cpl_func, "There is no WAVE_PARAM in the frameset (did you forget the static calibration files?)");
+
     if (!cpl_frameset_is_empty (wavecalib_frameset)) {
         cpl_msg_info (cpl_func, " ***** Get wave map ***** ");
 
@@ -639,7 +646,7 @@ static int gravity_p2vm(cpl_frameset            * frameset,
         }
 
         /* Compute wave calibration for FT */
-        gravi_compute_wave (wave_map, spectrum_data, GRAVI_FT, parlist);
+        gravi_compute_wave (wave_map, spectrum_data, GRAVI_FT, parlist, wave_param);
 
         CPLCHECK_CLEAN ("Cannot compute wave for FT");
 
@@ -707,7 +714,7 @@ static int gravity_p2vm(cpl_frameset            * frameset,
         }
 
         /* Compute wave calibration for SC */
-        gravi_compute_wave (wave_map, spectrum_data, GRAVI_SC, parlist);
+        gravi_compute_wave (wave_map, spectrum_data, GRAVI_SC, parlist, wave_param);
 
         CPLCHECK_CLEAN ("Cannot compute wave for SC");
 
@@ -761,12 +768,6 @@ static int gravity_p2vm(cpl_frameset            * frameset,
 
     /* Construction of the p2vm data. */
     /* START EKW 04/12/2018 read wave parameter from calibration file - Load the WAVE_PARAM Parameter */
-    if (!cpl_frameset_is_empty (wave_param_frameset)) {
-	  frame = cpl_frameset_get_position (wave_param_frameset, 0);
-	  wave_param = gravi_data_load_frame (frame, used_frameset);
-	}
-	else
-	  cpl_msg_error (cpl_func, "There is no WAVE_PARAM in the frameset (did you forget the static calibration files?)");
 
     cpl_msg_info (cpl_func, " ***** Create the P2VM ***** ");
     p2vm_map = gravi_create_p2vm (wave_map,wave_param);
