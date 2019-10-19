@@ -300,7 +300,7 @@ cpl_table * gravi_table_ft_format (cpl_table * pix_table,
 
   /* Keep the ny_out to 5 for now to keep the same size.
    * could be ny if the pipeline accept 6 pixels spectra */
-  cpl_size ny_out = 5;
+  cpl_size ny_out = ny;
 
   /* Number of RAW pixels */
   cpl_size n_output = 24;
@@ -998,6 +998,10 @@ cpl_error_code gravi_interpolate_spectrum_table (cpl_table * spectrum_table,
             
             /* Check size of WAVE of this region */
             int nbw = cpl_table_get_column_depth (wave_table, data_x);
+            if (nbw != nb_wave)
+                cpl_error_set_message(cpl_func, CPL_ERROR_ILLEGAL_INPUT,
+                                  "Wavelength calibration is incompatible with the data. Make sure the \n"
+                                  "calibration has been produced by the same version of the pipeline");
             cpl_ensure_code (nbw == nb_wave, CPL_ERROR_ILLEGAL_INPUT);
 
             /* Ensure we have no extrapolation and have increasing wavelengths */

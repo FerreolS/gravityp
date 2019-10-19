@@ -370,8 +370,8 @@ cpl_vector * gravi_ellipse_meanopd_create (cpl_table * spectrum_table,
         cpl_ensure (oiwave_tables[pol], CPL_ERROR_NULL_INPUT, NULL);
 
     /* Spectral band to integrate */
-    int wave_start = nwave > 5 ? nwave/4 : 0;
-    int wave_end   = nwave > 5 ? (nwave*3)/4 : nwave-1;
+    int wave_start = nwave > GRAVI_LBD_FTSC ? nwave/4 : 1;
+    int wave_end   = nwave > GRAVI_LBD_FTSC ? (nwave*3)/4 : nwave-2;
     
     /* Init mean_opd to average over channel and polar */
     cpl_vector * mean_opd = cpl_vector_new (nrow);

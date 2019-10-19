@@ -1084,7 +1084,7 @@ cpl_vector * gravi_compute_envelope (const cpl_vector *opd, int wave, int nwave)
     cpl_ensure (wave>=0 && wave<nwave, CPL_ERROR_ILLEGAL_INPUT, NULL);
     
 	/* Compute delta_lambda and lambda from experience */
-	double delta_lambda = (nwave == 5) ? 0.13 : 0.45 / nwave * 3;
+	double delta_lambda = (nwave > GRAVI_LBD_FTSC) ? 0.45 / nwave * 3 : 0.13;
     double lambda = 2.0 + 0.45 / nwave * wave;
     
 	 /* Compute coherent length */

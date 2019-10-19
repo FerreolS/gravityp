@@ -76,7 +76,7 @@
  -----------------------------------------------------------------------------*/
 
 #define PLOT_WAVE_PHASE_VS_OPD 0
-#define WAVE_TO_PLOT 12
+#define WAVE_TO_PLOT 5
 
 /*-----------------------------------------------------------------------------
                                  Private prototypes
@@ -1264,6 +1264,14 @@ cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
                          wave_value < 1.99e-6 ||
                          wave_value > 2.5e-6 ||
                          wave == 0 || wave == nwave-1))
+                        cpl_vector_set (all_valid, pos, 0);
+                }
+                else if (nwave == GRAVI_LBD_FTSC) {
+                    /* FT */
+                    if ((chi2_value > M_PI_4 ||
+                         //wave_value < 2.01e-6 ||
+                         wave_value < 1.99e-6 ||
+                         wave_value > 2.5e-6))
                         cpl_vector_set (all_valid, pos, 0);
                 }
                 
