@@ -203,6 +203,9 @@ static int gravity_p2vm_create(cpl_plugin * plugin)
 
     /* Wave option */
     gravi_parameter_add_wave (recipe->parameters);
+
+    /* Extraction */
+    gravi_parameter_add_extract (recipe->parameters);
     
     /* Phase definition in P2VM */
     p = cpl_parameter_new_enum ("gravity.calib.phase-calibration", CPL_TYPE_STRING,

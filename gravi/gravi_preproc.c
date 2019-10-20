@@ -65,7 +65,7 @@
  -----------------------------------------------------------------------------*/
 cpl_table * gravi_table_ft_format (cpl_table * table_ft, cpl_table * sky_table_std,
 								   cpl_table * sky_table_avg, cpl_table * badft_table,
-                                   int n_region, double gain);
+                                   int n_region, double gain, const cpl_parameterlist * parlist);
 
 cpl_table * gravi_imglist_sc_collapse (cpl_table * profile_table,
                                        cpl_imagelist * raw_imglist,
@@ -272,7 +272,7 @@ cpl_table * gravi_table_ft_format (cpl_table * pix_table,
 								   cpl_table * skystd_table,
                                    cpl_table * skyavg_table,
                                    cpl_table * badft_table,
-								   int n_region, double gain)
+								   int n_region, double gain, const cpl_parameterlist * parlist)
 {
   /* Verbose */
   gravi_msg_function_start(0);
@@ -300,7 +300,15 @@ cpl_table * gravi_table_ft_format (cpl_table * pix_table,
 
   /* Keep the ny_out to 5 for now to keep the same size.
    * could be ny if the pipeline accept 6 pixels spectra */
-  cpl_size ny_out = ny;
+  cpl_size ny_out;
+  if (gravi_param_get_bool(parlist, "gravity.preproc.extra-pixel-ft")) {
+      ny_out =ny;
+      cpl_msg_info (cpl_func, "Option extra-pixel-ft applied, using %d pixels", ny_out);
+      }
+  else{
+      ny_out = 5;
+      cpl_msg_info (cpl_func, "Option extra-pixel-ft disabled, using %d pixels", ny_out);
+  }
 
   /* Number of RAW pixels */
   cpl_size n_output = 24;
@@ -659,7 +667,7 @@ gravi_data * gravi_extract_spectrum (gravi_data * raw_data,
 
 		/* Convert PIX column to DATA# and DATAERR# */
 		cpl_table * spectrum_ft;
-        spectrum_ft = gravi_table_ft_format (imaging_data_ft, skystd_table, skyavg_table, badft_table, n_region, gain_ft);
+        spectrum_ft = gravi_table_ft_format (imaging_data_ft, skystd_table, skyavg_table, badft_table, n_region, gain_ft, parlist);
         CPLCHECK_NUL ("Cannot format FT data");
 
         /* Set units */

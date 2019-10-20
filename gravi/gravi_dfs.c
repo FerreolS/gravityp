@@ -509,6 +509,13 @@ cpl_parameter * gravi_parameter_add_extract (cpl_parameterlist *self)
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
 	cpl_parameterlist_append (self, p);
 
+    p = cpl_parameter_new_value ("gravity.preproc.extra-pixel-ft", CPL_TYPE_BOOL,
+                                 "Include the 6th pixels ot the FT",
+                                 "gravity.preproc", TRUE);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "extra-pixel-ft");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (self, p);
+
     return p;
 }
 

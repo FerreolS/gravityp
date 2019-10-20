@@ -314,6 +314,13 @@ int gravi_calib_test(void){
 	cpl_parameter_disable(p, CPL_PARAMETER_MODE_ENV);
 	cpl_parameterlist_append(paralist, p);
 
+    p = cpl_parameter_new_value ("gravity.preproc.extra-pixel-ft", CPL_TYPE_BOOL,
+                                 "Include the 6th pixels ot the FT",
+                                 "gravity.preproc", TRUE);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "extra-pixel-ft");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (self, p);
+
 
 	test_data(profile_map, gravi_compute_profile(flat_data,
 					dark_map, badpix_data, 4, paralist), "gravi_compute_profile: "
