@@ -218,7 +218,7 @@ static int gravity_vis_create(cpl_plugin * plugin)
     gravi_parameter_add_biasmethod (recipe->parameters);
 
     /* Extraction */
-    gravi_parameter_add_extract (recipe->parameters);
+    //gravi_parameter_add_extract (recipe->parameters); // need to get the param from the p2vm
     gravi_parameter_add_metrology (recipe->parameters);
     // gravi_parameter_add_preproc (recipe->parameters); // now automatically handled in the preproc
     
@@ -490,6 +490,8 @@ static int gravity_vis(cpl_frameset * frameset,
     /* Identify the P2VM in the input frameset */
 	frame = cpl_frameset_get_position (p2vmcalib_frameset, 0);
 	p2vm_map = gravi_data_load_frame (frame, used_frameset);
+	cpl_parameter * param_extrapixel = gravi_pfits_get_extrapixel_param(gravi_data_get_header(p2vm_map));
+	cpl_parameterlist_append(parlist, param_extrapixel);
 
     /* Load the DISP_MODEL in the input frameset */
     if (!cpl_frameset_is_empty (dispcalib_frameset)) {

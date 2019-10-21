@@ -879,6 +879,48 @@ cpl_propertylist * gravi_plist_get_oifits_keywords (cpl_propertylist * header)
 
 /*-----------------------------------------------------------------------------*/
 /**
+ * @brief Extract parameters from a product header
+ * @param header    The input header
+ * @param param     The parameter name
+ * @return A new cpl_parameter with the parameter
+ */
+/*-----------------------------------------------------------------------------*/
+cpl_parameter * gravi_pfits_get_extrapixel_param(cpl_propertylist * header)
+{
+    /* Check inputs */
+    cpl_ensure (header, CPL_ERROR_NULL_INPUT, NULL);
+
+    int key_index = 1;
+    char*  param_value = "false";
+    char * param_name = "extra-pixel-ft";
+
+    char* key = cpl_sprintf("ESO PRO REC1 PARAM%d NAME",key_index);
+    while (cpl_propertylist_has(header, key)){
+        if (!strcmp(cpl_propertylist_get_string(header, key), param_name))
+        {
+            key = cpl_sprintf("ESO PRO REC1 PARAM%d VALUE",key_index);
+            param_value = cpl_propertylist_get_string(header, key);
+            cpl_msg_info(cpl_func, "Retrieve the extra-pixel-ft option from the p2vm : [%s] ", param_value);
+        }
+        key = cpl_sprintf("ESO PRO REC1 PARAM%d NAME", ++key_index);
+    }
+
+    cpl_parameter * p = cpl_parameter_new_value ("gravity.preproc.extra-pixel-ft", CPL_TYPE_BOOL,
+                                 "Include the 6th pixels ot the FT",
+                                 "gravity.preproc", TRUE);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "extra-pixel-ft");
+
+    if (!strcmp(param_value, "true"))
+        cpl_parameter_set_bool(p, 1);
+    else
+        cpl_parameter_set_bool(p, 0);
+
+    cpl_msg_info(cpl_func, "Set extra-pixel-ft option : [%d] ", cpl_parameter_get_bool(p));
+    return p;
+}
+
+/*-----------------------------------------------------------------------------*/
+/**
  * @brief Extract QC parameters
  * @param header    The input header
  * @return A new cpl_parameterlist with the QC keywords
