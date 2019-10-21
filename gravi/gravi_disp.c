@@ -788,6 +788,7 @@ cpl_table * gravi_fit_dispersion (cpl_table * oiflux_table,
 
     /* Output of all wavelenths */
     cpl_matrix * disp_fits = cpl_matrix_new (nbase + ntel * 2, nwave);
+    cpl_matrix * residuals_fits = cpl_matrix_new (nrow*nbase, nwave);
     
     /* Model and right-hand-side for the lineary system (unfilled matrix are 0.0) */
     cpl_matrix * rhs_matrix   = cpl_matrix_new (nrow * nbase, 1);
@@ -834,10 +835,17 @@ cpl_table * gravi_fit_dispersion (cpl_table * oiflux_table,
         /* Solve the system */
         cpl_matrix * res_matrix = cpl_matrix_solve_normal (model_matrix, rhs_matrix);
 
+        /* Compute the residuals */
+        cpl_matrix * residual_matrix = cpl_matrix_product_create ( model_matrix, res_matrix);
+        cpl_matrix_subtract(residual_matrix, rhs_matrix);
+
         /* Save result in disp_fits */
         for (cpl_size param = 0; param < nbase + ntel * 2; param++)
             cpl_matrix_set (disp_fits, param, wave, cpl_matrix_get (res_matrix,param,0));
+        for (cpl_size param = 0; param < nrow * nbase; param++)
+            cpl_matrix_set (residuals_fits, param, wave, cpl_matrix_get (residual_matrix,param,0));
         FREE (cpl_matrix_delete, res_matrix);
+        FREE (cpl_matrix_delete, residual_matrix);
         
     } /* End loop on waves */
     FREE (cpl_matrix_delete, model_matrix);
@@ -860,6 +868,7 @@ cpl_table * gravi_fit_dispersion (cpl_table * oiflux_table,
     /* Add the BETA and GAMMA columns */
     gravi_table_init_column_array (dispwave_table, "BETA",  NULL, CPL_TYPE_DOUBLE, ntel);
     gravi_table_init_column_array (dispwave_table, "GAMMA", NULL, CPL_TYPE_DOUBLE, ntel);
+    gravi_table_init_column_array (dispwave_table, "RESIDUALS", NULL, CPL_TYPE_DOUBLE, nbase*nrow);
     
     /* Fill the BETA and GAMMA columns */
     for (cpl_size tel = 0; tel < ntel; tel++) {
@@ -872,8 +881,18 @@ cpl_table * gravi_fit_dispersion (cpl_table * oiflux_table,
         }
     }
 
+    /* Fill the RESIDUALS columns */
+    for (cpl_size tel = 0; tel < nrow * nbase; tel++) {
+        for (cpl_size wave = 0; wave < nwave; wave ++) {
+            gravi_table_set_value (dispwave_table,"RESIDUALS",wave,tel,
+                                   cpl_matrix_get (residuals_fits, tel, wave));
+            CPLCHECK_NUL ("Cannot fill the dispwave_table");
+        }
+    }
+
     /* Delete the matrix */
     FREE (cpl_matrix_delete, disp_fits);
+    FREE (cpl_matrix_delete, residuals_fits);
     
 	gravi_msg_function_exit (1);
 	return dispwave_table;
