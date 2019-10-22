@@ -303,11 +303,11 @@ cpl_table * gravi_table_ft_format (cpl_table * pix_table,
   cpl_size ny_out;
   if (gravi_param_get_bool(parlist, "gravity.preproc.extra-pixel-ft")) {
       ny_out =ny;
-      cpl_msg_info (cpl_func, "Option extra-pixel-ft applied, using %d pixels", ny_out);
+      cpl_msg_info (cpl_func, "Option extra-pixel-ft applied, using %lld pixels", ny_out);
       }
   else{
       ny_out = 5;
-      cpl_msg_info (cpl_func, "Option extra-pixel-ft disabled, using %d pixels", ny_out);
+      cpl_msg_info (cpl_func, "Option extra-pixel-ft disabled, using %lld pixels", ny_out);
   }
 
   /* Number of RAW pixels */
