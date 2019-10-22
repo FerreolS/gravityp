@@ -276,7 +276,7 @@ double gravi_convert_to_mjd (const char * );
 char * gravi_convert_to_timestamp (double mjd);
 cpl_error_code gravi_pfits_ensure_double(cpl_propertylist * self, const char * name);
 
-cpl_parameter * gravi_pfits_get_extrapixel_param(cpl_propertylist * header);
+cpl_parameter * gravi_pfits_get_extrapixel_param(const cpl_propertylist * header);
 cpl_propertylist *  gravi_plist_get_qc (cpl_propertylist * );
 cpl_propertylist *  gravi_plist_get_oifits_keywords (cpl_propertylist * header);
 

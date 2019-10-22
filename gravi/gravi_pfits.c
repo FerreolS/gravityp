@@ -885,13 +885,13 @@ cpl_propertylist * gravi_plist_get_oifits_keywords (cpl_propertylist * header)
  * @return A new cpl_parameter with the parameter
  */
 /*-----------------------------------------------------------------------------*/
-cpl_parameter * gravi_pfits_get_extrapixel_param(cpl_propertylist * header)
+cpl_parameter * gravi_pfits_get_extrapixel_param(const cpl_propertylist * header)
 {
     /* Check inputs */
     cpl_ensure (header, CPL_ERROR_NULL_INPUT, NULL);
 
     int key_index = 1;
-    char*  param_value = "false";
+    const char*  param_value;
     char * param_name = "extra-pixel-ft";
 
     char* key = cpl_sprintf("ESO PRO REC1 PARAM%d NAME",key_index);
