@@ -319,7 +319,7 @@ int gravi_calib_test(void){
                                  "gravity.preproc", TRUE);
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "extra-pixel-ft");
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
-    cpl_parameterlist_append (self, p);
+    cpl_parameterlist_append (paralist, p);
 
 
 	test_data(profile_map, gravi_compute_profile(flat_data,
@@ -402,9 +402,11 @@ int gravi_calib_test(void){
     /* Compute wave calibration for FT and SC */
     gravi_parameter_add_wave(paralist);
 
-    test(gravi_compute_wave (data_wave, spectrum_data, GRAVI_FT, paralist),
+    gravi_data * wave_param = gravi_data_new(0);
+
+    test(gravi_compute_wave (data_wave, spectrum_data, GRAVI_FT, paralist, wave_param),
 			"gravi_compute_wave: Compute wave FT... ", flag);
-    test(gravi_compute_wave (data_wave, spectrum_data, GRAVI_SC, paralist),
+    test(gravi_compute_wave (data_wave, spectrum_data, GRAVI_SC, paralist, wave_param),
 			"gravi_compute_wave: Compute wave FT... ", flag);
     plist = cpl_propertylist_duplicate(gravi_data_get_plist (data_wave,
     		GRAVI_WAVE_DATA_SC_EXT));
@@ -413,13 +415,13 @@ int gravi_calib_test(void){
     gravi_data_add_table (data_wave, NULL, "P2VM_MET", p2vm_met);
 
     /* Compute wave test failure  */
-	test_pfailure(CPL_ERROR_NULL_INPUT, gravi_compute_wave(NULL, spectrum_data, GRAVI_FT, paralist),
+	test_pfailure(CPL_ERROR_NULL_INPUT, gravi_compute_wave(NULL, spectrum_data, GRAVI_FT, paralist, wave_param),
 			              "gravi_compute_wave: Try to compute the wave with NULL wave_data... ", flag);
 
-	test_pfailure(CPL_ERROR_NULL_INPUT, gravi_compute_wave(data_wave, NULL, GRAVI_FT, paralist),
+	test_pfailure(CPL_ERROR_NULL_INPUT, gravi_compute_wave(data_wave, NULL, GRAVI_FT, paralist, wave_param),
 			              "gravi_compute_wave: Try to compute the wave from NULL spectrum data... ", flag);
 
-	test_pfailure(CPL_ERROR_ILLEGAL_INPUT, gravi_compute_wave(data_wave, spectrum_data, 10, paralist),
+	test_pfailure(CPL_ERROR_ILLEGAL_INPUT, gravi_compute_wave(data_wave, spectrum_data, 10, paralist, wave_param),
 			              "gravi_compute_wave: Try to compute the wave with illegal type... ", flag);
 
     FREE (gravi_data_delete, spectrum_data);
