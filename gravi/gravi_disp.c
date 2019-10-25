@@ -974,7 +974,6 @@ cpl_error_code gravi_compute_argon_pos (gravi_data * preproc_data, gravi_data *w
 
     double *line_wave;
     int nlines;
-    cpl_msg_info (cpl_func, "Vor line_wave2");
 
 	cpl_table * line_wave_table = gravi_data_get_table (wave_param, "ARGON_TAB");
     if ( cpl_table_has_column (line_wave_table , "ARGON_LINES") ) {
