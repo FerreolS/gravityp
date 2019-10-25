@@ -83,11 +83,6 @@ CPL_CHECK_LIBS
 #Check for ERFA
 ESO_CHECK_ERFA
 
-#Checking for Yorick executable
-CHECK_YORICK([optional])
-CHECK_YORICK_YETI([optional])
-CHECK_YORICK_OPTIMPACK([optional])
-
 # Check for <xx>clipm
 # - can be called multiple times
 # - replace the argument "xxclipm" by your library name,

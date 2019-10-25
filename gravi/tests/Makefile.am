@@ -38,7 +38,6 @@ check_PROGRAMS = gravi_vis-test \
                  gravi_utils-test \
                  gravi_calib-test \
                  gravi_strehl-test \
-                 gravi_image-test \
                  gravi_eop-test 
 
 gravi_dfs_test_SOURCES = gravi_dfs-test.c
@@ -65,11 +64,6 @@ gravi_strehl_test_SOURCES = gravi_strehl-test.c
 gravi_strehl_test_LDFLAGS = $(CPL_LDFLAGS) $(GSL_LDFLAGS) $(HDRL_LDFLAGS)
 gravi_strehl_test_LDADD = $(LIBCPLUI) $(LIBCPLCORE) $(LIBGRAVI) $(GSL_LIBS) $(HDRL_LIBS)
 gravi_strehl_test_DEPENDENCY = $(LIBHDRL)
-
-gravi_image_test_SOURCES = gravi_image-test.c
-gravi_image_test_LDFLAGS = $(CPL_LDFLAGS) $(GSL_LDFLAGS) $(HDRL_LDFLAGS)
-gravi_image_test_LDADD = $(LIBCPLUI) $(LIBCPLCORE) $(LIBGRAVI) $(GSL_LIBS) $(HDRL_LIBS)
-gravi_image_test_DEPENDENCY = $(LIBHDRL)
 
 gravi_eop_test_SOURCES = gravi_eop-test.c
 gravi_eop_test_LDFLAGS = $(CPL_LDFLAGS) $(GSL_LDFLAGS) $(HDRL_LDFLAGS)

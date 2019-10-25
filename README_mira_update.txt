@@ -1,3 +1,6 @@
+NOTE: This instructions are now obsolete. See PIPE-8379
+
+
 gravi_image_reconstruct recipe for the Gravity ESO pipeline
 -----------------------------------------------------------
 
