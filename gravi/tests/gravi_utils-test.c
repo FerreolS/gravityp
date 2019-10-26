@@ -56,7 +56,7 @@
                               PREPROC Private prototypes
  -----------------------------------------------------------------------------*/
 cpl_table * gravi_table_ft_format (cpl_table * table_ft, cpl_table * sky_table_std,
-				cpl_table * sky_table_avg, cpl_table * badpix, int n_region, double gain);
+				cpl_table * sky_table_avg, cpl_table * badpix, int n_region, double gain, const cpl_parameterlist * parlist);
 
 cpl_table * gravi_imglist_sc_collapse (cpl_table * profile_table,
                                        cpl_imagelist * raw_imglist,
@@ -67,7 +67,7 @@ cpl_error_code gravi_interpolate_spectrum_table (cpl_table * spectrum_table,
                                                  cpl_table * wave_table,
                                                  cpl_table * oiwave_table,
                                                  cpl_table * specflat_table);
-
+cpl_parameter * gravi_pfits_get_extrapixel_param(const cpl_propertylist *  header);
 
 //#include "gravi_data.c"
 //#include "gravi_pfits.c"
@@ -320,6 +320,13 @@ int gravi_utils_test(void){
 	 * Test unit of the function that extract spectrum
 	 */
 	gravi_data * spectrum_data;
+    cpl_parameterlist * parlist = cpl_parameterlist_new ();
+    cpl_parameter * p = cpl_parameter_new_value ("gravity.preproc.extra-pixel-ft", CPL_TYPE_BOOL,
+                                 "Include the 6th pixels ot the FT",
+                                 "gravity.preproc", TRUE);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "extra-pixel-ft");
+    cpl_parameter_set_bool(p, 0);
+    cpl_parameterlist_append(parlist, p);
 
 	test_pfailure(CPL_ERROR_NULL_INPUT, gravi_extract_spectrum(NULL,
                                                                NULL,
@@ -327,14 +334,11 @@ int gravi_utils_test(void){
                                                                NULL, NULL, GRAVI_DET_ALL),
 			              "gravi_extract_spectrum: Try to extract the spectrum with a NULL data... ", flag);
 
-    cpl_parameterlist * parlist = cpl_parameterlist_new ();
-
 	test_data (spectrum_data, gravi_extract_spectrum(data,
                                                      profile_map,
                                                      dark_map,  badpix,
                                                      NULL, parlist, GRAVI_DET_ALL), "gravi_extract_spectrum: extract the spectrum ...", flag);
 
-    cpl_parameterlist_delete (parlist);
 
 
 
@@ -375,9 +379,11 @@ int gravi_utils_test(void){
 	cpl_table * darkStd_ft = gravi_data_get_table (dark_map, GRAVI_IMAGING_ERR_FT_EXT);
 	cpl_table * badpix_ft = gravi_data_get_table (badpix, GRAVI_IMAGING_DATA_FT_EXT);
 
-	test_data (tableNew_ft, gravi_table_ft_format(table_ft, darkStd_ft, dark_ft, badpix_ft, 24, 25),
+	test_data (tableNew_ft, gravi_table_ft_format(table_ft, darkStd_ft, dark_ft, badpix_ft, 24, 25, parlist),
 			"gravi_table_ft_format_bis : "
 			"Remove the dark and extract the spectrum FT ...", flag);
+
+	cpl_parameterlist_delete (parlist);
 	FREE(cpl_table_delete, tableNew_ft);
 
 	FREE(gravi_data_delete, spectrum_data);
