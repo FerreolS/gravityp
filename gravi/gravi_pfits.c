@@ -32,6 +32,7 @@
 /*
  * History :
  * 10/01/2019  fix Warning : unused parameter : power
+ * 06/11/2019  commit for FE : make use of dedicated keyword introduced Oct 2019 
  */
 /*-----------------------------------------------------------------------------
                                    Includes
