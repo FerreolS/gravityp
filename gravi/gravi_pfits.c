@@ -212,17 +212,28 @@ int gravi_pfits_get_axis (const cpl_propertylist * plist)
 {
     const char * type;
     
-    if (cpl_propertylist_has (plist, "ESO INS OPTI11 ID"))
-        type = cpl_propertylist_get_string (plist,"ESO INS OPTI11 ID");
-    else return -1;
+    /* FE 2019-10-31 now making use of dedicated keyword introduced Oct 2019 
+       if not in header, use historic method (which is wrong, because the named
+       position of onaxis and offaxis are identical, and therefore ICS always 
+       returns offaxis */
+    
+    if (cpl_propertylist_has (plist, "ESO INS ROOF POS")) {
+        type = cpl_propertylist_get_string (plist,"ESO INS ROOF POS");
+	cpl_msg_info (cpl_func,"FE: using ESO INS ROOF POS");
+    } else {
+      if (cpl_propertylist_has (plist, "ESO INS OPTI11 ID")) {
+	type = cpl_propertylist_get_string (plist,"ESO INS OPTI11 ID");
+	cpl_msg_info (cpl_func,"FE: using ESO INS OPTI11 ID");
+      } else return -1;
+    }
     
     if (strstr (type,"OFFAXIS")) {
-        return MODE_OFFAXIS;
+       return MODE_OFFAXIS;
     }
     if (strstr (type, "ONAXIS")) {
-        return MODE_ONAXIS;
+       return MODE_ONAXIS;
     }
-    
+
     return 0;
 }
 
