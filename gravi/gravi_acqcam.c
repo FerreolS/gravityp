@@ -44,6 +44,7 @@
  *    18/09/2019 EkW Double spot fitting as Ollis analysis showed problems
  *    16/10/2019 EkW Remove debug statements
  *    06/11/2019 EKW Add Franks double pscale = sep ? rho_in/sep : scale (instead 0) ;
+ *    06/11/2019 EKW Commit with right PIPE-8675 as despite the line abovem, all changes are related to it
  */
 /*-----------------------------------------------------------------------------
                                    Includes
