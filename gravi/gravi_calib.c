@@ -163,7 +163,7 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
 		cpl_imagelist * imglist = gravi_data_get_cube (raw_data, GRAVI_IMAGING_DATA_SC_EXT);
 
 		/* Compute the median image of the imagelist */
-		cpl_image * median_img = cpl_imagelist_collapse_median_create (imglist);
+        cpl_image * median_img = cpl_imagelist_collapse_sigclip_create (imglist, 5, 5, 0.6, CPL_COLLAPSE_MEDIAN_MEAN, NULL);
 		CPLCHECK_NUL ("Cannot compute the median dark");
 
 		/* Compute the std of each pixels 
