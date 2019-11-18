@@ -31,8 +31,9 @@
 
 /*
  * History :
- * 10/01/2019  fix Warning : unused parameter : power
- * 06/11/2019  commit for FE : make use of dedicated keyword introduced Oct 2019 
+ * 10/01/2019  EKW fix Warning : unused parameter : power
+ * 06/11/2019  EkW commit for FE : make use of dedicated keyword introduced Oct 2019 
+ * 08/11/2019  EkW correct uninitilized parameter (PIPE-8072)
  */
 /*-----------------------------------------------------------------------------
                                    Includes
@@ -211,7 +212,7 @@ int gravi_pfits_get_mode (const cpl_propertylist * plist)
 
 int gravi_pfits_get_axis (const cpl_propertylist * plist)
 {
-    const char * type;
+    const char * type=NULL;
     
     /* FE 2019-10-31 now making use of dedicated keyword introduced Oct 2019 
        if not in header, use historic method (which is wrong, because the named
@@ -228,6 +229,7 @@ int gravi_pfits_get_axis (const cpl_propertylist * plist)
       } else return -1;
     }
     
+    if (type == NULL) return -1;
     if (strstr (type,"OFFAXIS")) {
        return MODE_OFFAXIS;
     }
@@ -903,7 +905,7 @@ cpl_parameter * gravi_pfits_get_extrapixel_param(const cpl_propertylist * header
     cpl_ensure (header, CPL_ERROR_NULL_INPUT, NULL);
 
     int key_index = 1;
-    const char*  param_value;
+    const char*  param_value=NULL;
     char * param_name = "extra-pixel-ft";
 
     char* key = cpl_sprintf("ESO PRO REC1 PARAM%d NAME",key_index);
@@ -922,7 +924,7 @@ cpl_parameter * gravi_pfits_get_extrapixel_param(const cpl_propertylist * header
                                  "gravity.preproc", TRUE);
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "extra-pixel-ft");
 
-    if (!strcmp(param_value, "true"))
+    if (param_value != NULL && !strcmp(param_value, "true"))
         cpl_parameter_set_bool(p, 1);
     else
         cpl_parameter_set_bool(p, 0);
