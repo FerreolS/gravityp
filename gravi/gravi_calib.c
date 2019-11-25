@@ -1109,7 +1109,7 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
         gravi_remove_badpixel_sc (data_imglist, bad_img);
 
         /* Collapse the DITs of this FLAT */
-        cpl_image * collapsed_img = cpl_imagelist_collapse_median_create (data_imglist);
+        cpl_image * collapsed_img = cpl_imagelist_collapse_sigclip_create (data_imglist, 5, 5, 0.6, CPL_COLLAPSE_MEDIAN_MEAN, NULL);
 		FREE (cpl_imagelist_delete, data_imglist);
 
         /* Save this FLAT in the imagelist to collapse them */
@@ -1182,7 +1182,8 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
         gravi_remove_badpixel_sc (data_imglist, bad_img);
         
         /* Collapse the DITs of this FLAT */
-        cpl_image * collapsed_img = cpl_imagelist_collapse_median_create (data_imglist);
+        cpl_image * collapsed_img = cpl_imagelist_collapse_sigclip_create (data_imglist, 5, 5, 0.6, CPL_COLLAPSE_MEDIAN_MEAN, NULL);
+        
 		FREE (cpl_imagelist_delete, data_imglist);
 
         /* Create a filtered version of this FLAT */
