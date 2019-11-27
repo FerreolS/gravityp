@@ -277,6 +277,8 @@ cpl_table * gravi_table_ft_format (cpl_table * pix_table,
   /* Verbose */
   gravi_msg_function_start(0);
   cpl_ensure (pix_table, CPL_ERROR_NULL_INPUT, NULL);
+  cpl_ensure (skystdtable_table, CPL_ERROR_NULL_INPUT, NULL);
+  cpl_ensure (skyavgtable_table, CPL_ERROR_NULL_INPUT, NULL);
   
   /* Get the number of frames */
   cpl_size nrow = cpl_table_get_nrow (pix_table);
@@ -640,7 +642,7 @@ gravi_data * gravi_extract_spectrum (gravi_data * raw_data,
 		/* Get the background mean and std. In case we have both SKY and DARK we still use
 		 * only the SKY because it is surely the closest in time (taken at night) and with the same setup
 		 * FIXME: could be interesting to check the setup and time distance... */
-        cpl_table * skyavg_table, * skystd_table;
+        cpl_table * skyavg_table = NULL, * skystd_table = NULL;
 		if (sky_map != NULL) {
 		  cpl_msg_info (cpl_func, "Extract FT spectra with SKY as background and variance");
 		  skyavg_table = gravi_data_get_table (sky_map, GRAVI_IMAGING_DATA_FT_EXT);
@@ -653,6 +655,9 @@ gravi_data * gravi_extract_spectrum (gravi_data * raw_data,
 			cpl_msg_info (cpl_func, "Extract FT spectra with DARK as background and variance");
 		  skyavg_table = gravi_data_get_table (dark_map, GRAVI_IMAGING_DATA_FT_EXT);
 		  skystd_table = gravi_data_get_table (dark_map, GRAVI_IMAGING_ERR_FT_EXT);
+		} else {
+		  return cpl_error_set_message (cpl_func,CPL_ERROR_NULL_INPUT,
+						"DARK or SKY should be provided");
 		}
 
 		/* Get the FT gain in [ADU/e] */
