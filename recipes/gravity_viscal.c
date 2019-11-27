@@ -23,6 +23,8 @@
  * $Date: 2011/12/3 09:16:12 $
  * $Revision: 1.29 $
  * $Name:  $
+ *
+ * History : EkW 27/11/2019 Add smoothing parameter
  */
 
 #ifdef HAVE_CONFIG_H
@@ -223,6 +225,15 @@ static int gravity_viscal_create(cpl_plugin * plugin)
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "calib-flux");
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
     cpl_parameterlist_append (recipe->parameters, p);
+
+    /* EKW 27/11/2019 smoothing for e.g. IMAGING_PHASE/MEDIUM */
+    p = cpl_parameter_new_value ("gravity.viscal.smoothing", CPL_TYPE_BOOL,
+                                 "control smoothing of transfer function (TF)"
+				 "TRUE : do smoothing -  FALSE : Skip smoothing",
+                                 "gravity.viscal", TRUE);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "smoothing");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (recipe->parameters, p);
     
     return 0;
 }
@@ -406,11 +417,16 @@ static int gravity_viscal(cpl_frameset            * frameset,
         frame = cpl_frameset_get_position (vis_calib_frameset, j);
         vis_data = gravi_data_load_frame (frame, NULL);
         vis_calib = gravi_compute_tf (vis_data, diamcat_data);
-        
+
+	/* EKW 27/11/2019 - we may decide to skip smoothing */
+	int smoothing = gravi_param_get_bool (parlist, "gravity.viscal.smoothing");
+	
         /* Smooth the TF if required */
         if ( !strcmp (gravi_data_get_spec_res (vis_calib), "LOW")) {
             cpl_msg_info (cpl_func,"LOW spectral resolution -> don't smooth the TF");
-        } else {
+	} else if (!smoothing) {
+	    cpl_msg_info (cpl_func,"smoothing parameter == FALSE -> don't smooth the TF");
+	} else {
             cpl_size smooth_vis_sc = gravi_param_get_int (parlist, "gravity.viscal.nsmooth-tfvis-sc");
             cpl_size smooth_flx_sc = gravi_param_get_int (parlist, "gravity.viscal.nsmooth-tfflux-sc");
             cpl_size maxdeg_sc = gravi_param_get_int (parlist, "gravity.viscal.maxdeg-tfvis-sc");
