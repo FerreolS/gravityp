@@ -287,7 +287,7 @@ cpl_error_code gravi_flux_average_bootstrap(cpl_table * oi_flux_avg,
   /* Pointer to columns, to speed-up */
   cpl_array ** pFLUX     = cpl_table_get_data_array (oi_flux, "FLUX");
   cpl_array ** pFLUXERR  = cpl_table_get_data_array (oi_flux, "FLUXERR");
-  cpl_array ** pOUTLIER = cpl_table_get_data_array (oi_flux, "OUTLIER_FLAG");
+  cpl_array ** pFLAG     = cpl_table_get_data_array (oi_flux, "FLAG");
   double * pINTTIME = cpl_table_get_data_double (oi_flux, "INT_TIME");
   double * pMJD     = cpl_table_get_data_double (oi_flux, "MJD");
   CPLCHECK_MSG ("Cannot get the data");
@@ -362,7 +362,7 @@ cpl_error_code gravi_flux_average_bootstrap(cpl_table * oi_flux_avg,
 		for ( int w=0; w<nwave; w++ ) {
           double FLUX    = cpl_array_get (pFLUX[rtel], w, NULL);
           double FLUXERR = cpl_array_get (pFLUXERR[rtel], w, NULL);
-	  int outlier_flag = cpl_array_get (pOUTLIER[rtel], w, NULL);
+	  int outlier_flag = cpl_array_get (pFLAG[rtel], w, NULL);
             CPLCHECK_MSG ("Cannot get data");
 
 	    /* Reject outlier */
@@ -441,7 +441,7 @@ cpl_error_code gravi_flux_average_bootstrap(cpl_table * oi_flux_avg,
   /* Renormalise by the number of outliers.
      Also flag channels with too much outliers. */
   cpl_array ** pflag  = cpl_table_get_data_array (oi_flux_avg,  "FLAG");
-  cpl_array * array = gravi_table_get_column_sum_array (oi_flux, "OUTLIER_FLAG", tel, ntel);
+  cpl_array * array = gravi_table_get_column_sum_array (oi_flux, "FLAG", tel, ntel);
   CPLCHECK_MSG("cannot get data");
   
   for (int wave = 0; wave < nwave; wave++) {
@@ -534,7 +534,7 @@ cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
   cpl_array ** pVISDATA = cpl_table_get_data_array (oi_vis, "VISDATA");
   cpl_array ** pVISERR  = cpl_table_get_data_array (oi_vis, "VISERR");
   cpl_array ** pFLUX    = cpl_table_get_data_array (oi_flux, "FLUX");
-  cpl_array ** pOUTLIER = cpl_table_get_data_array (oi_vis, "OUTLIER_FLAG");
+  cpl_array ** pFLAG    = cpl_table_get_data_array (oi_vis, "FLAG");
   double * pINTTIME = cpl_table_get_data_double (oi_vis, "INT_TIME");
   double * pMJD     = cpl_table_get_data_double (oi_vis, "MJD");
   double * pUCOORD  = cpl_table_get_data_double (oi_vis, "UCOORD");
@@ -647,9 +647,9 @@ cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
           double VFACTOR0 = (use_vFactor?cpl_array_get (pVFACTOR[rbase0], w, NULL):1.0);
           double VFACTOR1 = (use_vFactor?cpl_array_get (pVFACTOR[rbase1], w, NULL):1.0);
           double VFACTOR2 = (use_vFactor?cpl_array_get (pVFACTOR[rbase2], w, NULL):1.0);
-	  int outlier_flag0 = cpl_array_get (pOUTLIER[rbase0], w, NULL);
-	  int outlier_flag1 = cpl_array_get (pOUTLIER[rbase1], w, NULL);
-	  int outlier_flag2 = cpl_array_get (pOUTLIER[rbase2], w, NULL);
+	  int outlier_flag0 = cpl_array_get (pFLAG[rbase0], w, NULL);
+	  int outlier_flag1 = cpl_array_get (pFLAG[rbase1], w, NULL);
+	  int outlier_flag2 = cpl_array_get (pFLAG[rbase2], w, NULL);
 
 	  /* Reject outlier */
 	  if (outlier_flag0 || outlier_flag1 || outlier_flag2) {
@@ -782,9 +782,9 @@ cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
   int * sum_flag = cpl_array_get_data_int (array);
   
   for (int row=0; row < nrow; row++) {
-      cpl_array * arr0 = pOUTLIER[row * nbase + base0];
-      cpl_array * arr1 = pOUTLIER[row * nbase + base1];
-      cpl_array * arr2 = pOUTLIER[row * nbase + base2];
+      cpl_array * arr0 = pFLAG[row * nbase + base0];
+      cpl_array * arr1 = pFLAG[row * nbase + base1];
+      cpl_array * arr2 = pFLAG[row * nbase + base2];
       for (int wave = 0; wave < nwave; wave++) {
 	if (cpl_array_get (arr0, wave, NULL) ||
 	    cpl_array_get (arr1, wave, NULL) ||
@@ -900,7 +900,7 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
   cpl_array ** pVISDATA = cpl_table_get_data_array (oi_vis, "VISDATA");
   cpl_array ** pVISERR  = cpl_table_get_data_array (oi_vis, "VISERR");
   cpl_array ** pFNORM   = cpl_table_get_data_array (oi_vis, "F1F2");
-  cpl_array ** pOUTLIER = cpl_table_get_data_array (oi_vis, "OUTLIER_FLAG");
+  cpl_array ** pFLAG    = cpl_table_get_data_array (oi_vis, "FLAG");
   double * pINTTIME = cpl_table_get_data_double (oi_vis, "INT_TIME");
   double * pMJD     = cpl_table_get_data_double (oi_vis, "MJD");
   double * pUCOORD  = cpl_table_get_data_double (oi_vis, "UCOORD");
@@ -1009,7 +1009,7 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
 	    double mI  = cimag (Vis);
 	    double eR = creal (VErr);
 	    double eI = cimag (VErr);
-            int outlier_flag = cpl_array_get (pOUTLIER[rbase], w, NULL);
+            int outlier_flag = cpl_array_get (pFLAG[rbase], w, NULL);
             CPLCHECK_MSG ("Cannot get data");
 
 	    /* Reject outlier */
@@ -1166,7 +1166,7 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
      Also flag channels with too much outliers. */
   cpl_array ** pflag_vis  = cpl_table_get_data_array (oi_vis_avg,  "FLAG");
   cpl_array ** pflag_vis2 = cpl_table_get_data_array (oi_vis2_avg, "FLAG");
-  cpl_array * array = gravi_table_get_column_sum_array (oi_vis, "OUTLIER_FLAG", base, nbase);
+  cpl_array * array = gravi_table_get_column_sum_array (oi_vis, "FLAG", base, nbase);
   CPLCHECK_MSG("cannot get data");
   
   for (int wave = 0; wave < nwave; wave++) {
