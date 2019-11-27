@@ -645,7 +645,7 @@ cpl_table * gravi_fit_dispersion (cpl_table * oiflux_table,
     cpl_msg_info (cpl_func, "Correction #2");
 
     /* Compute the GD of all base and rows (with wavelength in glass) */
-	gravi_table_compute_group_delay (oivis_table, "VISDATA", "GDELAY", oiwave_table);
+	gravi_table_compute_group_delay (oivis_table, "VISDATA", "FLAG", "GDELAY", oiwave_table);
 
     /* Allocate memory for result */
     cpl_vector * GDb = cpl_vector_new (nbase);

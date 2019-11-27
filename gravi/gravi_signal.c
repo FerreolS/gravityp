@@ -71,10 +71,12 @@ cpl_error_code gravi_vis_compute_mean_phasor(cpl_table * oi_vis,
                                              const char * name_vis,
                                              const char * name_err,
                                              const char * name_pha,
-                                             const char * name_var);
+                                             const char * name_var,
+					     const char * name_flag);
 cpl_error_code gravi_vis_compute_interspectre (cpl_table * oi_vis,
                                                const char * name_vis,
-                                               const char * name_is);
+                                               const char * name_is,
+                                               const char * name_flag);
 cpl_error_code gravi_vis_compute_snr(cpl_table * oi_vis,
                                      const char * name_pha,
                                      const char * name_var,
@@ -88,6 +90,9 @@ cpl_error_code gravi_vis_create_f1f2_sc (cpl_table * vis_SC, cpl_table * flux_SC
 cpl_error_code gravi_vis_create_f1f2_ft (cpl_table * vis_FT, cpl_table * flux_FT);
 cpl_error_code gravi_vis_create_phaseref_ft (cpl_table * vis_FT);
 cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET);
+cpl_error_code gravi_create_outlier_flag_sc (cpl_table * flux_SC, cpl_table * vis_SC,
+					     double chi2r_threshold, double chi2r_sigma);
+cpl_error_code gravi_create_outlier_flag_ft (cpl_table * flux_SC, cpl_table * vis_SC);
 cpl_error_code gravi_flux_create_fddlpos_sc (cpl_table * flux_SC, cpl_table * fddl_table);
 cpl_error_code gravi_flux_create_totalflux_sc (cpl_table * flux_SC, cpl_table * flux_FT);
 cpl_error_code gravi_flux_create_met_sc (cpl_table * flux_SC, cpl_table * vis_MET);
@@ -266,6 +271,7 @@ cpl_error_code gravi_vis_correct_phasediff(cpl_table * oi_vis1, const char *name
  * @param name_err:  corresponding error column
  * @param name_pha:  name of the column to be created with mean phasor
  * @param name_var:  corresponding variance column to be created
+ * @param name_flag: name of flag column
  */
 /* -------------------------------------------------------------------------- */
 
@@ -273,7 +279,8 @@ cpl_error_code gravi_vis_compute_mean_phasor(cpl_table * oi_vis,
                                              const char * name_vis,
                                              const char * name_err,
                                              const char * name_pha,
-                                             const char * name_var)
+                                             const char * name_var,
+					     const char * name_flag)
 {
   gravi_msg_function_start(0);
   cpl_ensure_code (oi_vis,   CPL_ERROR_NULL_INPUT);
@@ -281,6 +288,7 @@ cpl_error_code gravi_vis_compute_mean_phasor(cpl_table * oi_vis,
   cpl_ensure_code (name_err, CPL_ERROR_NULL_INPUT);
   cpl_ensure_code (name_pha, CPL_ERROR_ILLEGAL_OUTPUT);
   cpl_ensure_code (name_var, CPL_ERROR_ILLEGAL_OUTPUT);
+  cpl_ensure_code (name_flag,CPL_ERROR_ILLEGAL_OUTPUT);
 
   cpl_size nrow = cpl_table_get_nrow (oi_vis);
   
@@ -292,8 +300,10 @@ cpl_error_code gravi_vis_compute_mean_phasor(cpl_table * oi_vis,
   double * varRaw = cpl_table_get_data_double (oi_vis, name_var);
   
   /* Get input pointer to speed up */  
-  cpl_array** tVis = cpl_table_get_data_array (oi_vis, name_vis);
-  cpl_array** tErr = cpl_table_get_data_array (oi_vis, name_err);
+  cpl_array** tVis  = cpl_table_get_data_array (oi_vis, name_vis);
+  cpl_array** tErr  = cpl_table_get_data_array (oi_vis, name_err);
+  cpl_array** tFlag = cpl_table_get_data_array (oi_vis, name_flag);
+  cpl_ensure_code (tFlag, CPL_ERROR_ILLEGAL_INPUT);
 
   /* Get nwave */
   int nwave = cpl_array_get_size (tVis[0]);
@@ -309,13 +319,18 @@ cpl_error_code gravi_vis_compute_mean_phasor(cpl_table * oi_vis,
 	cpl_ensure_code (err, CPL_ERROR_ILLEGAL_INPUT);
 	phasorRaw[row] = 0.0;
 	varRaw[row] = 0.0;
-	
-	/* Compute integrated phasor and variance over the spectral channels */
-	for (cpl_size wave = 0; wave < nwave; wave++) {
-	  phasorRaw[row] += cpx[wave];
-	  varRaw[row] += cabs(err[wave]) * cabs(err[wave]);
+
+	int * flag = cpl_array_get_data_int (tFlag[row]);
+
+	/* Compute integrated phasor and variance over the spectral channels,
+	   ignore flagged values if a flag is provided */
+	for (cpl_size wave = 0; wave < nwave; wave++)
+	{
+	  if (!flag[wave]) {
+	    phasorRaw[row] += cpx[wave];
+	    varRaw[row] += cabs(err[wave]) * cabs(err[wave]);
+	  }
 	}
-  
   }
   /* End loop on rows */
 
@@ -332,6 +347,7 @@ cpl_error_code gravi_vis_compute_mean_phasor(cpl_table * oi_vis,
  * @param oi_vis:    input OI_VIS table
  * @param name_vis:  name of VISDATA column to be used
  * @param name_is:   name of interspectra column to be created
+ * @param name_flag: name of flag column
  *
  * The real-time interspectral is computed by averaging the interspectra
  * of all consecutive spectral channels pairs (for each DIT).
@@ -340,18 +356,23 @@ cpl_error_code gravi_vis_compute_mean_phasor(cpl_table * oi_vis,
 
 cpl_error_code gravi_vis_compute_interspectre (cpl_table * oi_vis,
                                                const char * name_vis,
-                                               const char * name_is)
+                                               const char * name_is,
+					       const char * name_flag)
 {
   gravi_msg_function_start(0);
-  cpl_ensure_code (oi_vis,   CPL_ERROR_NULL_INPUT);
-  cpl_ensure_code (name_vis, CPL_ERROR_NULL_INPUT);
-  cpl_ensure_code (name_is,  CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (oi_vis,    CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (name_vis,  CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (name_is,   CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (name_flag, CPL_ERROR_NULL_INPUT);
   
   cpl_size nrow = cpl_table_get_nrow (oi_vis);
   
   /* Get input pointer to speed up */  
   cpl_array** tVis = cpl_table_get_data_array (oi_vis, name_vis);
   cpl_ensure_code (tVis, CPL_ERROR_ILLEGAL_INPUT);
+
+  cpl_array** tFlag = cpl_table_get_data_array (oi_vis, name_flag);
+  cpl_ensure_code (tFlag, CPL_ERROR_ILLEGAL_INPUT);
 
   /* Get nwave */
   int nwave = cpl_array_get_size (tVis[0]);
@@ -369,12 +390,20 @@ cpl_error_code gravi_vis_compute_interspectre (cpl_table * oi_vis,
 	
 	double complex * cpx = cpl_array_get_data_double_complex (tVis[row]);
 	cpl_ensure_code (cpx, CPL_ERROR_ILLEGAL_INPUT);
-	
+
+	int * flag = cpl_array_get_data_int (tFlag[row]);
+	cpl_ensure_code (flag, CPL_ERROR_ILLEGAL_INPUT);
+
 	interSpectreRaw[row] = 0.0;
 	
-	/* Compute integrated interspectre over the spectral channels */
-	for (cpl_size wave = 0; wave < nwave-1; wave++) 
-	  interSpectreRaw[row] += cpx[wave] * conj( cpx[wave+1] );
+	/* Compute integrated interspectre over the spectral channels,
+	   ignore the flagged values if a flag is provided */
+	for (cpl_size wave = 0; wave < nwave-1; wave++)
+	{
+	  if (!flag[wave] && !flag[wave+1]) {
+	    interSpectreRaw[row] += cpx[wave] * conj( cpx[wave+1] );
+	  }
+	}
   }
   /* End loop on rows */
 
@@ -492,7 +521,85 @@ cpl_error_code gravi_vis_compute_isdelay (cpl_table * oi_vis,
   return CPL_ERROR_NONE;
 }
 
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Compute the outliers flags
+ * 
+ * @param p2vmred_data is the P2VMREDUCED data (modified in-place)
+ * 
+ * Create the OUTLIER_FLAG columns in the P2VMREDUCED data
+ */
+/*----------------------------------------------------------------------------*/
 
+cpl_error_code gravi_compute_outliers (gravi_data * p2vmred_data,
+				       const cpl_parameterlist * parlist)
+{
+  gravi_msg_function_start(1);
+  cpl_ensure_code (p2vmred_data, CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (parlist,      CPL_ERROR_NULL_INPUT);
+
+  char qc_name[100];
+  int ntel = 4;
+
+  cpl_propertylist * p2vmred_header = gravi_data_get_header (p2vmred_data);
+  cpl_ensure_code (p2vmred_header, CPL_ERROR_ILLEGAL_INPUT);
+
+  /* Loop on polarisations and type_data */
+  for (int type_data = 0; type_data < 2; type_data ++) {
+    
+    int npol = gravi_pfits_get_pola_num (p2vmred_header, type_data);
+    for (int pol = 0; pol < npol; pol++) {
+
+        cpl_table * oi_vis  = gravi_data_get_oi_vis (p2vmred_data, type_data, pol, npol);
+        cpl_table * oi_flux = gravi_data_get_oi_flux (p2vmred_data, type_data, pol, npol);
+	cpl_size nrow = cpl_table_get_nrow (oi_flux) / ntel;
+	cpl_size nwave = cpl_table_get_column_depth (oi_flux, "FLUX");
+        CPLCHECK_MSG ("Cannot get data");
+
+	if (type_data == GRAVI_FT)
+	{
+	  gravi_create_outlier_flag_ft (oi_flux, oi_vis);
+	}
+	else
+	{
+	  double chi2r_threshold = gravi_param_get_double (parlist, "gravity.signal.chi2r-threshold");
+	  double chi2r_sigma = gravi_param_get_double (parlist, "gravity.signal.chi2r-sigma");
+	  
+	  gravi_create_outlier_flag_sc (oi_flux, oi_vis, chi2r_threshold, chi2r_sigma);
+	  
+	  /* Fraction of chi2 outliers per channel */
+	  cpl_array * array = gravi_table_get_column_sum_array (oi_flux, "OUTLIER_FLAG", 0, ntel);
+	  
+	  int stat[2] = {0,0};
+	  for (cpl_size wave = 0; wave < nwave ; wave ++) {
+	    double value = (double)cpl_array_get (array, wave, NULL) / nrow;
+	    if (value > 0)   stat[0]++;
+	    if (value > 0.5) stat[1]++;
+	  }
+	  
+	  FREE (cpl_array_delete, array);  
+	  CPLCHECK_MSG ("Cannot compute stat");
+
+	  /* QC */
+  	  sprintf (qc_name, "ESO QC OUTLIER_SC_P%i", pol+1);
+  	  cpl_propertylist_update_int (p2vmred_header, qc_name, stat[0]);
+  	  cpl_propertylist_set_comment (p2vmred_header, qc_name, "Channels with at least one outlier");
+  	  cpl_msg_info (cpl_func,"%s = %i ", qc_name, stat[0]);
+	  
+  	  sprintf (qc_name, "ESO QC OUTLIER50_SC_P%i",pol+1);
+  	  cpl_propertylist_update_int (p2vmred_header, qc_name, stat[1]);
+  	  cpl_propertylist_set_comment (p2vmred_header, qc_name, "Channels with more than 50% outlier");
+  	  cpl_msg_info (cpl_func,"%s = %i ", qc_name, stat[1]);
+	}
+	
+	CPLCHECK_MSG ("Cannot create outlier flag");
+    }
+  }
+  /* End loop on polarisation and type_data */
+  
+  gravi_msg_function_exit(1);
+  return CPL_ERROR_NONE;
+}
 /*----------------------------------------------------------------------------*/
 /**
  * @brief Compute real-time SNR and Group-Delay of the observation.
@@ -515,8 +622,9 @@ cpl_error_code gravi_compute_snr (gravi_data * p2vmred_data,
   gravi_msg_function_start(1);
   cpl_ensure_code (p2vmred_data, CPL_ERROR_NULL_INPUT);
 
-  char qc_name[90];
   int nbase = 6;
+  char qc_name[100];
+  double qc_value;
   
   cpl_propertylist * p2vmred_header = gravi_data_get_header (p2vmred_data);
   double periode_sc = gravi_pfits_get_period_sc (p2vmred_header); // [s]
@@ -549,20 +657,20 @@ cpl_error_code gravi_compute_snr (gravi_data * p2vmred_data,
         nsmooth = CPL_MIN (CPL_MAX (nsmooth, 0), 20);
     }
 
-    
     /* Loop on polarisation */
     int npol = gravi_pfits_get_pola_num (p2vmred_header, type_data);
     for (int pol = 0; pol < npol; pol++) {
   
-        cpl_msg_info(cpl_func, "Compute SNR for pol %i of %s (smoothed over %i frames)",
-                     pol+1,GRAVI_TYPE(type_data),2*nsmooth+1);
-        
-        cpl_table * oi_vis =  gravi_data_get_oi_vis (p2vmred_data, type_data, pol, npol);
+        cpl_msg_info (cpl_func, "Compute SNR for pol %i of %s (smoothed over %i frames)",
+		      pol+1,GRAVI_TYPE(type_data),2*nsmooth+1);
+	
+        cpl_table * oi_vis  = gravi_data_get_oi_vis (p2vmred_data, type_data, pol, npol);
+        cpl_table * oi_flux = gravi_data_get_oi_flux (p2vmred_data, type_data, pol, npol);
         CPLCHECK_MSG ("Cannot get data");
-        
+	
         /* Compute interspectre and phasor */
-        gravi_vis_compute_interspectre (oi_vis, "VISDATA", "IPHASOR");
-        gravi_vis_compute_mean_phasor (oi_vis, "VISDATA", "VISERR", "PHASOR", "PHASOR_VAR");
+        gravi_vis_compute_interspectre (oi_vis, "VISDATA", "IPHASOR", "OUTLIER_FLAG");
+        gravi_vis_compute_mean_phasor (oi_vis, "VISDATA", "VISERR", "PHASOR", "PHASOR_VAR", "OUTLIER_FLAG");
 
         /* Compute real-time SNR */
         gravi_vis_compute_snr (oi_vis, "PHASOR", "PHASOR_VAR", "SNR");
@@ -703,10 +811,7 @@ cpl_error_code gravi_compute_snr (gravi_data * p2vmred_data,
       CPLCHECK_MSG("Cannot erase column for polarisation 2");
     }
 
-    /* Add the QC */
-    char qc_name[100];
-    double qc_value;
-        
+    /* Add the QC on SNR */
     for (cpl_size base = 0; base < nbase; base++) {
         snprintf (qc_name, 100, "ESO QC SNRB_%s%s AVG", GRAVI_TYPE(type_data), GRAVI_BASE_NAME[base]);
         qc_value = gravi_table_get_column_mean (oi_vis_p1, "SNR_BOOT", base, nbase);
@@ -1920,6 +2025,7 @@ cpl_error_code gravi_flux_create_totalflux_sc (cpl_table * flux_SC, cpl_table * 
   int * first_ft = cpl_table_get_data_int (flux_SC, "FIRST_FT");
   int * last_ft  = cpl_table_get_data_int (flux_SC, "LAST_FT");
   
+  cpl_array ** flag_sc = cpl_table_get_data_array (flux_SC, "OUTLIER_FLAG");
   cpl_array ** flux_sc = cpl_table_get_data_array (flux_SC, "FLUX");
   cpl_array ** flux_ft = cpl_table_get_data_array (flux_FT, "FLUX");
   
@@ -1939,7 +2045,19 @@ cpl_error_code gravi_flux_create_totalflux_sc (cpl_table * flux_SC, cpl_table * 
 	  cpl_size nsc = row_sc * ntel + tel;
 
 	  /* Store the total flux of SC over the SC frame [e] */
-	  total_flux_scdit[nsc] = cpl_array_get_mean (flux_sc[nsc]) * nwave_sc;
+	  total_flux_scdit[nsc] = 0.0;
+	  int nvalid = 0;
+	  for (int wave = 0; wave < nwave_sc; wave++) {
+	    if (!cpl_array_get (flag_sc[nsc], wave, NULL)) {
+	      total_flux_scdit[nsc] += cpl_array_get (flux_sc[nsc], wave, NULL);
+	      nvalid++;
+	    }
+	  }
+
+	  /* Normalise to replace the rejected values by the mean */
+	  if (nvalid > 0) {
+	    total_flux_scdit[nsc] *= (double)nwave_sc / (double)nvalid;
+	  }
 	  
 	  /* Store the total flux of FT over the SC frame [e] */
 	  for (cpl_size row_ft = first_ft[nsc] ; row_ft < last_ft[nsc]; row_ft++) {
@@ -2327,6 +2445,186 @@ cpl_error_code gravi_vis_create_phaseref_sc (cpl_table * vis_SC,
   FREE (cpl_matrix_delete, sigma_ft);
   FREE (cpl_array_delete, wavenumber_ft);
   FREE (cpl_polynomial_delete, fit);
+
+  gravi_msg_function_exit(1);
+  return CPL_ERROR_NONE;
+}
+
+/* -------------------------------------------------------------------------- */
+/**
+ * @brief Create the list of outlier based on the values of the chi2.
+ * 
+ * @param flux_SC:          input/output OI_FLUX table of the SC
+ * @param vis_SC:           input/output OI_VIS table of the SC
+ * @param chi2r_threshold:  threshold for absolute value of chi2r
+ * @param chi2r_sigma:      threshold in number of sigma
+ * @param stat[2]:          stat[0] is number of channels with at least 
+ *                          one outlier. stat[1] is number of channels
+ *                          with more then 50% outliers.
+ *
+ */
+/* -------------------------------------------------------------------------- */
+
+cpl_error_code gravi_create_outlier_flag_sc (cpl_table * flux_SC,
+					     cpl_table * vis_SC,
+					     double chi2r_threshold,
+					     double chi2r_sigma)
+{
+  gravi_msg_function_start(1);
+  cpl_ensure_code (flux_SC, CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (vis_SC,  CPL_ERROR_NULL_INPUT);
+
+  cpl_msg_info (cpl_func, "chi2_threshold = %f", chi2r_threshold);
+  cpl_msg_info (cpl_func, "chi2_sigma = %f", chi2r_sigma);
+
+  cpl_size ntel = 4;
+  cpl_size nrow = cpl_table_get_nrow (flux_SC) / ntel;
+  cpl_size nwave = cpl_table_get_column_depth (flux_SC, "FLUX");
+
+  cpl_array ** chi2 = cpl_table_get_data_array (flux_SC, "CHI2");
+
+  /* Create column */
+  gravi_table_new_column_array (flux_SC, "OUTLIER_FLAG", "m", CPL_TYPE_INT, nwave);
+  cpl_table_set_column_savetype (flux_SC, "OUTLIER_FLAG", CPL_TYPE_BOOL);
+  cpl_array ** flux_outliers = cpl_table_get_data_array (flux_SC, "OUTLIER_FLAG");
+
+  CPLCHECK_MSG ("Cannot create column");
+  
+  /* vector to store data */
+  cpl_vector * vector = cpl_vector_new (nwave);
+  cpl_vector * med = NULL;
+  
+  /* Loop on rows */
+  for (cpl_size row = 0; row < nrow; row ++) {
+
+    /* Fill with zero */
+    flux_outliers[row*ntel+0] = cpl_array_new (nwave, CPL_TYPE_INT);
+    cpl_array_fill_window (flux_outliers[row*ntel+0], 0, nwave, 0);
+          
+    /* Chi2 data as vector so that we can apply filtering */
+    for (cpl_size wave = 0; wave < nwave ; wave ++) {
+      double value = cpl_array_get (chi2[row*ntel+0], wave, NULL);
+      cpl_vector_set (vector, wave, value);
+    }
+
+    /* Normalise the chi2 by median in spectral direction */
+    med = gravi_vector_median (vector, 50);
+    cpl_vector_divide (vector, med);
+    FREE (cpl_vector_delete, med);
+
+    /* Threshold on normalised value */
+    for (cpl_size wave = 0; wave < nwave ; wave ++) {
+      double value = cpl_vector_get (vector, wave);
+      if (value > chi2r_threshold) cpl_array_set (flux_outliers[row*ntel+0], wave, 1);
+    }
+
+    /* Compute the distance to median,
+       in unit of variance */
+    cpl_vector_subtract_scalar (vector, 1.0);
+    gravi_vector_abs (vector);
+    med = gravi_vector_median (vector, 50);
+    cpl_vector_divide (vector, med);
+    FREE (cpl_vector_delete, med);
+    
+    /* Flag on distance in unit of local variance */
+    for (cpl_size wave = 0; wave < nwave ; wave ++) {
+      double value = cpl_vector_get (vector, wave);
+      if (value > chi2r_sigma) cpl_array_set (flux_outliers[row*ntel+0], wave, 1);
+    }
+  }
+              
+  /* Free memory */
+  FREE (cpl_vector_delete, vector);
+
+  CPLCHECK_MSG ("Cannot fill outliers");
+
+  /* Duplicate the detection of outliers in flux_SC,
+     based on the one of the first beam */
+  
+  /* Loop on row */
+  for (cpl_size row = 0; row < nrow; row ++) {
+    for (cpl_size tel = 1; tel < ntel; tel++) {
+      flux_outliers[row*ntel+tel] = cpl_array_duplicate (flux_outliers[row*ntel+0]);
+    }
+  }    
+
+  CPLCHECK_MSG ("Cannot duplicate in OI_FLUX");
+
+  /* Duplicate the detection of outliers in vis_SC,
+     based on the one of the first beam */
+  
+  /* Create column */
+  gravi_table_new_column_array (vis_SC, "OUTLIER_FLAG", "m", CPL_TYPE_INT, nwave);
+  cpl_table_set_column_savetype (vis_SC, "OUTLIER_FLAG", CPL_TYPE_BOOL);
+  cpl_array ** vis_outliers = cpl_table_get_data_array (vis_SC, "OUTLIER_FLAG");
+
+  /* Loop on row */
+  int nbase = 6;
+  for (cpl_size row = 0; row < nrow; row ++) {
+    for (cpl_size base = 0; base < nbase; base++) {
+      vis_outliers[row*nbase+base] = cpl_array_duplicate (flux_outliers[row*ntel+0]);
+    }
+  }
+
+  CPLCHECK_MSG ("Cannot duplicate in OI_VIS");
+
+  gravi_msg_function_exit(1);
+  return CPL_ERROR_NONE;
+}
+
+/* -------------------------------------------------------------------------- */
+/**
+ * @brief Create the list of outlier. For the FT, this is filled with 0
+ * 
+ * @param flux_FT:          input/output OI_FLUX table of the FT
+ * @param vis_FT:           input/output OI_VIS table of the FT
+ *
+ */
+/* -------------------------------------------------------------------------- */
+
+cpl_error_code gravi_create_outlier_flag_ft (cpl_table * flux_FT,
+					     cpl_table * vis_FT)
+{
+  gravi_msg_function_start(1);
+  cpl_ensure_code (flux_FT, CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (vis_FT,  CPL_ERROR_NULL_INPUT);
+
+  cpl_size ntel = 4, nbase = 6;
+  cpl_size nrow = cpl_table_get_nrow (flux_FT) / ntel;
+  cpl_size nwave = cpl_table_get_column_depth (flux_FT, "FLUX");
+
+  /* Create column */
+  gravi_table_new_column_array (flux_FT, "OUTLIER_FLAG", "m", CPL_TYPE_INT, nwave);
+  cpl_table_set_column_savetype (flux_FT, "OUTLIER_FLAG", CPL_TYPE_BOOL);
+  cpl_array ** flux_outliers = cpl_table_get_data_array (flux_FT, "OUTLIER_FLAG");
+
+  gravi_table_new_column_array (vis_FT, "OUTLIER_FLAG", "m", CPL_TYPE_INT, nwave);
+  cpl_table_set_column_savetype (vis_FT, "OUTLIER_FLAG", CPL_TYPE_BOOL);
+  cpl_array ** vis_outliers = cpl_table_get_data_array (vis_FT, "OUTLIER_FLAG");
+  
+  CPLCHECK_MSG ("Cannot create column");
+
+  /* Loop on rows */
+  for (cpl_size row = 0; row < nrow; row ++) {
+
+    /* Create with wrap is the fastest */
+    for (cpl_size tel = 0; tel < ntel; tel++)
+    {
+      int * data = cpl_malloc (sizeof(int) * nwave);
+      memset (data, 0, sizeof(int) * nwave);
+      flux_outliers[row*ntel+tel] = cpl_array_wrap_int (data, nwave);
+    }
+    
+    /* Create with wrap is the fastest */
+    for (cpl_size base = 0; base < nbase; base++)
+    {
+      int * data = cpl_malloc (sizeof(int) * nwave);
+      memset (data, 0, sizeof(int) * nwave);
+      vis_outliers[row*nbase+base] = cpl_array_wrap_int (data, nwave);
+    }
+  }
+
+  CPLCHECK_MSG ("Cannot fill OUTLIER_FLAG");
 
   gravi_msg_function_exit(1);
   return CPL_ERROR_NONE;
@@ -2850,7 +3148,7 @@ cpl_error_code gravi_compute_signals (gravi_data * p2vmred_data,
     gravi_flux_create_met_sc (flux_SC, vis_met);
 	gravi_flux_create_fddlpos_sc (flux_SC, fddl_table);
 	gravi_flux_create_totalflux_sc (flux_SC, flux_FT);
-		
+
 	CPLCHECK_MSG ("Cannot create the signal for FLUX_SC");
 
 	/* 
@@ -2917,13 +3215,16 @@ cpl_error_code gravi_compute_signals (gravi_data * p2vmred_data,
       */
     
      /* Recompute the GDELAY of the FT (probably useless since one use GDELAY_FT) */
-     gravi_table_compute_group_delay (vis_FT, "VISDATA", "GDELAY", oi_wavelengthft);
+     gravi_table_compute_group_delay (vis_FT, "VISDATA", "OUTLIER_FLAG",
+				      "GDELAY", oi_wavelengthft);
 	
      /* Recompute the GDELAY of the SC (probably usefull) */
-     gravi_table_compute_group_delay (vis_SC, "VISDATA", "GDELAY", oi_wavelengthsc);
+     gravi_table_compute_group_delay (vis_SC, "VISDATA", "OUTLIER_FLAG",
+				      "GDELAY", oi_wavelengthsc);
 
      /* Compute the GDELAY_FT of VISDATA_FT in SC table (critical) */
-     gravi_table_compute_group_delay (vis_SC, "VISDATA_FT", "GDELAY_FT", oi_wavelengthft);
+     gravi_table_compute_group_delay (vis_SC, "VISDATA_FT", "OUTLIER_FLAG",
+				      "GDELAY_FT", oi_wavelengthft);
 	
      CPLCHECK_MSG ("Cannot compute the GDELAYs");
 

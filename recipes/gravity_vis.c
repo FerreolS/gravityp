@@ -785,6 +785,10 @@ static int gravity_vis(cpl_frameset * frameset,
         gravi_compute_qc_ft_opd_estimator (p2vmred_data);
         CPLCHECK_CLEAN ("Cannot compute QC for FT OPD estimator");
 
+	/* Find outliers */
+	gravi_compute_outliers (p2vmred_data, parlist);
+	CPLCHECK_MSG ("Cannot compute outliers");
+	    
 		/* Compute the SNR_BOOT and GDELAY_BOOT */
 		gravi_compute_snr (p2vmred_data, parlist);
 		CPLCHECK_MSG ("Cannot compute SNR");

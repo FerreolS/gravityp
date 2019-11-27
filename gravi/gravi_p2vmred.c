@@ -536,6 +536,7 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
 			
 			/* Construction of output tables */
 			cpl_matrix ** p2vm = cpl_calloc (nwave,sizeof (cpl_matrix*));
+			cpl_matrix ** v2pm = cpl_calloc (nwave,sizeof (cpl_matrix*));
 
             /* Get the list of regions having this pol */
             int all_region[48];
@@ -555,12 +556,13 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
 
             /* Allocate memory for direct access to P2VM */
             double ** pP2VM = cpl_malloc (sizeof(double*) * nwave);
+            double ** pV2PM = cpl_malloc (sizeof(double*) * nwave);
                 
 			/* Loop on wave */
 			for (cpl_size wave = 0; wave < nwave; wave ++) {
 
 				/* Construction of the v2pm matrix */
-				cpl_matrix * v2pm = cpl_matrix_new (n_region, 16);
+				v2pm[wave] = cpl_matrix_new (n_region, 16);
 
                 /* Loop on region */
 				for (cpl_size region = 0; region < n_region; region++) {
@@ -569,7 +571,7 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
 					/* Replace the four first columns of the v2pm by
 					 * the transmission */
 					for (int i = 0; i < 4; i++){
-						cpl_matrix_set (v2pm, region, i,
+						cpl_matrix_set (v2pm[wave], region, i,
 								cpl_array_get (trans[detregion], wave + i * nwave, &nv));
 					}
 
@@ -577,10 +579,10 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
 					 * the real part and the imaginary part of the coherence
 					 * and the phase */
 					for (int i = 0; i < 6; i++) {
-						cpl_matrix_set (v2pm, region, i + 4,
+						cpl_matrix_set (v2pm[wave], region, i + 4,
 							cpl_array_get (coh[detregion], wave + i * nwave, &nv) *
 							  cos(cpl_array_get (phase[detregion], wave + i * nwave, &nv)));
-						cpl_matrix_set (v2pm, region, i + 10,
+						cpl_matrix_set (v2pm[wave], region, i + 10,
 							cpl_array_get (coh[detregion], wave + i * nwave, &nv) *
 							  sin(cpl_array_get (phase[detregion], wave + i * nwave, &nv)));
 					}
@@ -588,15 +590,15 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
 				CPLCHECK_NUL("Cannot fill the V2PM");
 				
 				/* Ensure the V2PM is flux conservative */
-				cpl_matrix_multiply_scalar (v2pm, 1./n_region);
+				cpl_matrix_multiply_scalar (v2pm[wave], 1./n_region);
 
 				/* Compute the matrix inversion of the v2pm using the
 				 * singular value decomposition method */
-				p2vm[wave] = gravi_matrix_invertSV_create (v2pm);
-				cpl_matrix_delete (v2pm);
+				p2vm[wave] = gravi_matrix_invertSV_create (v2pm[wave]);
 
                 /* Keep a pointer to the data */
                 pP2VM[wave] = cpl_matrix_get_data (p2vm[wave]);
+                pV2PM[wave] = cpl_matrix_get_data (v2pm[wave]);
 				
 				CPLCHECK_NUL ("Cannot invers V2PM");
 			}
@@ -712,10 +714,16 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
 			cpl_array** tVis    = cpl_table_get_data_array (oi_vis, "VISDATA");
 			cpl_array** tVisErr = cpl_table_get_data_array (oi_vis, "VISERR");
 			CPLCHECK_NUL ("Cannot get data");
-            
+
+			/* Create column for chi2 */
+			gravi_table_new_column_array (oi_flux, "CHI2", NULL, CPL_TYPE_DOUBLE, nwave);
+			cpl_array** tChi2 = cpl_table_get_data_array (oi_flux, "CHI2");
+			int ndof = n_region - 16;
+			
 			/* Temporary matrix output memory */
 			double* pOut    = cpl_malloc (16 * nwave * sizeof(double));
 			double* pOutVar = cpl_malloc (16 * nwave * sizeof(double));
+			double* pChi2   = cpl_malloc (nwave * sizeof(double));
 
             /* Quantities to test flux conservation */
 			double full_flux_reg = 0.0, full_flux_tel = 0.0;
@@ -750,10 +758,29 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
                         }
                     } /* End outputs and regions */
 
+                    /* We compute the reduced chi2. We loop on regions
+                     * to recompute the expected value, and accumulate the chi2 */
+                    pChi2[wave] = 0.0;
+                    for (cpl_size reg = 0; reg < n_region; reg++) {
+                        double value = 0.0;
+                        for (int out=0; out<16; out++)
+                            value += pV2PM[wave][reg*16+out] * pOut[out*nwave+wave];
+                        pChi2[wave] += gravi_pow2 ((value-pReg[reg][wave]) / pErr[reg][wave]) / ndof;
+                    }
+
                     /* Integration the output flux of the row */
                     for (int tel = 0; tel < 4; tel++) full_flux_tel += pOut[tel*nwave+wave];
                     
                 } /* End loop on wavelengths */
+
+                /* Set CHI2  (wrap is the fastest to create an array).
+                   Same for all telescope since all-together */
+                for (int tel = 0; tel < ntel; tel++){
+                    double * data = cpl_malloc (nwave * sizeof(double));
+                    for (cpl_size wave = 0 ; wave < nwave ; wave++ ) 
+                        data[wave] = pChi2[wave];
+                    tChi2[row*ntel+tel] = cpl_array_wrap_double (data, nwave);
+                }
 
                 /* Set FLUX  (wrap is the fastest to create an array) */
                 for (int tel = 0; tel < ntel; tel++){
@@ -803,10 +830,13 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
 			FREE (cpl_free, pErr);
 			FREE (cpl_free, pRegArr);
 			FREE (cpl_free, pErrArr);
-            FREE (cpl_free, pOut);
-            FREE (cpl_free, pOutVar);
-            FREE (cpl_free, pP2VM);
+			FREE (cpl_free, pOut);
+			FREE (cpl_free, pOutVar);
+			FREE (cpl_free, pChi2);
+			FREE (cpl_free, pP2VM);
+			FREE (cpl_free, pV2PM);
 			FREELOOP (cpl_matrix_delete, p2vm, nwave);
+			FREELOOP (cpl_matrix_delete, v2pm, nwave);
 
 			/* Check how "flux conservative" is the P2VM */
 			cpl_msg_info (cpl_func, "Total flux in TELs: %.2f [e], in REGIONs:%.2f [e]  (ratio=%.5f)",

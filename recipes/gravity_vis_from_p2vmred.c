@@ -381,6 +381,10 @@ static int gravity_vis_from_p2vmred(cpl_frameset * frameset,
         if (gravi_param_get_bool (parlist, "gravity.signal.use-existing-rejection")) {
             cpl_msg_info (cpl_func,"Don't recompute SNR and selection, use the existing one");
         } else {
+	    /* Find outliers */
+            gravi_compute_outliers (p2vmred_data, parlist);
+            CPLCHECK_MSG ("Cannot compute outliers");
+	    
             /* Compute the SNR/GDELAY */
             gravi_compute_snr (p2vmred_data, parlist);
             CPLCHECK_MSG ("Cannot compute SNR");

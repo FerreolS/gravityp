@@ -76,13 +76,15 @@ cpl_error_code gravi_array_online_variance_res(cpl_array ** data,
 											   int n, int rephase);
 cpl_error_code gravi_flux_average_bootstrap(cpl_table * oi_flux_avg,
 											cpl_table * oi_flux,
-											int nboot);
+											int nboot,
+					    double outlier_threshold);
 cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
 										  cpl_table * oi_vis,
 										  cpl_table * oi_flux,
 										  int nboot,
 										  int use_vFactor,
-                                          int use_pFactor);
+                                          int use_pFactor,
+					  double outlier_threshold);
 cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
 											cpl_table * oi_vis2_avg,
 											cpl_table * oi_vis,
@@ -90,7 +92,8 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
 											const char * phase_ref,
 											int use_vFactor,
                                             int use_pFactor,
-											int use_debiasing);
+					    int use_debiasing,
+					    double outlier_threshold);
 
 cpl_error_code gravi_vis_flag_nan (cpl_table * oi_table);
 
@@ -268,7 +271,8 @@ cpl_error_code gravi_array_online_variance_res(cpl_array ** data,
 
 cpl_error_code gravi_flux_average_bootstrap(cpl_table * oi_flux_avg,
 											cpl_table * oi_flux,
-											int nboot)
+											int nboot,
+					    double outlier_threshold)
 {
    gravi_msg_function_start(0);
    cpl_ensure_code (oi_flux_avg, CPL_ERROR_ILLEGAL_OUTPUT);
@@ -283,6 +287,7 @@ cpl_error_code gravi_flux_average_bootstrap(cpl_table * oi_flux_avg,
   /* Pointer to columns, to speed-up */
   cpl_array ** pFLUX     = cpl_table_get_data_array (oi_flux, "FLUX");
   cpl_array ** pFLUXERR  = cpl_table_get_data_array (oi_flux, "FLUXERR");
+  cpl_array ** pOUTLIER = cpl_table_get_data_array (oi_flux, "OUTLIER_FLAG");
   double * pINTTIME = cpl_table_get_data_double (oi_flux, "INT_TIME");
   double * pMJD     = cpl_table_get_data_double (oi_flux, "MJD");
   CPLCHECK_MSG ("Cannot get the data");
@@ -357,7 +362,13 @@ cpl_error_code gravi_flux_average_bootstrap(cpl_table * oi_flux_avg,
 		for ( int w=0; w<nwave; w++ ) {
           double FLUX    = cpl_array_get (pFLUX[rtel], w, NULL);
           double FLUXERR = cpl_array_get (pFLUXERR[rtel], w, NULL);
+	  int outlier_flag = cpl_array_get (pOUTLIER[rtel], w, NULL);
+            CPLCHECK_MSG ("Cannot get data");
 
+	    /* Reject outlier */
+	    if (outlier_flag) {
+	      FLUX = 0.0;
+	    }
 		  /* Add noise if this is a Monte Carlo sample. */
 		  if ( seg > nseg-1 ) {
 			FLUX += 2 * FLUXERR * gravi_randn();
@@ -427,8 +438,25 @@ cpl_error_code gravi_flux_average_bootstrap(cpl_table * oi_flux_avg,
 	mjd_avg = cpl_table_get_column_mean (oi_flux, "MJD");
   }
 
+  /* Renormalise by the number of outliers.
+     Also flag channels with too much outliers. */
+  cpl_array ** pflag  = cpl_table_get_data_array (oi_flux_avg,  "FLAG");
+  cpl_array * array = gravi_table_get_column_sum_array (oi_flux, "OUTLIER_FLAG", tel, ntel);
+  CPLCHECK_MSG("cannot get data");
+  
+  for (int wave = 0; wave < nwave; wave++) {
+    double value = cpl_array_get (array, wave, NULL) / nrow;
+    if (value < 1.0) {
+      cpl_array_set (flux_res[2], wave, cpl_array_get (flux_res[2], wave, NULL) / (1.0 - value));
+    }
+    if (value > outlier_threshold) {
+      cpl_array_set (pflag[tel], wave, 1);
+    }
+  }
+  FREE (cpl_array_delete, array);
+
   /* 
-   * (3) Save the results on the oi_t3_avg tables 
+   * (3) Save the results on the oi_flux_avg tables 
    */
 
   /* Save the cloture amplitude on the oi_T3 tables  */
@@ -482,7 +510,8 @@ cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
 										  cpl_table * oi_flux,
 										  int nboot,
 										  int use_vFactor,
-                                          int use_pFactor)
+                                          int use_pFactor,
+					  double outlier_threshold)
 {
   gravi_msg_function_start(0);
   cpl_ensure_code (oi_t3_avg, CPL_ERROR_ILLEGAL_OUTPUT);
@@ -505,6 +534,7 @@ cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
   cpl_array ** pVISDATA = cpl_table_get_data_array (oi_vis, "VISDATA");
   cpl_array ** pVISERR  = cpl_table_get_data_array (oi_vis, "VISERR");
   cpl_array ** pFLUX    = cpl_table_get_data_array (oi_flux, "FLUX");
+  cpl_array ** pOUTLIER = cpl_table_get_data_array (oi_vis, "OUTLIER_FLAG");
   double * pINTTIME = cpl_table_get_data_double (oi_vis, "INT_TIME");
   double * pMJD     = cpl_table_get_data_double (oi_vis, "MJD");
   double * pUCOORD  = cpl_table_get_data_double (oi_vis, "UCOORD");
@@ -614,10 +644,26 @@ cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
           double F0 = cpl_array_get (pFLUX[row * ntel + ctel0], w, NULL);
           double F1 = cpl_array_get (pFLUX[row * ntel + ctel1], w, NULL);
           double F2 = cpl_array_get (pFLUX[row * ntel + ctel2], w, NULL);
-          double VFACTOR0 = (use_vFactor?cpl_array_get (pVFACTOR[row * nbase + base0], w, NULL):1.0);
-          double VFACTOR1 = (use_vFactor?cpl_array_get (pVFACTOR[row * nbase + base1], w, NULL):1.0);
-          double VFACTOR2 = (use_vFactor?cpl_array_get (pVFACTOR[row * nbase + base2], w, NULL):1.0);
+          double VFACTOR0 = (use_vFactor?cpl_array_get (pVFACTOR[rbase0], w, NULL):1.0);
+          double VFACTOR1 = (use_vFactor?cpl_array_get (pVFACTOR[rbase1], w, NULL):1.0);
+          double VFACTOR2 = (use_vFactor?cpl_array_get (pVFACTOR[rbase2], w, NULL):1.0);
+	  int outlier_flag0 = cpl_array_get (pOUTLIER[rbase0], w, NULL);
+	  int outlier_flag1 = cpl_array_get (pOUTLIER[rbase1], w, NULL);
+	  int outlier_flag2 = cpl_array_get (pOUTLIER[rbase2], w, NULL);
 
+	  /* Reject outlier */
+	  if (outlier_flag0 || outlier_flag1 || outlier_flag2) {
+	    Vis0 = 0.0+0.0*I; 
+	    Vis1 = 0.0+0.0*I;
+	    Vis2 = 0.0+0.0*I;
+	    VisErr0 = 0.0+0.0*I;
+	    VisErr1 = 0.0+0.0*I;
+	    VisErr2 = 0.0+0.0*I;
+	    F0 = 0.0;
+	    F1 = 0.0;
+	    F2 = 0.0;
+	  }
+	  
 		  /* Add noise if this is a Monte Carlo sample.
 		   * APPROX: Noise is only added to the coherent fluxes */
 		  if ( seg > nseg-1 ) {
@@ -675,7 +721,7 @@ cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
 		/* End loop on selected segments */
 
         /* Make sure the geometric flux is not null */
-        gravi_array_threshold_min (f012_boot, 0.0, 1e-15);
+        gravi_array_threshold_min (f012_boot, 1e-15);
         
 		/* Compute the argument and the module of the bispectrum */
 		FREE (cpl_array_delete, t3Amp_res[0]);
@@ -726,6 +772,34 @@ cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
 	cpl_array_fill_window (t3Phi_res[3], 0, nwave, 1e10);
 	mjd_avg = cpl_table_get_column_mean (oi_vis, "MJD");
   }
+
+  /* Flag channels with too much outliers. */
+  cpl_array ** pflag  = cpl_table_get_data_array (oi_t3_avg,  "FLAG");
+  CPLCHECK_MSG("cannot get data");
+
+  cpl_array * array = cpl_array_new (nwave, CPL_TYPE_INT);
+  cpl_array_fill_window (array, 0, nwave, 0.0);
+  int * sum_flag = cpl_array_get_data_int (array);
+  
+  for (int row=0; row < nrow; row++) {
+      cpl_array * arr0 = pOUTLIER[row * nbase + base0];
+      cpl_array * arr1 = pOUTLIER[row * nbase + base1];
+      cpl_array * arr2 = pOUTLIER[row * nbase + base2];
+      for (int wave = 0; wave < nwave; wave++) {
+	if (cpl_array_get (arr0, wave, NULL) ||
+	    cpl_array_get (arr1, wave, NULL) ||
+	    cpl_array_get (arr2, wave, NULL) )
+	  sum_flag[wave] ++;
+      }
+  }
+  
+  for (int wave = 0; wave < nwave; wave++) {
+    double value = cpl_array_get (array, wave, NULL) / nrow;
+    if (value > outlier_threshold) {
+      cpl_array_set (pflag[closure],  wave, 1);
+    }
+  }
+  FREE (cpl_array_delete, array);
 
   /* 
    * (3) Save the results on the oi_t3_avg tables 
@@ -808,7 +882,8 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
 											const char * phase_ref,
 											int use_vFactor,
                                             int use_pFactor,
-											int use_debiasing)
+					    int use_debiasing,
+					    double outlier_threshold)
 {
   gravi_msg_function_start(0);
   cpl_ensure_code (oi_vis_avg,  CPL_ERROR_ILLEGAL_OUTPUT);
@@ -825,6 +900,7 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
   cpl_array ** pVISDATA = cpl_table_get_data_array (oi_vis, "VISDATA");
   cpl_array ** pVISERR  = cpl_table_get_data_array (oi_vis, "VISERR");
   cpl_array ** pFNORM   = cpl_table_get_data_array (oi_vis, "F1F2");
+  cpl_array ** pOUTLIER = cpl_table_get_data_array (oi_vis, "OUTLIER_FLAG");
   double * pINTTIME = cpl_table_get_data_double (oi_vis, "INT_TIME");
   double * pMJD     = cpl_table_get_data_double (oi_vis, "MJD");
   double * pUCOORD  = cpl_table_get_data_double (oi_vis, "UCOORD");
@@ -929,11 +1005,19 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
             double FNORM = cpl_array_get (pFNORM[rbase], w, NULL);
             double complex Vis  = cpl_array_get_complex (pVISDATA[rbase], w, NULL);
             double complex VErr = cpl_array_get_complex (pVISERR[rbase], w, NULL);
-    		double mR  = creal (Vis);
-    		double mI  = cimag (Vis);
-    		double eR = creal (VErr);
-    		double eI = cimag (VErr);
+	    double mR  = creal (Vis);
+	    double mI  = cimag (Vis);
+	    double eR = creal (VErr);
+	    double eI = cimag (VErr);
+            int outlier_flag = cpl_array_get (pOUTLIER[rbase], w, NULL);
             CPLCHECK_MSG ("Cannot get data");
+
+	    /* Reject outlier */
+	    if (outlier_flag) {
+	      mR = 0.0; mI = 0.0;
+	      eR = 0.0; eI = 0.0;
+	      FNORM = 0.0;
+	    }
 
 			/* Add noise if this is a Monte Carlo sample.
 			 * APPROX: Noise is only added to the coherent flux */
@@ -941,7 +1025,6 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
 			  mR += 2 * eR * gravi_randn();
 			  mI += 2 * eI * gravi_randn();
 			}
-    
             if (PHASEREF) {
                 /* Integrate <R> and <I> rephased */
                 tR[w] += cos(PHASEREF) * mR - sin(PHASEREF) * mI;
@@ -1006,7 +1089,7 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
     	 * to which we can apply the estimators */
   
         /* Make sure the geometric flux is not null */
-        gravi_array_threshold_min (F1F2_boot, 0.0, 1e-15);
+        gravi_array_threshold_min (F1F2_boot, 1e-15);
     			  
     	/* Energy estimator
     	   vis2 = POWER /  F1F2 */
@@ -1015,7 +1098,7 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
     			  
     	/* Norm of coherent integration
     	   visAmp = sqrt(visR^2 + visR^2) / F12 */
-		FREE (cpl_array_delete, visAmp_res[0]);
+	FREE (cpl_array_delete, visAmp_res[0]);
     	visAmp_res[0] = gravi_array_compute_norm2 (visR_res[0], visI_res[0]);
     	cpl_array_power (visAmp_res[0], 0.5);
     	cpl_array_divide (visAmp_res[0], F12_boot);
@@ -1079,6 +1162,26 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
 	mjd_avg = cpl_table_get_column_mean (oi_vis, "MJD");
   }
 
+  /* Renormalise by the number of outliers.
+     Also flag channels with too much outliers. */
+  cpl_array ** pflag_vis  = cpl_table_get_data_array (oi_vis_avg,  "FLAG");
+  cpl_array ** pflag_vis2 = cpl_table_get_data_array (oi_vis2_avg, "FLAG");
+  cpl_array * array = gravi_table_get_column_sum_array (oi_vis, "OUTLIER_FLAG", base, nbase);
+  CPLCHECK_MSG("cannot get data");
+  
+  for (int wave = 0; wave < nwave; wave++) {
+    double value = cpl_array_get (array, wave, NULL) / nrow;
+    if (value < 1.0) {
+      cpl_array_set (visR_res[2], wave, cpl_array_get (visR_res[2], wave, NULL) / (1.0 - value));
+      cpl_array_set (visI_res[2], wave, cpl_array_get (visI_res[2], wave, NULL) / (1.0 - value));
+    }
+    if (value > outlier_threshold) {
+      cpl_array_set (pflag_vis[base],  wave, 1);
+      cpl_array_set (pflag_vis2[base], wave, 1);
+    }
+  }
+  FREE (cpl_array_delete, array);
+    
   /* 
    * (3) Save the results on the oi_vis_avg tables 
    */
@@ -1106,7 +1209,7 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
   gravi_table_set_array_phase (oi_vis_avg, "VISPHI", base, visPhi_res[2]);
   gravi_table_set_array_phase (oi_vis_avg, "VISPHIERR", base, visPhi_res[3]);
   CPLCHECK_MSG("filling VISPHI");
-  
+
   /* Flag the data with >100% error or >60deg error */
   gravi_vis_flag_threshold (oi_vis2_avg, "VIS2ERR", "FLAG", 1.0);
   gravi_vis_flag_median (oi_vis2_avg, "VIS2ERR", "FLAG", 5.0);
@@ -1351,7 +1454,7 @@ cpl_error_code gravi_average_self_visphi(cpl_table * oi_vis_avg,
 
       /* Compute and remove the mean group delay in [m] */
       double mean_delay = 0.0;
-      gravi_array_get_group_delay_loop(&Vis[irow], wavenumber, &mean_delay, 1, 2e-3, CPL_FALSE); /*search at 20 lambda max if recentered with FT*/
+      gravi_array_get_group_delay_loop(&Vis[irow], NULL, wavenumber, &mean_delay, 1, 2e-3, CPL_FALSE);
       gravi_array_multiply_phasor(Vis[irow], -2 * I * CPL_MATH_PI * mean_delay, wavenumber);
 
       /* Compute and remove the mean phase in [rad] */
@@ -1593,6 +1696,7 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
 		int debiasing_flag_ft = gravi_param_get_bool (parlist, "gravity.vis.debias-ft");
         int nboot_ft = gravi_param_get_int (parlist, "gravity.vis.nboot");
         const char * phase_ref_ft = "SELF_REF";
+	double outlier_threshold_ft = 0.0;
 		CPLCHECK_NUL("Cannot get parameters");
 
         cpl_msg_info (cpl_func, "Bias subtraction of V2 for FT is %s",debiasing_flag_ft?"ENABLE":"DISABLE");
@@ -1644,7 +1748,8 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
                                          phase_ref_ft,
                                          v_factor_flag_ft,
                                          p_factor_flag_ft,
-                                         debiasing_flag_ft);
+                                         debiasing_flag_ft,
+					 outlier_threshold_ft);
             CPLCHECK_NUL("Cannot average the FT frames");
 
             /* 
@@ -1655,7 +1760,8 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
             gravi_t3_average_bootstrap (oi_T3_FT, vis_FT, flux_FT,
                                         nboot_ft,
                                         v_factor_flag_ft,
-                                        p_factor_flag_ft);
+                                        p_factor_flag_ft,
+					outlier_threshold_ft);
             CPLCHECK_NUL("Cannot average t3 of FT");
             
             /* 
@@ -1664,7 +1770,8 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
             cpl_msg_info (cpl_func, "Compute OI_FLUX for FT");
 		
             gravi_flux_average_bootstrap (oi_flux_FT, flux_FT,
-                                          nboot_ft);
+                                          nboot_ft,
+					  outlier_threshold_ft);
             CPLCHECK_NUL("Cannot average flux of FT");
 
             /* 
@@ -1770,8 +1877,9 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
 		int debiasing_flag_sc = gravi_param_get_bool (parlist, "gravity.vis.debias-sc");
 		int nboot_sc = gravi_param_get_int (parlist, "gravity.vis.nboot");
         const char* rangeString = gravi_param_get_string (parlist, "gravity.vis.output-phase-channels");
-		
-		cpl_msg_info (cpl_func, "Bias subtraction of V2 for SC is %s",debiasing_flag_sc?"ENABLE":"DISABLE");
+	double outlier_threshold_sc = gravi_param_get_double (parlist, "gravity.vis.outlier-fraction-threshold");
+	cpl_msg_info (cpl_func, "Bias subtraction of V2 for SC is %s",debiasing_flag_sc?"ENABLE":"DISABLE");
+	cpl_msg_info (cpl_func, "Threshold for fraction of outlier is %.3f",outlier_threshold_sc);
         /*
           force VFACTOR and PFACTOR to 0 for SELF_VISPHI by precaution.
         */
@@ -1846,7 +1954,8 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
                                          phase_ref_sc,
                                          v_factor_flag_sc,
                                          p_factor_flag_sc,
-                                         debiasing_flag_sc);            
+                                         debiasing_flag_sc,
+					 outlier_threshold_sc);            
             CPLCHECK_NUL("Cannot average the SC frames");
 
             /* Compute other columns */
@@ -1870,14 +1979,18 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
                 visData_sc = cpl_array_cast (cpl_table_get_array (oi_vis_SC, "VISDATA", base),
                                              CPL_TYPE_DOUBLE_COMPLEX);
                 
-                /* Normalize the phasor to avoid bad pixels */
+                /* Normalize the phasor by error, to discard crazy points */
                 visErr_sc = cpl_array_duplicate (visData_sc);
                 cpl_array_abs (visErr_sc);
                 cpl_array_divide (visData_sc, visErr_sc);
+
+		/* Get the flag */
+		cpl_array * flag_sc;
+                flag_sc = (cpl_array *)cpl_table_get_array (oi_vis_SC, "FLAG", base);
                 
                 /* Compute and remove the mean group delay in [m] */
                 double mean_delay = 0.0;
-                gravi_array_get_group_delay_loop (&visData_sc, wavenumber_sc, &mean_delay, 1, 2e-3, CPL_FALSE);
+                gravi_array_get_group_delay_loop (&visData_sc, &flag_sc, wavenumber_sc, &mean_delay, 1, 2e-3, CPL_FALSE);
                 gravi_array_multiply_phasor (visData_sc, - 2*I*CPL_MATH_PI * mean_delay, wavenumber_sc);
                 
                 /* Save this delay [m] */
@@ -1955,7 +2068,8 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
             gravi_t3_average_bootstrap (oi_T3_SC, vis_SC, flux_SC,
                                         nboot_sc,
                                         v_factor_flag_sc,
-                                        p_factor_flag_sc);
+                                        p_factor_flag_sc,
+					outlier_threshold_sc);
             CPLCHECK_NUL("Cannot average t3 of SC");
             
             /* 
@@ -1964,7 +2078,7 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
             cpl_msg_info (cpl_func, "Compute OI_FLUX for SC");
 
             gravi_flux_average_bootstrap (oi_flux_SC, flux_SC,
-                                          nboot_sc);
+                                          nboot_sc, outlier_threshold_sc);
             CPLCHECK_NUL("Cannot average flux of SC");
             
             /* Compute other columns */

@@ -35,6 +35,9 @@ cpl_error_code gravi_signal_create_sync (cpl_table * vis_SC, int nbase_sc, doubl
 										 cpl_table * vis_FT, int nbase_ft,
 										 const char * name);
 
+cpl_error_code gravi_compute_outliers (gravi_data * reduce_data,
+                                       const cpl_parameterlist * parlist);
+
 cpl_error_code gravi_compute_snr (gravi_data * reduce_data,
                                   const cpl_parameterlist * parlist);
 

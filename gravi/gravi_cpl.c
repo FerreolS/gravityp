@@ -68,8 +68,7 @@ cpl_matrix * svdcmp(cpl_matrix * , cpl_vector * , cpl_matrix * );
  -----------------------------------------------------------------------------*/
 
 
-int gravi_array_threshold_min (cpl_array * array, double lo_cut,
-                               double assign_lo_cut)
+int gravi_array_threshold_min (cpl_array * array, double lo_cut)
 {
     cpl_ensure (array, CPL_ERROR_NULL_INPUT, -1);
 
@@ -78,7 +77,7 @@ int gravi_array_threshold_min (cpl_array * array, double lo_cut,
     
     for (cpl_size s = 0; s < size ; s++) {
         if (cpl_array_get (array, s, NULL) < lo_cut) {
-            cpl_array_set (array, s, assign_lo_cut);
+            cpl_array_set (array, s, lo_cut);
             num ++;
         }
     }
@@ -283,6 +282,27 @@ double gravi_table_get_column_std (cpl_table * table, const char * name, int bas
   return sqrt (mean2 / nrow - mean*mean / nrow / nrow);
 }
 
+cpl_array * gravi_table_get_column_sum_array (cpl_table * table, const char * name, int base, int nbase)
+{
+  cpl_ensure (table, CPL_ERROR_NULL_INPUT, NULL);
+  cpl_ensure (name,  CPL_ERROR_NULL_INPUT, NULL);
+  
+  cpl_size nrow = cpl_table_get_nrow (table) / nbase;
+  cpl_ensure (nrow,  CPL_ERROR_ILLEGAL_INPUT, NULL);
+
+  /* Get the pointer */
+  cpl_array ** arrays = cpl_table_get_data_array (table, name);
+  cpl_ensure (arrays,  CPL_ERROR_ILLEGAL_INPUT, NULL);
+
+  /* Build the mean (warning that integer will remain an integer) */
+  cpl_array * output = cpl_array_duplicate (arrays[base]);
+
+  /* Coadd all */
+  for (cpl_size r=1; r<nrow;r++)
+      cpl_array_add (output, arrays[r*nbase+base]);
+
+  return output;
+}
 
 cpl_array * gravi_table_get_column_mean_array (cpl_table * table, const char * name, int base, int nbase)
 {
@@ -296,8 +316,10 @@ cpl_array * gravi_table_get_column_mean_array (cpl_table * table, const char * n
   cpl_array ** arrays = cpl_table_get_data_array (table, name);
   cpl_ensure (arrays,  CPL_ERROR_ILLEGAL_INPUT, NULL);
 
-  /* Build the mean */
+  /* Build the mean (warning that integer will remain an integer) */
   cpl_array * output = cpl_array_duplicate (arrays[base]);
+
+  /* Coadd all */
   for (cpl_size r=1; r<nrow;r++)
       cpl_array_add (output, arrays[r*nbase+base]);
 
@@ -1166,6 +1188,7 @@ cpl_array * gravi_array_smooth (cpl_array * input, int nsmooth)
  * @brief Optimized computation of GDELAY for a list of arrays
  *
  * @param input        Pointer to arrays (complex coherent flux)
+ * @param flag         Pointer to arrays (flag to discard data), can be NULL
  * @param sigma        Array with the wavenumbers [m]
  * @param gd           Pointer to output GDELAYs  [m]
  * @param nrow         Size of input and gd
@@ -1184,7 +1207,9 @@ cpl_array * gravi_array_smooth (cpl_array * input, int nsmooth)
  */
 /*----------------------------------------------------------------------------*/
 
-cpl_error_code gravi_array_get_group_delay_loop (cpl_array ** input, cpl_array * sigma,
+cpl_error_code gravi_array_get_group_delay_loop (cpl_array ** input,
+						 cpl_array ** flag,
+						 cpl_array * sigma,
                                                  double * gd, cpl_size nrow,
                                                  double max_width,
                                                  int verbose)
@@ -1252,7 +1277,10 @@ cpl_error_code gravi_array_get_group_delay_loop (cpl_array ** input, cpl_array *
     
     /* Copy data as double complex to secure their type and allow
      * in-place modification between the different grids */
-    for (w=0; w<nsigma; w++) visdata[w] = cpl_array_get_complex (input[row], w, &nv);
+    for (w=0; w<nsigma; w++) {
+      if (flag && cpl_array_get (flag[row], w, &nv)) visdata[w] = 0. + I*0.;
+      else visdata[w] = cpl_array_get_complex (input[row], w, &nv);
+    }
 
     /* IOTA method in [m] -- as starting point, with 
      * equal weight to all channels to avoid badpixels */
@@ -1311,12 +1339,15 @@ cpl_error_code gravi_array_get_group_delay_loop (cpl_array ** input, cpl_array *
   return CPL_ERROR_NONE;
 }
 
-cpl_error_code gravi_table_compute_group_delay (cpl_table * table, const char *input,
-												const char *output, cpl_table * oi_wave)
+cpl_error_code gravi_table_compute_group_delay (cpl_table * table,
+						const char *input,
+						const char *flag,
+						const char *output, cpl_table * oi_wave)
 {
   gravi_msg_function_start(0);
   cpl_ensure_code (table,   CPL_ERROR_NULL_INPUT);
   cpl_ensure_code (input,   CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (flag,    CPL_ERROR_NULL_INPUT);
   cpl_ensure_code (output,  CPL_ERROR_NULL_INPUT);
   cpl_ensure_code (oi_wave, CPL_ERROR_NULL_INPUT);
 
@@ -1332,12 +1363,15 @@ cpl_error_code gravi_table_compute_group_delay (cpl_table * table, const char *i
 
   /* Get data */
   cpl_array ** input_arrays = cpl_table_get_data_array (table, input);
+  cpl_array ** flag_arrays  = cpl_table_get_data_array (table, flag);
   cpl_size nrow = cpl_table_get_nrow (table);
 
   CPLCHECK_MSG ("Cannot get data");
 
   /* Run */
-  gravi_array_get_group_delay_loop (input_arrays, sigma, gdelay,
+  gravi_array_get_group_delay_loop (input_arrays,
+				    flag_arrays,
+				    sigma, gdelay,
                                     nrow, 1.e-3, CPL_TRUE);
   FREE (cpl_array_delete, sigma);
 
@@ -2165,6 +2199,76 @@ double gravi_array_get_quantile (cpl_array * arr, double thr)
   cpl_vector_delete (vect);
 
   return value;
+}
+
+/*---------------------------------------------------------------------------*/
+/**
+ * @brief Return the running median of a vector, with special care for
+ *        the boundaray, that are filled with the value at nw and size-hw.
+ *        Running median is created with cpl_vector_filter_median_create
+ *        or cpl_vector_get_median if size is less than hw*2+3.
+ * @param vector     Input vector (size)
+ * @param hw         Same parameter as in cpl_vector_filter_median_create
+ * @return vector with running median, same size
+ */
+/*---------------------------------------------------------------------------*/
+
+cpl_vector * gravi_vector_median (const cpl_vector * vector, cpl_size hw)
+{
+  cpl_ensure (vector, CPL_ERROR_NULL_INPUT, NULL);
+  cpl_ensure (hw>0,   CPL_ERROR_ILLEGAL_INPUT, NULL);
+
+  cpl_size size = cpl_vector_get_size (vector);
+  cpl_vector * median = NULL;
+
+  /* Case the vector is shorter than the the box */
+  if (size < hw*2+3)
+  {
+    median = cpl_vector_new (size);
+    cpl_vector_fill (median, cpl_vector_get_median_const (vector));
+  }
+  /* case longer than the box */
+  else
+  {
+    median = cpl_vector_filter_median_create (vector, hw);
+    cpl_ensure (median, CPL_ERROR_DATA_NOT_FOUND, NULL);
+
+    double * data = cpl_vector_get_data (median);
+    cpl_ensure (data, CPL_ERROR_DATA_NOT_FOUND, NULL);
+    
+    for (int i = 0;       i < hw;   i++) data[i] = data[hw];
+    for (int i = size-hw; i < size; i++) data[i] = data[size-hw-1];
+  }
+  
+  return median;
+}
+/*---------------------------------------------------------------------------*/
+/**
+ * @brief Return the running median of a vector, with special care for
+ *        the boundaray, that are filled with the value at nw and size-hw.
+ *        Running median is created with cpl_vector_filter_median_create
+ *        or cpl_vector_get_median if size is less than hw*2+3.
+ * @param vector     Input vector (size)
+ * @param hw         Same parameter as in cpl_vector_filter_median_create
+ * @return vector with running median, same size
+ */
+/*---------------------------------------------------------------------------*/
+
+cpl_error_code gravi_vector_abs (cpl_vector * vector)
+{
+  cpl_ensure_code (vector, CPL_ERROR_NULL_INPUT);
+
+  /* Get data */
+  cpl_size size = cpl_vector_get_size (vector);
+  cpl_ensure_code (size > 0, CPL_ERROR_ILLEGAL_INPUT);
+
+  double * data = cpl_vector_get_data (vector);
+  cpl_ensure_code (data, CPL_ERROR_ILLEGAL_INPUT);
+
+  /* Take abs */
+  for (int i = 0; i < size; i++) data[i] = fabs (data[i]);
+  
+  return CPL_ERROR_NONE;
 }
 
 /*---------------------------------------------------------------------------*/

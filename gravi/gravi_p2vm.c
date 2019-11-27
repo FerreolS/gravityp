@@ -1322,7 +1322,7 @@ cpl_error_code gravi_p2vm_phase_correction (gravi_data * p2vm_map,
 		  
 		  for (int base = 0; base<3 ; base++) {
               double gd = 0.0;
-              gravi_array_get_group_delay_loop (&visphase[base + pol*6], sigma,
+              gravi_array_get_group_delay_loop (&visphase[base + pol*6], NULL, sigma,
                                                 &gd, 1, 2e-3, CPL_FALSE);
 			cpl_array * tmp = cpl_array_duplicate (visphase[base + pol*6]);
 			gravi_array_multiply_phasor (tmp, -CPL_MATH_2PI*I*gd, sigma);
@@ -1337,7 +1337,7 @@ cpl_error_code gravi_p2vm_phase_correction (gravi_data * p2vm_map,
 		  
 		  for (int base = 0; base<3 ; base++) {
               double gd = 0.0;
-              gravi_array_get_group_delay_loop (&visphase[base + pol*6], sigma,
+              gravi_array_get_group_delay_loop (&visphase[base + pol*6], NULL, sigma,
                                                 &gd, 1, 2e-3, CPL_FALSE);
 			ref[base+1] = gravi_array_cexp (CPL_MATH_2PI * I * gd, sigma);
 		  }
@@ -1372,7 +1372,7 @@ cpl_error_code gravi_p2vm_phase_correction (gravi_data * p2vm_map,
                   
                   /* Compute group-delay */
                   double gd = 0.0;
-                  gravi_array_get_group_delay_loop (&phase_unwraped, sigma,
+                  gravi_array_get_group_delay_loop (&phase_unwraped, NULL, sigma,
                                                     &gd, 1, 2e-3, CPL_FALSE);
                   
                   /* Remove mean group-delay and phase-delay to unwrap */

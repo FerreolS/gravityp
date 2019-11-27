@@ -54,7 +54,7 @@ TARGET_ID : id listed in OI_TARGET
 TIME [us] : timestamp
 MJD [d] : 
 INT_TIME [s] : integration time of this frame
-FLUX [e] : flux spectra
+FLUX [e] : flux spectra Note this KW is not OIFITS2 compliant. A new FLUXDATA column will be provided to solve this problem.
 FLUXERR [e] : error on flux spectra
 STA_INDEX : station index in the OI_ARRAY
 TOTALFLUX_SC [e] : total flux of SC in this SC frame (integrated over spectrum)

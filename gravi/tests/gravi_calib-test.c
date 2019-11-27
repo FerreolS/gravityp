@@ -773,6 +773,11 @@ int gravi_calib_test(void){
 	gravi_parameter_add_compute_snr (parlist, 0);
 	gravi_parameter_add_rejection (parlist, 0);
 
+	/* Compute the outliers */
+	cpl_msg_info (cpl_func, "Compute the Outliers");
+	test(gravi_compute_outliers (p2vm_reduced, parlist),
+		 "gravi_signal_outliers : ...", flag);
+
 	/* Compute the SNR */
 	cpl_msg_info (cpl_func, "Compute the SNR");
 	test(gravi_compute_snr (p2vm_reduced, parlist),

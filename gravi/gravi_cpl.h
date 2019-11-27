@@ -41,13 +41,13 @@ int ** gravi_table_get_data_array_int (cpl_table * table, const char * name);
 
 double gravi_table_get_column_mean (cpl_table * table, const char * name, int base, int nbase);
 double gravi_table_get_column_std (cpl_table * table, const char * name, int base, int nbase);
+cpl_array * gravi_table_get_column_sum_array (cpl_table * table, const char * name, int base, int nbase);
 cpl_array * gravi_table_get_column_mean_array (cpl_table * table, const char * name, int base, int nbase);
 
 #define gravi_table_get_value(table,name,row,value) cpl_array_get (cpl_table_get_array (table,name,row), value, NULL)
 #define gravi_table_set_value(table,name,row,value,val) cpl_array_set (cpl_table_get_data_array (table,name)[row], value, val);
 
-int gravi_array_threshold_min (cpl_array * array, double lo_cut,
-                               double assign_lo_cut);
+int gravi_array_threshold_min (cpl_array * array, double lo_cut);
 
 cpl_array * gravi_array_init_double (long n , double value);
 cpl_array * gravi_array_init_int (long n, int value);
@@ -104,11 +104,15 @@ cpl_error_code gravi_table_add_scalar (cpl_table * table, const char * name, int
 cpl_array * gravi_table_create_sigma_array (cpl_table * oi_wave);
 cpl_array * gravi_table_create_wave_array (cpl_table * oi_wave);
 
-cpl_error_code gravi_array_get_group_delay_loop (cpl_array ** input, cpl_array * sigma,
+cpl_error_code gravi_array_get_group_delay_loop (cpl_array ** input,
+						 cpl_array ** flag,
+						 cpl_array * sigma,
 						 double * gd, cpl_size nrow,
 						 double max_width, int verbose);
 
-cpl_error_code gravi_table_compute_group_delay (cpl_table * table, const char *input,
+cpl_error_code gravi_table_compute_group_delay (cpl_table * table,
+						const char *input,
+						const char *flag,
 						const char *output, cpl_table * oi_wave);
 
 cpl_matrix * get_matrix_from_vector (cpl_vector * , cpl_vector * );
@@ -146,6 +150,8 @@ cpl_image * gravi_image_from_column (cpl_table * table_data, const char * data_x
 double gravi_image_get_quantile (const cpl_image * img, double value);
 double gravi_array_get_quantile (cpl_array * arr, double value);
 
+cpl_vector * gravi_vector_median (const cpl_vector * vector, cpl_size hw);
+cpl_error_code gravi_vector_abs (cpl_vector * vector);
 cpl_size gravi_vector_get_maxpos (cpl_vector * vector);
 cpl_vector * gravi_vector_extract (const cpl_vector * vector, int start, int step);
 cpl_error_code gravi_vector_unwrap_with_guess (cpl_vector * vector, cpl_vector * ref, double ref_to_phase);

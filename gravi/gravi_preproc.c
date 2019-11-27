@@ -124,7 +124,7 @@ int gravi_pixel_is_good (cpl_image * bad_img, int x, int y)
 
 cpl_error_code gravi_remove_badpixel_sc (cpl_imagelist * imglist_sc, cpl_image * bad_img)
 {
-	gravi_msg_function_start(0);
+	gravi_msg_function_start(1);
 	cpl_ensure_code (imglist_sc, CPL_ERROR_NULL_INPUT);
 	cpl_ensure_code (bad_img,    CPL_ERROR_NULL_INPUT);
 	
@@ -245,7 +245,7 @@ cpl_error_code gravi_remove_badpixel_sc (cpl_imagelist * imglist_sc, cpl_image *
 	  } /* End loop k */
 	} /* End loop k */
 
-	gravi_msg_function_exit(0);
+	gravi_msg_function_exit(1);
 	return CPL_ERROR_NONE;
 }
 
@@ -766,6 +766,7 @@ gravi_data * gravi_extract_spectrum (gravi_data * raw_data,
         rawVar_imglist = cpl_imagelist_duplicate (imaging_data);
         cpl_imagelist_subtract_image (rawVar_imglist, darkavg_img);
         cpl_imagelist_divide_scalar (rawVar_imglist, gain_sc);
+        gravi_remove_badpixel_sc (rawVar_imglist, badpix_img);
         CPLCHECK_NUL ("Cannot extract the data");
 
         /* rawVar += (std(DARK) / gain) ** 2    [e^2] */

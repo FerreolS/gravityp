@@ -508,6 +508,10 @@ static int gravity_disp(cpl_frameset            * frameset,
 			gravi_metrology_reduce (p2vmred_data, NULL, static_param_data, NULL, parlist);
             CPLCHECK_CLEAN ("Cannot reduce metrology");
 
+	    /* Find outliers */
+            gravi_compute_outliers (p2vmred_data, parlist);
+            CPLCHECK_MSG ("Cannot compute outliers");
+	    
 			/* Compute the SNR_SMT and GDELAY_SMT columns */
 			gravi_compute_snr (p2vmred_data, parlist);
 			CPLCHECK_MSG ("Cannot compute SNR");

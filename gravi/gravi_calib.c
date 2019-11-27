@@ -163,25 +163,22 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
 		cpl_imagelist * imglist = gravi_data_get_cube (raw_data, GRAVI_IMAGING_DATA_SC_EXT);
 
 		/* Compute the median image of the imagelist */
-        cpl_image * median_img = cpl_imagelist_collapse_sigclip_create (imglist, 5, 5, 0.6, CPL_COLLAPSE_MEDIAN_MEAN, NULL);
+		cpl_image * median_img = cpl_imagelist_collapse_sigclip_create (imglist, 5, 5, 0.6, CPL_COLLAPSE_MEDIAN_MEAN, NULL);
 		CPLCHECK_NUL ("Cannot compute the median dark");
 
-		/* Compute the std of each pixels 
-         * FIXME: look at cpl_imagelist function */
-		cpl_imagelist * temp_imglist = cpl_imagelist_new ();
-		for (cpl_size i = 0; i < cpl_imagelist_get_size(imglist); i ++){
-			cpl_image * image = cpl_imagelist_get (imglist, i);
-			cpl_imagelist_set (temp_imglist, cpl_image_power_create (image, 2), i);
-		}
-		cpl_image * mean_img = cpl_imagelist_collapse_create (imglist);
-		cpl_image_power (mean_img, 2);
-		cpl_image * stdev_img = cpl_imagelist_collapse_create (temp_imglist);
-		cpl_image_subtract (stdev_img, mean_img);
-		cpl_image_power (stdev_img, 0.5);
+		/* Compute STD. We should see if we use sigma-clipping
+		 * or not for the collapse, it may change the bad pixel detection */
+		cpl_msg_info (cpl_func,"Compute std with imglist");
+		cpl_imagelist * temp_imglist = cpl_imagelist_duplicate (imglist);
+		cpl_imagelist_subtract_image (temp_imglist, median_img);
+		cpl_imagelist_power (temp_imglist, 2.0);
+		// cpl_image * stdev_img = cpl_imagelist_collapse_create (temp_imglist);
+		cpl_image * stdev_img = cpl_imagelist_collapse_sigclip_create (temp_imglist, 5, 5, 0.6,
+									       CPL_COLLAPSE_MEDIAN_MEAN, NULL);
 		FREE (cpl_imagelist_delete, temp_imglist);
-		FREE (cpl_image_delete, mean_img);
+		cpl_image_power (stdev_img, 0.5);
 		CPLCHECK_NUL ("Cannot compute the STD of the DARK");
-
+		
 		/* Compute the QC parameters RMS and MEDIAN */
 		cpl_msg_info (cpl_func, "Compute QC parameters");
 		double mean_qc = cpl_image_get_median (median_img);

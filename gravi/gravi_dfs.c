@@ -575,6 +575,21 @@ cpl_error_code gravi_parameter_add_compute_snr (cpl_parameterlist *self, int isC
     cpl_ensure_code (self, CPL_ERROR_NULL_INPUT);
     cpl_parameter *p;
     
+    /* chi2r */
+	p = cpl_parameter_new_value ("gravity.signal.chi2r-threshold", CPL_TYPE_DOUBLE,
+                                 "Threshold in chi2r to declare a bad value ",
+                                 "gravity.signal", 10.0);
+	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "chi2r-threshold");
+	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	cpl_parameterlist_append (self, p);
+    
+	p = cpl_parameter_new_value ("gravity.signal.chi2r-sigma", CPL_TYPE_DOUBLE,
+                                 "Threshold in sigma of chi2r to declare a bad value ",
+                                 "gravity.signal", 10.0);
+	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "chi2r-sigma");
+	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	cpl_parameterlist_append (self, p);
+    
     /* Number of FT samples to average to compute SNR and GDELAY */
 	p = cpl_parameter_new_value ("gravity.signal.nsmooth-snr-ft", CPL_TYPE_INT,
                                  "Number of samples to average coherently when computing\n "
@@ -592,6 +607,8 @@ cpl_error_code gravi_parameter_add_compute_snr (cpl_parameterlist *self, int isC
 cpl_error_code gravi_parameter_add_compute_signal (cpl_parameterlist *self, int isCalib)
 {
     cpl_ensure_code (self, CPL_ERROR_NULL_INPUT);
+    // cpl_parameter *p;
+    
     return CPL_ERROR_NONE;
 }
 
@@ -800,6 +817,14 @@ cpl_error_code gravi_parameter_add_compute_vis (cpl_parameterlist *self, int isC
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
     cpl_parameterlist_append (self, p);
     
+	/* Number of bootstrap */
+	p = cpl_parameter_new_value ("gravity.vis.outlier-fraction-threshold", CPL_TYPE_DOUBLE,
+                                 "Flag channels with more than this fraction of outliers",
+                                 "gravity.vis", 0.5);
+	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "outlier-fraction-threshold");
+	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	cpl_parameterlist_append (self, p);
+
     return CPL_ERROR_NONE;
 }
 
