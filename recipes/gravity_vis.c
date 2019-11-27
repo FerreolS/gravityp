@@ -938,6 +938,7 @@ cleanup:
 	FREE (gravi_data_delete,vis_data);
 	FREE (gravi_data_delete,tmpvis_data);
 	FREE (gravi_data_delete,diamcat_data);
+	FREE (gravi_data_delete,static_param_data);
 	FREE (gravi_data_delete,diodepos_data);
 	FREE (gravi_data_delete,eop_map);
 	FREE (cpl_frameset_delete,darkcalib_frameset);
