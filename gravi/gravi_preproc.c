@@ -277,8 +277,8 @@ cpl_table * gravi_table_ft_format (cpl_table * pix_table,
   /* Verbose */
   gravi_msg_function_start(0);
   cpl_ensure (pix_table, CPL_ERROR_NULL_INPUT, NULL);
-  cpl_ensure (skystdtable_table, CPL_ERROR_NULL_INPUT, NULL);
-  cpl_ensure (skyavgtable_table, CPL_ERROR_NULL_INPUT, NULL);
+  cpl_ensure (skystd_table, CPL_ERROR_NULL_INPUT, NULL);
+  cpl_ensure (skyavg_table, CPL_ERROR_NULL_INPUT, NULL);
   
   /* Get the number of frames */
   cpl_size nrow = cpl_table_get_nrow (pix_table);
@@ -656,8 +656,9 @@ gravi_data * gravi_extract_spectrum (gravi_data * raw_data,
 		  skyavg_table = gravi_data_get_table (dark_map, GRAVI_IMAGING_DATA_FT_EXT);
 		  skystd_table = gravi_data_get_table (dark_map, GRAVI_IMAGING_ERR_FT_EXT);
 		} else {
-		  return cpl_error_set_message (cpl_func,CPL_ERROR_NULL_INPUT,
-						"DARK or SKY should be provided");
+		  cpl_error_set_message (cpl_func,CPL_ERROR_NULL_INPUT,
+					 "DARK or SKY should be provided");
+		  return NULL;
 		}
 
 		/* Get the FT gain in [ADU/e] */
