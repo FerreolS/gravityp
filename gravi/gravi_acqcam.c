@@ -661,7 +661,8 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
     int nv = 0;
     cpl_size x0 = cpl_vector_get (a, GRAVI_SPOT_SUB+0);
     cpl_size y0 = cpl_vector_get (a, GRAVI_SPOT_SUB+4);
-    CPLCHECK_MSG ("Cannot get values valid");
+    cpl_size nx_img = cpl_image_get_size_x (img);
+    cpl_size ny_img = cpl_image_get_size_y (img);
 
     /* Compute RMS in the central region */
     double RMS = gravi_image_get_noise_window (img, x0-25, y0-25, x0+25, y0+25);
@@ -736,6 +737,12 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
             cpl_size yf = roundl(ysub[sub] + yd[diode]);
             
             /* Extract 10 pixels around each spot */
+            /* check that we do not get over the limit of the detector */
+            if (xf-nf/2<0) xf=nf/2;
+            if (yf-nf/2<0) yf=nf/2;
+            if (xf+nf/2>nx_img-2) xf=nx_img-2-nf/2;
+            if (yf+nf/2>ny_img-2) yf=ny_img-2-nf/2;
+            
             double mf = 0.0;
             for (cpl_size x = xf-nf/2; x < xf+nf/2; x++) {
                 for (cpl_size y = yf-nf/2; y < yf+nf/2; y++) {
@@ -799,6 +806,12 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
             cpl_size yf = roundl(ysub[sub] + yd[diode]);
             
             /* Extract 10 pixels around each spot */
+            /* check that we do not get over the limit of the detector */
+            if (xf-nf/2<0) xf=nf/2;
+            if (yf-nf/2<0) yf=nf/2;
+            if (xf+nf/2>nx_img-2) xf=nx_img-2-nf/2;
+            if (yf+nf/2>ny_img-2) yf=ny_img-2-nf/2;
+            
             double mf = 0.0;
             for (cpl_size x = xf-nf/2; x < xf+nf/2; x++) {
                 for (cpl_size y = yf-nf/2; y < yf+nf/2; y++) {
