@@ -907,16 +907,17 @@ cpl_parameter * gravi_pfits_get_extrapixel_param(const cpl_propertylist * header
     int key_index = 1;
     const char*  param_value=NULL;
     char * param_name = "extra-pixel-ft";
+    char key[100];
 
-    char* key = cpl_sprintf("ESO PRO REC1 PARAM%d NAME",key_index);
+    sprintf (key, "ESO PRO REC1 PARAM%d NAME",key_index);
     while (cpl_propertylist_has(header, key)){
         if (!strcmp(cpl_propertylist_get_string(header, key), param_name))
         {
-            key = cpl_sprintf("ESO PRO REC1 PARAM%d VALUE",key_index);
+	    sprintf (key, "ESO PRO REC1 PARAM%d VALUE",key_index);
             param_value = cpl_propertylist_get_string(header, key);
-            cpl_msg_info(cpl_func, "Retrieve the extra-pixel-ft option from the p2vm : [%s] ", param_value);
+            cpl_msg_info (cpl_func, "Retrieve the extra-pixel-ft option from the p2vm: [%s] ", param_value);
         }
-        key = cpl_sprintf("ESO PRO REC1 PARAM%d NAME", ++key_index);
+        sprintf (key, "ESO PRO REC1 PARAM%d NAME", ++key_index);
     }
 
     cpl_parameter * p = cpl_parameter_new_value ("gravity.preproc.extra-pixel-ft", CPL_TYPE_BOOL,
