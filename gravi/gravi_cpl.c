@@ -1403,6 +1403,7 @@ int gravi_table_are_equal (cpl_table * first, cpl_table * second)
   if (ncol != cpl_table_get_ncol (second)) {cpl_msg_info(cpl_func, "Different cols"); return 0;}
   if (cpl_table_compare_structure (first, second)) {cpl_msg_info(cpl_func, "Different structure"); return 0;}
 
+  /* Create array of names */
   cpl_array *names = cpl_table_get_column_names (first);
 
   /* Loop on colums */
@@ -1451,6 +1452,9 @@ int gravi_table_are_equal (cpl_table * first, cpl_table * second)
 	}
 
   }/* End loop on columns */
+
+  /* Clean memory */
+  FREE (cpl_array_delete, names);
 
   gravi_msg_function_exit(0);
   return 1;
