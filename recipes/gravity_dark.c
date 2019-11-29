@@ -165,6 +165,7 @@ static int gravity_dark_create(cpl_plugin * plugin)
 
     /* Bias-method */
     gravi_parameter_add_biasmethod (recipe->parameters);
+    gravi_parameter_add_biassub_file (recipe->parameters);
     
     return 0;
 }
@@ -301,15 +302,28 @@ static int gravity_dark (cpl_frameset            * frameset,
     /* Load all DARK in the frameset into a single data */
     nb_frame = cpl_frameset_get_size (dark_frameset);
 	used_frameset = cpl_frameset_new ();
-
+    
     for (comp = 0; comp < nb_frame; comp++){
 	    gravi_data * data_tmp;
 	    cpl_frame * frame_tmp;
 
+        char filename_suffix[10];
+        snprintf(filename_suffix, 10, "%d", comp);
+        
         /* Load this frame */
         frame_tmp = cpl_frameset_get_position (dark_frameset, comp);
         data_tmp  = gravi_data_load_rawframe (frame_tmp, used_frameset);
         gravi_data_detector_cleanup (data_tmp, parlist);
+
+		/* Option save the bias-subtracted file */
+		if (gravi_param_get_bool (parlist,"gravity.dfs.bias-subtracted-file")) {
+		  
+			gravi_data_save_new (data_tmp, frameset, NULL, filename_suffix, parlist,
+								 dark_frameset, frame_tmp, "gravity_dark",
+								 NULL, "BIAS_SUBTRACTED");
+
+			CPLCHECK_CLEAN ("Cannot save the BIAS_SUBTRACTED product");
+		}
 
 		/* Cleanup unused data */
 		//gravi_data_erase (data_tmp, GRAVI_METROLOGY_EXT);
