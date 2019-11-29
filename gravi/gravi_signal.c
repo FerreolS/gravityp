@@ -665,7 +665,6 @@ cpl_error_code gravi_compute_snr (gravi_data * p2vmred_data,
 		      pol+1,GRAVI_TYPE(type_data),2*nsmooth+1);
 	
         cpl_table * oi_vis  = gravi_data_get_oi_vis (p2vmred_data, type_data, pol, npol);
-        cpl_table * oi_flux = gravi_data_get_oi_flux (p2vmred_data, type_data, pol, npol);
         CPLCHECK_MSG ("Cannot get data");
 	
         /* Compute interspectre and phasor */
