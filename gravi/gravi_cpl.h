@@ -136,6 +136,14 @@ cpl_vector * gravi_table_get_vector_diff (cpl_table * spectrum_data, int index,
 
 cpl_array * gravi_array_wrap_image (cpl_image *);
 
+cpl_image * gravi_image_collapse_median_x (cpl_image * img,
+                                           cpl_size drop_from,
+                                           cpl_size drop_to);
+
+cpl_error_code gravi_image_subtract_collapse (cpl_image * img,
+                                              const cpl_image * collapse,
+                                              int direction);
+
 cpl_error_code gravi_image_subtract_window (cpl_image * img1, const cpl_image * img2,
                                             cpl_size llx, cpl_size lly,
                                             cpl_size urx, cpl_size ury,

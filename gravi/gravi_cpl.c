@@ -1676,6 +1676,104 @@ double gravi_image_get_noise_window (cpl_image *img,
 }
 
 /*----------------------------------------------------------------------------*/
+/**
+ * @brief collapse image along the x direction, droping a part of the image
+ *
+ * @param img               image
+ * @param drop_from         follow FITS convention start at 1
+ * @param drop_to           follow FITS convention start at 1
+ *
+ * The returned image has size nx=1 and the same ny as the input image.
+ * It should be desallocated with cpl_image_delete
+ */
+/*----------------------------------------------------------------------------*/
+
+cpl_image * gravi_image_collapse_median_x (cpl_image * img, cpl_size drop_from, cpl_size drop_to)
+{
+  gravi_msg_function_start(0);
+  cpl_ensure (img, CPL_ERROR_NULL_INPUT, NULL);
+  cpl_ensure (drop_from < drop_to, CPL_ERROR_ILLEGAL_INPUT, NULL);
+  
+  /* Get size */
+  cpl_size nx = cpl_image_get_size_x (img);
+  cpl_size ny = cpl_image_get_size_y (img);
+
+  /* Check */
+  cpl_ensure (drop_from >0, CPL_ERROR_ILLEGAL_INPUT, NULL);
+  cpl_ensure (drop_to <=nx, CPL_ERROR_ILLEGAL_INPUT, NULL);
+
+  /* Fill mask */
+  cpl_mask * mask = cpl_mask_new (nx, ny);
+  for (cpl_size y = 1; y <= ny; y++)
+      for (cpl_size x = drop_from; x <= drop_to ; x++)
+          cpl_mask_set (mask, x, y, CPL_BINARY_1);
+
+  /* Set BPM */
+  cpl_mask * bpm = cpl_image_set_bpm (img, mask);
+
+  /* Collapse in the x direction */
+  cpl_image * collapse = cpl_image_collapse_median_create (img, 1, 0, 0);
+
+  /* Set back current BPM */
+  mask = cpl_image_set_bpm (img, bpm);
+  FREE (cpl_mask_delete, mask);
+
+  /* Return collapse */
+  gravi_msg_function_exit(0);
+  return collapse;
+}
+
+/*----------------------------------------------------------------------------*/
+
+cpl_error_code gravi_image_subtract_collapse (cpl_image * img,
+                                              const cpl_image * collapse,
+                                              int direction)
+{
+    gravi_msg_function_start(0);
+    cpl_ensure_code (img,      CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (collapse, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (direction==0 || direction==1, CPL_ERROR_ILLEGAL_INPUT);
+
+    int nv;
+
+    /* Get size */
+    cpl_size nx = cpl_image_get_size_x (img);
+    cpl_size ny = cpl_image_get_size_y (img);
+
+    if (direction == 0) {
+        /* Collapse was done along the y direction */
+        cpl_ensure_code (cpl_image_get_size_x (collapse) == nx &&
+                         cpl_image_get_size_y (collapse) == 1,
+                         CPL_ERROR_ILLEGAL_INPUT);
+        
+        for (cpl_size x = 0; x < nx ; x++) {
+            double value = cpl_image_get (collapse, x+1, 1, &nv);
+            for (cpl_size y = 0; y < ny ; y++) {
+                cpl_image_set (img, x+1, y+1, cpl_image_get (img, x+1, y+1, &nv) - value);
+                CPLCHECK_MSG ("Cannot remove collapse y");
+            }
+        }
+        
+    } else {
+        /* Collapse was done along the x direction */
+        cpl_ensure_code (cpl_image_get_size_x (collapse) == 1 &&
+                         cpl_image_get_size_y (collapse) == ny,
+                         CPL_ERROR_ILLEGAL_INPUT);
+        
+        for (cpl_size y = 0; y < ny ; y++) {
+            double value = cpl_image_get (collapse, 1, y+1, &nv);
+            for (cpl_size x = 0; x < nx ; x++) {
+                cpl_image_set (img, x+1, y+1, cpl_image_get (img, x+1, y+1, &nv) - value);
+                CPLCHECK_MSG ("Cannot remove collapse x");
+            }
+        }
+    }
+
+    gravi_msg_function_exit(0);
+    return CPL_ERROR_NONE;
+}
+
+/*----------------------------------------------------------------------------*/
 
 cpl_error_code gravi_image_subtract_window (cpl_image * img1, const cpl_image * img2,
                                             cpl_size llx, cpl_size lly,
