@@ -1117,6 +1117,8 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
 
   // cpl_msg_info (cpl_func, "nreg=%lli, nx=%lli, ny=%lli, ny_reg_mr=%lli", nreg, nx, ny, ny_reg_mr);
 
+  /* Case HIGH spectral resolution and 
+   * --bias-option=MEDIAN_PER_COLUMN */
   if (  !strcmp(resolution, "HIGH") && !strcmp (gravi_param_get_string_default (parlist,
                        "gravity.preproc.bias-method","MEDIAN"),
                        "MEDIAN_PER_COLUMN")) {
@@ -1170,6 +1172,8 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
       FREE (cpl_vector_delete, bias);
       FREE (cpl_vector_delete, bias_column);
     }
+  /* Case HIGH spectral resolution
+   * and --bias-method=MEDIAN */
     else if ( !strcmp(resolution, "HIGH") ) {
    /* High Resolution - the first 4 columns
     * are for bias. FIXME: make sure this is also true in
@@ -1196,6 +1200,8 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
 	}
     FREE (cpl_vector_delete, bias);
   }
+  /* Case LOW or MEDIUM spectral resolution
+   * and --bias-method=MEDIAN_PER_COLUMN */
   else if ( !strcmp (gravi_param_get_string_default (parlist,
                      "gravity.preproc.bias-method","MEDIAN"),
                      "MEDIAN_PER_COLUMN")) {
@@ -1255,6 +1261,8 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
     FREE (cpl_vector_delete, bias);
     FREE (cpl_vector_delete, bias_column);
   }
+  /* Case LOW or MEDIUM spectral resolution and 
+   * --bias-method=MEDIAN */
   else {
     /* Low and Medium - the first line of
      * each region is bias */
