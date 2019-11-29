@@ -457,9 +457,9 @@ cpl_parameter * gravi_parameter_add_biasmethod (cpl_parameterlist *self)
                                 "Method to average the biaspixels when cleaning-up\n "
                                 "the SC detector (only applied to MED and LOW). Ideally\n "
                                 "the same value shall be used when reducing the DARK\n "
-                                "with gravity_dark and the OBJECT with gravity_vis.",
+                                "with gravity_dark and the OBJECT with gravity_vis.\n",
                                 "gravity.preproc", "MEDIAN",
-                                2, "MEDIAN", "MEDIAN_PER_COLUMN");
+                                3, "MEDIAN", "MEDIAN_PER_COLUMN","MASKED_MEDIAN_PER_COLUMN");
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "bias-method");
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
 	cpl_parameterlist_append (self, p);

@@ -76,6 +76,7 @@ struct _gravi_data_{
 int gravi_data_is_oi_ext (cpl_propertylist * hdr);
 cpl_error_code gravi_data_check_savetypes(cpl_propertylist * hdr, cpl_table * oi_table);
 int gravi_data_get_dark_pos(cpl_table * detector_table, int reg);
+cpl_mask * gravi_data_create_bias_mask (cpl_table * detector_table, cpl_size nx, cpl_size ny);
 
 /*-----------------------------------------------------------------------------
                              Functions code
@@ -1060,6 +1061,89 @@ int gravi_data_get_dark_pos(cpl_table * detector_table, int reg)
     return (ref0_y+ref1_y)/2;
 }
 
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief return a mask with pixel to be considered for bias
+ *
+ * @param detector_table    cpl_table containing extension IMAGING_DETECTOR_TABLE
+ * @param nx                size of image
+ * @param ny                size of image
+ *
+ * Return a mask with 1 where the pixels are illumated with the spectra,
+ * according to the information in DETECTOR_TABLE, and 0 if the pixels
+ * are not illuminated.
+ *
+ * Returned mask should be desallocated with cpl_mask_delete
+ */
+/*----------------------------------------------------------------------------*/
+
+cpl_mask * gravi_data_create_bias_mask (cpl_table * detector_table,
+                                        cpl_size nx, cpl_size ny)
+{
+  gravi_msg_function_start(1);
+  cpl_ensure (detector_table, CPL_ERROR_NULL_INPUT, NULL);
+  cpl_ensure (nx > 2, CPL_ERROR_ILLEGAL_INPUT, NULL);
+  cpl_ensure (ny > 2, CPL_ERROR_ILLEGAL_INPUT, NULL);
+
+  /* Get size */
+  cpl_size nreg = cpl_table_get_nrow (detector_table);
+  cpl_ensure (nreg == 24 || nreg == 48, CPL_ERROR_ILLEGAL_INPUT, NULL);
+  
+  /* Define the mask with 0 everywhere */
+  cpl_mask * mask = cpl_mask_new (nx, ny);
+
+  cpl_msg_info (cpl_func, "Create mask with size nx = %lli, ny = %lli", nx, ny);
+
+  /* In LOW and MEDIUM, we impose spetrum are horizontal.
+     In HIGH, we allow for 0,1,2 order and enlarge the window */
+  cpl_size mindeg = 0, maxdeg, hw;
+  if      (nx < 150) {maxdeg = 0; hw = 4;}
+  else if (nx < 400) {maxdeg = 0; hw = 4;}
+  else               {maxdeg = 2; hw = 6;}
+
+  /* Names of columns */
+  int nnames = 5;
+  const char * names[] = {"LEFT","HALFLEFT","CENTER","HALFRIGHT","RIGHT"};
+
+  /* Prepare to fit the position from table */
+  cpl_polynomial * fit = cpl_polynomial_new (1);
+  cpl_matrix * xp = cpl_matrix_new (1,nnames);
+  cpl_vector * yp = cpl_vector_new (nnames);
+
+  /* Loop on regions */
+  for (cpl_size reg = 0; reg < nreg; reg++) {
+
+      /* Fill data for fit of the position from table */
+      for (int n = 0; n < nnames; n++) {
+          int x0 = gravi_table_get_value (detector_table, names[n], reg, 0) - 1;
+          int y0 = gravi_table_get_value (detector_table, names[n], reg, 1) - 1;
+          cpl_matrix_set (xp, 0, n, x0);
+          cpl_vector_set (yp, n, y0);
+      }
+
+      /* Solve polynomial */
+      cpl_polynomial_fit (fit, xp, NULL, yp, NULL, CPL_FALSE, &mindeg, &maxdeg);
+      CPLCHECK_NUL ("Cannot fit the expected position from table");
+
+      /* Evaluate polynomial for all column, and fill the pixels
+         around expected spectrum position with 1 */
+      for (cpl_size x = 0; x < nx ; x++) {
+          cpl_size y0 = cpl_polynomial_eval_1d (fit, x, NULL);
+          for (cpl_size y = y0-hw; y <= y0+hw; y++) {
+              cpl_mask_set (mask, x+1, y+1, CPL_BINARY_1);
+          }
+      }
+  } /* End loop on regions */
+
+  /* Free data */
+  FREE (cpl_polynomial_delete, fit);
+  FREE (cpl_matrix_delete, xp);
+  FREE (cpl_vector_delete, yp);
+
+  /* Return mask */
+  gravi_msg_function_exit(1);
+  return mask;
+}
 
 
 /*----------------------------------------------------------------------------*/
@@ -1068,11 +1152,11 @@ int gravi_data_get_dark_pos(cpl_table * detector_table, int reg)
  * 
  * @param data     gravi_data to be processed (in-place).
  * @param parlist  parameter list with :
- *                    - bias-method : Method to average the biaspixels when
- *                    cleaning-up the SC detector (only applied to MED and LOW).
- *                    Ideally the same value shall be used when reducing the DARK
- *                    with gravity_dark and the OBJECT with gravity_vis.
- *                    <MEDIAN | MEDIAN_PER_COLUMN> [MEDIAN]
+ *                 - bias-method : Method to average the biaspixels when
+ *                 cleaning-up the SC detector (only applied to MED and LOW).
+ *                 Ideally the same value shall be used when reducing the DARK
+ *                 with gravity_dark and the OBJECT with gravity_vis.
+ *                 <MEDIAN | MEDIAN_PER_COLUMN | MASKED_MEDIAN_PER_COLUMN> [MEDIAN]
  * 
  * This function applies the self bias-pixel correction to the IMAGING_DATA_SC
  * images, in-place. The bias is estimated independently for each image in the
@@ -1115,11 +1199,60 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
   cpl_size ny_reg_mr = (ny - 1) / nreg;
   cpl_size n_bias_line = 5;
 
-  // cpl_msg_info (cpl_func, "nreg=%lli, nx=%lli, ny=%lli, ny_reg_mr=%lli", nreg, nx, ny, ny_reg_mr);
+  /* Case --bias-option=MASKED_MEDIAN_PER_COLUMN */
+  if (  !strcmp (gravi_param_get_string_default (parlist,
+                 "gravity.preproc.bias-method","MEDIAN"),
+                 "MASKED_MEDIAN_PER_COLUMN")) {
+      
+      gravi_msg_warning ("FIXME","Bias method MASKED_MEDIAN_PER_COLUMN is experimental");
 
+      /* Build the mask of supposedly illuminated pixels */
+      cpl_mask * mask;
+      mask = gravi_data_create_bias_mask (detector_table, nx, ny);
+
+      /* Save the mask in data */
+      cpl_image * mask_img = cpl_image_new_from_mask (mask);
+      gravi_data_add_img (data, NULL, "BIAS_MASK_SC", mask_img);
+      
+      /* Loop on frames */
+      for (cpl_size f = 0; f < nframe; f++) {
+        cpl_image * frame = cpl_imagelist_get (imglist, f);
+
+        /* Set the illuminated pixels as 'bad pixels', store 
+           the current bad-pixel map in case it exists */
+        cpl_mask * thismask = cpl_mask_duplicate (mask);	
+        cpl_mask * bpm = cpl_image_set_bpm  (frame, thismask);
+
+        /* Compute median along the y direction */
+        cpl_image * collapse;
+        collapse = cpl_image_collapse_median_create (frame, 0, 0, 0);
+
+        /* Set back the bpm immediately, otherwise following
+           operations are not running on masked pixels */
+        thismask = cpl_image_set_bpm (frame, bpm);
+        FREE (cpl_mask_delete, thismask);
+
+        /* Remove this value to all pixels of the column */
+        for (cpl_size x = 0; x < nx ; x++) {
+            double bias = cpl_image_get (collapse, x+1, 1, &nv);
+            cpl_ensure_code (!nv, CPL_ERROR_ILLEGAL_INPUT);
+            for (cpl_size y = 0; y < ny ; y++) {
+                cpl_image_set (frame, x+1, y+1, cpl_image_get (frame, x+1, y+1, &nv) - bias);
+            }
+        }
+
+        /* For QC */
+        cpl_vector_set (bias_list, f, cpl_image_get_mean (collapse));
+
+        /* Delete data */
+        FREE (cpl_image_delete, collapse);
+      } /* End loop on frames */
+
+      FREE (cpl_mask_delete, mask);
+  }
   /* Case HIGH spectral resolution and 
    * --bias-option=MEDIAN_PER_COLUMN */
-  if (  !strcmp(resolution, "HIGH") && !strcmp (gravi_param_get_string_default (parlist,
+  else if (  !strcmp(resolution, "HIGH") && !strcmp (gravi_param_get_string_default (parlist,
                        "gravity.preproc.bias-method","MEDIAN"),
                        "MEDIAN_PER_COLUMN")) {
       /* TODO High - the n first lines of Image is bias
