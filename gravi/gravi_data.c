@@ -1065,7 +1065,7 @@ int gravi_data_get_dark_pos(cpl_table * detector_table, int reg)
 
 /*----------------------------------------------------------------------------*/
 /**
- * @brief return a mask with pixel to be considered for bias
+ * @brief return a mask with pixel to be possibly illuminated
  *
  * @param detector_table    cpl_table containing extension IMAGING_DETECTOR_TABLE
  * @param nx                size of image
@@ -1096,7 +1096,7 @@ cpl_mask * gravi_data_create_bias_mask (cpl_table * detector_table,
 
   cpl_msg_info (cpl_func, "Create mask with size nx = %lli, ny = %lli", nx, ny);
 
-  /* In LOW and MEDIUM, we impose spetrum are horizontal.
+  /* In LOW and MEDIUM, we impose spectrum are horizontal.
      In HIGH, we allow for 0,1,2 order and enlarge the window */
   cpl_size mindeg = 0, maxdeg, hw;
   if      (nx < 150) {maxdeg = 0; hw = 4;}
@@ -1146,7 +1146,6 @@ cpl_mask * gravi_data_create_bias_mask (cpl_table * detector_table,
   gravi_msg_function_exit(1);
   return mask;
 }
-
 
 /*----------------------------------------------------------------------------*/
 /**
@@ -1211,7 +1210,7 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
       /* Build the mask of supposedly illuminated pixels */
       cpl_mask * mask;
       mask = gravi_data_create_bias_mask (detector_table, nx, ny);
-
+      
       /* Save the mask in data */
       cpl_image * mask_img = cpl_image_new_from_mask (mask);
       gravi_data_add_img (data, NULL, "BIAS_MASK_SC", mask_img);
@@ -1220,14 +1219,27 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
       for (cpl_size f = 0; f < nframe; f++) {
         cpl_image * frame = cpl_imagelist_get (imglist, f);
 
+        /* Get the overal shape in the vertical direction 
+           by the mean of bias pixels. To help the median.
+           This is still not tested  */
+        // cpl_size nbias_x = 4;
+        // cpl_image * collapse_x; 
+        // collapse_x = gravi_image_collapse_median_x (frame, nbias_x + 1, nx - nbias_x);
+        // cpl_image_subtract_scalar (collapse_x, cpl_image_get_median (collapse_x));
+        
+        /* Remove this value to all pixels of the line */
+        // gravi_image_subtract_collapse (frame, collapse_x, 1);
+        // CPLCHECK_MSG ("Cannot remove x shape");
+
         /* Set the illuminated pixels as 'bad pixels', store 
            the current bad-pixel map in case it exists */
-        cpl_mask * thismask = cpl_mask_duplicate (mask);	
+        cpl_mask * thismask = cpl_mask_duplicate (mask);
         cpl_mask * bpm = cpl_image_set_bpm  (frame, thismask);
+        FREE (cpl_mask_delete, bpm);
 
         /* Compute median along the y direction */
-        cpl_image * collapse;
-        collapse = cpl_image_collapse_median_create (frame, 0, 0, 0);
+        cpl_image * collapse_y;
+        collapse_y = cpl_image_collapse_median_create (frame, 0, 0, 0);
 
         /* Set back the bpm immediately, otherwise following
            operations are not running on masked pixels */
@@ -1235,19 +1247,21 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
         FREE (cpl_mask_delete, thismask);
 
         /* Remove this value to all pixels of the column */
-        for (cpl_size x = 0; x < nx ; x++) {
-            double bias = cpl_image_get (collapse, x+1, 1, &nv);
-            cpl_ensure_code (!nv, CPL_ERROR_ILLEGAL_INPUT);
-            for (cpl_size y = 0; y < ny ; y++) {
-                cpl_image_set (frame, x+1, y+1, cpl_image_get (frame, x+1, y+1, &nv) - bias);
-            }
-        }
+        gravi_image_subtract_collapse (frame, collapse_y, 0);
 
+        /* Re-add the crude bias shape in the y direction. Ideally we
+           would like to remove it entirely, but the SNR is too low.
+           This is still not tested */
+        // cpl_image_multiply_scalar (mean_collapse_x, -1.0);
+        // gravi_image_subtract_collapse (frame, mean_collapse_x, 1);
+        
         /* For QC */
-        cpl_vector_set (bias_list, f, cpl_image_get_mean (collapse));
+        cpl_vector_set (bias_list, f, cpl_image_get_mean (collapse_y));
 
         /* Delete data */
-        FREE (cpl_image_delete, collapse);
+        // FREE (cpl_image_delete, collapse_x);
+        FREE (cpl_image_delete, collapse_y);
+        
       } /* End loop on frames */
 
       FREE (cpl_mask_delete, mask);
