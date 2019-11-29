@@ -265,7 +265,10 @@ cpl_error_code gravi_apply_tf_amp( gravi_data * science,
   cpl_ensure_code (num_tf_data>0, CPL_ERROR_ILLEGAL_INPUT);
   
   cpl_msg_debug (cpl_func, "%s %s amp=%s ampErr=%s nbase=%i",extName,insName,ampName,ampErrName,nbase);
-
+  /*oifits2 conformance: if ampName is FLUX, then apply to (existing) FLUXDATA column as well*/
+  int dofluxdata=0;
+  if (!strcmp(ampName,"FLUX")) dofluxdata=1;
+  
   int i, row_sc, row_cal, nv=0;
 
   /* Get correct table */
@@ -336,7 +339,7 @@ cpl_error_code gravi_apply_tf_amp( gravi_data * science,
 	
 	/* Apply the TF to the science_calibrated data */
 	cpl_array_divide (cpl_table_get_data_array (sci_table, ampName)[row_sc], tf_mean);
-	
+	if (dofluxdata) cpl_array_divide (cpl_table_get_data_array (sci_table, "FLUXDATA")[row_sc], tf_mean); /*That's it for OIFITS2 conformance*/
 	/* Apply the TF to the error on the science_calibrated data -- FIXME: error on TF not propagated */
 	cpl_array_divide (cpl_table_get_data_array (sci_table, ampErrName)[row_sc], tf_mean);
 

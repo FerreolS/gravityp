@@ -459,8 +459,8 @@ cpl_error_code gravi_flux_average_bootstrap(cpl_table * oi_flux_avg,
    * (3) Save the results on the oi_flux_avg tables 
    */
 
-  /* Save the cloture amplitude on the oi_T3 tables  */
   cpl_table_set_array (oi_flux_avg, "FLUX", tel, flux_res[2]);
+  cpl_table_set_array (oi_flux_avg, "FLUXDATA", tel, flux_res[2]); /*for oifits2 compliance*/
   cpl_table_set_array (oi_flux_avg, "FLUXERR", tel, flux_res[3]);
   CPLCHECK_MSG("filling FLUX and FLUXERR");
 
@@ -2659,6 +2659,10 @@ cpl_error_code gravi_vis_average_amp (cpl_table *oi_table, const char *name,  co
 	/* Set the mean */
 	cpl_array_divide (value, weight);
 	cpl_table_set_array (oi_table, name, base, value);
+    
+    /* Special for "FLUX": OIFITS2 conformance needs to copy result in "FLUXDATA" */
+    if (!strcmp(name,"FLUX")) cpl_table_set_array (oi_table, "FLUXDATA", base, value);
+    
 	/* Set the variance of the mean */
 	cpl_array_power (weight, -0.5);
 	cpl_table_set_array (oi_table, err,  base, weight);
@@ -3029,6 +3033,8 @@ cpl_error_code gravi_vis_smooth_amp (cpl_table * oi_table, const char * name, co
 
     /* Set back */
     cpl_table_set_array (oi_table, name, row, smo_array);
+    /*special for FLUX: duplicate in FLUXDATA , OIFITS2 compliance */
+    if (!strcmp (name, "FLUX")) cpl_table_set_array (oi_table, "FLUXDATA", row, smo_array);
     cpl_table_set_array (oi_table, err,  row, err_array);
     CPLCHECK_MSG ("Cannot smooth amp");
 	
@@ -3303,7 +3309,10 @@ cpl_error_code gravi_vis_resamp_amp (cpl_table * oi_table, const char * name, co
 {
   gravi_msg_function_start(1);
   cpl_ensure_code (oi_table, CPL_ERROR_NULL_INPUT);
-
+  
+  /*special for FLUX: duplicate in FLUXDATA , OIFITS2 compliance */
+  int dofluxdata=0;
+  if (!strcmp (name, "FLUX")) dofluxdata=1;
   /* Loop on rows */
   cpl_size nrow = cpl_table_get_nrow (oi_table);
   cpl_ensure_code (nrow > 0, CPL_ERROR_ILLEGAL_INPUT);
@@ -3320,12 +3329,14 @@ cpl_error_code gravi_vis_resamp_amp (cpl_table * oi_table, const char * name, co
 		  weight += w;
 		}
 		gravi_table_set_value (oi_table,name,row,wave, sum / weight);
+        if (dofluxdata) gravi_table_set_value (oi_table,"FLUXDATA",row,wave, sum / weight);
 		gravi_table_set_value (oi_table,err,row,wave, pow (weight, -0.5));
 	  }
 	
   } /* End loop on rows */
 
   cpl_table_set_column_depth (oi_table, name, nwave_new);
+  if (dofluxdata) cpl_table_set_column_depth (oi_table, "FLUXDATA", nwave_new);
   cpl_table_set_column_depth (oi_table, err,  nwave_new);
 
   gravi_msg_function_exit(1);

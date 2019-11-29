@@ -195,7 +195,9 @@ cpl_error_code gravi_data_check_savetypes (cpl_propertylist * hdr, cpl_table * o
   if ( cpl_table_has_column (oi_table, "FLAG") ) {
 	cpl_table_set_column_savetype(oi_table, "FLAG", CPL_TYPE_BOOL);
   }
-
+  if ( cpl_table_has_column (oi_table, "VISREFMAP") ) {
+	cpl_table_set_column_savetype(oi_table, "VISREFMAP", CPL_TYPE_BOOL);
+  }
   if ( cpl_table_has_column (oi_table, "STA_INDEX") ) {
 	cpl_table_set_column_savetype(oi_table, "STA_INDEX", CPL_TYPE_SHORT);
   }
@@ -2077,13 +2079,14 @@ cpl_error_code gravi_data_add_table (gravi_data * self,
 	if (plist_name && !(strcmp(plist_name,  GRAVI_OI_ARRAY_EXT) &&
 						strcmp (plist_name, GRAVI_OI_TARGET_EXT) &&
 						strcmp (plist_name, GRAVI_OI_WAVELENGTH_EXT) &&
-						strcmp (plist_name, GRAVI_OI_FLUX_EXT) &&
 						strcmp (plist_name, GRAVI_OI_T3_EXT) &&
 						strcmp (plist_name, GRAVI_OI_VIS2_EXT) &&
 						strcmp (plist_name, GRAVI_OI_VIS_EXT))) {
-		cpl_propertylist_update_int (plist, "OI_REVN", 1);
+		cpl_propertylist_update_int (plist, "OI_REVN", 2);
 	}
-	
+	if (plist_name && !(strcmp(plist_name,  GRAVI_OI_FLUX_EXT))) {
+		cpl_propertylist_update_int (plist, "OI_REVN", 1);
+	}	
 	/* OIFITS: check is saved as short */
 	gravi_data_check_savetypes (plist, table);
 	
