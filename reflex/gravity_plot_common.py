@@ -30,7 +30,7 @@ class GravityInstrumentConf:
     this_lab_input = self.getLabInputIndex(gravity_input)
     ncol_ot = self.conf.getTableNcols('OPTICAL_TRAIN')
     tel_name_col = self.conf.readTableColumn('OPTICAL_TRAIN', 'TEL_NAME')
-    for col in range(1, (ncol_ot - 2 ) / 2 + 1) :
+    for col in range(1, int((ncol_ot - 2 ) / 2) + 1) :
       colname = "OPTI_NAME{0}".format(col)
       opti_elem = self.conf.readTableColumn('OPTICAL_TRAIN', colname)
       if(opti_elem[0] == 'LAB_INPUT1'):
