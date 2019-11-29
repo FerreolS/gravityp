@@ -1,4 +1,6 @@
 from __future__ import with_statement
+from __future__ import absolute_import
+from __future__ import print_function
 import sys
 
 
@@ -10,7 +12,7 @@ try:
 
 except ImportError:
     import_success = False
-    print "Error importing modules pyfits, wx, matplotlib, numpy"
+    print("Error importing modules pyfits, wx, matplotlib, numpy")
 
 
 def paragraph(text, width=None):
