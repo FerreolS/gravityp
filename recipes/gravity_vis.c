@@ -682,7 +682,7 @@ static int gravity_vis(cpl_frameset * frameset,
 		gravi_data_patch (data, patch_frameset);
         gravi_data_detector_cleanup (data, parlist);
 
-		/* Option save the preproc file */
+		/* Option save the bias-subtracted file */
 		if (gravi_param_get_bool (parlist,"gravity.dfs.bias-subtracted-file")) {
 		  
 			gravi_data_save_new (data, frameset, NULL, filename_suffix, parlist,
