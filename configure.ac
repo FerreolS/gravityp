@@ -1,6 +1,6 @@
 # Process this file with autoconf to produce a configure script.
 
-AC_INIT([GRAVITY Instrument Pipeline], [1.3.0], [usd_help@eso.org],
+AC_INIT([GRAVITY Instrument Pipeline], [1.3.1], [usd_help@eso.org],
 [gravity])
 AC_PREREQ([2.59])
 
