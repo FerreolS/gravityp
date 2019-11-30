@@ -870,23 +870,42 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
 }
 
 /*----------------------------------------------------------------------------*/
-/*
+/**
  * @brief measure Strehl Ratio of the source at the given location
- */
+ *
+ * @param img      input image
+ * @param x,y      position in image in FITS convention (1,1 is lower,left)
+ * @param pscale   plate scale
+ * @param SR       returned strehl value
+ * @param header   property list to read the telescope (UTs or ATs)
+ *
+ * The function extrat a sub-image of +-50pixel around the x,y position
+ * and run the hdrl_strehl_compute function.
+ **/
 /*----------------------------------------------------------------------------*/
 
 cpl_error_code gravi_acq_measure_strehl(cpl_image * img, double x, double y, 
-                                        double pscale, double *SR, cpl_propertylist * header)
+                                        double pscale, double *SR,
+                                        cpl_propertylist * header)
 {
     gravi_msg_function_start(0);
-    cpl_ensure_code (img, CPL_ERROR_NULL_INPUT);
-    cpl_ensure_code (SR, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (img,        CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (SR,         CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (header,     CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (pscale > 0, CPL_ERROR_ILLEGAL_INPUT);
 
-    const char * telname = gravi_conf_get_telname (0, header);
-    CPLCHECK ("Cannot get telescope name");
+    cpl_size hw = 50;
+    cpl_ensure_code (x > hw, CPL_ERROR_ILLEGAL_INPUT);
+    cpl_ensure_code (y > hw, CPL_ERROR_ILLEGAL_INPUT);
+
+    /* Structure to define the parameters
+       for fitting strehl in image */
     hdrl_parameter * strehl_params;
 
     /* Hardcoded Mirror diameters */
+    const char * telname = gravi_conf_get_telname (0, header);
+    CPLCHECK ("Cannot get telescope name");
+    
     if (telname[0] == 'U') {
         strehl_params = 
             hdrl_strehl_parameter_create (1.8e-6, 8.0/2.0, 1.126/2.0,
@@ -903,15 +922,19 @@ cpl_error_code gravi_acq_measure_strehl(cpl_image * img, double x, double y,
         return CPL_ERROR_ILLEGAL_INPUT;
     }
 
-    hdrl_strehl_result strehl;
-    cpl_image * sub_image = cpl_image_extract (img, x-50, y-50, x+50, y+50);
+    /* Extract sub-image */
+    cpl_image * sub_image = cpl_image_extract (img, x-hw, y-hw, x+hw, y+hw);
     hdrl_image * sub_hdrl = hdrl_image_create (sub_image, NULL);
 
+    /* Run Strehl algorithm from HDRL package */
+    hdrl_strehl_result strehl;
     strehl = hdrl_strehl_compute (sub_hdrl, strehl_params);
     *SR = (double) strehl.strehl_value.data;
-    FREE (hdrl_image_delete, sub_hdrl);
+
+    /* Delete */
     FREE (cpl_image_delete, sub_image);
-    hdrl_parameter_delete(strehl_params);
+    FREE (hdrl_image_delete, sub_hdrl);
+    FREE (hdrl_parameter_delete, strehl_params);
 
     gravi_msg_function_exit(0);
     return CPL_ERROR_NONE;
@@ -1112,7 +1135,7 @@ cpl_error_code gravi_acqcam_pupil(cpl_image * mean_img,
 		 get pupil shift, focus, and rotation */
 
 		/* copy to initial guess, to then also include pupil rotation, fwhm, and flux */
-		cpl_vector * a_initial = cpl_vector_duplicate(a_start);
+		cpl_vector * a_initial = cpl_vector_duplicate (a_start);
 
 		/* We see that fitting the spot angle fails if one spot is fainter than reflection from brightest spot
 		 resulting in wrong pupil_x,y, therefore we calculate angle from header information
@@ -1127,17 +1150,17 @@ cpl_error_code gravi_acqcam_pupil(cpl_image * mean_img,
 
 		if (angle < 0)   angle += 180;
 		if (angle > 180) angle -= 180;
-		cpl_vector_set(a_initial, GRAVI_SPOT_ANGLE, angle);
+		cpl_vector_set (a_initial, GRAVI_SPOT_ANGLE, angle);
 
 		/* set initial flux of model spots to 1 such that model is not equal zero */
 		for (int d = 0; d < 16; d++)
-			cpl_vector_set(a_initial, GRAVI_SPOT_FLUX + d, 1.0);
+			cpl_vector_set (a_initial, GRAVI_SPOT_FLUX + d, 1.0);
 
 		/* set FWHM to a realist value in [pix**2] */
-		cpl_vector_set(a_initial, GRAVI_SPOT_FWHM, 2.3 * 2.3);
+		cpl_vector_set (a_initial, GRAVI_SPOT_FWHM, 2.3 * 2.3);
 
 		/* copy initial guess for the fit of the average image in a_final */
-		cpl_vector * a_final = cpl_vector_duplicate(a_initial);
+		cpl_vector * a_final = cpl_vector_duplicate (a_initial);
 
 		/* fit all model parameters for average image */
 		/* ekki modified below gravi_acqcam_fit_spot (mean_img, a_final, 1, &nspot); */
@@ -1248,7 +1271,7 @@ cpl_error_code gravi_acqcam_pupil(cpl_image * mean_img,
 
 			/* Get data and initialize model fit */
 			cpl_image * img = cpl_imagelist_get(acqcam_imglist, row);
-			cpl_vector * a_row = cpl_vector_duplicate(a_initial);
+			cpl_vector * a_row = cpl_vector_duplicate (a_initial);
 
 			/* Fit pupil sensor spots in this image. */
 			gravi_acqcam_fit_spot(img, a_row, 1, &nspot);
@@ -1317,10 +1340,11 @@ cpl_error_code gravi_acqcam_pupil(cpl_image * mean_img,
 				cpl_table_set(acqcam_table, "OPD_PUPIL", row * ntel + tel,
 						opd_pupil);
 			}
-			FREE(cpl_vector_delete, a_row);
+			FREE (cpl_vector_delete, a_row);
 		}
-		FREE(cpl_vector_delete, a_start);
-		FREE(cpl_vector_delete, a_final);
+		FREE (cpl_vector_delete, a_start);
+		FREE (cpl_vector_delete, a_final);
+		FREE (cpl_vector_delete, a_initial);
 	} /* End loop on tel */
 
 	gravi_msg_function_exit(1);
