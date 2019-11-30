@@ -123,9 +123,7 @@ cpl_error_code gravi_acq_measure_strehl(cpl_image * img, double x, double y,
 
 cpl_error_code gravi_acq_measure_max(cpl_image * img, double x, double y, double size, double * img_max);
 
-// FE added function for calculating maximum position in crosscorrelation
-cpl_error_code FFTcorrelate(cpl_image *ia, cpl_image *ib, cpl_size *xd, cpl_size *yd);
-
+cpl_error_code gravi_image_fft_correlate (cpl_image *ia, cpl_image *ib, cpl_size *xd, cpl_size *yd);
 
 /* This global variable optimises the computation
  * of partial derivative on fitted parameters */
@@ -682,39 +680,40 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
 
     /* x00,y00 in definition of model coordinates, i.e. lower left pixel = 0,0 
        but CPL in fits convention, i.e. lower left pixel = 1,1 */
-    cpl_image *ia  = cpl_image_extract(img, x00 + 1, y00 + 1, x00 + nx, y00 + ny);
+    cpl_image *ia  = cpl_image_extract (img, x00 + 1, y00 + 1, x00 + nx, y00 + ny);
 
     /* Create model image */
-    cpl_image *ib  = cpl_image_new(nx, ny, CPL_TYPE_DOUBLE);
-    double   *a_vector;
-    /* convert cpl_vector a to normal c vector */
-    a_vector = cpl_vector_get_data(a);   
+    cpl_image *ib  = cpl_image_new (nx, ny, CPL_TYPE_DOUBLE);
+    
+    /* Get data from parameter vector */
+    double *a_vector = cpl_vector_get_data(a);   
 
-    int    ii, jj;
+    /* Fill this image with model */
     double x_in[2];
     double result = 0.0;
-    int    ret = 0;
-
-    for (ii = 0; ii < nx ; ii++) {
-      for (jj = 0; jj < ny; jj++) {
+    
+    for (int ii = 0; ii < nx ; ii++) {
+      for (int jj = 0; jj < ny; jj++) {
 	x_in[0] = ii + (double) x00 ;
 	x_in[1] = jj + (double) y00 ;
-	ret = gravi_acqcam_spot(x_in, a_vector, &result);
-	// FE ToDo add error handling if routine fails for some reason //
-	/* x_in in definition of model coordinates, i.e. lower left pixel = 0,0 
-	   but CPL in fits convention, i.e. lower left pixel = 1,1 */
-	cpl_error_code err = cpl_image_set(ib, ii + 1, jj + 1, result);
+	gravi_acqcam_spot (x_in, a_vector, &result);
+	cpl_image_set (ib, ii + 1, jj + 1, result);
       }
     }
 
-    /* shift determined from cross corellation */
+    /* Shift determined from cross corellation */
     cpl_size xout = 0;
     cpl_size yout = 0;
-    cpl_error_code err = FFTcorrelate(ia, ib, &xout, &yout);
+    gravi_image_fft_correlate (ia, ib, &xout, &yout);
+    CPLCHECK_MSG ("Cannot correlate data with model");
     
-     /* update model for subsequent model fitting */
-    cpl_vector_set(a, GRAVI_SPOT_SUB + 0, cpl_vector_get(a, GRAVI_SPOT_SUB + 0) + (double) xout);
-    cpl_vector_set(a, GRAVI_SPOT_SUB + 4, cpl_vector_get(a, GRAVI_SPOT_SUB + 4) + (double) yout);
+    /* Delete memory */
+    FREE (cpl_image_delete, ia);
+    FREE (cpl_image_delete, ib);
+    
+    /* Update model for subsequent model fitting */
+    cpl_vector_set (a, GRAVI_SPOT_SUB + 0, cpl_vector_get(a, GRAVI_SPOT_SUB + 0) + (double) xout);
+    cpl_vector_set (a, GRAVI_SPOT_SUB + 4, cpl_vector_get(a, GRAVI_SPOT_SUB + 4) + (double) yout);
 
     /*
      * Fine: fit 10 pixel around each spot with true Gaussian
@@ -793,7 +792,9 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
       for (int d=0; d<16; d++) cpl_vector_set (a, GRAVI_SPOT_FLUX+d, 0);
     }
    
-    /* FE: Repeat the Cutout of spotwindows and fit to account for imperfect knowledge of the rotation angle assumed in the first fit */
+    /* FE: Repeat the Cutout of spotwindows and fit
+       to account for imperfect knowledge of the rotation
+       angle assumed in the first fit */
 
     /* FE: recalculate spot windows from results of initial fit */
     gravi_acqcam_xy_diode (cpl_vector_get_data (a), xd, yd);
@@ -831,7 +832,8 @@ cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
         }
     }
 
-    /* FE: refit using a as returned by the initial fit as starting point, but now on newly cut spot windows */
+    /* FE: refit using a as returned by the initial fit
+       as starting point, but now on newly cut spot windows */
     chisq_fine = 0.0;
     prestate = cpl_errorstate_get();
     cpl_fit_lvmq (x_matrix, NULL, y_vector, sy_vector,
@@ -2068,16 +2070,27 @@ double gravi_acqcam_z2meter (double PositionPixels, gravi_data * static_param_da
 }
 
 
-/*
- * Correlate two images using FFT
- * ia Input image cut down to one telescope
- * ib Input Model
- * xd Output x shift
- * yd Output y shift
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Correlate two images using FFT.
+ *  
+ * @param ia Input image cut down to one telescope
+ * @param ib Input Model
+ * @param xd Output x shift
+ * @param yd Output y shift
+ *
+ * Input images are not destroyed
  */
+/*----------------------------------------------------------------------------*/
 
-cpl_error_code FFTcorrelate(cpl_image *ia, cpl_image *ib, cpl_size *xd, cpl_size *yd) {
-
+cpl_error_code gravi_image_fft_correlate (cpl_image *ia, cpl_image *ib, cpl_size *xd, cpl_size *yd)
+{
+  gravi_msg_function_start(0);                                                                                                    
+  cpl_ensure_code (ia, CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (ib, CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (xd, CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (yd, CPL_ERROR_NULL_INPUT);
+  
   cpl_error_code error = CPL_ERROR_NONE;
   cpl_type type  = cpl_image_get_type(ia);
   cpl_size nx    = cpl_image_get_size_x(ia);
@@ -2123,7 +2136,6 @@ cpl_error_code FFTcorrelate(cpl_image *ia, cpl_image *ib, cpl_size *xd, cpl_size
   if (*yd > ny/2) *yd = *yd - ny;
 
   /* subtract one for come from fits convention (lower left pixel = 1,1) to shift vector */
-
   (*xd)--;
   (*yd)--;
 
@@ -2131,12 +2143,15 @@ cpl_error_code FFTcorrelate(cpl_image *ia, cpl_image *ib, cpl_size *xd, cpl_size
   //  cpl_image_save (ib, "ib.fits", CPL_TYPE_DOUBLE,NULL, CPL_IO_DEFAULT);
   //  cpl_image_save (ic, "ic.fits", CPL_TYPE_DOUBLE,NULL, CPL_IO_DEFAULT);
 
+  /* Free memory allocated by this routine */
+  FREE (cpl_imagelist_unwrap, iab);
+  FREE (cpl_imagelist_unwrap, fab);
+  FREE (cpl_image_delete, ic);
+  FREE (cpl_image_delete, fa);
+  FREE (cpl_image_delete, fb);
+  FREE (cpl_image_delete, fc);
 
-  cpl_imagelist_delete(iab);
-  cpl_imagelist_delete(fab);
-  cpl_image_delete(ic);
-  cpl_image_delete(fc);
-
+  gravi_msg_function_exit(0);
   return (error);
 }
 
