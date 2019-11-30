@@ -1389,6 +1389,10 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
     
     /* Number of row */
     cpl_size nrow = cpl_imagelist_get_size (acqcam_imglist);
+
+    /* MODE_ONAXIS or MODE_OFFAIS. We query once
+       at the begining of the function */
+    int axis_mode = gravi_pfits_get_axis (header);
     
     /* Create columns */
     gravi_table_new_column (acqcam_table, "FIELD_SC_X", "pix", CPL_TYPE_DOUBLE);
@@ -1632,7 +1636,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         
         double xFT, yFT, xSC, ySC;
         
-        if (gravi_pfits_get_axis (header) == MODE_ONAXIS) {
+        if (axis_mode == MODE_ONAXIS) {
             /* TODO: close dual-field */
             /* Single-field case */
             /* Simply shift the best spot from full frame to cut-out */
@@ -1716,7 +1720,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         /* Measure FT target position in mean image */
         /*------------------------------------------*/
         
-        if ((gravi_pfits_get_axis (header) != MODE_ONAXIS)) {
+        if (axis_mode != MODE_ONAXIS) {
             /* Detec FT */
             gravi_acq_fit_gaussian (mean_img, &xFT, &yFT, &ex, &ey, size);
             CPLCHECK_MSG("Error fitting FT");
@@ -1759,7 +1763,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         /* If in dual field, measure plate scale */
         /*---------------------------------------*/
         
-        if (gravi_pfits_get_axis (header) != MODE_ONAXIS) {
+        if (axis_mode != MODE_ONAXIS) {
             sprintf (qc_name, "ESO QC ACQ FIELD%i SCALE", tel+1);
             double sep = sqrt((ySC-yFT)*(ySC-yFT)+(xSC-xFT)*(xSC-xFT));
 	    /* FE 2019-10-31 in case separation could not  be measured, i.e. 0, then use default scale */
@@ -1777,7 +1781,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         /* If in dual field, measure fibre position error */
         /*------------------------------------------------*/
         
-        if (gravi_pfits_get_axis (header) != MODE_ONAXIS) {
+        if (axis_mode != MODE_ONAXIS) {
             /* Error in SC fibre positioning */
             /* The three terms are */
             /*  - offset from FT target as detected to original SC */
@@ -1856,7 +1860,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             /* FT target position computation of current frame */
             /*-------------------------------------------------*/
             double xft = xFT, yft = yFT, exft=0., eyft=0.;
-            if (gravi_pfits_get_axis (header) != MODE_ONAXIS) {
+            if (axis_mode != MODE_ONAXIS) {
                 gravi_acq_fit_gaussian (img, &xft, &yft, &exft, &eyft, size);
                 CPLCHECK_MSG("Error fitting FT");
                 /* Shift back positions to full frame */
