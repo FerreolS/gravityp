@@ -1405,7 +1405,8 @@ cpl_error_code gravi_p2vm_phase_correction (gravi_data * p2vm_map,
                   for (cpl_size wave=0; wave<nwave;wave++) {
                       cpl_array_set_complex (visphase[base + pol*6], wave, cexp( I * cpl_polynomial_eval_1d (fit, cpl_matrix_get (sigma_matrix,0,wave), NULL)));
                   }
-                  
+
+                  FREE (cpl_polynomial_delete, fit);
                   FREE (cpl_matrix_delete, sigma_matrix);
               }
           
