@@ -668,6 +668,7 @@ int gravity_get_socket_connection (const char * host, const char * port)
     if (getaddrinfo(host, port, &hints, &addr_list) != 0) {
         cpl_error_set_message(cpl_func, CPL_ERROR_DATA_NOT_FOUND,
             "Couldn't get address for host");
+        freeaddrinfo(addr_list);
         return 0;
     }
 
@@ -698,6 +699,7 @@ int gravity_get_socket_connection (const char * host, const char * port)
     {
         cpl_error_set_message(cpl_func, CPL_ERROR_DATA_NOT_FOUND,
             "Couldn't connect to the host");
+        freeaddrinfo(addr_list);
         return 0;
     }
 
