@@ -43,7 +43,7 @@ static void gravi_eop_retrieve_eop_test(void);
 int main (void)
 {
 
-    cpl_test_init(PACKAGE_BUGREPORT, CPL_MSG_WARNING);
+    cpl_test_init(PACKAGE_BUGREPORT, CPL_MSG_INFO);
 
     gravi_eop_all_test();
 

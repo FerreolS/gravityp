@@ -405,7 +405,7 @@ int main(void)
 {
     int flag;
 
-    cpl_test_init(PACKAGE_BUGREPORT, CPL_MSG_WARNING);
+    cpl_test_init(PACKAGE_BUGREPORT, CPL_MSG_INFO);
 
     flag=gravi_utils_test();
 

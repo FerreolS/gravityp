@@ -75,7 +75,7 @@ int gravi_strehl_tests(void)
 int main(void)
 {
     int flag;
-    cpl_test_init(PACKAGE_BUGREPORT, CPL_MSG_WARNING);
+    cpl_test_init(PACKAGE_BUGREPORT, CPL_MSG_INFO);
 
     flag=gravi_strehl_tests();
 
