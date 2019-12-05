@@ -309,7 +309,7 @@ static int gravity_eop(cpl_frameset            * frameset,
     
 
     /* Retrieve EOP file from the site */
-    char * eop_data;
+    const char * eop_data;
     int          data_length;
     cpl_msg_info (cpl_func, "Retrieving EOP file ");
     eop_data = gravity_eop_download_finals2000A (eop_host, eop_urlpath, &data_length);
@@ -319,7 +319,7 @@ static int gravity_eop(cpl_frameset            * frameset,
                                         "Could not download data from server");
     }
 
-	/* Convert to a CPL_TABLE */
+    /* Convert to a CPL_TABLE */
     cpl_msg_info (cpl_func, "Convert EOP data to cpl_table");
     cpl_table * eop_table = gravity_eop_data_totable (eop_data, data_length);
 
@@ -370,7 +370,7 @@ cpl_error_code gravity_eop_compute_qc (cpl_table * eop_table,
                                        double * mjd_lastfinal)
 {
     double mjd_start;
-    double mjd_lastprediction = 0;
+    double mjd_lastprediction;
     int null;
 
     mjd_start = cpl_table_get_double (eop_table, "MJD", 0, &null);
@@ -382,7 +382,7 @@ cpl_error_code gravity_eop_compute_qc (cpl_table * eop_table,
         if(!strncmp(flag, "P", 1))
             mjd_lastprediction = cpl_table_get_double(eop_table, "MJD", i, &null);
     }
-	
+
     cpl_msg_info (cpl_func, "QC EOP MJD START = %.3f", mjd_start);
     cpl_msg_info (cpl_func, "QC EOP MJD LAST FINAL = %.3f", *mjd_lastfinal);
     cpl_msg_info (cpl_func, "QC EOP MJD LAST PREDICTION = %.3f", mjd_lastprediction);
@@ -391,6 +391,6 @@ cpl_error_code gravity_eop_compute_qc (cpl_table * eop_table,
     cpl_propertylist_append_double (header, "ESO QC EOP MJD LAST FINAL", *mjd_lastfinal);
     cpl_propertylist_append_double (header, "ESO QC EOP MJD LAST PREDICTION", mjd_lastprediction);
     cpl_propertylist_append_double (header, "MJD-OBS", *mjd_lastfinal);
-	
+
     return CPL_ERROR_NONE;
 }
