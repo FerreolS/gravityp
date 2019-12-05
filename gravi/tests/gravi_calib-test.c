@@ -424,6 +424,7 @@ int gravi_calib_test(void){
 	test_pfailure(CPL_ERROR_ILLEGAL_INPUT, gravi_compute_wave(data_wave, spectrum_data, 10, paralist, wave_param),
 			              "gravi_compute_wave: Try to compute the wave with illegal type... ", flag);
 
+    FREE (gravi_data_delete, wave_param);
     FREE (gravi_data_delete, spectrum_data);
 //	cpl_table_delete (opl_table);
 
