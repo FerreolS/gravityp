@@ -308,9 +308,10 @@ static int gravity_eop(cpl_frameset            * frameset,
     }
     
 
-    /* Retrieve EOP file from the site */
-    const char * eop_data;
-    int          data_length;
+    /* Retrieve EOP file from the site. The data are stored in the buffer 
+     eop_data, which should be freed with free() function */
+    char * eop_data;
+    int  data_length;
     cpl_msg_info (cpl_func, "Retrieving EOP file ");
     eop_data = gravity_eop_download_finals2000A (eop_host, eop_urlpath, &data_length);
 
@@ -355,11 +356,11 @@ static int gravity_eop(cpl_frameset            * frameset,
     cpl_ensure_code (cpl_errorstate_is_equal(prestate), cpl_error_get_code());
 
     /* Cleanup */
-    cpl_propertylist_delete (applist);
-    cpl_table_delete (eop_table);
-    free(eop_data);
-    cpl_free (filename);
-    cpl_free (timestamp_lastfinal);
+    FREE (cpl_propertylist_delete, applist);
+    FREE (cpl_table_delete, eop_table);
+    FREE (free, eop_data);
+    FREE (cpl_free, filename);
+    FREE (cpl_free, timestamp_lastfinal);
 
     gravi_msg_function_exit(1);
     return (int)cpl_error_get_code();
