@@ -61,6 +61,7 @@ cpl_error_code gravi_vis_flag_relative_threshold (cpl_table * oi_table, const ch
 cpl_error_code gravi_force_uncertainties (gravi_data * oi_data,
                                           const cpl_parameterlist * parlist);
 
+cpl_error_code gravi_vis_copy_fluxdata (gravi_data * oi_data);
 
 cpl_error_code gravi_vis_erase_obs (cpl_table * oi_table, cpl_array *flag_array, cpl_size ntel);
 cpl_error_code gravi_vis_force_time (gravi_data * oi_data);

@@ -143,6 +143,7 @@ cpl_parameter * gravi_parameter_add_biasmethod (cpl_parameterlist *self);
 cpl_parameter * gravi_parameter_add_extract (cpl_parameterlist *self);
 
 cpl_parameter * gravi_parameter_add_average_vis (cpl_parameterlist *self);
+cpl_parameter * gravi_parameter_copy_fluxdata (cpl_parameterlist *self);
 cpl_parameter * gravi_parameter_add_force_uncertainties (cpl_parameterlist *self);
 
 cpl_error_code gravi_parameter_add_compute_snr (cpl_parameterlist *self, int isCalib);

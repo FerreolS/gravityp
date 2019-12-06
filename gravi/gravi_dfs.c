@@ -534,6 +534,20 @@ cpl_parameter * gravi_parameter_add_average_vis (cpl_parameterlist *self)
     return p;
 }
 
+cpl_parameter * gravi_parameter_copy_fluxdata (cpl_parameterlist *self)
+{
+    cpl_ensure (self, CPL_ERROR_NULL_INPUT, NULL);
+    cpl_parameter *p;
+	p = cpl_parameter_new_value ("gravity.postprocess.copy-fluxdata", CPL_TYPE_BOOL,
+                                 "Duplicate FLUX into FLUXDATA for OIFITS2\n "
+                                 "gravity.postprocess", FALSE);
+	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "copy-fluxdata");
+	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	cpl_parameterlist_append (self, p);
+    
+    return p;
+}
+
 cpl_parameter * gravi_parameter_add_force_uncertainties (cpl_parameterlist *self)
 {
     cpl_ensure (self, CPL_ERROR_NULL_INPUT, NULL);

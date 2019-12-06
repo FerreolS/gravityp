@@ -312,9 +312,6 @@ cpl_table * gravi_table_oi_create (int nwave, int nrow, const char * oi_name)
 														  0, nrow * 4, 0.0);
 		cpl_table_new_column_array (oi_table, "FLUX",CPL_TYPE_DOUBLE, nwave);
 		cpl_table_set_column_unit (oi_table, "FLUX", "e");
-        /*OIFITS2 conformance is FLUXDATA. We just copy FLUX as many existing tools rely on the presence of the FLUX column*/
-		cpl_table_new_column_array (oi_table, "FLUXDATA",CPL_TYPE_DOUBLE, nwave);
-		cpl_table_set_column_unit (oi_table, "FLUXDATA", "e");
 		cpl_table_new_column_array (oi_table, "FLUXERR",CPL_TYPE_DOUBLE, nwave);
 		cpl_table_set_column_unit (oi_table, "FLUXERR", "e");
 		cpl_table_new_column (oi_table, "STA_INDEX", CPL_TYPE_INT);
