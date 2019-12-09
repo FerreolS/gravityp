@@ -71,7 +71,7 @@
 static int gravity_vis_create(cpl_plugin *);
 static int gravity_vis_exec(cpl_plugin *);
 static int gravity_vis_destroy(cpl_plugin *);
-static int gravity_vis(cpl_frameset *, const cpl_parameterlist *);
+static int gravity_vis(cpl_frameset *, cpl_parameterlist *);
 
 /*-----------------------------------------------------------------------------
                             Static variables
@@ -375,7 +375,7 @@ static int gravity_vis_destroy(cpl_plugin * plugin)
  */
 /*----------------------------------------------------------------------------*/
 static int gravity_vis(cpl_frameset * frameset,
-					  const cpl_parameterlist * parlist)
+                       cpl_parameterlist * parlist)
 {
     cpl_frameset * recipe_frameset=NULL, * wavecalib_frameset=NULL, * dark_frameset=NULL,
 	  * darkcalib_frameset=NULL, * sky_frameset=NULL, * flatcalib_frameset=NULL, * p2vmcalib_frameset=NULL,
