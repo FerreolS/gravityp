@@ -307,8 +307,8 @@ static int gravity_dark (cpl_frameset            * frameset,
 	    gravi_data * data_tmp;
 	    cpl_frame * frame_tmp;
 
-        char filename_suffix[10];
-        snprintf(filename_suffix, 10, "%d", comp);
+        char filename_suffix[20];
+        snprintf(filename_suffix, 16, "%d", comp);
         
         /* Load this frame */
         frame_tmp = cpl_frameset_get_position (dark_frameset, comp);

@@ -603,8 +603,8 @@ static int gravity_vis(cpl_frameset * frameset,
 		  
 		  /* Save the SKY map */
           if (averageSky == 0) {
-              char filename_suffix[10];
-              snprintf(filename_suffix, 10, "%d", isky);
+              char filename_suffix[20];
+              snprintf(filename_suffix, 16, "%d", isky);
               gravi_data_save_new (sky_maps[isky], frameset, NULL, filename_suffix,
                                    parlist, NULL, frame, "gravity_vis",
                                    NULL, skyCatg);
@@ -645,8 +645,8 @@ static int gravity_vis(cpl_frameset * frameset,
 	
     for (int ivis = 0; ivis < nb_frame; ivis++){
         int isky;
-        char filename_suffix[10];
-        snprintf(filename_suffix, 10, "%d", ivis);
+        char filename_suffix[20];
+        snprintf(filename_suffix, 16, "%d", ivis);
 		current_frameset = cpl_frameset_duplicate (used_frameset);
 
 		cpl_msg_info (cpl_func, " ***** OBJECT %d over %d ***** ", ivis+1, nb_frame);
