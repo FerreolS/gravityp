@@ -619,7 +619,7 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
                                                     cpl_table_get_nrow (spectrum_table));
             cpl_ensure (times, CPL_ERROR_ILLEGAL_INPUT, NULL);
             
-			/* Compute the MJDs for each row, by adding PCR.ACQ.TIME
+			/* Compute the MJDs for each row, by adding PCR.ACQ.START
              * (in MJD) to the TIME column */
 			cpl_array * mjds = cpl_array_cast (times, CPL_TYPE_DOUBLE);
 			cpl_array_divide_scalar (mjds, 86400.E6);
