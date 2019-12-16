@@ -592,14 +592,14 @@ cpl_error_code gravi_parameter_add_compute_snr (cpl_parameterlist *self, int isC
     /* chi2r */
 	p = cpl_parameter_new_value ("gravity.signal.chi2r-threshold", CPL_TYPE_DOUBLE,
                                  "Threshold in chi2r to declare a bad value ",
-                                 "gravity.signal", 10.0);
+                                 "gravity.signal", 50.0);
 	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "chi2r-threshold");
 	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
 	cpl_parameterlist_append (self, p);
     
 	p = cpl_parameter_new_value ("gravity.signal.chi2r-sigma", CPL_TYPE_DOUBLE,
                                  "Threshold in sigma of chi2r to declare a bad value ",
-                                 "gravity.signal", 10.0);
+                                 "gravity.signal", 100.0);
 	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "chi2r-sigma");
 	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
 	cpl_parameterlist_append (self, p);
