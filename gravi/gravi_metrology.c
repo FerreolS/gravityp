@@ -1506,7 +1506,8 @@ double gravi_metrology_get_fc_focus (cpl_propertylist * header, int gv, gravi_da
 
 /*----------------------------------------------------------------------------*/
 /**
- * @brief Read the fiber coupler focus offset from the fits header
+ * @brief Read the fiber coupler shift parameter, resulting from offset between fiber coupler pickup 
+ * and pupil tracker reference spot, from the fits header
  *
  * @param header input header
  * @param gv gravity input [0...3]
@@ -1538,6 +1539,9 @@ double gravi_metrology_get_fc_shift (cpl_propertylist * header, int gv, gravi_da
     
     /* Assemble column name
      * 08/10/2019 ug fix else fc_focus_shift_at */
+    /* FE: "fc_focus_shift" is very misleading, because it is not related to "focus" at all, but only to
+       the shift between fiber coupler pickup and pupil tracker reference spot. I don't know how the misleading 
+       name entered the fits header convention, and would propose to change at some point */
     if (telname[0] == 'U') strcpy(column_name,"fc_focus_shift_ut");
     else strcpy(column_name,"fc_focus_shift_at");
     if (gravi_pfits_get_axis (header) == MODE_ONAXIS) strcat(column_name,"_onaxis");
