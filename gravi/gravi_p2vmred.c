@@ -1251,7 +1251,9 @@ cpl_error_code gravi_compute_qc_injection (gravi_data * data)
 
     /* Sort the flux array and normalise */
     cpl_vector_sort (flux, CPL_SORT_ASCENDING);
-    cpl_vector_divide_scalar (flux, cpl_vector_get_max (flux) / 100);
+    /* Do not divide if flux equal to 0*/
+    if (cpl_vector_get_max (flux) > 0)
+        cpl_vector_divide_scalar (flux, cpl_vector_get_max (flux) / 100);
         
     /* Histogram as a string, values are 0-100 */
     char qc_value[100];
@@ -1275,6 +1277,8 @@ cpl_error_code gravi_compute_qc_injection (gravi_data * data)
     /* Compute the 5 percentile and 95 percentile */
     p05 = cpl_vector_get (flux, (cpl_size)(0.05*(nrow-1)));
     p95 = cpl_vector_get (flux, (cpl_size)(0.95*(nrow-1)));
+    /* remove error if p95 equal to 0*/
+    if (p95<1) p95=1;
 
     /* Create the QC entry in the FITS header */
     sprintf (qc_name, "ESO QC FLUX_FT%d P05P95", tel+1);
