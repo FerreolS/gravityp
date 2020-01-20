@@ -802,6 +802,7 @@ cpl_error_code gravi_compute_p2vm (gravi_data * p2vm_map, gravi_data * preproc_d
                     
                     FREE (cpl_vector_delete, init_val);
                     FREE (cpl_vector_delete, y_window);
+                    FREE (cpl_vector_delete, yerr_window);
                     FREE (cpl_vector_delete, residuals);
                 } /* loop on region */
 
