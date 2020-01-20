@@ -697,6 +697,7 @@ cpl_error_code gravi_compute_p2vm (gravi_data * p2vm_map, gravi_data * preproc_d
             /* 
              * Compute the P2VM complex coherence for each channel and region
              */
+            double residuals_avg = 0;
 					
             for (cpl_size wave = 0; wave < nwave; wave++){
 
@@ -709,22 +710,22 @@ cpl_error_code gravi_compute_p2vm (gravi_data * p2vm_map, gravi_data * preproc_d
                  * [ 1.0, sin(2.pi.opd/lbd)*env(opd), cos(2.pi.opd/lbd)*env(opd) ] 
                  * different for each polarisation */
                 cpl_matrix ** inv_matrixes = cpl_calloc (npol, sizeof(cpl_matrix *));
+                cpl_matrix ** model_matrices = cpl_calloc (npol, sizeof(cpl_matrix *));
                 
                 for (int pol = 0; pol < npol; pol ++) {
-                    cpl_matrix * model_matrix = cpl_matrix_new (nrow, 3);
+                    model_matrices[pol] = cpl_matrix_new (nrow, 3);
                     
                     for (cpl_size row = 0; row < nrow; row++) {
-                        cpl_matrix_set (model_matrix, row, 0, 1.0);
+                        cpl_matrix_set (model_matrices[pol], row, 0, 1.0);
                         double lambda = cpl_table_get (oiwave_tables[pol], "EFF_WAVE", wave, NULL);
                         double phi = cpl_vector_get (mean_opd, row) / lambda * CPL_MATH_2PI;
                         double enveloppe = cpl_vector_get (envelope_vector, row);
-                        cpl_matrix_set (model_matrix, row, 1, sin(phi)*enveloppe);
-                        cpl_matrix_set (model_matrix, row, 2, cos(phi)*enveloppe);
+                        cpl_matrix_set (model_matrices[pol], row, 1, sin(phi)*enveloppe);
+                        cpl_matrix_set (model_matrices[pol], row, 2, cos(phi)*enveloppe);
                     }
 
                     /* Invers the matrix of the carrying-wave */
-                    inv_matrixes[pol] = gravi_matrix_invertSV_create (model_matrix);
-                    FREE (cpl_matrix_delete, model_matrix);
+                    inv_matrixes[pol] = gravi_matrix_invertSV_create (model_matrices[pol]);
                 }
 
                 /* Loop on region to apply this fit */
@@ -734,8 +735,10 @@ cpl_error_code gravi_compute_p2vm (gravi_data * p2vm_map, gravi_data * preproc_d
 
                     cpl_vector * y_window;
                     y_window = gravi_table_get_vector (spectrum_table, wave,
-                                                       GRAVI_DATA[region]);
-                    
+                                                                           GRAVI_DATA[region]);
+                    cpl_vector * yerr_window = gravi_table_get_vector (spectrum_table, wave,
+                                                                           GRAVI_DATAERR[region]);
+
                     /* Vector init_val contains the best fit coeficient of the fit,
                      * that is the mean flux c and the complex coherence flux,
                      * computed as: init_val = inv_matrix * data 
@@ -750,6 +753,33 @@ cpl_error_code gravi_compute_p2vm (gravi_data * p2vm_map, gravi_data * preproc_d
                         cpl_vector_set (init_val, j, comp);
                     }
                     
+                    /* compute the residuals */
+                    cpl_vector * residuals = cpl_vector_new(nrow);
+//                    cpl_vector * fit = cpl_vector_new(nrow);
+                    for (cpl_size i = 0; i < nrow; i++){
+                        double comp = 0;
+                        for (cpl_size j = 0; j < 3; j++){
+                            comp += cpl_matrix_get (model_matrices[pol], i, j) * cpl_vector_get (init_val, j);
+                        }
+                        cpl_vector_set (residuals, i, pow((cpl_vector_get (y_window, i)-comp)/cpl_vector_get (yerr_window, i) , 2));
+//                        cpl_vector_set (fit, i, comp);
+                    }
+
+//                    if (region == 1)
+//                    	if (wave == 7){
+//                    		const cpl_vector ** vectors = malloc(4 * sizeof(cpl_vector*));
+//                    		cpl_vector * error = cpl_vector_duplicate(y_window);
+//                    		cpl_vector_subtract(error, fit);
+//                    		vectors[0]=NULL;
+//                    		vectors[1]=fit;
+//                    		vectors[2] = error;
+//                    		vectors[3] = y_window;
+//                    		cpl_plot_vectors(NULL, NULL, NULL, vectors, 4);
+//                    		cpl_plot_vector(NULL, NULL, NULL, error);
+//                    		printf("Chi2 : %g \n", cpl_vector_get_mean(residuals));
+//                    	}
+                    residuals_avg += cpl_vector_get_mean(residuals);
+
                     /* Compute the P2VM coherence [e]. */
                     double coherence_fit =
                         sqrt( pow (cpl_vector_get(init_val, 2), 2) +
@@ -772,12 +802,22 @@ cpl_error_code gravi_compute_p2vm (gravi_data * p2vm_map, gravi_data * preproc_d
                     
                     FREE (cpl_vector_delete, init_val);
                     FREE (cpl_vector_delete, y_window);
+                    FREE (cpl_vector_delete, residuals);
                 } /* loop on region */
 
                 FREELOOP (cpl_matrix_delete, inv_matrixes, npol);
+                FREELOOP (cpl_matrix_delete, model_matrices, npol);
                 FREE (cpl_vector_delete, envelope_vector);
             } /* loop on wave */
-					
+
+            /* Write QC in header */
+        	cpl_propertylist * p2vm_header = gravi_data_get_header (p2vm_map);
+    		char qc_name[90];
+    		cpl_msg_info (cpl_func, "Averaged of CHI2 of p2vm fit for %s base %i = %f", GRAVI_TYPE(type_data), base+1, residuals_avg / (nwave*n_region));
+    		sprintf (qc_name, "ESO QC P2VM%s%i CHI2",  GRAVI_TYPE(type_data), base+1);
+    		cpl_propertylist_append_double (p2vm_header, qc_name, residuals_avg / (nwave*n_region));
+    		cpl_propertylist_set_comment (p2vm_header, qc_name, "Chi2 avg. of p2vm fit");
+
             FREE (cpl_vector_delete, mean_opd);
         } /* End case valid_pair (baseline) */
 
