@@ -1001,6 +1001,9 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
 	gravi_data_copy_ext (out_data, raw0, GRAVI_IMAGING_DETECTOR_FT_EXT);
 	gravi_data_copy_ext (out_data, raw0, GRAVI_IMAGING_DETECTOR_SC_EXT);
 
+	/* Create the FLUX array*/
+	cpl_array * array_flux_FT = cpl_array_new(nflat, CPL_TYPE_DOUBLE);
+	cpl_array * array_flux_SC = cpl_array_new(nflat, CPL_TYPE_DOUBLE);
 
     /*
      * (1) Compute the FLAT of the FT
@@ -1038,6 +1041,9 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
             /* Collapse the DITs of this FLAT */
             cpl_imagelist_set (imglist_ft, cpl_imagelist_collapse_create (imglistft_tmp), file);
             gravi_imagelist_unwrap_images (imglistft_tmp);
+
+            /* compute the flux of this flat*/
+            cpl_array_set(array_flux_FT, file, cpl_image_get_flux(cpl_imagelist_get(imglist_ft, file)));
         }
 
         /* Collapse the FLAT files together */
@@ -1112,6 +1118,9 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
         /* Save this FLAT in the imagelist to collapse them */
         cpl_imagelist_set (temp_imglist, collapsed_img,
                            cpl_imagelist_get_size (temp_imglist));
+
+        /* compute the flux of this flat*/
+        cpl_array_set(array_flux_SC, file, cpl_image_get_flux(collapsed_img));
 
 		CPLCHECK_NUL ("Error");
 	} /* End loop on FLATs*/
@@ -1438,10 +1447,26 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
      */
     
 	cpl_propertylist * main_header = gravi_data_get_header (out_data);
+	double qc_value;
+	char qc_name[100];
+	cpl_size idx;
+
+	for (int file = 0; file < nflat; file++){
+		  sprintf (qc_name, "ESO QC FLATFLUX FT%i", file+1);
+		  qc_value = cpl_array_get(array_flux_FT, file, NULL);
+		  cpl_propertylist_append_double (main_header, qc_name, qc_value);
+		  cpl_propertylist_set_comment (main_header, qc_name, "[ADU] Total flux per DIT");
+		  cpl_msg_info (cpl_func,"%s = %f [ADU]", qc_name, qc_value);
+	}
+	for (int file = 0; file < nflat; file++){
+		  sprintf (qc_name, "ESO QC FLATFLUX SC%i", file+1);
+		  qc_value = cpl_array_get(array_flux_SC, file, NULL);
+		  cpl_propertylist_append_double (main_header, qc_name, qc_value);
+		  cpl_propertylist_set_comment (main_header, qc_name, "[ADU] Total flux per DIT");
+		  cpl_msg_info (cpl_func,"%s = %f [ADU]", qc_name, qc_value);
+	}
+
 	for (int reg = 0; reg < nb_region; reg += 12) {
-	  double qc_value;
-	  char qc_name[100];
-	  cpl_size idx;
 
 	  /* Median lateral position */
 	  qc_value = cpl_array_get_median (cpl_table_get_array (params_table, "CENTERY", reg));
@@ -1484,6 +1509,8 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
     FREE (cpl_image_delete, mask_img);    
     FREELOOP (cpl_image_delete, median_img, 4);
     FREE (cpl_free, ext_dim);
+    cpl_array_delete(array_flux_FT);
+    cpl_array_delete(array_flux_SC);
 
 	/* Verbose */
 	gravi_msg_function_exit(1);
