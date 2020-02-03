@@ -465,6 +465,7 @@ cpl_error_code gravi_flux_average_bootstrap(cpl_table * oi_flux_avg,
 
   /* Flag the data with >100% error */
   gravi_vis_flag_relative_threshold (oi_flux_avg, "FLUXERR", "FLUX", "FLAG", 1.0);
+  gravi_vis_flag_lower (oi_flux_avg, "FLUXERR", "FLAG", 0.0);
   CPLCHECK_MSG("cannot flag baddata data");
 
   /* Compute the total integration time */
@@ -814,9 +815,10 @@ cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
   gravi_table_set_array_phase (oi_t3_avg, "T3PHIERR", closure, t3Phi_res[3]);
   CPLCHECK_MSG("filling T3PHI");
 
-  /* Flag the data with >100% error or >60deg error */
+  /* Flag the data with >100% error or >60deg error or negative errors */
   gravi_vis_flag_threshold (oi_t3_avg, "T3PHIERR", "FLAG", 60.0);
   gravi_vis_flag_threshold (oi_t3_avg, "T3AMPERR", "FLAG", 1.0);
+  gravi_vis_flag_lower (oi_t3_avg, "T3AMPERR", "FLAG", 0.0);
   gravi_vis_flag_median (oi_t3_avg, "T3PHIERR", "FLAG", 5.0);
   CPLCHECK_MSG("cannot flag baddata data");
   
@@ -1211,8 +1213,10 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
 
   /* Flag the data with >100% error or >60deg error */
   gravi_vis_flag_threshold (oi_vis2_avg, "VIS2ERR", "FLAG", 1.0);
+  gravi_vis_flag_lower (oi_vis2_avg, "VIS2ERR", "FLAG", 0.0);
   gravi_vis_flag_median (oi_vis2_avg, "VIS2ERR", "FLAG", 5.0);
   gravi_vis_flag_threshold (oi_vis_avg,  "VISAMPERR", "FLAG", 1.0);
+  gravi_vis_flag_lower (oi_vis_avg,  "VISAMPERR", "FLAG", 0.0);
   gravi_vis_flag_median (oi_vis_avg, "VISPHIERR", "FLAG", 5.0);
   CPLCHECK_MSG("cannot flag baddata data");
   
@@ -3240,39 +3244,43 @@ cpl_error_code gravi_vis_smooth (gravi_data * oi_data,
 
 	/* OI_FLUX */
 	oi_table = gravi_data_get_oi_flux (oi_data, type_data, pol, npol);
-    gravi_vis_flag_nan (oi_table);
+        gravi_vis_flag_nan (oi_table);
+	gravi_vis_flag_lower (oi_table, "FLUXERR", "FLAG", 0.0);
 	gravi_vis_smooth_amp (oi_table, "FLUX", "FLUXERR", nsamp_flx);
 	gravi_vis_flag_relative_threshold (oi_table, "FLUXERR", "FLUX", "FLAG", 1.0);
 	CPLCHECK_MSG ("Cannot resamp OI_FLUX");
 
 	/* OI_VIS2 */
 	oi_table = gravi_data_get_oi_vis2 (oi_data, type_data, pol, npol);
-    gravi_vis_flag_nan (oi_table);
-    gravi_vis_flag_median (oi_table, "VIS2ERR", "FLAG", 5.0);    
+        gravi_vis_flag_nan (oi_table);
+	gravi_vis_flag_lower (oi_table, "VIS2ERR", "FLAG", 0.);
+        gravi_vis_flag_median (oi_table, "VIS2ERR", "FLAG", 5.0);    
 	gravi_vis_smooth_amp (oi_table, "VIS2DATA", "VIS2ERR", nsamp_vis);
-    gravi_vis_fit_amp (oi_table, "VIS2DATA", "VIS2ERR", maxdeg);
+        gravi_vis_fit_amp (oi_table, "VIS2DATA", "VIS2ERR", maxdeg);
 	gravi_vis_flag_threshold (oi_table, "VIS2ERR", "FLAG", 1.);
 	CPLCHECK_MSG ("Cannot resamp OI_VIS2");
 
 	/* OI_VIS */
 	oi_table = gravi_data_get_oi_vis (oi_data, type_data, pol, npol);
-    gravi_vis_flag_nan (oi_table);
-    gravi_vis_flag_median (oi_table, "VISPHIERR", "FLAG", 5.0);
+        gravi_vis_flag_nan (oi_table);
+	gravi_vis_flag_lower (oi_table, "VISAMPERR", "FLAG", 0.);
+        gravi_vis_flag_median (oi_table, "VISPHIERR", "FLAG", 5.0);
 	gravi_vis_smooth_amp (oi_table, "VISAMP", "VISAMPERR", nsamp_vis);
 	gravi_vis_smooth_phi (oi_table, "VISPHI", "VISPHIERR", nsamp_vis);
-    gravi_vis_fit_amp (oi_table, "VISAMP", "VISAMPERR", maxdeg);
-    gravi_vis_fit_amp (oi_table, "VISPHI", "VISPHIERR", maxdeg);
+        gravi_vis_fit_amp (oi_table, "VISAMP", "VISAMPERR", maxdeg);
+        gravi_vis_fit_amp (oi_table, "VISPHI", "VISPHIERR", maxdeg);
 	gravi_vis_smooth_amp (oi_table, "RVIS", "RVISERR", nsamp_flx);
 	gravi_vis_smooth_amp (oi_table, "IVIS", "IVISERR", nsamp_flx);
 	gravi_vis_flag_threshold (oi_table, "VISAMPERR", "FLAG", 1.);
     
-    gravi_msg_warning ("FIXME", "VISDATA is not properly smooth !!");
+        gravi_msg_warning ("FIXME", "VISDATA is not properly smooth !!");
 	CPLCHECK_MSG ("Cannot resamp OI_VIS");
 	
 	/* OI_T3 */
 	oi_table = gravi_data_get_oi_t3 (oi_data, type_data, pol, npol);
-    gravi_vis_flag_nan (oi_table);
-    gravi_vis_flag_median (oi_table, "T3PHIERR", "FLAG", 5.0);
+        gravi_vis_flag_nan (oi_table);
+	gravi_vis_flag_lower (oi_table, "T3AMPERR", "FLAG", 0.0);
+        gravi_vis_flag_median (oi_table, "T3PHIERR", "FLAG", 5.0);
 	gravi_vis_smooth_amp (oi_table, "T3AMP", "T3AMPERR", nsamp_vis);
 	gravi_vis_smooth_phi (oi_table, "T3PHI", "T3PHIERR", nsamp_vis);
 	gravi_vis_fit_amp (oi_table, "T3AMP", "T3AMPERR", maxdeg);
@@ -3625,6 +3633,52 @@ cpl_error_code gravi_vis_flag_threshold (cpl_table * oi_table, const char * data
         
 	for ( cpl_size indx = 0 ; indx < size ; indx ++ ) {
 	  if ( cpl_array_get (pdata[row], indx, &nv) > value ) {
+	       cpl_array_set (pflag[row], indx, cpl_array_get (pflag[row], indx, &nv) + 1 );
+	  }
+	}
+  }
+
+  gravi_msg_function_exit(0);
+  return CPL_ERROR_NONE;
+}
+
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Flag samples of OIFITS table based on absolute threshold.
+ * 
+ * @param oi_table:  the cpl_table to update, in-place
+ * @param name:      the column name to verify
+ * @param flag:      the corresponding flag column (to update in-place)
+ * @param value:     the threshold to compare
+ *
+ * For each sample in the column, if sample<=value then the corresponding 
+ * element in the flag column is set to 'T'.
+ */
+/*----------------------------------------------------------------------------*/
+
+cpl_error_code gravi_vis_flag_lower (cpl_table * oi_table, const char * data, const char *flag, double value)
+{
+  gravi_msg_function_start(0);
+  cpl_ensure_code (oi_table, CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (data, CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (flag, CPL_ERROR_ILLEGAL_OUTPUT);
+  
+  /* Get pointer to speed up */
+  int nv = 0;
+  cpl_size nrow = cpl_table_get_nrow (oi_table);
+  cpl_array ** pdata = cpl_table_get_data_array (oi_table, data);
+  cpl_array ** pflag = cpl_table_get_data_array (oi_table, flag);
+  
+  CPLCHECK_MSG ("Cannot get data");
+  
+  cpl_size size = cpl_array_get_size (pdata[0]);
+  
+  /* Loop on row and index. Add to FLAG if data is above threshold */
+  for ( cpl_size row = 0 ; row < nrow ; row ++ ) {
+        if (pdata[row]==NULL) continue;
+        
+	for ( cpl_size indx = 0 ; indx < size ; indx ++ ) {
+	  if ( cpl_array_get (pdata[row], indx, &nv) <= value ) {
 	       cpl_array_set (pflag[row], indx, cpl_array_get (pflag[row], indx, &nv) + 1 );
 	  }
 	}
