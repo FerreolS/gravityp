@@ -754,14 +754,19 @@ cpl_error_code gravi_compute_p2vm (gravi_data * p2vm_map, gravi_data * preproc_d
                     }
                     
                     /* compute the residuals */
-                    cpl_vector * residuals = cpl_vector_new(nrow);
+                    double residuals_sum=0;
+                    cpl_size count = 0;
+
 //                    cpl_vector * fit = cpl_vector_new(nrow);
                     for (cpl_size i = 0; i < nrow; i++){
                         double comp = 0;
                         for (cpl_size j = 0; j < 3; j++){
                             comp += cpl_matrix_get (model_matrices[pol], i, j) * cpl_vector_get (init_val, j);
                         }
-                        cpl_vector_set (residuals, i, pow((cpl_vector_get (y_window, i)-comp)/cpl_vector_get (yerr_window, i) , 2));
+                        if (cpl_vector_get (yerr_window, i) > 0.001 ) {
+                        	residuals_sum += pow((cpl_vector_get (y_window, i)-comp)/cpl_vector_get (yerr_window, i) , 2);
+                        	count +=1;
+                        }
 //                        cpl_vector_set (fit, i, comp);
                     }
 
@@ -776,9 +781,9 @@ cpl_error_code gravi_compute_p2vm (gravi_data * p2vm_map, gravi_data * preproc_d
 //                    		vectors[3] = y_window;
 //                    		cpl_plot_vectors(NULL, NULL, NULL, vectors, 4);
 //                    		cpl_plot_vector(NULL, NULL, NULL, error);
-//                    		printf("Chi2 : %g \n", cpl_vector_get_mean(residuals));
+//                    		printf("Chi2 : %g \n", residuals_sum/count);
 //                    	}
-                    residuals_avg += cpl_vector_get_mean(residuals);
+                    if (count > 0) residuals_avg += residuals_sum/count;
 
                     /* Compute the P2VM coherence [e]. */
                     double coherence_fit =
@@ -803,7 +808,6 @@ cpl_error_code gravi_compute_p2vm (gravi_data * p2vm_map, gravi_data * preproc_d
                     FREE (cpl_vector_delete, init_val);
                     FREE (cpl_vector_delete, y_window);
                     FREE (cpl_vector_delete, yerr_window);
-                    FREE (cpl_vector_delete, residuals);
                 } /* loop on region */
 
                 FREELOOP (cpl_matrix_delete, inv_matrixes, npol);
@@ -1085,11 +1089,13 @@ cpl_error_code gravi_p2vm_normalisation (gravi_data * p2vm_map,
 		cpl_array * mean_coh_arr = cpl_array_new(n_region, CPL_TYPE_DOUBLE);
 		cpl_array * mean_coh_base_arr = cpl_array_new(n_base, CPL_TYPE_DOUBLE);
 		cpl_array * min_coh_base_arr = cpl_array_new(n_base, CPL_TYPE_DOUBLE);
+		cpl_array * max_coh_base_arr = cpl_array_new(n_base, CPL_TYPE_DOUBLE);
 		cpl_array * mean_trans_arr = cpl_array_new(n_region, CPL_TYPE_DOUBLE);
 		cpl_array * sig_transdiff_arr = cpl_array_new(n_region, CPL_TYPE_DOUBLE);
 
 		cpl_array_fill_window (mean_coh_base_arr, 0, n_base, 0);
 		cpl_array_fill_window (min_coh_base_arr, 0, n_base, 10);
+		cpl_array_fill_window (max_coh_base_arr, 0, n_base, 0);
         
 		/* Compute the values per region */
 		for (cpl_size region = 0; region < n_region; region ++ ) {
@@ -1144,10 +1150,14 @@ cpl_error_code gravi_p2vm_normalisation (gravi_data * p2vm_map,
             
             /* Compute percentil */
             double min_percentile = gravi_array_get_quantile (coh_region, 0.05);
+            double max_percentile = gravi_array_get_quantile (coh_region, 0.95);
             
             if (cpl_array_get(min_coh_base_arr, base, NULL) > min_percentile)
                 cpl_array_set(min_coh_base_arr, base, min_percentile);
-            
+
+            if (cpl_array_get(max_coh_base_arr, base, NULL) < max_percentile)
+                cpl_array_set(max_coh_base_arr, base, max_percentile);
+
             /* Delete variables */
             cpl_array_delete (coh_region);
             cpl_array_delete (trans_tel2);
@@ -1159,37 +1169,58 @@ cpl_error_code gravi_p2vm_normalisation (gravi_data * p2vm_map,
 		CPLCHECK_MSG ("Cannot compute_the averages values per region");
 
 		/* Compute the full-averaged QC */
-		double mean_coh, sig_coh, sig_phi;
+		double mean_coh, sig_coh, sig_phi, min_trans, mean_trans, max_trans;
 		mean_coh = cpl_array_get_mean (mean_coh_arr) /
                    (2*cpl_array_get_mean (mean_trans_arr));
 		sig_coh  = cpl_array_get_mean (sig_coh_arr) /
                    (2*cpl_array_get_mean (mean_trans_arr));
 		sig_phi  = cpl_array_get_mean (sig_phi_arr);
+		min_trans = cpl_array_get_min (mean_trans_arr)/2.;
+		max_trans = cpl_array_get_max (mean_trans_arr)/2.;
+		mean_trans = cpl_array_get_mean (mean_trans_arr)/2.;
+
 		CPLCHECK_MSG ("Cannot compute averaged values");
 
 		/* Set these full-averaged QC parameters */
 		cpl_propertylist_update_double (p2vm_header, (type_data)?QC_MEANCOH_FT:QC_MEANCOH_SC,
-                                       mean_coh);
+		        mean_coh);
 		cpl_propertylist_update_double (p2vm_header, (type_data)?QC_RMSCOH_FT:QC_RMSCOH_SC,
-                                       sig_coh);
+		        sig_coh);
 		cpl_propertylist_update_double (p2vm_header, (type_data)?QC_RMSPHASE_FT:QC_RMSPHASE_SC,
-                                        sig_phi);
-		cpl_msg_info (cpl_func, "QC %s COH_AVG = %e COH_RMS %e PHASE_RMS = %e",
-                      GRAVI_TYPE(type_data), mean_coh, (sig_coh), sig_phi);
+		        sig_phi);
+        cpl_propertylist_update_double (p2vm_header, (type_data)?QC_MEANTRANS_FT:QC_MEANTRANS_SC,
+                mean_trans);
+        cpl_propertylist_update_double (p2vm_header, (type_data)?QC_MINTRANS_FT:QC_MINTRANS_SC,
+                min_trans);
+        cpl_propertylist_update_double (p2vm_header, (type_data)?QC_MAXTRANS_FT:QC_MAXTRANS_SC,
+                max_trans);
+		cpl_msg_info (cpl_func, "QC %s COH_AVG = %e COH_RMS %e PHASE_RMS = %e TRANS_AVG %e TRANS_MIN = %e TRANS_MAX = %e",
+		        GRAVI_TYPE(type_data), mean_coh, (sig_coh), sig_phi, min_trans, mean_trans, max_trans);
+
 		
+
 		/* QC per baseline */
 		for (int base=0; base< n_base; base++){
+			/* ESO QC P2VM_COHERENCE */
 			sprintf (qc_name, "ESO QC P2VM_COHERENCE_%s%s", GRAVI_TYPE(type_data), GRAVI_BASE_NAME[base]);
 			cpl_propertylist_update_double (p2vm_header, qc_name,
                                             cpl_array_get (mean_coh_base_arr, base, NULL));
 			cpl_propertylist_set_comment (p2vm_header, qc_name,
                                           "Avg coh. over lbd per baseline");
             
+			/* ESO QC P2VM_MINCOHERENCE_ */
 			sprintf (qc_name, "ESO QC P2VM_MINCOHERENCE_%s%s", GRAVI_TYPE(type_data), GRAVI_BASE_NAME[base]);
 			cpl_propertylist_update_double (p2vm_header, qc_name,
                                             cpl_array_get (min_coh_base_arr, base, NULL));
 			cpl_propertylist_set_comment (p2vm_header, qc_name,
                                           "Min coh. (5 perc) over lbd per baseline");
+
+			/* ESO QC P2VM_MAXCOHERENCE_ */
+			sprintf (qc_name, "ESO QC P2VM_MAXCOHERENCE_%s%s", GRAVI_TYPE(type_data), GRAVI_BASE_NAME[base]);
+			cpl_propertylist_update_double (p2vm_header, qc_name,
+                                            cpl_array_get (max_coh_base_arr, base, NULL));
+			cpl_propertylist_set_comment (p2vm_header, qc_name,
+                                          "Max coh. (95 perc) over lbd per baseline");
 		}
 		CPLCHECK_MSG ("Cannot append QC params");
 		
