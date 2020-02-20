@@ -2369,12 +2369,10 @@ cpl_error_code gravi_vis_create_phaseref_sc (cpl_table * vis_SC,
   cpl_vector * wave_sc = cpl_vector_new (nwave_sc);
   cpl_array * wavenumber_ft = cpl_array_new (nwave_ft, CPL_TYPE_DOUBLE);
 
-  double lbd0   = cpl_table_get_column_mean (waveft_table, "EFF_WAVE");
-  double delta0 = cpl_table_get_column_max (waveft_table, "EFF_WAVE") -
-                  cpl_table_get_column_min (waveft_table, "EFF_WAVE");
+  double lbd0   = 2.2e-6;
   for (cpl_size wave = 0; wave < nwave_ft; wave ++) {
       double lbd = cpl_table_get (waveft_table, "EFF_WAVE", wave, NULL);
-      cpl_matrix_set (sigma_ft, 0, wave, (lbd0/lbd - 1.) * lbd0/delta0 );
+      cpl_matrix_set (sigma_ft, 0, wave, lbd0/lbd );
       cpl_array_set (wavenumber_ft, wave, 1./lbd);
   }
   for (cpl_size wave = 0; wave < nwave_sc; wave ++) {
@@ -2423,14 +2421,15 @@ cpl_error_code gravi_vis_create_phaseref_sc (cpl_table * vis_SC,
 
       /* Save fit coefficients */
       phase_coeff[nsc] = cpl_array_new (maxdeg+1, CPL_TYPE_DOUBLE);
-      for (cpl_size d = 0; d < maxdeg+1; d++) 
+      for (cpl_size d = 0; d < maxdeg+1; d++)
+      {
           cpl_array_set (phase_coeff[nsc], d, cpl_polynomial_get_coeff (fit, &d));
-      
+      }
       /* Evaluate polynomial at the output sampling */
       phaseref[nsc] = cpl_array_new (nwave_sc, CPL_TYPE_DOUBLE);
       for (cpl_size w = 0; w < nwave_sc; w++) {
-          double delta = (lbd0/cpl_vector_get(wave_sc, w) - 1.) * lbd0/delta0 ;
-          cpl_array_set (phaseref[nsc], w, cpl_polynomial_eval_1d (fit, delta, NULL));
+          double sigma_sc = lbd0/cpl_vector_get(wave_sc, w);
+          cpl_array_set (phaseref[nsc], w, cpl_polynomial_eval_1d (fit, sigma_sc, NULL));
       }
 
 	  gravi_array_phase_wrap (phaseref[nsc]);

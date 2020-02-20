@@ -726,10 +726,35 @@ gravi_data * gravi_extract_spectrum (gravi_data * raw_data,
          * Give priority to SKY for estimating the background */
         cpl_image * skyavg_img;
         if (sky_map != NULL){
-            cpl_msg_info (cpl_func,"Extract SC spectra with SKY as background");
-            skyavg_img = gravi_data_get_img (sky_map, GRAVI_IMAGING_DATA_SC_EXT);
-        }
-        else if (dark_map != NULL) {
+            cpl_propertylist * sky_header = gravi_data_get_header (sky_map);
+            int sky_map_usefull=1;
+            if (gravi_pfits_get_dit_sc (raw_header)!=gravi_pfits_get_dit_sc (sky_header))
+            {
+                cpl_msg_warning (cpl_func, "SC DIT is different from SKY SC DIT");
+                sky_map_usefull=0;
+            }
+            if (gravi_pfits_get_spec_res (raw_header)!=gravi_pfits_get_spec_res (sky_header))
+            {
+                cpl_msg_warning (cpl_func, "SC spectral resolution is different from SKY resolution");
+                sky_map_usefull=0;
+            }
+            if (gravi_pfits_get_pola_mode (raw_header, GRAVI_DET_SC)!=gravi_pfits_get_pola_mode (sky_header, GRAVI_DET_SC))
+            {
+                cpl_msg_warning (cpl_func, "SC POLA is different from SKY POLA");
+                sky_map_usefull=0;
+            }
+            if ((sky_map_usefull==1)||(dark_map == NULL))
+            {
+                cpl_msg_info (cpl_func,"Extract SC spectra with SKY as background");
+                skyavg_img = gravi_data_get_img (sky_map, GRAVI_IMAGING_DATA_SC_EXT);
+            } else {
+                if ( !gravi_data_is_internal(raw_data) )
+                    gravi_pfits_add_check (spectrum_header, "Extract SC spectra with DARK as background");
+                else
+                    cpl_msg_info (cpl_func,"Extract SC spectra with DARK as background");
+                skyavg_img = gravi_data_get_img (dark_map, GRAVI_IMAGING_DATA_SC_EXT);
+            }
+        } else if (dark_map != NULL) {
             if ( !gravi_data_is_internal(raw_data) )
                 gravi_pfits_add_check (spectrum_header, "Extract SC spectra with DARK as background");
             else
@@ -742,6 +767,7 @@ gravi_data * gravi_extract_spectrum (gravi_data * raw_data,
          * the background variance */
         cpl_image * darkavg_img;
         cpl_image * darkstd_img;
+        CPLCHECK_NUL ("Check for error to remove");
         if (dark_map != NULL) {
             cpl_msg_info (cpl_func,"Extract SC photonic variance with DARK as background and variance");
             darkavg_img = gravi_data_get_img (dark_map, GRAVI_IMAGING_DATA_SC_EXT);

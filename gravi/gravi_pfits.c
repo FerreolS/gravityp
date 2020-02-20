@@ -1496,7 +1496,7 @@ cpl_error_code gravi_pfits_add_check (cpl_propertylist * header, char *msg)
         i = cpl_propertylist_get_int (header, "ESO QC CHECK FLAGS") + 1;
     
     cpl_propertylist_update_int (header, "ESO QC CHECK FLAGS", i);
-    CPLCHECK_MSG ("Cannot add check flags...");
+    /* CPLCHECK_MSG ("Cannot add check flags2..."); */
     
     /* Set message */
     char qc_name[80];
