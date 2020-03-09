@@ -733,14 +733,18 @@ gravi_data * gravi_extract_spectrum (gravi_data * raw_data,
                 cpl_msg_warning (cpl_func, "SC DIT is different from SKY SC DIT");
                 sky_map_usefull=0;
             }
-            if (gravi_pfits_get_spec_res (raw_header)!=gravi_pfits_get_spec_res (sky_header))
+            if ( strcmp(gravi_pfits_get_spec_res (raw_header),gravi_pfits_get_spec_res (sky_header)) > 0)
             {
-                cpl_msg_warning (cpl_func, "SC spectral resolution is different from SKY resolution");
+                cpl_msg_warning (cpl_func, "SC spectral resolution is different from SKY resolution :");
+                cpl_msg_warning (cpl_func, "SC resolution is %s", gravi_pfits_get_spec_res (raw_header));
+                cpl_msg_warning (cpl_func, "SKY resolution is %s", gravi_pfits_get_spec_res (sky_header));
                 sky_map_usefull=0;
             }
-            if (gravi_pfits_get_pola_mode (raw_header, GRAVI_DET_SC)!=gravi_pfits_get_pola_mode (sky_header, GRAVI_DET_SC))
+            if ( strcmp(gravi_pfits_get_pola_mode (raw_header, GRAVI_DET_SC),gravi_pfits_get_pola_mode (sky_header, GRAVI_DET_SC)) > 0)
             {
-                cpl_msg_warning (cpl_func, "SC POLA is different from SKY POLA");
+                cpl_msg_warning (cpl_func, "SC POLA is different from SKY POLA :");
+                cpl_msg_warning (cpl_func, "SC POLA is %s", gravi_pfits_get_pola_mode (raw_header, GRAVI_DET_SC));
+                cpl_msg_warning (cpl_func, "SKY POLA is %s", gravi_pfits_get_pola_mode (sky_header, GRAVI_DET_SC));
                 sky_map_usefull=0;
             }
             if ((sky_map_usefull==1)||(dark_map == NULL))
