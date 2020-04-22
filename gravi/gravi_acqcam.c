@@ -1089,7 +1089,7 @@ cpl_error_code gravi_acqcam_pupil(cpl_image * mean_img,
 	/* Compute separation */
 	double sobj_x = gravi_pfits_get_sobj_x(header);
 	double sobj_y = gravi_pfits_get_sobj_y(header);
-	double sobj_sep = sqrt(sobj_x * sobj_x + sobj_y * sobj_y);
+	//double sobj_sep = sqrt(sobj_x * sobj_x + sobj_y * sobj_y);
 
 	/* Pupil positions (or we use array of 3)  */
 	gravi_table_new_column(acqcam_table, "PUPIL_NSPOT", NULL, CPL_TYPE_INT);
@@ -1115,10 +1115,10 @@ cpl_error_code gravi_acqcam_pupil(cpl_image * mean_img,
 		CPLCHECK_MSG("Cannot determine field angle#");
 
 		/* Get the orientation of star */
-		double drotoff = gravi_pfits_get_drotoff(header, tel);
-		double cdrotoff = cos(drotoff * CPL_MATH_RAD_DEG);
-		double sdrotoff = sin(drotoff * CPL_MATH_RAD_DEG);
-		CPLCHECK_MSG("Cannot read ESO INS DROTOFF#");
+		//double drotoff = gravi_pfits_get_drotoff(header, tel);
+		//double cdrotoff = cos(drotoff * CPL_MATH_RAD_DEG);
+		//double sdrotoff = sin(drotoff * CPL_MATH_RAD_DEG);
+		//CPLCHECK_MSG("Cannot read ESO INS DROTOFF#");
 
 		/* Allocate memory */
 		cpl_vector * a_start = cpl_vector_new(GRAVI_SPOT_NA);
