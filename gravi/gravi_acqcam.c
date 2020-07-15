@@ -45,6 +45,7 @@
  *    16/10/2019 EkW Remove debug statements
  *    06/11/2019 EKW Add Franks double pscale = sep ? rho_in/sep : scale (instead 0) ;
  *    06/11/2019 EKW Commit with right PIPE-8675 as despite the line abovem, all changes are related to it
+ *    15/07/2020 EKW JIRA PIPE-9123 : Pipeline faile with Strehl=NaN
  */
 /*-----------------------------------------------------------------------------
                                    Includes
@@ -1820,6 +1821,18 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         
         /* Measure strehl and maximum on averaged image */
         gravi_acq_measure_strehl(mean_img, xFT, yFT, scale, &strehl_on_average, header);
+	
+        /*
+         * JIRA PIPE-9123 : Pipeline faile with Strehl=NaN
+         * For 2017 AT data the spots jump up by 30 pixel and therefore are not
+         * catched in the subwindow around roof_pos , cut_out +/- 50 pixel
+        */
+        if (cpl_error_get_code() != CPL_ERROR_NONE  ) {
+           cpl_msg_info (cpl_func, "WARNING Filling STREHL due to NaN");
+           cpl_error_reset();
+           strehl_on_average = 0.0;
+        }
+	
         gravi_acq_measure_max(mean_img, xFT, yFT, 15, &max_on_average);
         
         /* Update Strehl QC */
