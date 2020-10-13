@@ -176,7 +176,7 @@ static int gravity_vis_from_p2vmred_create(cpl_plugin * plugin)
     gravi_parameter_add_average_vis (recipe->parameters);
 
     /* Snr */
-    gravi_parameter_add_compute_snr (recipe->parameters, isCalib);
+    gravi_parameter_add_compute_snr (recipe->parameters);
     
     /* Rejection */
     gravi_parameter_add_rejection (recipe->parameters, isCalib);

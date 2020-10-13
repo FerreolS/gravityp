@@ -223,8 +223,8 @@ static int gravity_vis_create(cpl_plugin * plugin)
     // gravi_parameter_add_preproc (recipe->parameters); // now automatically handled in the preproc
     
     /* Snr, signal, rejectio flags, vis */
-    gravi_parameter_add_compute_snr (recipe->parameters, isCalib);
-    gravi_parameter_add_compute_signal (recipe->parameters, isCalib);
+    gravi_parameter_add_compute_snr (recipe->parameters);
+    gravi_parameter_add_compute_signal (recipe->parameters);
     gravi_parameter_add_rejection (recipe->parameters, isCalib);
     gravi_parameter_add_compute_vis (recipe->parameters, isCalib);
 

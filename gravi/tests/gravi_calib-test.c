@@ -515,8 +515,8 @@ int gravi_calib_test(void){
 
     /* Snr, signal, rejectio flags, vis */
     int isCalib = 0;
-    gravi_parameter_add_compute_snr (parlist, isCalib);
-    gravi_parameter_add_compute_signal (parlist, isCalib);
+    gravi_parameter_add_compute_snr (parlist);
+    gravi_parameter_add_compute_signal (parlist);
     gravi_parameter_add_rejection (parlist, isCalib);
     gravi_parameter_add_compute_vis (parlist, isCalib);
     

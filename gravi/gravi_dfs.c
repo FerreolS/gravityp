@@ -584,7 +584,7 @@ cpl_parameter * gravi_parameter_add_force_uncertainties (cpl_parameterlist *self
     return p;
 }
 
-cpl_error_code gravi_parameter_add_compute_snr (cpl_parameterlist *self, int isCalib)
+cpl_error_code gravi_parameter_add_compute_snr (cpl_parameterlist *self)
 {
     cpl_ensure_code (self, CPL_ERROR_NULL_INPUT);
     cpl_parameter *p;
@@ -618,7 +618,7 @@ cpl_error_code gravi_parameter_add_compute_snr (cpl_parameterlist *self, int isC
     return CPL_ERROR_NONE;
 }
 
-cpl_error_code gravi_parameter_add_compute_signal (cpl_parameterlist *self, int isCalib)
+cpl_error_code gravi_parameter_add_compute_signal (cpl_parameterlist *self)
 {
     cpl_ensure_code (self, CPL_ERROR_NULL_INPUT);
     // cpl_parameter *p;
