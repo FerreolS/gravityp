@@ -128,7 +128,7 @@ cpl_error_code gravi_image_fft_correlate (cpl_image *ia, cpl_image *ib, cpl_size
 
 /* This global variable optimises the computation
  * of partial derivative on fitted parameters */
-const extern int * GRAVI_LVMQ_FREE;
+const int * GRAVI_LVMQ_FREE;
 const int * GRAVI_LVMQ_FREE = NULL;
 
 /* Number of parameters in the model 'gravi_acqcam_spot' 
