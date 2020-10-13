@@ -3172,11 +3172,24 @@ cpl_error_code gravi_vis_fit_amp (cpl_table * oi_table, const char * name,
                           pow (cpl_array_get (e_array[row],wave,&nv), -2);
 		  double value = cpl_array_get (f_array[row],wave,&nv) ? 0.0 : 
                          cpl_array_get (v_array[row],wave,&nv);
+
+                  if (weight > 1e10)
+                  {
+                    cpl_msg_warning (cpl_func, "name = %s row = %lli wave = %lli "
+                                     "has faulty uncertainty", name, row, wave);
+                    weight = 0.0;
+                    cpl_array_set (f_array[row],wave,1);
+                  }
+                  
           cpl_matrix_set (rhs, wave, 0, value * weight);
           for (cpl_size deg = 0; deg <= maxdeg; deg++) 
               cpl_matrix_set (coeff, wave, deg, pow ((double)wave,(double)deg) * weight);
           CPLCHECK_MSG ("Cannot fill");
       }
+
+      //printf ("name = %s row = %i maxdeg = %i\n", name, row, maxdeg);
+      //cpl_matrix_dump (rhs, NULL);
+      //cpl_matrix_dump (coeff, NULL);
 
       /* Solve */
       cpl_errorstate prev_state = cpl_errorstate_get();
