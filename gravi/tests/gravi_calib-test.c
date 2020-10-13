@@ -771,7 +771,7 @@ int gravi_calib_test(void){
     //gravi_data_save_data (p2vm_reduced, "test_files/p2vm_reduced.fits", CPL_IO_CREATE);
     gravi_data_delete(gravi_data_focus);
 
-	gravi_parameter_add_compute_snr (parlist, 0);
+	gravi_parameter_add_compute_snr (parlist);
 	gravi_parameter_add_rejection (parlist, 0);
 
 	/* Compute the outliers */
@@ -786,7 +786,7 @@ int gravi_calib_test(void){
 
 	/* Compute the signals */
 	cpl_msg_info (cpl_func, "Compute the signal");
-    gravi_parameter_add_compute_signal (parlist, 0);
+    gravi_parameter_add_compute_signal (parlist);
 	test(gravi_compute_signals (p2vm_reduced, NULL, parlist),
 		 "gravi_compute_signals : ...", flag);
 
