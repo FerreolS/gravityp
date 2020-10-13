@@ -68,20 +68,23 @@ AC_C_INLINE
 # Checks for library functions.
 AC_CHECK_FUNCS([floor pow sqrt isinf isnan])
 
+# Check for CPL presence and usability
+CPL_CHECK_LIBS
+
+# Check for GSL 
+CPL_CHECK_GSL
+
+#Check for ERFA
+ESO_CHECK_ERFA
+
 # mark hdrl folder as containing a configurable package
 AC_CONFIG_SUBDIRS([hdrl])
 # check and define all required variables to build and
 # link hdrl external located in the hdrl folder
 HDRL_CHECK([hdrl])
 
-# Check for CPL presence and usability
-CPL_CHECK_LIBS
-
 #Check the presence of pkgconfig
 #ESO_PROG_PKGCONFIG
-
-#Check for ERFA
-ESO_CHECK_ERFA
 
 # Check for <xx>clipm
 # - can be called multiple times
