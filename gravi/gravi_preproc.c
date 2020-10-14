@@ -1436,8 +1436,7 @@ cpl_error_code gravi_interpolate_spectrum_table (cpl_table * spectrum_table,
 cpl_error_code gravi_align_spectrum (gravi_data * spectrum_data,
                                      gravi_data * wave_map,
                                      gravi_data * p2vm_map,
-                                     enum gravi_detector_type det_type,
-                                     const cpl_parameterlist * parlist)
+                                     enum gravi_detector_type det_type)
 {
     gravi_msg_function_start(1);
 

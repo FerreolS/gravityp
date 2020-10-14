@@ -574,7 +574,7 @@ int gravi_calib_test(void){
 
 
 		    /* Rescale to common wavelength */
-		    gravi_align_spectrum (preproc_data, data_wave, p2vm_data, GRAVI_DET_ALL, parlist);
+		    gravi_align_spectrum (preproc_data, data_wave, p2vm_data, GRAVI_DET_ALL);
 
 		}
 		gravi_data_delete(gravi_wave);
@@ -731,7 +731,7 @@ int gravi_calib_test(void){
                                                       GRAVI_DET_ALL);
     
 	cpl_parameterlist_delete (paralist);
-    gravi_align_spectrum (preproc_data, data_wave, p2vm_data, GRAVI_DET_ALL, parlist);
+    gravi_align_spectrum (preproc_data, data_wave, p2vm_data, GRAVI_DET_ALL);
 
     /* Move extensions from raw_data and delete it */
     gravi_data_move_ext (preproc_data, data, GRAVI_ARRAY_GEOMETRY_EXT);

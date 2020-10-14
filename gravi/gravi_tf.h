@@ -33,7 +33,7 @@
 
 gravi_data * gravi_compute_tf (gravi_data *, gravi_data *);
 
-gravi_data * gravi_calibrate_vis (gravi_data *, gravi_data ** , int, gravi_data *, gravi_data *, const cpl_parameterlist *);
+gravi_data * gravi_calibrate_vis (gravi_data *, gravi_data ** , int, gravi_data *, const cpl_parameterlist *);
 
 gravi_data * gravi_compute_zp (gravi_data ** , int);
 

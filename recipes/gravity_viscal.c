@@ -535,7 +535,7 @@ static int gravity_viscal(cpl_frameset            * frameset,
         vis_data = gravi_data_load_frame (frame, current_frameset);
         
         tf_science = gravi_data_duplicate (vis_data);
-        calibrated = gravi_calibrate_vis (vis_data, vis_calibs, nb_calib, zero_data, tf_science, parlist);
+        calibrated = gravi_calibrate_vis (vis_data, vis_calibs, nb_calib, tf_science, parlist);
         
         CPLCHECK_GOTO("Cannot calibrate the visibility", cleanup_calib);
         

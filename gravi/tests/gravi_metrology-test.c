@@ -191,6 +191,9 @@ int gravi_metrology_test(void){
     printf ("3  with header AstigmAmplitude %e  - AstigmTheta %e  - AstigmRadius %e \n",AstigmAmplitude,AstigmTheta, AstigmRadius);
 
 
+    if(err != CPL_ERROR_NONE)
+        flag = EXIT_FAILURE;
+
     /* gravi_pfits_get_fangle_acqcam */
 
     FREE(cpl_propertylist_delete, propertylist  );

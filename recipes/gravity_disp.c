@@ -464,7 +464,7 @@ static int gravity_disp(cpl_frameset            * frameset,
             CPLCHECK_CLEAN ("Cannot extract spectrum");
 
             /* Rescale to common wavelength */
-            gravi_align_spectrum (preproc_data, wave_map, p2vm_map, GRAVI_DET_ALL, parlist);
+            gravi_align_spectrum (preproc_data, wave_map, p2vm_map, GRAVI_DET_ALL);
             CPLCHECK_CLEAN ("Cannot re-interpolate spectrum");
 
             /* Move extensions from raw_data */

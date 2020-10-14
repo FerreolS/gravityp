@@ -517,7 +517,7 @@ cpl_error_code gravi_apply_tf_phi( gravi_data * science,
 /*----------------------------------------------------------------------------*/
 
 gravi_data * gravi_calibrate_vis(gravi_data * vis_data, gravi_data ** tf_data, int num_tf,
-							 gravi_data * zero, gravi_data * tf_science,
+							 gravi_data * tf_science,
 							 const cpl_parameterlist * parlist)
 {
     gravi_msg_function_start(1);

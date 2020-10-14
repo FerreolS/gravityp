@@ -287,7 +287,7 @@ int gravi_data_test(){
     unlink("test_data_save_data.fits");
     unlink("test_data_save_dark.fits");
 
-    return 0;
+    return flag;
 }
 
 /*----------------------------------------------------------------------------*/
