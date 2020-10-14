@@ -32,8 +32,7 @@
  -----------------------------------------------------------------------------*/
 
 gravi_data * gravi_compute_p2vmred (gravi_data *, gravi_data *, const char *, 
-                                    const cpl_parameterlist *,
-                                    enum gravi_detector_type det_type);
+                                    const cpl_parameterlist *);
 
 cpl_error_code gravi_compute_opdc_state (gravi_data * p2vmred_data);
 

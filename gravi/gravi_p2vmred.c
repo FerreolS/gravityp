@@ -328,8 +328,7 @@ cpl_table * gravi_create_oiarray_table (const cpl_table * array_geometry,
 /*----------------------------------------------------------------------------*/
 
 gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm_map,
-                                    const char * mode, const cpl_parameterlist * parlist,
-                                    enum gravi_detector_type det_type)
+                                    const char * mode, const cpl_parameterlist * parlist)
 {
 	/* Message and timer */
 	gravi_msg_function_start(1);

@@ -324,7 +324,7 @@ double gravi_pfits_get_met_wavelength (const cpl_propertylist * plist)
     cpl_errorstate prestate = cpl_errorstate_get();
     
     /* double power; */
-    double wavelength;
+    double wavelength = 0.0;
     
     /*
      * If cannot read MLC laser power
@@ -352,7 +352,6 @@ double gravi_pfits_get_met_wavelength (const cpl_propertylist * plist)
     if (!cpl_errorstate_is_equal(prestate)) {
         cpl_msg_warning (cpl_func, "Cannot read the laser wavelength in the header : %s", cpl_error_get_message());
         cpl_errorstate_set (prestate);
-        wavelength = 0.0;
     }
     
     return wavelength;
@@ -906,7 +905,7 @@ cpl_parameter * gravi_pfits_get_extrapixel_param(const cpl_propertylist * header
 
     int key_index = 1;
     const char*  param_value=NULL;
-    char * param_name = "extra-pixel-ft";
+    const char * param_name = "extra-pixel-ft";
     char key[100];
 
     sprintf (key, "ESO PRO REC1 PARAM%d NAME",key_index);
@@ -1484,7 +1483,7 @@ double gravi_pfits_get_double_silentdefault (const cpl_propertylist * plist,
  */
 /*---------------------------------------------------------------------------*/
 
-cpl_error_code gravi_pfits_add_check (cpl_propertylist * header, char *msg)
+cpl_error_code gravi_pfits_add_check (cpl_propertylist * header, const char *msg)
 {
     gravi_msg_function_start(0);
     cpl_ensure_code (header, CPL_ERROR_NULL_INPUT);

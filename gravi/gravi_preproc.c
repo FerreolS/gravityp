@@ -77,7 +77,6 @@ cpl_error_code gravi_interpolate_spectrum_table (cpl_table * spectrum_table,
                                                  cpl_table ** oiwave_tables,
                                                  cpl_table * detector_table,
                                                  cpl_table * specflat_table,
-                                                 const cpl_parameterlist * parlist,
                                                  int type_data);
 
 /*-----------------------------------------------------------------------------
@@ -967,7 +966,6 @@ cpl_error_code gravi_interpolate_spectrum_table (cpl_table * spectrum_table,
                                                  cpl_table ** oiwave_tables,
                                                  cpl_table * detector_table,
                                                  cpl_table * specflat_table,
-                                                 const cpl_parameterlist * parlist,
                                                  int type_data)
 {
     gravi_msg_function_start(1);
@@ -1502,7 +1500,7 @@ cpl_error_code gravi_align_spectrum (gravi_data * spectrum_data,
                                           oiwave_tables,
                                           detector_table,
                                           specflat_table,
-                                          parlist, type_data);
+                                          type_data);
         
         FREE (cpl_free, oiwave_tables);
         CPLCHECK_MSG ("Cannot interpolate");

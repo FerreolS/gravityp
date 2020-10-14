@@ -745,7 +745,7 @@ static int gravity_vis(cpl_frameset * frameset,
 		/* Compute the flux and visibilities for each telescope and
 		 * per acquisition with the P2VM applied to preproc_data */
 		p2vmred_data = gravi_compute_p2vmred(preproc_data, p2vm_map, mode, 
-		                                     parlist, GRAVI_DET_ALL);
+		                                     parlist);
 		CPLCHECK_CLEAN ("Cannot apply p2vm to the preproc data");
 
         /* Reduce the Acquisition Camera and delete data */

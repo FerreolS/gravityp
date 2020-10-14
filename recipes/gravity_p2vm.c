@@ -680,7 +680,7 @@ static int gravity_p2vm(cpl_frameset            * frameset,
             gravi_data * wavesc_ft_data  = gravi_data_load_rawframe_ext (frame, used_frameset, ext_regexp);
 
             cpl_msg_info (cpl_func, "Extract FT SPECTRUM for WAVESC_RAW");
-            gravi_data * ft_spectrum_data = gravi_extract_spectrum (wavesc_ft_data, profile_map, dark_map,
+            ft_spectrum_data = gravi_extract_spectrum (wavesc_ft_data, profile_map, dark_map,
                     badpix_map, NULL, parlist, GRAVI_DET_FT);
             CPLCHECK_CLEAN ("Cannot extract FT spectrum from WAVESC_RAW");
             FREE (gravi_data_delete, wavesc_ft_data);
@@ -777,7 +777,6 @@ static int gravity_p2vm(cpl_frameset            * frameset,
     CPLCHECK_CLEAN ("Cannot create the P2VM data");
 
     /* Loop on files */
-    int i_wave;
     for (int i = 0; i < nb_frame; i++) {
 
         cpl_msg_info (cpl_func, " ***** file %d over %d ***** ", i+1, nb_frame );
@@ -811,7 +810,6 @@ static int gravity_p2vm(cpl_frameset            * frameset,
 
             /* Here we go to next file */
             cpl_msg_info (cpl_func, "Nothing to be done with the file... yet.");
-            i_wave = i;
 
             FREE (gravi_data_delete, hdr_data);        
             FREE (cpl_frameset_delete, current_frameset);
@@ -926,7 +924,7 @@ static int gravity_p2vm(cpl_frameset            * frameset,
 
     /* Compute P2VMRED */
     p2vmred_data = gravi_compute_p2vmred(preproc_data, p2vm_map, "gravi_single", 
-                                         parlist, GRAVI_DET_SC);
+                                         parlist);
     FREE (gravi_data_delete, preproc_data);
     CPLCHECK_CLEAN ("Cannot apply p2vm");
 
@@ -951,7 +949,7 @@ static int gravity_p2vm(cpl_frameset            * frameset,
 
     /* Compute P2VMRED */
     gravi_data * ft_p2vmred_data = gravi_compute_p2vmred(ft_preproc_data, 
-            p2vm_map, "gravi_single", parlist, GRAVI_DET_FT);
+            p2vm_map, "gravi_single", parlist);
     FREE (gravi_data_delete, ft_preproc_data);
     CPLCHECK_CLEAN ("Cannot apply p2vm");
 

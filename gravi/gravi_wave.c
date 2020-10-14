@@ -115,9 +115,7 @@ cpl_table * gravi_wave_fit_individual (cpl_table * wave_individual_table,
                                           cpl_table * opd_table,
                                           cpl_table * spectrum_table,
                                           cpl_table * detector_table,
-                                          cpl_size fullstartx,
-                                       double n0, double n1, double n2,
-                                       double * rms_residuals);
+                                       double n0, double n1, double n2);
 
 cpl_error_code gravi_wave_correct_dispersion (cpl_table * wave_fibre,
                                               double n0, double n1, double n2);
@@ -908,7 +906,7 @@ cpl_error_code gravi_wave_compute_opds (gravi_data * spectrum_data,
 
     /* Set a warning */
     if (cpl_vector_get (coeff_vector, 2) > 1e-7) {
-        gravi_pfits_add_check (spectrum_header,"Residu of fit MET=a.SC-b.FT+c are high");
+        gravi_pfits_add_check (spectrum_header,"Residuals of fit MET=a.SC-b.FT+c are high");
         
 		cpl_msg_info (cpl_func,    "*************************************************");
 		cpl_msg_warning (cpl_func, "****  !!! residuals of the fit too high !!!  ****");
@@ -1431,9 +1429,7 @@ cpl_table * gravi_wave_fit_individual (cpl_table * wave_individual_table,
                                               cpl_table * opd_table,
                                               cpl_table * spectrum_table,
                                               cpl_table * detector_table,
-                                              cpl_size fullstartx,
-                                       double n0, double n1, double n2,
-                                       double * rms_residuals)
+                                       double n0, double n1, double n2)
 {
     
     gravi_msg_function_start(1);
@@ -1659,29 +1655,29 @@ cpl_table * gravi_wave_fit_individual (cpl_table * wave_individual_table,
     for (cpl_size region = 0 ; region < n_region; region ++)
     {
             char * data_x = GRAVI_DATA[region];
-            cpl_array * wavelength = cpl_table_get_data_array (wave_fitted_table, data_x)[0];
-            cpl_size nwave = cpl_array_get_size (wavelength);
-            for (cpl_size wave = 0 ; wave < nwave ; wave ++ ) {
+            cpl_array * wavelength_fitted = cpl_table_get_data_array (wave_fitted_table, data_x)[0];
+            cpl_size nwave_fitted = cpl_array_get_size (wavelength_fitted);
+            for (cpl_size wave = 0 ; wave < nwave_fitted ; wave ++ ) {
                 
-                double result = cpl_array_get (wavelength, wave, NULL);
+                double result = cpl_array_get (wavelength_fitted, wave, NULL);
                 double d_met  = (result - LAMBDA_MET) / LAMBDA_MET;
-                cpl_array_set (wavelength, wave, result * (n0 + n1*d_met + n2*d_met*d_met));
+                cpl_array_set (wavelength_fitted, wave, result * (n0 + n1*d_met + n2*d_met*d_met));
                 
             }
-            for (cpl_size wave = nwave/2 ; wave < nwave-1 ; wave ++ ) {
-                double result = cpl_array_get (wavelength, wave, NULL);
-                double result2 = cpl_array_get (wavelength, wave+1, NULL);
+            for (cpl_size wave = nwave_fitted/2 ; wave < nwave_fitted-1 ; wave ++ ) {
+                double result = cpl_array_get (wavelength_fitted, wave, NULL);
+                double result2 = cpl_array_get (wavelength_fitted, wave+1, NULL);
                 if (result2<result+2e-10) {
                     result2=result+2e-10;
-                    cpl_array_set (wavelength, wave+1, result2);
+                    cpl_array_set (wavelength_fitted, wave+1, result2);
                 }
             }
-            for (cpl_size wave = nwave/2 ; wave > 0 ; wave -- ) {
-                double result = cpl_array_get (wavelength, wave, NULL);
-                double result2 = cpl_array_get (wavelength, wave-1, NULL);
+            for (cpl_size wave = nwave_fitted/2 ; wave > 0 ; wave -- ) {
+                double result = cpl_array_get (wavelength_fitted, wave, NULL);
+                double result2 = cpl_array_get (wavelength_fitted, wave-1, NULL);
                 if (result2>result-2e-10) {
                         result2=result-2e-10;
-                    cpl_array_set (wavelength, wave-1, result2);
+                    cpl_array_set (wavelength_fitted, wave-1, result2);
                 }
             }
         }
@@ -2165,9 +2161,7 @@ cpl_error_code  gravi_compute_wave (gravi_data * wave_map,
                                    opd_table,
                                    spectrum_table,
                                    detector_table,
-                                   fullstartx,
-                                   n0,n1,n2,
-                                   &rms_residuals);
+                                   n0,n1,n2);
         
         cpl_msg_info (cpl_func,"Add tables in wave_map");
 
