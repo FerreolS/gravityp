@@ -31,7 +31,7 @@
 #include "gravi_eop.h"
 
 #define INVALID_IP_ADDR "0.0.0.0"
-#define ESO_FTP_IP_ADDR "134.171.42.53"
+#define ESO_FTP_IP_ADDR "ftp.eso.org"
 /*-----------------------------------------------------------------------------
                                    Static functions
  -----------------------------------------------------------------------------*/
@@ -82,10 +82,6 @@ static void gravi_eop_retrieve_eop_test(void)
         cpl_msg_debug(__func__, "Trying EOP data retrieval. Trial %d",itry);
         //Test retrieving the EOP data from the server
         raw_text = gravity_eop_download_finals2000A(
-                //In principle we should use ftp.eso.org (which is a DNS alias) 
-                //but this sets errno=2 in macOS when calling getaddrinfo(). 
-                //It seems to be fixed from macOS 10.13 on,
-                //so it can eventually be removed.
                 ESO_FTP_IP_ADDR,
                 "/pub/dfs/pipelines/gravity/finals2000A.data",
                 &data_length);
@@ -99,7 +95,6 @@ static void gravi_eop_retrieve_eop_test(void)
                 cpl_msg_debug(__func__, "Sleeping %d seconds before retrying",
                         sleep_seconds);
                 sleep(sleep_seconds);
-                errno = 0;
                 cpl_error_reset();
             }
             else
@@ -108,8 +103,8 @@ static void gravi_eop_retrieve_eop_test(void)
         }
     }
 
-    //A copy needs to be done since further cpl_test functions will set it to zero
-    int errno_after = errno;
+    //Note that getaddrinfo() might set errno to any value
+    //Only if getaddrinfo() returns EAI_SYSTEM it is meaningful to test errno.
 
     //Check no cpl error is set
     cpl_test_error(CPL_ERROR_NONE);
@@ -119,9 +114,6 @@ static void gravi_eop_retrieve_eop_test(void)
 
     //Check pointer is not null
     cpl_test_nonnull(raw_text);
-
-    //Check that no system calls have set errno
-    cpl_test_zero(errno_after);
 
     //If those tests passed (no more failed tests than before),
     //then continue with further tests on the retrieved data
