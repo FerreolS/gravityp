@@ -276,6 +276,7 @@ double gravi_pfits_get_pmdec(const cpl_propertylist * plist);
 double gravi_pfits_get_geoelev(const cpl_propertylist * plist);
 double gravi_pfits_get_geolat(const cpl_propertylist * plist);
 double gravi_pfits_get_geolon(const cpl_propertylist * plist);
+const char * gravi_pfits_get_feed (const cpl_propertylist * plist);
 
 double gravi_ra_to_rad (const char *stri);
 double gravi_dec_to_rad (const char *stri);

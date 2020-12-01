@@ -381,6 +381,12 @@ double gravi_pfits_get_geoelev (const cpl_propertylist * plist)
     return value;
 }
 
+const char * gravi_pfits_get_feed (const cpl_propertylist * plist)
+{
+    const char * value = gravi_pfits_get_string_default (plist, "ESO ISS FEED MODE", "SINGLE-STS");
+    return value;
+}
+
 const char * gravi_pfits_get_sobj (const cpl_propertylist * plist)
 {
     const char * value = gravi_pfits_get_string_default (plist, "ESO INS SOBJ NAME", "UNKNOWN_SC");

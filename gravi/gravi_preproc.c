@@ -1147,7 +1147,7 @@ cpl_error_code gravi_interpolate_spectrum_table (cpl_table * spectrum_table,
                 	// only compute the weights if the three flats are not null (bad pixel)
                 	//  and if xo is below (xm+xi)/2
                 	//  and if xo is above (xi+xp)/2
-                	double fluxLimit = 40 ; // below this value the pixel is consider dead
+                	double fluxLimit = 40 ; // below this value the pixel is consider dead was 10
                 	if ( (Fi > fluxLimit) && (Fp > fluxLimit) && (Fm > fluxLimit) && (xm-xi>1e-4) && (xi-xp>1e-4) )
                 	{
 

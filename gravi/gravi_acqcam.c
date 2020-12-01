@@ -179,6 +179,13 @@ cpl_error_code gravi_preproc_acqcam (gravi_data *output_data,
         gravi_msg_warning (cpl_func,"Cannot preproc the ACQCAM, no badpixel in BAD");
         return CPL_ERROR_NONE;
     }
+    /* check the feed mode */
+    if ( !strcmp(gravi_pfits_get_feed (gravi_data_get_plist(input_data, GRAVI_PRIMARY_HDR_EXT)), "DUAL_STS") ) {
+        printf("WARNING\n");
+        gravi_msg_warning (cpl_func,"Cannot preproc the ACQCAM in DUAL_STS feed mode. AcqCam data is invalid in this context.");
+        return CPL_ERROR_NONE;
+    }
+
 
     /* Construct a mask of badpixels */
     cpl_image * badpix_img = gravi_data_get_img (bad_map, GRAVI_IMAGING_DATA_ACQ_EXT);
