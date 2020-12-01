@@ -1231,6 +1231,7 @@ cpl_error_code gravi_p2vm_normalisation (gravi_data * p2vm_map,
 		FREE (cpl_array_delete, sig_transdiff_arr);
 		FREE (cpl_array_delete, mean_coh_base_arr);
 		FREE (cpl_array_delete, min_coh_base_arr);
+		FREE (cpl_array_delete, max_coh_base_arr);
 
 	} /* end loop on FT and SC */
 
