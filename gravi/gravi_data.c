@@ -1214,6 +1214,10 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
       /* Save the mask in data */
       cpl_image * mask_img = cpl_image_new_from_mask (mask);
       gravi_data_add_img (data, NULL, "BIAS_MASK_SC", mask_img);
+
+	  /* FIXME: We should first remove a median DARK over all
+		 images, so that the spatial structure is removed before
+		 computing spatial median, and then add it back */
       
       /* Loop on frames */
       for (cpl_size f = 0; f < nframe; f++) {
