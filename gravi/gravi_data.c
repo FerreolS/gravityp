@@ -1218,6 +1218,11 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
 	  /* FIXME: We should first remove a median DARK over all
 		 images, so that the spatial structure is removed before
 		 computing spatial median, and then add it back */
+
+	  /* Compute the median image of the imagelist */
+	  // cpl_image * median_img = cpl_imagelist_collapse_sigclip_create (imglist, 5, 5, 0.6, CPL_COLLAPSE_MEDIAN_MEAN, NULL);
+	  // cpl_imagelist_subtract_image (imglist, median_img);
+	  // CPLCHECK_MSG ("Cannot remove the median image");
       
       /* Loop on frames */
       for (cpl_size f = 0; f < nframe; f++) {
@@ -1266,7 +1271,11 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
         // FREE (cpl_image_delete, collapse_x);
         FREE (cpl_image_delete, collapse_y);
         
+		CPLCHECK_MSG ("Cannot remove the bias");
       } /* End loop on frames */
+
+	  // cpl_imagelist_add_image (imglist, median_img);
+	  // CPLCHECK_MSG ("Cannot add the median image");
 
       FREE (cpl_mask_delete, mask);
   }
