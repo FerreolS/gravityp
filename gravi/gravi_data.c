@@ -1200,6 +1200,12 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
   cpl_size ny_reg_mr = (ny - 1) / nreg;
   cpl_size n_bias_line = 5;
 
+  /* Compute the median image of the imagelist */
+  // cpl_msg_info (cpl_func, "Remove spatial structure");
+  // cpl_image * median_img = cpl_imagelist_collapse_sigclip_create (imglist, 5, 5, 0.6, CPL_COLLAPSE_MEDIAN_MEAN, NULL);
+  // cpl_imagelist_subtract_image (imglist, median_img);
+  // CPLCHECK_MSG ("Cannot remove the median image");
+      
   /* Case --bias-option=MASKED_MEDIAN_PER_COLUMN */
   if (  !strcmp (gravi_param_get_string_default (parlist,
                  "gravity.preproc.bias-method","MEDIAN"),
@@ -1215,15 +1221,6 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
       cpl_image * mask_img = cpl_image_new_from_mask (mask);
       gravi_data_add_img (data, NULL, "BIAS_MASK_SC", mask_img);
 
-	  /* FIXME: We should first remove a median DARK over all
-		 images, so that the spatial structure is removed before
-		 computing spatial median, and then add it back */
-
-	  /* Compute the median image of the imagelist */
-	  // cpl_image * median_img = cpl_imagelist_collapse_sigclip_create (imglist, 5, 5, 0.6, CPL_COLLAPSE_MEDIAN_MEAN, NULL);
-	  // cpl_imagelist_subtract_image (imglist, median_img);
-	  // CPLCHECK_MSG ("Cannot remove the median image");
-      
       /* Loop on frames */
       for (cpl_size f = 0; f < nframe; f++) {
         cpl_image * frame = cpl_imagelist_get (imglist, f);
@@ -1273,9 +1270,6 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
         
 		CPLCHECK_MSG ("Cannot remove the bias");
       } /* End loop on frames */
-
-	  // cpl_imagelist_add_image (imglist, median_img);
-	  // CPLCHECK_MSG ("Cannot add the median image");
 
       FREE (cpl_mask_delete, mask);
   }
@@ -1450,6 +1444,12 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
 	}
     FREE (cpl_vector_delete, bias);
   }
+
+  
+  /* Re-install the median */
+  //cpl_imagelist_add_image (imglist, median_img);
+  //FREE (cpl_image_delete, median_img);
+  //CPLCHECK_MSG ("Cannot add the median image");
 
   /* Add some QC */
   cpl_propertylist_update_double (header, "ESO QC PIXBIAS AVG", cpl_vector_get_mean (bias_list));
