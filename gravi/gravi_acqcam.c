@@ -1013,42 +1013,53 @@ cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y,
     
     /* Fit Gaussian */
     double rms=0.;
-    cpl_fit_image_gaussian (img, NULL, (cpl_size)(*x), (cpl_size)(*y),
+    
+    cpl_errorstate fit_converged =  cpl_fit_image_gaussian (img, NULL, (cpl_size)(*x), (cpl_size)(*y),
                             size, size, parameters,
                             NULL, NULL, &rms, NULL, NULL,
                             NULL, NULL, NULL, NULL);
-    CPLCHECK_MSG ("Error fitting Gaussian");
+    
+    if (fit_converged == CPL_ERROR_NONE)
+    {
+        /* Set back */
+        *x = cpl_array_get (parameters,3,NULL);
+        *y = cpl_array_get (parameters,4,NULL);
+        CPLCHECK_MSG ("Error reading fit result");
 
-    /* Set back */
-    *x = cpl_array_get (parameters,3,NULL);
-    *y = cpl_array_get (parameters,4,NULL);
-    CPLCHECK_MSG ("Error reading fit result");
-
-    /* Check errors */
-    /* reject result if either:       */
-    /*          * peak is below 3*rms */
-    /*          * sigma_x > 5 pixels  */
-    /*          * sigma_y > 5 pixels  */
-    double A   = cpl_array_get (parameters, 1, NULL);
-    double rho = cpl_array_get (parameters, 2, NULL);
-    double sx  = cpl_array_get (parameters, 5, NULL);
-    double sy  = cpl_array_get (parameters, 6, NULL);
-
-    if ( A < 0. ) {
-      // detection is just not significant
-      cpl_msg_info (cpl_func, "rejecting fit: x=%g, y=%g, SNR=%g, sx=%g, sy=%g",
-                    *x, *y, A/(rms * 2.*M_PI*sx*sy*sqrt(1-rho*rho)), sx, sy);
-      *x = 0.;
-      *y = 0.;
-      *ex = -1.;
-      *ey = -1.;
+        /* Check errors */
+        /* reject result if either:       */
+        /*          * peak is below 3*rms */
+        /*          * sigma_x > 5 pixels  */
+        /*          * sigma_y > 5 pixels  */
+        double A   = cpl_array_get (parameters, 1, NULL);
+        double rho = cpl_array_get (parameters, 2, NULL);
+        double sx  = cpl_array_get (parameters, 5, NULL);
+        double sy  = cpl_array_get (parameters, 6, NULL);
+            
+        // cf. Condon 1996, PASP 109:166
+        double cst = 2. * sqrt(2. * M_PI * (1. - rho*rho) * sx * sy) * rms / A;
+        *ex=cst*sx;
+        *ey=cst*sy;
+        
+        if ( A < 0. ) {
+          // detection is just not significant
+          cpl_msg_info (cpl_func, "rejecting fit: x=%g, y=%g, SNR=%g, sx=%g, sy=%g",
+                        *x, *y, A/(rms * 2.*M_PI*sx*sy*sqrt(1-rho*rho)), sx, sy);
+          *x = 0.;
+          *y = 0.;
+          *ex = -1.;
+          *ey = -1.;
+        }
+        CPLCHECK_MSG("Error checking significance of fit result");
     } else {
-      // cf. Condon 1996, PASP 109:166
-      double cst = 2. * sqrt(2. * M_PI * (1. - rho*rho) * sx * sy) * rms / A;
-      *ex=cst*sx;
-      *ey=cst*sy;
+        cpl_msg_warning (cpl_func, "fit of pupil beacon did not converge");
+        *x = 0.;
+        *y = 0.;
+        *ex = -1.;
+        *ey = -1.;
+        cpl_error_reset();
     }
-    CPLCHECK_MSG("Error checking significance of fit result");
+    CPLCHECK_MSG ("Pupil beacon fit failed");
 
     /* Fill image with zero at the detected position */
     //if (*x > 0. && *y > 0.) {
@@ -1169,6 +1180,12 @@ cpl_error_code gravi_acqcam_pupil(cpl_image * mean_img,
 
 		/* copy initial guess for the fit of the average image in a_final */
 		cpl_vector * a_final = cpl_vector_duplicate (a_initial);
+        
+
+        cpl_msg_info(cpl_func, "fit spot on angle = %g",(double) cpl_vector_get (a_initial, GRAVI_SPOT_ANGLE));
+        cpl_msg_info(cpl_func, "fit spot on spot diode = %g",(double) cpl_vector_get (a_initial, GRAVI_SPOT_DIODE));
+        cpl_msg_info(cpl_func, "fit spot on subimage x00 = %g",(double) cpl_vector_get (a_initial, GRAVI_SPOT_SUB));
+        cpl_msg_info(cpl_func, "fit spot on subimage y00 = %g",(double) cpl_vector_get (a_initial, GRAVI_SPOT_SUB+4));
 
 		/* fit all model parameters for average image */
 		/* ekki modified below gravi_acqcam_fit_spot (mean_img, a_final, 1, &nspot); */
