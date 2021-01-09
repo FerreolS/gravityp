@@ -1014,7 +1014,7 @@ cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y,
     /* Fit Gaussian */
     double rms=0.;
     
-    cpl_errorstate fit_converged =  cpl_fit_image_gaussian (img, NULL, (cpl_size)(*x), (cpl_size)(*y),
+    cpl_error_code fit_converged =  cpl_fit_image_gaussian (img, NULL, (cpl_size)(*x), (cpl_size)(*y),
                             size, size, parameters,
                             NULL, NULL, &rms, NULL, NULL,
                             NULL, NULL, NULL, NULL);
