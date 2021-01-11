@@ -1211,7 +1211,7 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
                  "gravity.preproc.bias-method","MEDIAN"),
                  "MASKED_MEDIAN_PER_COLUMN")) {
       
-      gravi_msg_warning ("FIXME","Bias method MASKED_MEDIAN_PER_COLUMN is experimental");
+      /* gravi_msg_warning ("FIXME","Bias method MASKED_MEDIAN_PER_COLUMN is experimental"); */
 
       /* Build the mask of supposedly illuminated pixels */
       cpl_mask * mask;
@@ -2391,12 +2391,13 @@ cpl_error_code gravi_data_check_consistency (gravi_data * data)
 
 	/* Check missing samples (delta > 1.5 * median) */
 	int nwrong = 0;
+      int nwrong_warning = 0;
+    if (ext_rmn[ext] == "OPDC") nwrong_warning = 2;
 	for (cpl_size row = 0; row < nrow-1 ; row++) {
 	 double current_delta = time[row+1] - time[row];
 	 if (current_delta > 1.5 * median_delta) nwrong ++;
 	}
-	
-	if (nwrong) {
+	if (nwrong > nwrong_warning) {
 	  sprintf (qc_msg, "%s has %i wrong steps", ext_rmn[ext], nwrong);
 	  gravi_pfits_add_check (header, qc_msg);
 	}
