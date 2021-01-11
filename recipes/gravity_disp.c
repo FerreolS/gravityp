@@ -570,7 +570,18 @@ static int gravity_disp(cpl_frameset            * frameset,
 			CPLCHECK_CLEAN ("Cannot merge the visibilities");
 
             }
+            
+            /* Save the astro file, which is a lighter version of the p2vmreduced */
+            if (gravi_param_get_bool (parlist,"gravity.dfs.astro-file")) {
 
+                gravi_data_clean_for_astro (p2vmred_data);
+                gravi_data_save_new (p2vmred_data, frameset, NULL, NULL,
+                                     parlist, current_frameset, frame,
+                                     "gravity_vis", NULL, GRAVI_ASTROREDUCED);
+
+                CPLCHECK_CLEAN ("Cannot save the ASTROREDUCED product");
+            }
+            
 			cpl_msg_info (cpl_func,"Free the p2vmreduced");
 			FREE (cpl_frameset_delete, current_frameset);
     		FREE (gravi_data_delete, p2vmred_data);
