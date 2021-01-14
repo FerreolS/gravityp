@@ -904,7 +904,7 @@ cpl_error_code gravi_signal_create_sync (cpl_table * vis_SC, int nbase_sc, doubl
 	  /* Check if enough data */
 	  if ( first_ft[row_sc * nbase_sc + base_sc] < 2 ||
 		   last_ft[row_sc * nbase_sc + base_sc] > nrow_ft - 2 ) {
-        if (!strcmp (name, "ACQ"))
+        if (!strcmp (name, "ACQ"))
             {
 	        cpl_msg_info (cpl_func,"Not enough %s data to synchronise with DIT %lli over %lli", name, row_sc+1, nrow_sc);
             } else {
