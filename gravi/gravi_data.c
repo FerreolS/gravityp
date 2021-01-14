@@ -2391,8 +2391,8 @@ cpl_error_code gravi_data_check_consistency (gravi_data * data)
 
 	/* Check missing samples (delta > 1.5 * median) */
 	int nwrong = 0;
-      int nwrong_warning = 0;
-    if (ext_rmn[ext] == "OPDC") nwrong_warning = 2;
+    int nwrong_warning = 0;
+    if (!strcmp (ext_rmn[ext], "OPDC")) nwrong_warning = 2;
 	for (cpl_size row = 0; row < nrow-1 ; row++) {
 	 double current_delta = time[row+1] - time[row];
 	 if (current_delta > 1.5 * median_delta) nwrong ++;
