@@ -954,24 +954,6 @@ cpl_error_code gravi_compute_argon_pos (gravi_data * preproc_data, gravi_data *w
 	/* 
      * Wavelengths of the argon emission lines [m]
      */
-#if(0)
-	int nlines = 10;
-	double  line_wave[] = {/*1.982291e-6,*/
-                   1.997118e-6,
-                   2.032256e-6,
-                   2.062186e-6,
-                   /*2.065277e-6,*/
-                   /*2.073922e-6,*/
-                   /*2.081672e-6,*/
-                   2.099184e-6,
-                   2.133871e-6,
-                   2.154009e-6,
-                   2.208321e-6,
-                   2.313952e-6,
-                   2.385154e-6,
-                   2.397306e-6};
-#endif
-
     double *line_wave;
     int nlines;
 
