@@ -1685,7 +1685,7 @@ cpl_error_code gravi_acqcam_clean_pupil_v2(cpl_imagelist * acqcam_imglist, cpl_i
     
     CPLCHECK_MSG("Pupil Fitting V2 does not work");
     gravi_msg_function_exit(1);
-    return pupilImage_filtered;
+    return CPL_ERROR_NONE;
     
 }
     
