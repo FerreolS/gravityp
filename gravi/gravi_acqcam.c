@@ -1648,8 +1648,8 @@ cpl_error_code gravi_acqcam_clean_pupil_v2(cpl_imagelist * acqcam_imglist, cpl_i
     CPLCHECK_MSG("Failure to subtract background");
     
     cpl_size Npref = 21;
-    const cpl_matrix * kernel1 = cpl_matrix_new (Npref,Npref);
-    const cpl_matrix * kernel2 = cpl_matrix_new (Npref,Npref);
+    cpl_matrix * kernel1 = cpl_matrix_new (Npref,Npref);
+    cpl_matrix * kernel2 = cpl_matrix_new (Npref,Npref);
     for (cpl_size x =0;x< Npref; x++)
     for (cpl_size y =0;y< Npref; y++)
     {
