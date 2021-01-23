@@ -1701,6 +1701,7 @@ const cpl_size ury = (ny>1100) ? 1200 : 745;
  */
     cpl_imagelist * pupilImage_filtered  =  cpl_imagelist_new ();
     gravi_acqcam_clean_pupil_v2(acqcam_imglist, pupilImage_filtered, ury);
+    CPLCHECK_MSG("Cannot clean pupil");
     
 /*
  * Second step. The goal is to select the frames with the blinking beacons on
@@ -1710,6 +1711,7 @@ const cpl_size ury = (ny>1100) ? 1200 : 745;
     cpl_array * good_frames= cpl_array_new(cpl_imagelist_get_size(pupilImage_filtered),CPL_TYPE_INT);
     cpl_imagelist * pupilImage_onFrames = cpl_imagelist_new ();
     gravi_acqcam_select_good_frames_v2(pupilImage_filtered,pupilImage_onFrames,good_frames);
+    CPLCHECK_MSG("Cannot find blinking pupil frames");
     
 /* Third step. The goal is to initialize the vectors which will be used to know where the diodes
  * are on the detectors (hence the use of bivectors, which contains x and y positions
@@ -1739,39 +1741,51 @@ const cpl_size ury = (ny>1100) ? 1200 : 745;
     
     for (int tel = 0 ; tel < GRAVI_SPOT_NTEL; tel++)
         pupilImage_shiftandadd[tel] = cpl_imagelist_new();
+    CPLCHECK_MSG("Cannot initialized vectors");
 
 /*
- * Fourth step. Here we get the position of the 4 subwindows (correspond to each lenslet) in detector space
+ * Fourth step. Here we get the position of the 4 subwindows (correspond to each lenslet), in pixel/detector space
  */
     gravi_acqcam_get_pup_ref_v2(header, diode_pos_subwindow);
+    CPLCHECK_MSG("Cannot get pupil reference values");
     
 /*
- * Fifth step. Here we get the position of the 4 subwindows (correspond to each lenslet) in detector space
+ * Fifth step. Here we get the position of the 4 diodes of each 4 telescopes, in pixel/detector space
  */
     gravi_acqcam_get_diode_ref_v2(header, good_frames, scale_vector, diode_pos_telescope, nrow_on);
+    CPLCHECK_MSG("Cannot get telescope beacons position");
     
-    
+/*
+ * Seventh step. Get a large array of diode vector position (diode_pos_theoretical)
+ * this for each telescope, diode, lenslet, and focal number.
+ */
     gravi_acqcam_get_diode_theoretical_v2(diode_pos_subwindow ,diode_pos_telescope,
                                           diode_pos_theoretical, nrow_on, ury);
+    CPLCHECK_MSG("Cannot get theoretical position of beacons");
     
-    /*
-    for (int tel = 0 ; tel < GRAVI_SPOT_NTEL; tel++)
-    for (cpl_size focus = 0 ; focus < GRAVI_SPOT_NFOCUS; focus++)
-    for (cpl_size n = 0 ; n < nrow_on; n++)
-    for (int lens = 0 ; lens < GRAVI_SPOT_NLENS; lens++)
-    for (int spot = 0 ; spot < GRAVI_SPOT_NSPOT; spot++)
-    cpl_msg_info (cpl_func, "Toto image valeur X %.2f / Y %.2f",x_diode_theo_fine[n][focus][spot][lens][tel],y_diode_theo_fine[n][focus][spot][lens][tel]);
-    */
-    
+/*
+ * Eigth step. Test each focus position to see which one is best. Then, collapse all spot images according to that focus value.
+ * The result pupilImage_shiftandadd correspond to an image for each blinking frame and each telescope
+ */
     gravi_acqcam_perform_shiftandadd_v2(pupilImage_onFrames, pupilImage_shiftandadd, good_frames, focus_value, diode_pos_theoretical,
                                                                                 diode_pos_offset, nrow_on);
+    CPLCHECK_MSG("Cannot find correct focus to shift and add pupil images");
     
-    
-    
+/*
+ * Nineth step. For each one of the pupilImage_shiftandadd, fit a gaussian to know where the pupil is
+ * The measurement is done as an offset with respect to the theroetical position of the beacons
+ */
     gravi_acqcam_get_pupil_offset_v2(pupilImage_shiftandadd, bad_frames_short, diode_pos_offset , nrow_on);
-
-    gravi_acqcam_set_pupil_table_v2(acqcam_table, header, scale_vector, good_frames, bad_frames_short, diode_pos_offset, static_param_data);
+    CPLCHECK_MSG("Cannot get pupil offset values");
     
+/*
+ * Last step. Storing the value of the pupil position in a table
+ */
+    gravi_acqcam_set_pupil_table_v2(acqcam_table, header, scale_vector, good_frames, bad_frames_short, diode_pos_offset, static_param_data);
+    CPLCHECK_MSG("Cannot stor pupil offset values in OI_ACQ table");
+    
+    
+    /* cleaning all arrays ( free memory ) */
     
 for (int tel = 0 ; tel < GRAVI_SPOT_NTEL; tel++)
 {
@@ -1799,7 +1813,7 @@ cpl_imagelist_delete(pupilImage_filtered);
     cpl_vector_delete(scale_vector);
     cpl_vector_delete(focus_value);
 
-CPLCHECK_MSG("Pupil Fitting V2 does not work");
+CPLCHECK_MSG("Failed at freeing memory");
 gravi_msg_function_exit(1);
 return CPL_ERROR_NONE;
 }
@@ -1824,7 +1838,6 @@ cpl_error_code    gravi_acqcam_set_pupil_table_v2(cpl_table * acqcam_table, cpl_
     
     if (cpl_array_get_mean(good_frames) != 1.0/nrow*nrow_on)
         cpl_msg_error (cpl_func, "Problem with number of blinking frames");
-    
     
         
     /* Pupil positions array  */
