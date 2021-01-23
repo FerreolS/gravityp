@@ -721,9 +721,9 @@ double gravi_pfits_get_fangle_acqcam (const cpl_propertylist * plist, int tel)
 {
     double fangle = 0.0;
     
-    if (cpl_propertylist_has(plist, "ESO INS FORCE FANGLE"))
+    if (cpl_propertylist_has(plist, "ESO FORCE FANGLE"))
         {
-        fangle = cpl_propertylist_get_double (plist, "ESO INS FORCE FANGLE");
+        fangle = cpl_propertylist_get_double (plist, "ESO FORCE FANGLE");
         cpl_msg_warning( cpl_func, "Using fangle from header" );
         cpl_msg_warning (cpl_func, "fangle = %.2f [deg] / NorthACQ in Y to X", fangle);
     } else {
