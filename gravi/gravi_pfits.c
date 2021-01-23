@@ -721,6 +721,12 @@ double gravi_pfits_get_fangle_acqcam (const cpl_propertylist * plist, int tel)
 {
     double fangle = 0.0;
     
+    if (cpl_propertylist_has(plist, "ESO INS FORCE FANGLE"))
+        {
+        fangle = cpl_propertylist_get_double (plist, "ESO INS FORCE FANGLE");
+        cpl_msg_warning( cpl_func, "Using fangle from header" );
+        cpl_msg_warning (cpl_func, "fangle = %.2f [deg] / NorthACQ in Y to X", fangle);
+    } else {
     if (cpl_propertylist_has (plist, "ESO INS SOBJ X") &&
         cpl_propertylist_has (plist, "ESO INS SOBJ Y") ) {
         
@@ -754,6 +760,7 @@ double gravi_pfits_get_fangle_acqcam (const cpl_propertylist * plist, int tel)
         cpl_msg_info (cpl_func, "fangle = %.2f [deg] / NorthACQ in Y to X", fangle);
     } else {
         cpl_msg_warning (cpl_func, "Cannot compute field angle: fangle = 0.0");
+    }
     }
     
     return fangle;
