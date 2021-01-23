@@ -159,9 +159,9 @@ cpl_error_code gravi_acq_measure_max(cpl_image * img, double x, double y, double
 
 cpl_error_code gravi_image_fft_correlate (cpl_image *ia, cpl_image *ib, cpl_size *xd, cpl_size *yd);
 
-cpl_imagelist * gravi_acqcam_clean_pupil_v2(cpl_imagelist * acqcam_imglist, const cpl_size ury);
+cpl_error_code gravi_acqcam_clean_pupil_v2(cpl_imagelist * acqcam_imglist, cpl_imagelist * pupilImage_filtered, const cpl_size ury);
 
-cpl_imagelist * gravi_acqcam_select_good_frames_v2(cpl_imagelist * acqcam_imglist, cpl_array * good_frames);
+cpl_error_code gravi_acqcam_select_good_frames_v2(cpl_imagelist * acqcam_imglist, cpl_imagelist * pupilImage_onFrames, cpl_array * good_frames);
 
 cpl_error_code gravi_acqcam_perform_shiftandadd_v2(cpl_imagelist * pupilImage_onFrames, cpl_imagelist ** pupilImage_shiftandadd, cpl_array * good_frames,
                                                      cpl_bivector **  diode_pos_theoretical,
@@ -1695,12 +1695,14 @@ cpl_size  ny = cpl_image_get_size_y (cpl_imagelist_get (acqcam_imglist, 0));
 const cpl_size ury = (ny>1100) ? 1200 : 745;
     
 /* 1 */
-    cpl_imagelist * pupilImage_filtered = gravi_acqcam_clean_pupil_v2(acqcam_imglist, ury);
+    cpl_imagelist * pupilImage_filtered  =  cpl_imagelist_new ();
+    gravi_acqcam_clean_pupil_v2(acqcam_imglist, pupilImage_filtered, ury);
     
-    cpl_array * good_frames= cpl_array_new(cpl_imagelist_get_size(pupilImage_filtered),CPL_TYPE_INT);
     
 /* 2 */
-    cpl_imagelist * pupilImage_onFrames = gravi_acqcam_select_good_frames_v2(pupilImage_filtered,good_frames);
+    cpl_array * good_frames= cpl_array_new(cpl_imagelist_get_size(pupilImage_filtered),CPL_TYPE_INT);
+    cpl_imagelist * pupilImage_onFrames = cpl_imagelist_new ();
+    gravi_acqcam_select_good_frames_v2(pupilImage_filtered,pupilImage_onFrames,good_frames);
     
 /* 3 */
     
@@ -2142,9 +2144,6 @@ cpl_error_code gravi_acqcam_perform_shiftandadd_v2(cpl_imagelist * pupilImage_on
 cpl_imagelist * gravi_image_extract(cpl_image * image_in, cpl_size llx, cpl_size lly, cpl_size urx, cpl_size ury)
     {
         
-        gravi_msg_function_start(0);
-        cpl_ensure_code(image_in, CPL_ERROR_NULL_INPUT);
-        
         cpl_size  nx = cpl_image_get_size_x (image_in);
         cpl_size  ny = cpl_image_get_size_y (image_in);
         cpl_size llx_new,lly_new,urx_new,ury_new;
@@ -2154,7 +2153,6 @@ cpl_imagelist * gravi_image_extract(cpl_image * image_in, cpl_size llx, cpl_size
         cpl_size ny_new=ury+1-lly;
         cpl_image * image_out= cpl_image_new (nx_new, ny_new, cpl_image_get_type(image_in));
         cpl_image_fill_window (image_out, 1, 1, nx_new, ny_new, 0.0);
-        CPLCHECK_MSG("Cannot create new image");
         
         
         if ((llx >= nx)||(lly >= ny)||(urx <= 0)||(ury <= 0))
@@ -2182,7 +2180,6 @@ cpl_imagelist * gravi_image_extract(cpl_image * image_in, cpl_size llx, cpl_size
                 ypos=1;
             }
             
-            
             if (urx > nx)
                 urx_new=nx;
             else
@@ -2192,17 +2189,13 @@ cpl_imagelist * gravi_image_extract(cpl_image * image_in, cpl_size llx, cpl_size
             else
                 ury_new=ury;
             
-            /*cpl_msg_info (cpl_func, "Deep cut at position : X/Y = %lli/%lli/ %lli/%lli",llx_new,lly_new,urx_new,ury_new);*/
             cpl_image * image_in_cut = cpl_image_extract(image_in,llx_new,lly_new,urx_new,ury_new);
-            CPLCHECK_MSG("Cannot cut image");
             
             cpl_image_copy (image_out, image_in_cut, xpos, ypos);
             
             cpl_image_delete(image_in_cut);
         }
         
-        CPLCHECK_MSG("Cannot extract image");
-        gravi_msg_function_exit(0);
         return image_out;
     }
     
@@ -2259,7 +2252,7 @@ return CPL_ERROR_NONE;
 }
 
 
-cpl_imagelist * gravi_acqcam_select_good_frames_v2(cpl_imagelist * pupilImage_filtered, cpl_array * good_frames)
+cpl_error_code gravi_acqcam_select_good_frames_v2(cpl_imagelist * pupilImage_filtered, cpl_imagelist * pupilImage_onFrames, cpl_array * good_frames)
 {
     gravi_msg_function_start(1);
     int nv =0;
@@ -2321,7 +2314,6 @@ cpl_imagelist * gravi_acqcam_select_good_frames_v2(cpl_imagelist * pupilImage_fi
     
     cpl_size frames_background = 4;
     cpl_size n_goodFrames = 0;
-    cpl_imagelist * pupilImage_onFrames  =  cpl_imagelist_new ();
     
     CPLCHECK_MSG("Failed to find blincking pupil files");
     
@@ -2380,11 +2372,11 @@ cpl_imagelist * gravi_acqcam_select_good_frames_v2(cpl_imagelist * pupilImage_fi
     
     CPLCHECK_MSG("Pupil Selection of good files failed");
     gravi_msg_function_exit(1);
-    return pupilImage_onFrames;
+    return CPL_ERROR_NONE;
 }
 
 
-cpl_imagelist * gravi_acqcam_clean_pupil_v2(cpl_imagelist * acqcam_imglist, const cpl_size ury)
+cpl_error_code gravi_acqcam_clean_pupil_v2(cpl_imagelist * acqcam_imglist, cpl_imagelist * pupilImage_filtered, const cpl_size ury)
 {
     gravi_msg_function_start(1);
         
@@ -2399,7 +2391,6 @@ cpl_imagelist * gravi_acqcam_clean_pupil_v2(cpl_imagelist * acqcam_imglist, cons
     
     int nv = 0;
     cpl_imagelist * pupilImage  =  cpl_imagelist_new ();
-    cpl_imagelist * pupilImage_filtered  =  cpl_imagelist_new ();
 
     for (cpl_size n = 0; n < nrow ; n++)
     {
