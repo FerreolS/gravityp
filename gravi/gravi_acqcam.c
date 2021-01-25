@@ -2139,7 +2139,7 @@ cpl_error_code gravi_acqcam_perform_shiftandadd_v2(cpl_imagelist * pupilImage_on
         }
     
         int focus_max_pos = cpl_vector_get_maxpos (focus_max);
-        cpl_msg_info (cpl_func, "Focus value for telescope %lli : F = %.2f %", tel, 100 * gravi_acqcam_defocus_scaling(focus_max_pos));
+        cpl_msg_info (cpl_func, "Focus value for telescope %lli : F = %.2f \%", tel, 100 * gravi_acqcam_defocus_scaling(focus_max_pos));
         cpl_vector_set(focus_value,tel,gravi_acqcam_defocus_scaling(focus_max_pos)*100.);
         CPLCHECK_MSG("Cannot find optimum focus position");
         
