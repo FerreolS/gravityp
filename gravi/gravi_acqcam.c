@@ -2049,8 +2049,13 @@ cpl_error_code gravi_acqcam_get_diode_theoretical_v2(cpl_bivector *  diode_pos_s
     
     for (int tel = 0 ; tel < GRAVI_SPOT_NTEL; tel++)
     {
-        double x_lenslet_mean=cpl_vector_get_mean (x_pos_subwindow);
-        double y_lenslet_mean=cpl_vector_get_mean (y_pos_subwindow);
+        double x_lenslet_mean=0.0;
+        double y_lenslet_mean=0.0;
+        for (int lens = 0 ; lens < GRAVI_SPOT_NLENS; lens++)
+        {
+            x_lenslet_mean+=cpl_vector_get(x_pos_subwindow,lens*GRAVI_SPOT_NTEL+tel)/GRAVI_SPOT_NLENS;
+            y_lenslet_mean+=cpl_vector_get(y_pos_subwindow,lens*GRAVI_SPOT_NTEL+tel)/GRAVI_SPOT_NLENS;
+        }
         
         cpl_msg_info (cpl_func, "Reference pixel position for tel %lli : X = %.2f, Y= %.2f", tel, x_lenslet_mean, y_lenslet_mean);
         
@@ -2134,7 +2139,7 @@ cpl_error_code gravi_acqcam_perform_shiftandadd_v2(cpl_imagelist * pupilImage_on
         }
     
         int focus_max_pos = cpl_vector_get_maxpos (focus_max);
-        cpl_msg_info (cpl_func, "Focus value for telescope %lli : F = %.2f \%", tel, 100 * gravi_acqcam_defocus_scaling(focus_max_pos));
+        cpl_msg_info (cpl_func, "Focus value for telescope %lli : F = %.2f %", tel, 100 * gravi_acqcam_defocus_scaling(focus_max_pos));
         cpl_vector_set(focus_value,tel,gravi_acqcam_defocus_scaling(focus_max_pos)*100.);
         CPLCHECK_MSG("Cannot find optimum focus position");
         
