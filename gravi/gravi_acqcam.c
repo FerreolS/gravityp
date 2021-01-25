@@ -84,6 +84,7 @@
 #define GRAVI_SPOT_NSPOT 4
 #define GRAVI_SPOT_NFOCUS 21
 #define GRAVI_SPOT_NSEARCH 59
+#define GRAVI_SPOT_SWINDOW 28
 
 #define GRAVI_SPOT_NA    30
 #define GRAVI_SPOT_SUB   0
@@ -186,7 +187,7 @@ cpl_error_code gravi_acqcam_get_pupil_offset_v2(cpl_imagelist ** pupilImage_shif
                                                 cpl_bivector **  diode_pos_offset,
                                                      cpl_size nrow_on);
 
-cpl_error_code gravi_acqcam_set_pupil_table_v2(cpl_table * acqcam_table, cpl_propertylist * header, cpl_vector* scale_vector, cpl_array * good_frames, cpl_array * bad_frames_short, cpl_bivector **  diode_pos_offset ,gravi_data *static_param_data);
+cpl_error_code gravi_acqcam_set_pupil_table_v2(cpl_table * acqcam_table, cpl_propertylist * header, cpl_vector* scale_vector, cpl_array * good_frames, cpl_array * bad_frames_short, cpl_bivector **  diode_pos_offset , cpl_vector * focus_value, gravi_data *static_param_data);
 
 cpl_imagelist * gravi_image_extract(cpl_image * image_in, cpl_size llx, cpl_size lly, cpl_size urx, cpl_size ury);
 
@@ -1564,7 +1565,7 @@ const cpl_size ury = (ny>1100) ? 1200 : 745;
 /*
  * Last step. Storing the value of the pupil position in a table
  */
-    gravi_acqcam_set_pupil_table_v2(acqcam_table, header, scale_vector, good_frames, bad_frames_short, diode_pos_offset, static_param_data);
+    gravi_acqcam_set_pupil_table_v2(acqcam_table, header, scale_vector, good_frames, bad_frames_short, diode_pos_offset, focus_value, static_param_data);
     CPLCHECK_MSG("Cannot stor pupil offset values in OI_ACQ table");
     
     
@@ -2309,7 +2310,7 @@ cpl_error_code gravi_acqcam_get_pupil_offset_v2(cpl_imagelist ** pupilImage_shif
 
 
 
-cpl_error_code    gravi_acqcam_set_pupil_table_v2(cpl_table * acqcam_table, cpl_propertylist * header, cpl_vector* scale_vector, cpl_array * good_frames, cpl_array * bad_frames_short, cpl_bivector **  diode_pos_offset, gravi_data *static_param_data)
+cpl_error_code    gravi_acqcam_set_pupil_table_v2(cpl_table * acqcam_table, cpl_propertylist * header, cpl_vector* scale_vector, cpl_array * good_frames, cpl_array * bad_frames_short, cpl_bivector **  diode_pos_offset, cpl_vector * focus_value, gravi_data *static_param_data)
 {
 
 gravi_msg_function_start(1);
@@ -2382,7 +2383,7 @@ for (int tel = 0; tel < GRAVI_SPOT_NTEL; tel++)
                 double r_shift = 0; /*cpl_vector_get(a_row, GRAVI_SPOT_ANGLE);*/
                 double x_shift = cpl_vector_get(x_pos_offset,tel);
                 double y_shift = cpl_vector_get(y_pos_offset,tel);
-                double z_shift = 0.0;
+                double z_shift = cpl_vector_get(focus_value,tel)/GRAVI_SPOT_SWINDOW;
 
                 /* In UV [m] */
                 double u_shift = (cfangle * x_shift - sfangle * y_shift)
@@ -2487,7 +2488,7 @@ cpl_imagelist * gravi_image_extract(cpl_image * image_in, cpl_size llx, cpl_size
 double gravi_acqcam_defocus_scaling(int focus)
 {
     double defocus;
-    defocus = 0.3*(2.0*focus/(GRAVI_SPOT_NFOCUS-1) - 1.0);
+    defocus = 0.4*(2.0*focus/(GRAVI_SPOT_NFOCUS-1) - 1.0)*(2.0*focus/(GRAVI_SPOT_NFOCUS-1) - 1.0)*(2.0*focus/(GRAVI_SPOT_NFOCUS-1) - 1.0);
     
     return defocus;
 }
