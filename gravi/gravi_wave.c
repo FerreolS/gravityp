@@ -910,7 +910,7 @@ cpl_error_code gravi_wave_compute_opds (gravi_data * spectrum_data,
     }
     
     if (cpl_vector_get (coeff_vector, 2) > 1.2e-7) {
-		cpl_msg_info (cpl_func,    "*************************************************");
+		cpl_msg_warning (cpl_func,    "*************************************************");
 		cpl_msg_warning (cpl_func, "****  !!! residuals of the fit too high !!!  ****");
         cpl_msg_warning (cpl_func, "****     Residuals are:%7.0f nm            ****",cpl_vector_get (coeff_vector, 2)*1e9);
         cpl_msg_warning (cpl_func, "****     SC and RMN may be desynchronized    ****");
