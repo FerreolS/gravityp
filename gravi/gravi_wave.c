@@ -515,7 +515,8 @@ cpl_vector * gravi_opds_fit_opdmet (cpl_table * ft_table, double lbd_met)
     /* Compute residuals */
     cpl_matrix * residual_matrix = cpl_matrix_product_create (model_matrix, res_matrix);
     cpl_matrix_subtract (residual_matrix, rhs_matrix);
-	double rms_fit = cpl_matrix_get_stdev (residual_matrix);
+    double rms_fit = cpl_matrix_get_stdev (residual_matrix);
+    //cpl_plot_vector(NULL, NULL, NULL, cpl_vector_wrap(nrow_valid*nbase,cpl_matrix_get_data(residual_matrix)));
 
     /* Verbose */
     cpl_msg_info (cpl_func, "coeff SC = %.20g ", cpl_matrix_get (res_matrix, 0, 0));
@@ -846,6 +847,8 @@ cpl_error_code gravi_wave_compute_opds (gravi_data * spectrum_data,
     
     cpl_table * vismet_table = gravi_metrology_create (met_table, spectrum_header);
     gravi_metrology_drs (met_table, vismet_table, spectrum_header);
+    /* also apply the TAC reduction */
+    gravi_metrology_tac(met_table, vismet_table, spectrum_header);
     
     /* Compute the mean LBD_MET for this file */
     double lbd_met = gravi_pfits_get_met_wavelength_mean (spectrum_header, met_table);
@@ -935,22 +938,22 @@ cpl_error_code gravi_wave_compute_opds (gravi_data * spectrum_data,
     /* 
      * Fill the output 
      */
-    if ((det_type == GRAVI_DET_SC || det_type == GRAVI_DET_ALL))
-    {
+//    if ((det_type == GRAVI_DET_SC || det_type == GRAVI_DET_ALL))
+//    {
         gravi_data_add_table (spectrum_data, NULL, "OPD_SC", sc_table);
         CPLCHECK_MSG ("Cannot set OPD_SC table");
-    }
-    else
-        FREE (cpl_table_delete, sc_table);
-        
-
-    if ((det_type == GRAVI_DET_FT || det_type == GRAVI_DET_ALL))
-    {
+//    }
+//    else
+//        FREE (cpl_table_delete, sc_table);
+//
+//
+//    if ((det_type == GRAVI_DET_FT || det_type == GRAVI_DET_ALL))
+//    {
         gravi_data_add_table (spectrum_data, NULL, "OPD_FT", ft_table);
         CPLCHECK_MSG ("Cannot set OPD_FT table");
-    }
-    else
-        FREE (cpl_table_delete, ft_table);
+//    }
+//    else
+//        FREE (cpl_table_delete, ft_table);
 
     gravi_data_add_table (spectrum_data, NULL, GRAVI_OI_VIS_MET_EXT, vismet_table);
 	CPLCHECK_MSG ("Cannot set OI_VIS_MET table");

@@ -1351,9 +1351,9 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET)
   /* Get MET data */
   double * phase_met_fc         = cpl_table_get_data_double (vis_MET, "PHASE_FC");
   double * opd_met_fc           = cpl_table_get_data_double (vis_MET, "OPD_FC");
-  cpl_array ** phase_met_tel    = cpl_table_get_data_array (vis_MET, "PHASE_TEL");
+  cpl_array ** phase_met_tel    = cpl_table_get_data_array (vis_MET, "PHASE_TEL_DRS");
   cpl_array ** opd_met_tel      = cpl_table_get_data_array (vis_MET, "OPD_TEL");
-  cpl_array ** phasor_met_telfc = cpl_table_get_data_array (vis_MET, "PHASOR_TELFC");
+  cpl_array ** phasor_met_telfc = cpl_table_get_data_array (vis_MET, "PHASOR_TELFC_DRS");
 
   double * opd_met_fc_corr        = cpl_table_get_data_double (vis_MET, "OPD_FC_CORR");
   double * opd_met_telfc_mcorr    = cpl_table_get_data_double (vis_MET, "OPD_TELFC_MCORR");
@@ -1606,7 +1606,7 @@ cpl_error_code gravi_vis_create_met_ft (cpl_table * vis_FT, cpl_table * vis_MET)
   cpl_msg_info (cpl_func, "PERIOD FT = %g [us]", periode_ft);
 
   /* Get MET data */
-  double * phase_met_fc = cpl_table_get_data_double (vis_MET, "PHASE_FC");
+  double * phase_met_fc = cpl_table_get_data_double (vis_MET, "PHASE_FC_DRS");
 
   CPLCHECK_MSG("Cannot get direct pointer to data");
 
@@ -1808,7 +1808,7 @@ cpl_error_code gravi_flux_create_met_sc (cpl_table * flux_SC, cpl_table * vis_ME
   /* Get MET data */
   double * opd_met_fc      = cpl_table_get_data_double (vis_MET, "OPD_FC");
   cpl_array ** opd_met_tel = cpl_table_get_data_array (vis_MET, "OPD_TEL");
-  cpl_array ** phasor_met_telfc = cpl_table_get_data_array (vis_MET, "PHASOR_TELFC");
+  cpl_array ** phasor_met_telfc = cpl_table_get_data_array (vis_MET, "PHASOR_TELFC_DRS");
 
   double * opd_met_fc_corr        = cpl_table_get_data_double (vis_MET, "OPD_FC_CORR");
   double * opd_met_telfc_mcorr    = cpl_table_get_data_double (vis_MET, "OPD_TELFC_MCORR");

@@ -1941,11 +1941,11 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
 
 	/* Create the output table for VIS_MET
 	 * PHASE_TEL and PHASE_FC are defined as FT-SC */
-	cpl_table_new_column (vismet_table, "PHASE_FC", CPL_TYPE_DOUBLE);
-	cpl_table_set_column_unit (vismet_table, "PHASE_FC", "rad");
-    cpl_table_fill_column_window (vismet_table, "PHASE_FC", 0, nbrow_met * ntel, 0.0);
-	cpl_table_new_column_array (vismet_table, "PHASE_TEL", CPL_TYPE_DOUBLE, ndiode);
-	cpl_table_set_column_unit (vismet_table, "PHASE_TEL", "rad");
+	cpl_table_new_column (vismet_table, "PHASE_FC_DRS", CPL_TYPE_DOUBLE);
+	cpl_table_set_column_unit (vismet_table, "PHASE_FC_DRS", "rad");
+    cpl_table_fill_column_window (vismet_table, "PHASE_FC_DRS", 0, nbrow_met * ntel, 0.0);
+	cpl_table_new_column_array (vismet_table, "PHASE_TEL_DRS", CPL_TYPE_DOUBLE, ndiode);
+	cpl_table_set_column_unit (vismet_table, "PHASE_TEL_DRS", "rad");
 	
 	const char * date = gravi_pfits_get_met_ph(header);
 	const char * acq_date = gravi_pfits_get_start_prcacq(header);
@@ -2011,7 +2011,7 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
 		}
 		
 		/* Set the PHASE_SC and the TIME */
-        cpl_table_set (vismet_table, "PHASE_FC", row*ntel+tel, phase_d);
+        cpl_table_set (vismet_table, "PHASE_FC_DRS", row*ntel+tel, phase_d);
         
         CPLCHECK_MSG("Computing the metrology phase at FC");
 	  }
@@ -2030,8 +2030,8 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
     /* Loop on rows to re-apply to k_phase */
     for (cpl_size row = 0; row < nbrow_met; row++) {
         for (int tel = 0; tel < 4 ; tel++) {
-            double value = cpl_table_get (vismet_table, "PHASE_FC", row*ntel+tel, NULL);
-            cpl_table_set (vismet_table, "PHASE_FC", row*ntel+tel, value + k_phase[tel]);
+            double value = cpl_table_get (vismet_table, "PHASE_FC_DRS", row*ntel+tel, NULL);
+            cpl_table_set (vismet_table, "PHASE_FC_DRS", row*ntel+tel, value + k_phase[tel]);
         }
     } /* End loop on rows */
 	
@@ -2092,7 +2092,7 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
             for (int diode = 0; diode < ndiode; diode++) {
                 cpl_array_set (tel_phase, diode, cpl_array_get (phase,tel*ndiode+diode, NULL));
             }
-            cpl_table_set_array (vismet_table, "PHASE_TEL", row*ntel+tel, tel_phase);
+            cpl_table_set_array (vismet_table, "PHASE_TEL_DRS", row*ntel+tel, tel_phase);
             CPLCHECK_MSG ("Cannot set");
         }
     }
@@ -2160,7 +2160,7 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
             for (int diode = 0; diode < ndiode; diode++) {
                 cpl_array_set (tel_phase, diode, cpl_array_get (phase,tel*ndiode+diode, NULL));
             }
-            cpl_table_set_array (vismet_table, "PHASE_TEL", row*ntel+tel, tel_phase);
+            cpl_table_set_array (vismet_table, "PHASE_TEL_DRS", row*ntel+tel, tel_phase);
             CPLCHECK_MSG ("Cannot set");
         }
         
@@ -2173,9 +2173,9 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
 
 	/* case for n_filter last lines */
     for (int tel = 0; tel < ntel; tel++) {
-        const cpl_array * last_phase = cpl_table_get_array (vismet_table,"PHASE_TEL", (nbrow_met-n_filter-1)*ntel+tel);
+        const cpl_array * last_phase = cpl_table_get_array (vismet_table,"PHASE_TEL_DRS", (nbrow_met-n_filter-1)*ntel+tel);
         for (cpl_size row = nbrow_met-n_filter; row<nbrow_met; row++) {
-            cpl_table_set_array (vismet_table,"PHASE_TEL", row*ntel+tel, last_phase);
+            cpl_table_set_array (vismet_table,"PHASE_TEL_DRS", row*ntel+tel, last_phase);
             CPLCHECK_MSG ("Cannot set");
         }
     }
@@ -2189,7 +2189,7 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
 	}
     
     /* Loop on rows to re-apply to k_phase */
-    cpl_array ** all_phase = cpl_table_get_data_array (vismet_table, "PHASE_TEL");
+    cpl_array ** all_phase = cpl_table_get_data_array (vismet_table, "PHASE_TEL_DRS");
     
     for (cpl_size row = 0; row < nbrow_met; row++) {
 		for (int tel = 0; tel < ntel; tel++) {
@@ -2207,11 +2207,11 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
 	 * Compute the TEL-FC complex phasor = Vtel * conj (Vfc)
      * without any smoothing
 	 */
-    cpl_msg_info (cpl_func,"Compute PHASOR_TELFC");
+    cpl_msg_info (cpl_func,"Compute PHASOR_TELFC_DRS");
     
-	cpl_table_new_column_array (vismet_table, "PHASOR_TELFC", CPL_TYPE_DOUBLE_COMPLEX, ndiode);
-	cpl_table_set_column_unit (vismet_table, "PHASOR_TELFC", "V^4");
-    cpl_array ** phasor_telfc = cpl_table_get_data_array (vismet_table, "PHASOR_TELFC");
+	cpl_table_new_column_array (vismet_table, "PHASOR_TELFC_DRS", CPL_TYPE_DOUBLE_COMPLEX, ndiode);
+	cpl_table_set_column_unit (vismet_table, "PHASOR_TELFC_DRS", "V^4");
+    cpl_array ** phasor_telfc = cpl_table_get_data_array (vismet_table, "PHASOR_TELFC_DRS");
 
     for (cpl_size row = 0; row < nbrow_met; row++) {
 		for (int tel = 0; tel < ntel; tel++) {
@@ -2327,7 +2327,10 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
     
     gravi_table_new_column (vismet_table, "OPD_FC", "m", CPL_TYPE_DOUBLE);
     double * opd_fc = cpl_table_get_data_double (vismet_table, "OPD_FC");
-    
+
+    gravi_table_new_column (vismet_table, "PHASE_FC", "rad", CPL_TYPE_DOUBLE);
+    double * phase_fc = cpl_table_get_data_double (vismet_table, "PHASE_FC");
+
     gravi_table_new_column (vismet_table, "VAMP_FC_FT", "V", CPL_TYPE_DOUBLE);
     double * coher_fc_ft = cpl_table_get_data_double (vismet_table, "VAMP_FC_FT");
     
@@ -2425,6 +2428,7 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
             
             /* TAC computation */
             opd_fc[nmet]  = tacData->opl_fiber_coupler[tel];
+            phase_fc[nmet]  = - tacData->opl_fiber_coupler[tel] * CPL_MATH_2PI / lambda_met_mean;
             flag_fc[nmet] = tacData->total_flag_fiber_coupler[tel][FT] | tacData->total_flag_fiber_coupler[tel][SC];
             /* Volt amplitude */
             coher_fc_ft[nmet] = sqrt (volts[sample_number-1][idx_ft+idx*2] * volts[sample_number-1][idx_ft+idx*2] + 
@@ -2468,8 +2472,10 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
             (cpl_propertylist_get_double (header, card_sc) - cpl_propertylist_get_double (header, card_ft)) - 
             opd_fc[row_ref*ntel+tel];
         double opd_ref_int = gravi_round (opd_ref / lambda_met_mean) * lambda_met_mean;
+        double phase_ref_int = gravi_round (opd_ref / lambda_met_mean) * CPL_MATH_2PI;
         for (cpl_size row = 0; row < nrow_met; row++) {
             opd_fc[row*ntel+tel] += opd_ref_int;
+            phase_fc[row*ntel+tel] -= phase_ref_int;
         }
     }
     /* End loop on tel and diodes */
