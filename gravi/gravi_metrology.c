@@ -2828,22 +2828,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                 }
                 
 
-
-                /* TEST 1: NOT subtracting astigmatism 
-                */
-
-                /*opd_tel_corr[row*ntel+tel][diode] -= astigm; */
-
-                /* Save values to file 
-                   TEST 2: astigm is constant over exposure,
-                           when subtracted (above) it's 1 value per diode per Tel  
-                           per exposure (regardless of frame/DIT used in reduction)
-                */
-                /*if (tel==0) {
-                            FILE *fAst=fopen("astigm_diodes_GV0_rowAll.txt","a");
-                            fprintf(fAst, "%g\n" , astigm*1e9);
-                            fclose(fAst);
-                            }*/
+                /* subtracting astigmatism  */
+                opd_tel_corr[row*ntel+tel][diode] -= astigm;
             }
         }
     }
