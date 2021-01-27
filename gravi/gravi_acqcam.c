@@ -665,7 +665,7 @@ cpl_error_code gravi_acqcam_get_pup_ref (cpl_propertylist * header,
         CPLCHECK_MSG ("Cannot get sub-windowing parameters");
     }
     
-    cpl_msg_debug (cpl_func,"sub-window pupil %i sx= %lld sy = %lld", tel, sx, sy);
+    cpl_msg_debug (cpl_func,"sub-window pupil %lli sx= %lld sy = %lld", tel, sx, sy);
         
     /* Read the sub-apperture reference positions 
      * Converted to accound for sub-windowing 
@@ -1867,7 +1867,7 @@ cpl_error_code gravi_acqcam_get_pup_ref_v2 (cpl_propertylist * header, cpl_bivec
             CPLCHECK_MSG ("Cannot get sub-windowing parameters");
         }
         
-        cpl_msg_info (cpl_func,"sub-window pupil %lli sx= %lld sy = %lld", tel, sx, sy);
+        cpl_msg_info (cpl_func,"sub-window pupil %i sx= %lld sy = %lld", tel, sx, sy);
             
         /* Read the sub-apperture reference positions
          * Converted to accound for sub-windowing
