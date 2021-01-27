@@ -189,7 +189,7 @@ cpl_error_code gravi_acqcam_get_pupil_offset_v2(cpl_imagelist ** pupilImage_shif
 
 cpl_error_code gravi_acqcam_set_pupil_table_v2(cpl_table * acqcam_table, cpl_propertylist * header, cpl_vector* scale_vector, cpl_array * good_frames, cpl_array * bad_frames_short, cpl_bivector **  diode_pos_offset , cpl_vector * focus_value, gravi_data *static_param_data);
 
-cpl_imagelist * gravi_image_extract(cpl_image * image_in, cpl_size llx, cpl_size lly, cpl_size urx, cpl_size ury);
+cpl_image * gravi_image_extract(cpl_image * image_in, cpl_size llx, cpl_size lly, cpl_size urx, cpl_size ury);
 
 double gravi_acqcam_defocus_scaling(int focus);
 
@@ -2056,7 +2056,7 @@ cpl_error_code gravi_acqcam_get_diode_theoretical_v2(cpl_bivector *  diode_pos_s
             y_lenslet_mean+=cpl_vector_get(y_pos_subwindow,lens*GRAVI_SPOT_NTEL+tel)/GRAVI_SPOT_NLENS;
         }
         
-        cpl_msg_info (cpl_func, "Reference pixel position for tel %lli : X = %.2f, Y= %.2f", tel, x_lenslet_mean, y_lenslet_mean);
+        cpl_msg_info (cpl_func, "Reference pixel position for tel %d : X = %.2f, Y= %.2f", tel, x_lenslet_mean, y_lenslet_mean);
         
         for (int lens = 0 ; lens < GRAVI_SPOT_NLENS; lens++)
         for (int focus = 0 ; focus < GRAVI_SPOT_NFOCUS; focus++)
@@ -2424,7 +2424,7 @@ gravi_msg_function_exit(1);
 return CPL_ERROR_NONE;
 }
 
-cpl_imagelist * gravi_image_extract(cpl_image * image_in, cpl_size llx, cpl_size lly, cpl_size urx, cpl_size ury)
+cpl_image * gravi_image_extract(cpl_image * image_in, cpl_size llx, cpl_size lly, cpl_size urx, cpl_size ury)
     {
         
         cpl_size  nx = cpl_image_get_size_x (image_in);
