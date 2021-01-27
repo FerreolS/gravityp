@@ -1628,8 +1628,6 @@ cpl_error_code gravi_acqcam_clean_pupil_v2(cpl_imagelist * acqcam_imglist, cpl_i
     cpl_size  nx = cpl_image_get_size_x (cpl_imagelist_get (acqcam_imglist, 0));
     cpl_size  ny = cpl_image_get_size_y (cpl_imagelist_get (acqcam_imglist, 0));
     
-    
-    int nv = 0;
     cpl_imagelist * pupilImage  =  cpl_imagelist_new ();
 
     for (cpl_size n = 0; n < nrow ; n++)
@@ -2100,7 +2098,6 @@ cpl_error_code gravi_acqcam_perform_shiftandadd_v2(cpl_imagelist * pupilImage_on
                                                      cpl_bivector **  diode_pos_offset, cpl_size nrow_on)
 {
     gravi_msg_function_start(1);
-    int nv =0;
     
     cpl_ensure_code(pupilImage_onFrames, CPL_ERROR_NULL_INPUT);
     cpl_ensure_code(good_frames, CPL_ERROR_NULL_INPUT);
@@ -2192,7 +2189,6 @@ cpl_error_code gravi_acqcam_perform_shiftandadd_v2(cpl_imagelist * pupilImage_on
             
             cpl_size nx=cpl_image_get_size_x (cpl_image_combined[0]);
             cpl_size ny=cpl_image_get_size_y (cpl_image_combined[0]);
-            cpl_msg_info (cpl_func, "Mean image of tel %lli and row %lli is now of size %lli/%lli",tel,n,nx,ny);
                           
             cpl_image * image_mean = cpl_image_extract (cpl_image_combined[0], 4, 4, GRAVI_SPOT_NSEARCH*2-3, GRAVI_SPOT_NSEARCH*2-3);
             
@@ -2285,9 +2281,9 @@ cpl_error_code gravi_acqcam_get_pupil_offset_v2(cpl_imagelist ** pupilImage_shif
                     if (distance > 5*5)
                     {
                         previous = cpl_array_get_int (bad_frames_short,n-1,&nv);
-                        cpl_array_set_int (bad_frames_short,n-1,previous|(1<<tel+4));
+                        cpl_array_set_int (bad_frames_short,n-1,previous|(1<<(tel+4)));
                         previous = cpl_array_get_int (bad_frames_short,n,&nv);
-                        cpl_array_set_int (bad_frames_short,n,previous|(1<<tel+4));
+                        cpl_array_set_int (bad_frames_short,n,previous|(1<<(tel+4)));
                     }
                 }
             }
@@ -2295,9 +2291,11 @@ cpl_error_code gravi_acqcam_get_pupil_offset_v2(cpl_imagelist ** pupilImage_shif
             previous_ysc=ysc;
             CPLCHECK_MSG("Failure at testing bad pupil measurments");
             
+            /* Check box
             cpl_msg_info (cpl_func, "Max position tel %lli n %lli = %lli / %lli, %.2f / %.2f / SNR %.2f / RMS %.2f -> %lli", tel, n, px-GRAVI_SPOT_NSEARCH-1,py-GRAVI_SPOT_NSEARCH-1,exsc,eysc,flux_max/std,std,cpl_array_get_int (bad_frames_short,n,&nv));
             cpl_msg_info (cpl_func, "Max position tel %lli n %lli = %.3f / %.3f", tel, n, xsc-GRAVI_SPOT_NSEARCH-1,ysc-GRAVI_SPOT_NSEARCH-1);
             cpl_msg_info (cpl_func, "Max position tel %lli n %lli = %.3f / %.3f", tel, n, x_offset_final,y_offset_final);
+             */
                 
         }
     }
