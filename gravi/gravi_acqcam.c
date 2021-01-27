@@ -665,7 +665,7 @@ cpl_error_code gravi_acqcam_get_pup_ref (cpl_propertylist * header,
         CPLCHECK_MSG ("Cannot get sub-windowing parameters");
     }
     
-    cpl_msg_debug (cpl_func,"sub-window pupil %lli sx= %lld sy = %lld", tel, sx, sy);
+    cpl_msg_debug (cpl_func,"sub-window pupil %i sx= %lld sy = %lld", tel, sx, sy);
         
     /* Read the sub-apperture reference positions 
      * Converted to accound for sub-windowing 
@@ -1857,11 +1857,11 @@ cpl_error_code gravi_acqcam_get_pup_ref_v2 (cpl_propertylist * header, cpl_bivec
             char name[90];
             
             nsx = cpl_propertylist_get_int (header, "ESO DET1 FRAMES NX");
-            sprintf (name, "ESO DET1 FRAM%lld STRX", 3*GRAVI_SPOT_NTEL + tel + 1);
+            sprintf (name, "ESO DET1 FRAM%d STRX", 3*GRAVI_SPOT_NTEL + tel + 1);
             sx = cpl_propertylist_get_int (header, name);
             
             nsy = cpl_propertylist_get_int (header, "ESO DET1 FRAMES NY");
-            sprintf (name, "ESO DET1 FRAM%lld STRY", 3*GRAVI_SPOT_NTEL + tel + 1);
+            sprintf (name, "ESO DET1 FRAM%d STRY", 3*GRAVI_SPOT_NTEL + tel + 1);
             sy = cpl_propertylist_get_int (header, name);
             
             CPLCHECK_MSG ("Cannot get sub-windowing parameters");
@@ -2137,7 +2137,7 @@ cpl_error_code gravi_acqcam_perform_shiftandadd_v2(cpl_imagelist * pupilImage_on
         }
     
         int focus_max_pos = cpl_vector_get_maxpos (focus_max);
-        cpl_msg_info (cpl_func, "Focus value for telescope %lli : F = %.2f pixels", tel, GRAVI_SPOT_SWINDOW * gravi_acqcam_defocus_scaling(focus_max_pos));
+        cpl_msg_info (cpl_func, "Focus value for telescope %d : F = %.2f pixels", tel, GRAVI_SPOT_SWINDOW * gravi_acqcam_defocus_scaling(focus_max_pos));
         cpl_vector_set(focus_value,tel,gravi_acqcam_defocus_scaling(focus_max_pos)*100.);
         CPLCHECK_MSG("Cannot find optimum focus position");
         
