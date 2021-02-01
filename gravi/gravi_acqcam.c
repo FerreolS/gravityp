@@ -1956,7 +1956,7 @@ cpl_error_code gravi_acqcam_get_diode_ref_v2 (cpl_propertylist * header,
     
     cpl_size nrow = cpl_array_get_size(good_frames);
     if (fabs(cpl_array_get_mean(good_frames)*nrow -nrow_on) > 1e-2)
-        cpl_msg_error (cpl_func, "Ratio of blinking frames different %f from %lli",cpl_array_get_mean(good_frames)*nrow,nrow_on);
+        cpl_msg_error (cpl_func, "Ratio of blinking frames different %f from %i",cpl_array_get_mean(good_frames)*nrow,nrow_on);
     
     for (int tel = 0 ; tel < GRAVI_SPOT_NTEL; tel++)
     {
@@ -2442,7 +2442,7 @@ cpl_ensure_code(static_param_data, CPL_ERROR_NULL_INPUT);
 cpl_size nrow_on = cpl_array_get_size(bad_frames_short);
 
 if (fabs(cpl_array_get_mean(good_frames)*nrow -nrow_on) > 1e-2)
-    cpl_msg_error (cpl_func, "Ratio of blinking frames different %f from %i",cpl_array_get_mean(good_frames)*nrow,nrow_on);
+    cpl_msg_error (cpl_func, "Ratio of blinking frames different %f from %lli",cpl_array_get_mean(good_frames)*nrow,nrow_on);
 
     
 
