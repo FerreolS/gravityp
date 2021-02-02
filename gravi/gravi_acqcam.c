@@ -106,27 +106,10 @@ double exp1 (double x);
 double sin1 (double x);
 int gravi_acqcam_xy_diode (const double v[], double *xd, double *yd);
 
-cpl_error_code gravi_acqcam_get_pup_ref (cpl_propertylist * header,
-                                         cpl_size tel,
-                                         cpl_vector * pupref);
-
-
-cpl_error_code gravi_acqcam_get_diode_ref (cpl_propertylist * header,
-                                           cpl_size tel,
-                                           cpl_vector * output);
-
 static int gravi_acqcam_spot (const double x_in[], const double v[], double *result);
 static int gravi_acqcam_xy_sub (const double v[], double *xsub, double *ysub);
 
-
-cpl_error_code gravi_acqcam_spot_imprint (cpl_image * img, cpl_vector * a);
-
 static int gravi_acqcam_spot_dfda (const double x_in[], const double v[], double result[]);
-
-cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
-                                      cpl_vector * a, 
-                                      int fitAll,
-                                      int * nspot);
 
 double gravi_acqcam_z2meter (double PositionPixels, gravi_data *static_param_data);
 
@@ -507,444 +490,6 @@ static int gravi_acqcam_spot_dfda (const double x_in[], const double v[], double
 
 /*----------------------------------------------------------------------------*/
 /**
- * @brief Imprint a cross (pixel=0) in the image of the pupil spot
- * 
- * @param img:    input/output img
- * @param a:      paramters for spot position
- */
-/*----------------------------------------------------------------------------*/
-
-cpl_error_code gravi_acqcam_spot_imprint (cpl_image * img, cpl_vector * a)
-{
-    gravi_msg_function_start(0);
-    cpl_ensure_code (img, CPL_ERROR_NULL_INPUT);
-    cpl_ensure_code (a,   CPL_ERROR_NULL_INPUT);
-
-    cpl_size nx = cpl_image_get_size_x (img);
-    cpl_size ny = cpl_image_get_size_y (img);
-
-    /* Static parameters */
-    double xd[4], yd[4], xsub[4], ysub[4];
-    double * v = cpl_vector_get_data (a);
-    gravi_acqcam_xy_diode (v, xd, yd);
-    gravi_acqcam_xy_sub (v, xsub, ysub);
-    
-    /* Loop on diode and appertures */
-    for (int diode = 0; diode < 4 ; diode++) {
-        for (int sub = 0; sub < 4 ; sub++) {
-            cpl_size xf = roundl(xsub[sub] + xd[diode]) + 1;
-            cpl_size yf = roundl(ysub[sub] + yd[diode]) + 1;
-	    if (xf < 2 || xf > nx-2 || yf < 2 || yf > ny-2) continue;
-            cpl_image_set (img, xf,   yf, 0);
-            cpl_image_set (img, xf-1, yf, 0);
-            cpl_image_set (img, xf+1, yf, 0);
-            cpl_image_set (img, xf, yf+1, 0);
-            cpl_image_set (img, xf, yf-1, 0);
-            CPLCHECK ("Cannot imprint cross in image");
-        }
-    }
-
-    gravi_msg_function_exit(0);
-    return CPL_ERROR_NONE;
-}
-
-/*----------------------------------------------------------------------------*/
-/**
- * @brief Read the diode position from header into the vector output
- * 
- * @param header:   input header
- * @param tel:      requested beam (0..3)
- * @param output:   output vector, shall be already allocated
- *
- * \exception CPL_ERROR_NULL_INPUT input data is missing
- * \exception CPL_ERROR_ILLEGAL_INPUT tel outside limits
- *
- * Read the diode position from header into the vector output. Assume
- *        the four diodes form a rectangle centered on the pupil center.
- *
- *        - output[8]   = rotation  [deg], set to 0.0
- *        - output[9]   = scale  [pix/m]
- *        - output[10]  = dx [m]
- *        - output[11]  = dy [m]
- */
-/*----------------------------------------------------------------------------*/
-
-cpl_error_code gravi_acqcam_get_diode_ref (cpl_propertylist * header,
-                                           cpl_size tel,
-                                           cpl_vector * output)
-{
-    gravi_msg_function_start(0);
-    cpl_ensure_code (header,          CPL_ERROR_NULL_INPUT);
-    cpl_ensure_code (tel>=0 && tel<4, CPL_ERROR_ILLEGAL_INPUT);
-    cpl_ensure_code (output,          CPL_ERROR_ILLEGAL_INPUT);
-
-    /* Get the telescope name and ID */
-    const char * telname = gravi_conf_get_telname (tel, header);
-
-    /* Check telescope name */
-    if (!telname) cpl_msg_error (cpl_func, "Cannot read the telescope name");
-    cpl_ensure_code (telname, CPL_ERROR_ILLEGAL_INPUT);
-    
-    /* Hardcoded theoretical positions in mm */
-
-    /* If UTs or ATs, select scaling, rotation, and spacing */
-    if (telname[0] == 'U') {
-        cpl_vector_set (output, GRAVI_SPOT_ANGLE,   0.0);
-	// FE 2019-05-15 replaced with median measured for the whole 2017-2018 
-        // Galactic Center data set, which should be the best information at hand
-        // cpl_vector_set (output, GRAVI_SPOT_SCALE, 16.225);
-	if ( tel == 0 ) cpl_vector_set (output, GRAVI_SPOT_SCALE, 16.83);
-	if ( tel == 1 ) cpl_vector_set (output, GRAVI_SPOT_SCALE, 17.42);
-	if ( tel == 2 ) cpl_vector_set (output, GRAVI_SPOT_SCALE, 16.85);
-	if ( tel == 3 ) cpl_vector_set (output, GRAVI_SPOT_SCALE, 17.41);
-	// below information could be calculated from diode position in header
-        // this would also give the 45 offset angle introduced above to calculate
-	// the spot angle
-        cpl_vector_set (output, GRAVI_SPOT_DIODE+0, 0.363);
-        cpl_vector_set (output, GRAVI_SPOT_DIODE+1, 0.823);
-        cpl_vector_set (output, GRAVI_SPOT_DIODE+2, 0);
-    } else if (telname[0] == 'A') {
-        cpl_vector_set (output, GRAVI_SPOT_ANGLE,  0.0);
-	// FE 2019-05-15 maybe we should also update the AT numbers 
-        cpl_vector_set (output, GRAVI_SPOT_SCALE, 73.0154);
-        // EW, FE 2019-09-11: short and long side of AT beacons are
-        // flipped when compared to UTs
-        cpl_vector_set (output, GRAVI_SPOT_DIODE+0, 0.158);
-        cpl_vector_set (output, GRAVI_SPOT_DIODE+1, 0.122);
-        cpl_vector_set (output, GRAVI_SPOT_DIODE+2, 0);
-    } else 
-        return cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
-                                      "Cannot get telescope name");
-        
-    gravi_msg_function_exit(0);
-    return CPL_ERROR_NONE;
-}
-
-/*----------------------------------------------------------------------------*/
-/**
- * @brief Re-arrange the sub-aperture position into the output vector
- *
- * @param header:   input header
- * @param tel:      requested beam (0..3)
- * @param output:   output vector, shall be already allocated
- *
- * \exception CPL_ERROR_NULL_INPUT input data is missing
- * \exception CPL_ERROR_ILLEGAL_INPUT tel outside limits
- *
- *
- * Read the sub-aperture position for the pupil sensor,
- *        and re-arrange them into the output vector
- *
- *        - output[0] = x0+x1+x2+x3   (center of sub-apertures)
- *        - output[1] = x0-x1+x2-x3
- *        - output[2] = x0+x1-x2-x3
- *        - output[3] = x0-x1-x2+x3
- *        - output[4..7] = same for y
- */
-/*----------------------------------------------------------------------------*/
-
-cpl_error_code gravi_acqcam_get_pup_ref (cpl_propertylist * header,
-                                         cpl_size tel,
-                                         cpl_vector * output)
-{
-    gravi_msg_function_start(0);
-    cpl_ensure_code (header,          CPL_ERROR_NULL_INPUT);
-    cpl_ensure_code (tel>=0 && tel<4, CPL_ERROR_ILLEGAL_INPUT);
-    cpl_ensure_code (output,          CPL_ERROR_ILLEGAL_INPUT);
-
-    cpl_size ntel = 4, nsub = 4;
-    cpl_size nsx = 0, nsy = 0, sx = 0, sy = 0;
-
-    /* If sub-windowing, we read the sub-window size and
-     * the sub-window start for pupil */
-    if ( cpl_propertylist_has (header, "ESO DET1 FRAMES NX") ) {
-        char name[90];
-        
-        nsx = cpl_propertylist_get_int (header, "ESO DET1 FRAMES NX");
-        sprintf (name, "ESO DET1 FRAM%lld STRX", 3*ntel + tel + 1);
-        sx = cpl_propertylist_get_int (header, name);
-        
-        nsy = cpl_propertylist_get_int (header, "ESO DET1 FRAMES NY");
-        sprintf (name, "ESO DET1 FRAM%lld STRY", 3*ntel + tel + 1);
-        sy = cpl_propertylist_get_int (header, name);
-        
-        CPLCHECK_MSG ("Cannot get sub-windowing parameters");
-    }
-    
-    cpl_msg_debug (cpl_func,"sub-window pupil %lli sx= %lld sy = %lld", tel, sx, sy);
-        
-    /* Read the sub-apperture reference positions 
-     * Converted to accound for sub-windowing 
-     * In vector convention (start at 0,0) */
-    double xsub[4], ysub[4];
-    for (int sub = 0; sub < nsub ; sub++) {
-        double xv = gravi_pfits_get_ptfc_acqcam (header, sub*ntel + tel + 1);
-        double yv = gravi_pfits_get_ptfc_acqcam (header, sub*ntel + tel + 17);
-        xsub[sub] = xv - (sx - tel*nsx) - 1;
-        ysub[sub] = yv - (sy - 3*nsy) - 1;
-        cpl_msg_debug (cpl_func,"pupil %lli subC %i = %10.4f,%10.4f",
-                       tel, sub, xsub[sub], ysub[sub]);
-        CPLCHECK_MSG ("Cannot get pupil reference position");
-    }
-
-    /* All linear combination of sub-appertures center */
-    cpl_vector_set (output, GRAVI_SPOT_SUB+0, 0.25 * (xsub[0] + xsub[1] + xsub[2] + xsub[3]));
-    cpl_vector_set (output, GRAVI_SPOT_SUB+1, 0.25 * (xsub[0] - xsub[1] + xsub[2] - xsub[3]));
-    cpl_vector_set (output, GRAVI_SPOT_SUB+2, 0.25 * (xsub[0] + xsub[1] - xsub[2] - xsub[3]));
-    cpl_vector_set (output, GRAVI_SPOT_SUB+3, 0.25 * (xsub[0] - xsub[1] - xsub[2] + xsub[3]));
-    
-    cpl_vector_set (output, GRAVI_SPOT_SUB+4, 0.25 * (ysub[0] + ysub[1] + ysub[2] + ysub[3]));
-    cpl_vector_set (output, GRAVI_SPOT_SUB+5, 0.25 * (ysub[0] - ysub[1] + ysub[2] - ysub[3]));
-    cpl_vector_set (output, GRAVI_SPOT_SUB+6, 0.25 * (ysub[0] + ysub[1] - ysub[2] - ysub[3]));
-    cpl_vector_set (output, GRAVI_SPOT_SUB+7, 0.25 * (ysub[0] - ysub[1] - ysub[2] + ysub[3]));
-    
-    gravi_msg_function_exit(0);
-    return CPL_ERROR_NONE;
-}
-
-/*----------------------------------------------------------------------------*/
-/**
- * @brief Fit a pupil spot pattern into an image.
- * 
- * @param img:    input image
- * @param a:      vector of parameter, modified in-place
- * @param fitAll: if set to 1, the high order of sub-aperture position (more
- *                than center and focus), the diode scaling, and the diode
- *                intensities are let free.
- * @param nspot:  is filled with the number of detected spots.
- * 
- * Fit a pupil spot pattern into an image. The global minimum is found
- * by initializing the fit from a crosscorrelation with an initial model
- * based on the know spot geometry and angle of the pattern
- */
-/*----------------------------------------------------------------------------*/
-
-cpl_error_code gravi_acqcam_fit_spot (cpl_image * img,
-                                      cpl_vector * a,
-                                      int fitAll,
-                                      int * nspot)
-{
-    gravi_msg_function_start(0);
-    cpl_ensure_code (img, CPL_ERROR_NULL_INPUT);
-    cpl_ensure_code (a,   CPL_ERROR_NULL_INPUT);
-    cpl_ensure_code (nspot, CPL_ERROR_NULL_INPUT);
-
-    int F = fitAll;
-    int nv = 0;
-    cpl_size x0 = cpl_vector_get (a, GRAVI_SPOT_SUB+0);
-    cpl_size y0 = cpl_vector_get (a, GRAVI_SPOT_SUB+4);
-    cpl_size nx_img = cpl_image_get_size_x (img);
-    cpl_size ny_img = cpl_image_get_size_y (img);
-
-    /* Compute RMS in the central region */
-    double RMS = gravi_image_get_noise_window (img, x0-25, y0-25, x0+25, y0+25);
-
-    /* The image is surely empty */
-    if (RMS == 0) { *nspot = 0; return CPL_ERROR_NONE;}
-
-    /*
-     * FE 20190627 derive initial guess from cross-correlation with model 
-     */
-
-    /* We work on 160 x 160 subimage to optimize speed of FFT */
-    cpl_size nx    = 160;
-    cpl_size ny    = 160;
-    cpl_size x00   = x0 - nx / 2;
-    cpl_size y00   = y0 - nx / 2;
-
-    /* x00,y00 in definition of model coordinates, i.e. lower left pixel = 0,0 
-       but CPL in fits convention, i.e. lower left pixel = 1,1 */
-    cpl_image *ia  = cpl_image_extract (img, x00 + 1, y00 + 1, x00 + nx, y00 + ny);
-
-    /* Create model image */
-    cpl_image *ib  = cpl_image_new (nx, ny, CPL_TYPE_DOUBLE);
-    
-    /* Get data from parameter vector */
-    double *a_vector = cpl_vector_get_data(a);   
-
-    /* Fill this image with model */
-    double x_in[2];
-    double result = 0.0;
-    
-    for (int ii = 0; ii < nx ; ii++) {
-      for (int jj = 0; jj < ny; jj++) {
-	x_in[0] = ii + (double) x00 ;
-	x_in[1] = jj + (double) y00 ;
-	gravi_acqcam_spot (x_in, a_vector, &result);
-	cpl_image_set (ib, ii + 1, jj + 1, result);
-      }
-    }
-
-    /* Shift determined from cross corellation */
-    cpl_size xout = 0;
-    cpl_size yout = 0;
-    gravi_image_fft_correlate (ia, ib, &xout, &yout);
-    CPLCHECK_MSG ("Cannot correlate data with model");
-    
-    /* Delete memory */
-    FREE (cpl_image_delete, ia);
-    FREE (cpl_image_delete, ib);
-    
-    /* Update model for subsequent model fitting */
-    cpl_vector_set (a, GRAVI_SPOT_SUB + 0, cpl_vector_get(a, GRAVI_SPOT_SUB + 0) + (double) xout);
-    cpl_vector_set (a, GRAVI_SPOT_SUB + 4, cpl_vector_get(a, GRAVI_SPOT_SUB + 4) + (double) yout);
-
-    /*
-     * Fine: fit 10 pixel around each spot with true Gaussian
-     */
-    
-    cpl_size nf = 10, ndiode = 4, nsub = 4;
-    cpl_matrix * x_matrix  = cpl_matrix_new (nf*nf*ndiode*nsub, 2);
-    cpl_vector * y_vector  = cpl_vector_new (nf*nf*ndiode*nsub);
-    cpl_vector * sy_vector = cpl_vector_new (nf*nf*ndiode*nsub);
-    
-    double xd[4], yd[4], xsub[4], ysub[4];
-    gravi_acqcam_xy_diode (cpl_vector_get_data (a), xd, yd);
-    gravi_acqcam_xy_sub (cpl_vector_get_data (a), xsub, ysub);
-
-    /* Loop on diode and appertures to fill the matrix and
-     * vector for the fine fit */ 
-    for (cpl_size v = 0, diode = 0; diode < ndiode ; diode++) {
-        for (int sub = 0; sub < nsub ; sub++) {
-            cpl_size xf = roundl(xsub[sub] + xd[diode]);
-            cpl_size yf = roundl(ysub[sub] + yd[diode]);
-            
-            /* Extract 10 pixels around each spot */
-            /* check that we do not get over the limit of the detector */
-            if (xf-nf/2<0) xf=nf/2;
-            if (yf-nf/2<0) yf=nf/2;
-            if (xf+nf/2>nx_img-2) xf=nx_img-2-nf/2;
-            if (yf+nf/2>ny_img-2) yf=ny_img-2-nf/2;
-            
-            double mf = 0.0;
-            for (cpl_size x = xf-nf/2; x < xf+nf/2; x++) {
-                for (cpl_size y = yf-nf/2; y < yf+nf/2; y++) {
-                    double value = cpl_image_get (img, x+1, y+1, &nv);
-                    if (value > mf) mf = value;   /* remember max value for later */
-                    cpl_matrix_set (x_matrix, v, 0, x);
-                    cpl_matrix_set (x_matrix, v, 1, y);
-                    cpl_vector_set (y_vector, v, value);
-                    cpl_vector_set (sy_vector, v, RMS);
-                    v++;
-                    CPLCHECK_MSG ("Cannot fill matrix");
-                }
-            }
-	    
-            /* Save the local maximum of this spot as
-             * the starting point for its amplitude */
-            cpl_vector_set (a, GRAVI_SPOT_FLUX+sub*4+diode, mf);
-        }
-    }
-
-    /* Set FWHM to a realist value in [pix**2] */
-    cpl_vector_set (a, GRAVI_SPOT_FWHM, 2.3*2.3);
-
-    /* Fit all sub-aperture position, rotation and scaling of diodes,
-     * and individual intensities of spots. (high order, rotation and scaling
-     * are only fitted if fitAll != 0) */
-    const int ia_fine[] = {1,F,1,F, 1,1,F,F, F,F, 0,0,0, 0,
-                           1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1};
-
-    GRAVI_LVMQ_FREE = ia_fine;
-
-    /* Fit from this starting point */
-    double chisq_fine = 0.0;
-    cpl_errorstate prestate = cpl_errorstate_get();
-    cpl_fit_lvmq (x_matrix, NULL, y_vector, sy_vector,
-                  a, GRAVI_LVMQ_FREE,
-                  gravi_acqcam_spot,
-                  gravi_acqcam_spot_dfda,
-                  CPL_FIT_LVMQ_TOLERANCE,
-                  CPL_FIT_LVMQ_COUNT,
-                  CPL_FIT_LVMQ_MAXITER,
-                  NULL, &chisq_fine, NULL);
-
-    /* Recover on error but return NULL */
-    if (cpl_error_get_code() == CPL_ERROR_CONTINUE) {
-      cpl_errorstate_set (prestate);
-      cpl_msg_warning (cpl_func, "Cannot fit pupil spots in initial fit...");
-      for (int d=0; d<16; d++) cpl_vector_set (a, GRAVI_SPOT_FLUX+d, 0);
-    }
-   
-    /* FE: Repeat the Cutout of spotwindows and fit
-       to account for imperfect knowledge of the rotation
-       angle assumed in the first fit */
-
-    /* FE: recalculate spot windows from results of initial fit */
-    gravi_acqcam_xy_diode (cpl_vector_get_data (a), xd, yd);
-    gravi_acqcam_xy_sub (cpl_vector_get_data (a), xsub, ysub);
-    
-    /* FE: refill the spot subapertures */
-    for (cpl_size v = 0, diode = 0; diode < ndiode ; diode++) {
-        for (int sub = 0; sub < nsub ; sub++) {
-            cpl_size xf = roundl(xsub[sub] + xd[diode]);
-            cpl_size yf = roundl(ysub[sub] + yd[diode]);
-            
-            /* Extract 10 pixels around each spot */
-            /* check that we do not get over the limit of the detector */
-            if (xf-nf/2<0) xf=nf/2;
-            if (yf-nf/2<0) yf=nf/2;
-            if (xf+nf/2>nx_img-2) xf=nx_img-2-nf/2;
-            if (yf+nf/2>ny_img-2) yf=ny_img-2-nf/2;
-            
-            double mf = 0.0;
-            for (cpl_size x = xf-nf/2; x < xf+nf/2; x++) {
-                for (cpl_size y = yf-nf/2; y < yf+nf/2; y++) {
-                    double value = cpl_image_get (img, x+1, y+1, &nv);
-                    if (value > mf) mf = value;   /* remember max value for later */
-                    cpl_matrix_set (x_matrix, v, 0, x);
-                    cpl_matrix_set (x_matrix, v, 1, y);
-                    cpl_vector_set (y_vector, v, value);
-                    cpl_vector_set (sy_vector, v, RMS);
-                    v++;
-                    CPLCHECK_MSG ("Cannot fill matrix");
-                }
-            }
-            /* Save the local maximum of this spot as
-             * the starting point for its amplitude */
-            cpl_vector_set (a, GRAVI_SPOT_FLUX+sub*4+diode, mf);
-        }
-    }
-
-    /* FE: refit using a as returned by the initial fit
-       as starting point, but now on newly cut spot windows */
-    chisq_fine = 0.0;
-    prestate = cpl_errorstate_get();
-    cpl_fit_lvmq (x_matrix, NULL, y_vector, sy_vector,
-                  a, GRAVI_LVMQ_FREE,
-                  gravi_acqcam_spot,
-                  gravi_acqcam_spot_dfda,
-                  CPL_FIT_LVMQ_TOLERANCE,
-                  CPL_FIT_LVMQ_COUNT,
-                  CPL_FIT_LVMQ_MAXITER,
-                  NULL, &chisq_fine, NULL);
-
-    /* Recover on error but return NULL */
-    if (cpl_error_get_code() == CPL_ERROR_CONTINUE) {
-      cpl_errorstate_set (prestate);
-      cpl_msg_warning (cpl_func, "Cannot fit pupil spots in final fit ...");
-      for (int d=0; d<16; d++) cpl_vector_set (a, GRAVI_SPOT_FLUX+d, 0);
-    }
-    
-    CPLCHECK_MSG ("Cannot fit fine");
-
-    FREE (cpl_matrix_delete, x_matrix);
-    FREE (cpl_vector_delete, y_vector);
-    FREE (cpl_vector_delete, sy_vector);
-
-    /* Count the number of valid spots based on their amplitude */
-    *nspot = 0;
-    for (int d=0; d<16; d++) {
-      if (cpl_vector_get (a, GRAVI_SPOT_FLUX+d) > 3.*RMS) (*nspot)++;
-    }
-  /*  for (int d=0; d<16; d++) if (cpl_vector_get (a, GRAVI_SPOT_FLUX+d) > 3.*RMS) (*nspot)++; */
-
-    gravi_msg_function_exit(0);
-    return CPL_ERROR_NONE;
-}
-
-/*----------------------------------------------------------------------------*/
-/**
  * @brief measure Strehl Ratio of the source at the given location
  *
  * @param img      input image
@@ -1153,316 +698,14 @@ cpl_error_code gravi_acq_fit_gaussian (cpl_image * img, double *x, double *y,
 
 /*----------------------------------------------------------------------------*/
 /**
- * @brief Reduce the images of pupil from ACQ
- * 
- * @param mean_img:          input mean image
- * @param acqcam_imglist:    input image list
- * @param header:            input header
- * @param acqcam_table:      output table
- * @param o_header:          output header
- * 
- * \exception CPL_ERROR_NULL_INPUT input data is missing
- *
- * The routine analyse the pupil from ACQ and create QC parameters in the
- * header, as well as columns in the acqcam_table.
- */
-/*----------------------------------------------------------------------------*/
-
-cpl_error_code gravi_acqcam_pupil(cpl_image * mean_img,
-		cpl_imagelist * acqcam_imglist, cpl_propertylist * header,
-		cpl_table * acqcam_table, cpl_propertylist * o_header,
-		gravi_data *static_param_data) {
-	gravi_msg_function_start(1);
-	cpl_ensure_code(mean_img, CPL_ERROR_NULL_INPUT);
-	cpl_ensure_code(acqcam_imglist, CPL_ERROR_NULL_INPUT);
-	cpl_ensure_code(header, CPL_ERROR_NULL_INPUT);
-	cpl_ensure_code(acqcam_table, CPL_ERROR_NULL_INPUT);
-	cpl_ensure_code(o_header, CPL_ERROR_NULL_INPUT);
-
-	/* Number of row */
-	cpl_size nrow = cpl_imagelist_get_size(acqcam_imglist);
-
-	/* Compute separation */
-	double sobj_x = gravi_pfits_get_sobj_x(header);
-	double sobj_y = gravi_pfits_get_sobj_y(header);
-	//double sobj_sep = sqrt(sobj_x * sobj_x + sobj_y * sobj_y);
-
-	/* Pupil positions (or we use array of 3)  */
-	gravi_table_new_column(acqcam_table, "PUPIL_NSPOT_V1", NULL, CPL_TYPE_INT);
-	gravi_table_new_column(acqcam_table, "PUPIL_X_V1", "pix", CPL_TYPE_DOUBLE);
-	gravi_table_new_column(acqcam_table, "PUPIL_Y_V1", "pix", CPL_TYPE_DOUBLE);
-	gravi_table_new_column(acqcam_table, "PUPIL_Z_V1", "pix", CPL_TYPE_DOUBLE);
-	gravi_table_new_column(acqcam_table, "PUPIL_R_V1", "deg", CPL_TYPE_DOUBLE);
-	gravi_table_new_column(acqcam_table, "PUPIL_U_V1", "m", CPL_TYPE_DOUBLE);
-	gravi_table_new_column(acqcam_table, "PUPIL_V_V1", "m", CPL_TYPE_DOUBLE);
-	gravi_table_new_column(acqcam_table, "PUPIL_W_V1", "m", CPL_TYPE_DOUBLE);
-	gravi_table_new_column(acqcam_table, "OPD_PUPIL_V1", "m", CPL_TYPE_DOUBLE);
-
-	int nspot = 0, ntel = 4;
-
-	/* Loop on tel */
-	for (int tel = 0; tel < ntel; tel++) {
-		cpl_msg_info(cpl_func, "Compute pupil position for beam %i", tel + 1);
-
-		/* Get the conversion angle xy to uv in [rad] */
-		double fangle = gravi_pfits_get_fangle_acqcam(header, tel);
-		double cfangle = cos(fangle * CPL_MATH_RAD_DEG);
-		double sfangle = sin(fangle * CPL_MATH_RAD_DEG);
-		CPLCHECK_MSG("Cannot determine field angle#");
-
-		/* Get the orientation of star */
-		//double drotoff = gravi_pfits_get_drotoff(header, tel);
-		//double cdrotoff = cos(drotoff * CPL_MATH_RAD_DEG);
-		//double sdrotoff = sin(drotoff * CPL_MATH_RAD_DEG);
-		//CPLCHECK_MSG("Cannot read ESO INS DROTOFF#");
-
-		/* Allocate memory */
-		cpl_vector * a_start = cpl_vector_new(GRAVI_SPOT_NA);
-		cpl_vector_fill(a_start, 0.0);
-
-		/* Read the sub-apperture reference positions
-		 * Converted to accound for sub-windowing
-		 * In vector convention (start at 0,0) */
-		gravi_acqcam_get_pup_ref(header, tel, a_start);
-		gravi_acqcam_get_diode_ref(header, tel, a_start);
-		CPLCHECK_MSG("Cannot read ACQ data for pupil in header");
-
-		/* a_start is the reference position, which will be subtracted to
-		 get pupil shift, focus, and rotation */
-
-		/* copy to initial guess, to then also include pupil rotation, fwhm, and flux */
-		cpl_vector * a_initial = cpl_vector_duplicate (a_start);
-
-		/* We see that fitting the spot angle fails if one spot is fainter than reflection from brightest spot
-		 resulting in wrong pupil_x,y, therefore we calculate angle from header information
-		 by design of telescope spiders. This model angle should be
-		 angle = north_angle + paralactic angle + 45
-		 Remark: checking the angles for the GC easter flare night, we get an offset of 45.75 degrees */
-		double parang = 0.5 * (cpl_propertylist_get_double(header, "ESO ISS PARANG START")
-						     + cpl_propertylist_get_double(header, "ESO ISS PARANG END"));
-
-		// TODO: FE handle case of calibration unit //
-		double angle = fangle + parang + 45.;
-
-		if (angle < 0)   angle += 180;
-		if (angle > 180) angle -= 180;
-		cpl_vector_set (a_initial, GRAVI_SPOT_ANGLE, angle);
-
-		/* set initial flux of model spots to 1 such that model is not equal zero */
-		for (int d = 0; d < 16; d++)
-			cpl_vector_set (a_initial, GRAVI_SPOT_FLUX + d, 1.0);
-
-		/* set FWHM to a realist value in [pix**2] */
-		cpl_vector_set (a_initial, GRAVI_SPOT_FWHM, 2.3 * 2.3);
-
-		/* copy initial guess for the fit of the average image in a_final */
-		cpl_vector * a_final = cpl_vector_duplicate (a_initial);
-        
-
-        cpl_msg_info(cpl_func, "fit spot on angle = %g",(double) cpl_vector_get (a_initial, GRAVI_SPOT_ANGLE));
-        cpl_msg_info(cpl_func, "fit spot on spot diode = %g",(double) cpl_vector_get (a_initial, GRAVI_SPOT_DIODE));
-        cpl_msg_info(cpl_func, "fit spot on subimage x00 = %g",(double) cpl_vector_get (a_initial, GRAVI_SPOT_SUB));
-        cpl_msg_info(cpl_func, "fit spot on subimage y00 = %g",(double) cpl_vector_get (a_initial, GRAVI_SPOT_SUB+4));
-
-		/* fit all model parameters for average image */
-		/* ekki modified below gravi_acqcam_fit_spot (mean_img, a_final, 1, &nspot); */
-		gravi_acqcam_fit_spot(mean_img, a_final, 1, &nspot);
-		CPLCHECK_MSG("Cannot fit average pupil image");
-
-		/* Offsets in pixels */
-		double xpos = cpl_vector_get(a_final, GRAVI_SPOT_SUB + 0)
-				- cpl_vector_get(a_start, GRAVI_SPOT_SUB + 0);
-		double ypos = cpl_vector_get(a_final, GRAVI_SPOT_SUB + 4)
-				- cpl_vector_get(a_start, GRAVI_SPOT_SUB + 4);
-
-		/* Scale */
-		double scale = cpl_vector_get(a_final, GRAVI_SPOT_SCALE);
-
-		/* Angle in degree, taking out 180 deg symmetry */
-		angle = cpl_vector_get(a_final, GRAVI_SPOT_ANGLE);
-		if (angle < 0) angle += 180;
-		if (angle > 180) angle -= 180;
-		cpl_vector_set(a_final, GRAVI_SPOT_ANGLE, angle);
-
-		/* In UV [m] */
-		double upos = (cfangle * xpos - sfangle * ypos) / scale;
-		double vpos = (sfangle * xpos + cfangle * ypos) / scale;
-
-		/* Add best position as a cross in image */
-		gravi_acqcam_spot_imprint(mean_img, a_final);
-
-		/* Add QC parameters */
-		char qc_name[100];
-
-		sprintf(qc_name, "ESO QC ACQ FIELD%i NORTH_ANGLE", tel + 1);
-		cpl_msg_info(cpl_func, "%s = %f", qc_name, fangle);
-		cpl_propertylist_update_double(o_header, qc_name, fangle);
-		cpl_propertylist_set_comment(o_header, qc_name,
-				"[deg] y->x, predicted North direction on ACQ");
-
-		sprintf(qc_name, "ESO QC ACQ PUP%i NSPOT", tel + 1);
-		cpl_msg_info(cpl_func, "%s = %i", qc_name, nspot);
-		cpl_propertylist_update_int(o_header, qc_name, nspot);
-		cpl_propertylist_set_comment(o_header, qc_name,
-				"nb. of pupil spot in ACQ");
-
-		sprintf(qc_name, "ESO QC ACQ PUP%i ANGLE", tel + 1);
-		cpl_msg_info(cpl_func, "%s = %f", qc_name, angle);
-		cpl_propertylist_update_double(o_header, qc_name, angle);
-		cpl_propertylist_set_comment(o_header, qc_name,
-				"[deg] y->x, diode angle on ACQ");
-
-		sprintf(qc_name, "ESO QC ACQ PUP%i SCALE", tel + 1);
-		cpl_msg_info(cpl_func, "%s = %f", qc_name, scale);
-		cpl_propertylist_update_double(o_header, qc_name, scale);
-		cpl_propertylist_set_comment(o_header, qc_name,
-				"[pix/m] diode scale on ACQ");
-
-		sprintf(qc_name, "ESO QC ACQ PUP%i XPOS", tel + 1);
-		cpl_msg_info(cpl_func, "%s = %f", qc_name, xpos);
-		cpl_propertylist_update_double(o_header, qc_name, xpos);
-		cpl_propertylist_set_comment(o_header, qc_name,
-				"[pix] pupil x-shift in ACQ");
-
-		sprintf(qc_name, "ESO QC ACQ PUP%i YPOS", tel + 1);
-		cpl_msg_info(cpl_func, "%s = %f", qc_name, ypos);
-		cpl_propertylist_update_double(o_header, qc_name, ypos);
-		cpl_propertylist_set_comment(o_header, qc_name,
-				"[pix] pupil y-shift in ACQ");
-
-		sprintf(qc_name, "ESO QC ACQ PUP%i UPOS", tel + 1);
-		cpl_msg_info(cpl_func, "%s = %f", qc_name, upos);
-		cpl_propertylist_update_double(o_header, qc_name, upos);
-		cpl_propertylist_set_comment(o_header, qc_name,
-				"[m] pupil u-shift in ACQ");
-
-		sprintf(qc_name, "ESO QC ACQ PUP%i VPOS", tel + 1);
-		cpl_msg_info(cpl_func, "%s = %f", qc_name, vpos);
-		cpl_propertylist_update_double(o_header, qc_name, vpos);
-		cpl_propertylist_set_comment(o_header, qc_name,
-				"[m] pupil v-shift in ACQ");
-
-		for (int ispot = 0; ispot < 4; ispot++) {
-			sprintf(qc_name, "ESO QC ACQ PUP%i SPOT_FLUX%i", tel + 1,
-					ispot + 1);
-			cpl_msg_info(cpl_func, "%s = %f", qc_name,
-					(cpl_vector_get(a_final, GRAVI_SPOT_FLUX + ispot + 0)
-							+ cpl_vector_get(a_final,
-									GRAVI_SPOT_FLUX + ispot + 4)
-							+ cpl_vector_get(a_final,
-									GRAVI_SPOT_FLUX + ispot + 8)
-							+ cpl_vector_get(a_final,
-									GRAVI_SPOT_FLUX + ispot + 12)) / 4.);
-			cpl_propertylist_update_double(o_header, qc_name,
-					(cpl_vector_get(a_final, GRAVI_SPOT_FLUX + ispot + 0)
-							+ cpl_vector_get(a_final,
-									GRAVI_SPOT_FLUX + ispot + 4)
-							+ cpl_vector_get(a_final,
-									GRAVI_SPOT_FLUX + ispot + 8)
-							+ cpl_vector_get(a_final,
-									GRAVI_SPOT_FLUX + ispot + 12)) / 4.);
-			cpl_propertylist_set_comment(o_header, qc_name,
-					"[ADU] mean spot flux");
-		}
-
-		/* Loop on all images */
-		for (cpl_size row = 0; row < nrow; row++) {
-			if (row % 10 == 0 || row == (nrow - 1))
-				cpl_msg_info_overwritable(cpl_func, "Fit image %lld over %lld",
-						row + 1, nrow);
-
-			/* Get data and initialize model fit */
-			cpl_image * img = cpl_imagelist_get(acqcam_imglist, row);
-			cpl_vector * a_row = cpl_vector_duplicate (a_initial);
-
-			/* Fit pupil sensor spots in this image. */
-			gravi_acqcam_fit_spot(img, a_row, 1, &nspot);
-			CPLCHECK_MSG("Cannot fit sub-appertures of image");
-
-			/* Angle in degree, taking out 180 deg symmetry */
-			angle = cpl_vector_get(a_row, GRAVI_SPOT_ANGLE);
-			if (angle < 0)
-				angle += 180;
-			if (angle > 180)
-				angle -= 180;
-			cpl_vector_set(a_row, GRAVI_SPOT_ANGLE, angle);
-			double x_shift = -999.0;
-			double y_shift = -999.0;
-			/* If spot detected */
-			if (nspot < 4) {
-				cpl_table_set(acqcam_table, "PUPIL_NSPOT_V1", row * ntel + tel, 0);
-			} else {
-				/* Add best position as a cross in image */
-				gravi_acqcam_spot_imprint(img, a_row);
-
-				/* Remove reference */
-				cpl_vector_subtract(a_row, a_start);
-
-				/* Get rotation [deg] and shift [pix]*/
-				double r_shift = cpl_vector_get(a_row, GRAVI_SPOT_ANGLE);
-				x_shift = cpl_vector_get(a_row, GRAVI_SPOT_SUB + 0);
-				y_shift = cpl_vector_get(a_row, GRAVI_SPOT_SUB + 4);
-				double z_shift = -0.5
-						* (cpl_vector_get(a_row, GRAVI_SPOT_SUB + 2)
-								+ cpl_vector_get(a_row, GRAVI_SPOT_SUB + 5));
-
-				/* In UV [m] */
-				double u_shift = (cfangle * x_shift - sfangle * y_shift)
-						/ scale;
-				double v_shift = (sfangle * x_shift + cfangle * y_shift)
-						/ scale;
-				double w_shift = gravi_acqcam_z2meter(z_shift,
-						static_param_data);
-
-				cpl_table_set(acqcam_table, "PUPIL_NSPOT_V1", row * ntel + tel,
-						nspot);
-				cpl_table_set(acqcam_table, "PUPIL_X_V1", row * ntel + tel,
-						x_shift);
-				cpl_table_set(acqcam_table, "PUPIL_Y_V1", row * ntel + tel,
-						y_shift);
-				cpl_table_set(acqcam_table, "PUPIL_Z_V1", row * ntel + tel,
-						z_shift);
-				cpl_table_set(acqcam_table, "PUPIL_R_V1", row * ntel + tel,
-						r_shift);
-				cpl_table_set(acqcam_table, "PUPIL_U_V1", row * ntel + tel,
-						u_shift);
-				cpl_table_set(acqcam_table, "PUPIL_V_V1", row * ntel + tel,
-						v_shift);
-				cpl_table_set(acqcam_table, "PUPIL_W_V1", row * ntel + tel,
-						w_shift);
-                
-
-				/* Compute the OPD_PUPIL */
-				// FE 2019-05-15 replacing opd_pupil calculation with more accurate formula,
-				// the calculation using the drotoff angle doens't know about the fiber offsets,
-				// but the above fangle in the caclulation of uv_shift includes the fiber offsets
-				double opd_pupil = -(u_shift * sobj_x + v_shift * sobj_y)
-						* GRAVI_MATH_RAD_MAS;
-				// double opd_pupil = sobj_sep * GRAVI_MATH_RAD_MAS / scale *
-				//                (x_shift * cdrotoff + y_shift * sdrotoff);
-				cpl_table_set(acqcam_table, "OPD_PUPIL_V1", row * ntel + tel,
-						opd_pupil);
-			}
-			FREE (cpl_vector_delete, a_row);
-		}
-		FREE (cpl_vector_delete, a_start);
-		FREE (cpl_vector_delete, a_final);
-		FREE (cpl_vector_delete, a_initial);
-	} /* End loop on tel */
-
-	gravi_msg_function_exit(1);
-	return CPL_ERROR_NONE;
-}
-
-
-/*----------------------------------------------------------------------------*/
-/**
  * @brief Reduce the images of pupil from ACQ V2.0
  *
+ * @param mean_img:  input image
  * @param acqcam_imglist:    input image list
  * @param header:            input header
  * @param acqcam_table:      output table
  * @param o_header:          output header
+ * @param static_param_data:          gravity static dataset
  *
  * \exception CPL_ERROR_NULL_INPUT input data is missing
  *
@@ -1634,12 +877,11 @@ return CPL_ERROR_NONE;
 /**
  * @brief Cleaning pupil images by cross-correlation with gaussian function
  *
- * @param imagelist:   input acqcam_imglist
- * @param imagelist:   output pupilImage_filtered
+ * @param acqcam_imglist:   input acqcam_imglist
+ * @param pupilImage_filtered:   output pupilImage_filtered
  * @param ury:      y limit of pupil beacon camera
  *
  * \exception CPL_ERROR_NULL_INPUT input data is missing
- * \exception CPL_ERROR_ILLEGAL_INPUT tel outside limits
  *
  */
 /*----------------------------------------------------------------------------*/
@@ -1647,8 +889,10 @@ return CPL_ERROR_NONE;
 cpl_error_code gravi_acqcam_clean_pupil_v2(cpl_imagelist * acqcam_imglist, cpl_imagelist * pupilImage_filtered, const cpl_size ury)
 {
     gravi_msg_function_start(1);
-        
+    
     cpl_ensure_code(acqcam_imglist, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code(pupilImage_filtered, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code(ury, CPL_ERROR_NULL_INPUT);
     
     /* Number of row */
     cpl_size nrow = cpl_imagelist_get_size(acqcam_imglist);
@@ -1717,6 +961,21 @@ cpl_error_code gravi_acqcam_clean_pupil_v2(cpl_imagelist * acqcam_imglist, cpl_i
 }
     
 
+/*----------------------------------------------------------------------------*/
+/**
+* @brief select pupil frames with pupil beacon on. Clean pupil frames by substraction of images with pupil beacon off.
+*
+* @param pupilImage_filtered:   input imagelist with cleaned (filtered) images
+ * @param pupilImage_onFrames:   output pupilImage with beacons on
+ * @param good_frames:   array of integer. It tells which frames have beacon on or off
+* @param ury:      y limit of pupil beacon camera
+*
+* \exception CPL_ERROR_NULL_INPUT input data is missing
+*
+ * Not that the output imagelist is a list of n_on images, with n_on the number of good_frames at off:
+ *   n_on= sum(good_frames)
+*/
+/*----------------------------------------------------------------------------*/
 
 cpl_error_code gravi_acqcam_select_good_frames_v2(cpl_imagelist * pupilImage_filtered, cpl_imagelist * pupilImage_onFrames, cpl_array * good_frames)
 {
@@ -1750,10 +1009,6 @@ cpl_error_code gravi_acqcam_select_good_frames_v2(cpl_imagelist * pupilImage_fil
         cpl_msg_info (cpl_func, "Finding min brightness level for beacon ON %lli: %.5f ADU",n, cpl_vector_get(pupil_mediam, n));*/
         
     }
-    /*
-    for (cpl_size n = 0; n < nrow; n++)
-    cpl_msg_info (cpl_func, "Finding min brightness level for beacon 1ON %lli: %.5f ADU",n, cpl_vector_get(pupil_mediam, n));
-    */
     
     cpl_vector *   pupil_mediam_sort = cpl_vector_duplicate (pupil_mediam);
     cpl_vector_sort (pupil_mediam_sort,CPL_SORT_ASCENDING);
@@ -1829,40 +1084,22 @@ cpl_error_code gravi_acqcam_select_good_frames_v2(cpl_imagelist * pupilImage_fil
     cpl_vector_delete(pupil_mediam_sort);
     cpl_array_delete(back_frames);
     
-    /*
-    for (cpl_size n = 0; n < n_goodFrames ; n++)
-    {
-        cpl_image * small_img_tmp = cpl_imagelist_get (pupilImage_onFrames, n);
-        cpl_msg_info (cpl_func, "flux %lli = %.2f",n, cpl_image_get(small_img_tmp, 101, 151, &nv));
-    }*/
-    
     CPLCHECK_MSG("Pupil Selection of good files failed");
     gravi_msg_function_exit(1);
     return CPL_ERROR_NONE;
 }
-
-
     
 /*----------------------------------------------------------------------------*/
 /**
- * @brief Re-arrange the sub-aperture position into the output vector
+ * @brief Get the reference pixels for the pupil guiding on the acquisition camera
  *
  * @param header:   input header
- * @param tel:      requested beam (0..3)
- * @param output:   output vector, shall be already allocated
+ * @param diode_pos_subwindow:   output bivector, positions of the subwindows in pupil camera
  *
  * \exception CPL_ERROR_NULL_INPUT input data is missing
  * \exception CPL_ERROR_ILLEGAL_INPUT tel outside limits
  *
- *
- * Read the sub-aperture position for the pupil sensor,
- *        and re-arrange them into the output vector
- *
- *        - output[0] = x0+x1+x2+x3   (center of sub-apertures)
- *        - output[1] = x0-x1+x2-x3
- *        - output[2] = x0+x1-x2-x3
- *        - output[3] = x0-x1-x2+x3
- *        - output[4..7] = same for y
+ * The output bi-vector is of size 4x4=16 (4 telescopes, 4 lenslets on the acquisition camera).
  */
 /*----------------------------------------------------------------------------*/
 
@@ -1870,6 +1107,7 @@ cpl_error_code gravi_acqcam_get_pup_ref_v2 (cpl_propertylist * header, cpl_bivec
 {
     gravi_msg_function_start(0);
     cpl_ensure_code (header,          CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (diode_pos_subwindow,          CPL_ERROR_NULL_INPUT);
 
     cpl_size nsx = 0, nsy = 0, sx = 0, sy = 0;
     
@@ -1919,24 +1157,21 @@ cpl_error_code gravi_acqcam_get_pup_ref_v2 (cpl_propertylist * header, cpl_bivec
 
 /*----------------------------------------------------------------------------*/
 /**
- * @brief Read the diode position from header into the vector output
- *
- * @param header:   input header
- * @param tel:      requested beam (0..3)
- * @param output:   output vector, shall be already allocated
- *
- * \exception CPL_ERROR_NULL_INPUT input data is missing
- * \exception CPL_ERROR_ILLEGAL_INPUT tel outside limits
- *
- * Read the diode position from header into the vector output. Assume
- *        the four diodes form a rectangle centered on the pupil center.
- *
- *        - output[8]   = rotation  [deg], set to 0.0
- *        - output[9]   = scale  [pix/m]
- *        - output[10]  = dx [m]
- *        - output[11]  = dy [m]
- */
+* @brief Get the position of the telescope diodes in pixels
+*
+* @param header:   input header
+ * @param good_frames:   array of 0 and 1, which tells when the pupil beacons are on
+ * @param scale_vector:  output vector with the scales used for each telescope
+ * @param diode_pos_telescope:   output bivector, positions of the diode in pixel unit (and camera orientation)
+*
+* \exception CPL_ERROR_NULL_INPUT input data is missing
+*
+* The output bi-vector is of size n_onx4x4=16 (4 telescopes, 4 diodes).
+ * To note, because of the rotation of the parralactic angle (which can be large close to zenith), the output bivector is
+ * actually an array of n_on bivector, where n_on is the number of frames with the beacons light on.
+*/
 /*----------------------------------------------------------------------------*/
+
 
 cpl_error_code gravi_acqcam_get_diode_ref_v2 (cpl_propertylist * header,
                                               cpl_array * good_frames,
@@ -2062,6 +1297,25 @@ cpl_error_code gravi_acqcam_get_diode_ref_v2 (cpl_propertylist * header,
     return CPL_ERROR_NONE;
 }
 
+/*----------------------------------------------------------------------------*/
+/**
+* @brief Get the position of the telescope diodes in pixels
+*
+ * @param diode_pos_subwindow:   input bivector, positions of the subwindows in pupil camera
+ * @param diode_pos_telescope:   input bivector, positions of the diode in pixel unit (and camera orientation)
+ * @param diode_pos_theoretical:   output bivectori, expected position of the beacons on the acq camera
+ .
+*
+* \exception CPL_ERROR_NULL_INPUT input data is missing
+*
+* The output bi-vector is of size n_onx11x4x4x4=16 (4 telescopes, 4 diodes, 4 lenslet).
+ * To note, because of the rotation of the parralactic angle (which can be large close to zenith), the output bivector is
+ * actually an array of n_on bivector, where n_on is the number of frames with the beacons light on.
+ * Also To note, the position depends on the focus value. Therefore, we will propose 11 different positions for 11 values of defocs.
+ * The number 11 is actually a parameter defined by GRAVI_SPOT_NFOCUS.
+ * The scaling factor is defined by the function gravi_acqcam_defocus_scaling (A thrid order polynomial).
+*/
+/*----------------------------------------------------------------------------*/
 
 cpl_error_code gravi_acqcam_get_diode_theoretical_v2(cpl_bivector *  diode_pos_subwindow,
                                                      cpl_bivector **  diode_pos_telescope,
@@ -2070,6 +1324,9 @@ cpl_error_code gravi_acqcam_get_diode_theoretical_v2(cpl_bivector *  diode_pos_s
 {
     
     gravi_msg_function_start(1);
+    cpl_ensure_code (diode_pos_subwindow,          CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (diode_pos_telescope,          CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (diode_pos_theoretical,          CPL_ERROR_NULL_INPUT);
     
     cpl_vector * x_pos_subwindow = cpl_bivector_get_x (diode_pos_subwindow);
     cpl_vector * y_pos_subwindow = cpl_bivector_get_y (diode_pos_subwindow);
@@ -2117,6 +1374,17 @@ gravi_msg_function_exit(1);
 return CPL_ERROR_NONE;
     
 }
+
+/*----------------------------------------------------------------------------*/
+/**
+* @brief imprint zeros at the postion of the detected pupil spots
+*
+ * @param mean_img:   input / output image,
+ * @param diode_pos_offset:   input bivectori, the initial pupil shift caused by the shift and add algorithm
+ * @param diode_pos_theoretical:   input bivectori, expected position of the beacons on the acq camera
+ * @param ury:  separation between pupil images and rest of acq camera (typically 750)
+ .
+/*----------------------------------------------------------------------------*/
 
 
 cpl_error_code gravi_acqcam_spot_imprint_v2(cpl_image *mean_img, cpl_bivector ** diode_pos_offset, cpl_bivector **  diode_pos_theoretical, int ury)
@@ -2166,6 +1434,40 @@ cpl_error_code gravi_acqcam_spot_imprint_v2(cpl_image *mean_img, cpl_bivector **
 }
 
 
+/*----------------------------------------------------------------------------*/
+/**
+* @brief perform shift and add of the pupil image according to the theoretical positions
+*
+ * @param pupilImage_onFrames:   input imagelist, pupil images where the beacons are on
+ * @param pupilImage_shiftandadd:   output imagelist, pupil images after shift and add
+ * @param good_frames:   input array of 0 and 1, which tells when the pupil beacons are on
+ * @param focus_value:   output vector, store the measured focus value.
+ * @param diode_pos_theoretical:   input bivectori, expected position of the beacons on the acq camera
+ * @param diode_pos_offset:   output bivectori, the initial pupil shift caused by the shift and add algorithm
+ * @param nrow_on:   the number of input frames
+ .
+*
+* \exception CPL_ERROR_NULL_INPUT input data is missing
+*
+ *
+ * The first step of this routine is to find the focus/defocus value.
+ * To do so, it use brut force to find the focus wich gives the maximum flux (over a 55x55 add and shifted image)
+ *
+ * The output images list are the pupil plane images, but shift and added according to the theoretical positions,
+ * and the maximum focus.
+ * In other words, it co-adds all the beacon images on a single image, which has a smaller size.
+ * the size of the shigt and added images is 59*2+1 (that is fixed by the parameter GRAVI_SPOT_NSEARCH)
+ * It means that if the beacons moved by more tha 59 pixels, we will not find them.
+ * But the margin should be big enough to cover all cases.
+ *
+* The output bi-vector is of size n_onx4  (4 telescopes, n_on frames).
+ * They correspond to the x and y pupil shift observe at each 'beacon ON' frames
+ * Not the the diode_pos_offset bivector is just an initialisation (different from zero) resulting from the cut of the shift
+ * and add algorithm
+*/
+/*----------------------------------------------------------------------------*/
+
+
 cpl_error_code gravi_acqcam_perform_shiftandadd_v2(cpl_imagelist * pupilImage_onFrames, cpl_imagelist ** pupilImage_shiftandadd, cpl_array * good_frames,
                                                    cpl_vector * focus_value,
                                                      cpl_bivector **  diode_pos_theoretical ,
@@ -2174,7 +1476,12 @@ cpl_error_code gravi_acqcam_perform_shiftandadd_v2(cpl_imagelist * pupilImage_on
     gravi_msg_function_start(1);
     
     cpl_ensure_code(pupilImage_onFrames, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code(pupilImage_shiftandadd, CPL_ERROR_NULL_INPUT);
     cpl_ensure_code(good_frames, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code(focus_value, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code(diode_pos_theoretical, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code(diode_pos_offset, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code(nrow_on, CPL_ERROR_NULL_INPUT);
     
     if (cpl_imagelist_get_size(pupilImage_onFrames) != nrow_on)
         cpl_msg_error (cpl_func, "Problem with number of blinking frames");
@@ -2252,14 +1559,10 @@ cpl_error_code gravi_acqcam_perform_shiftandadd_v2(cpl_imagelist * pupilImage_on
             double ppos_x, ppos_y;
             cpl_image** cpl_image_combined =  cpl_geom_img_offset_saa    (pupilImage_shifted,offs,CPL_KERNEL_DEFAULT,
                                                                           0,0,CPL_GEOM_INTERSECT,&ppos_x,&ppos_y);
-            /*cpl_msg_info (cpl_func, "saa image %.2f / %.2f",ppos_x,ppos_y);*/
             CPLCHECK_MSG("Cannot do fine shift and add");
             
             cpl_vector * x_pos_offset = cpl_bivector_get_x (diode_pos_offset[n]);
             cpl_vector * y_pos_offset = cpl_bivector_get_y (diode_pos_offset[n]);
-            
-            
-/*            cpl_image * image_mean = cpl_imagelist_collapse_create (pupilImage_shifted);*/
             
             cpl_size nx=cpl_image_get_size_x (cpl_image_combined[0]);
             cpl_size ny=cpl_image_get_size_y (cpl_image_combined[0]);
@@ -2268,10 +1571,6 @@ cpl_error_code gravi_acqcam_perform_shiftandadd_v2(cpl_imagelist * pupilImage_on
             
             cpl_vector_set(x_pos_offset, tel, ppos_x+3);
             cpl_vector_set(y_pos_offset, tel, ppos_y+3);
-            
-            /*
-            if (n == 10)
-            cpl_msg_info (cpl_func, "image %lli / tel %lli shifted 15/10 : %.2f", n,tel,cpl_image_get(image_mean, 11, 16, &nv));*/
                 
             cpl_imagelist_set(pupilImage_shiftandadd[tel], image_mean, n);
             CPLCHECK_MSG("Cannot add shift and added image to imagelist");
@@ -2293,14 +1592,39 @@ cpl_error_code gravi_acqcam_perform_shiftandadd_v2(cpl_imagelist * pupilImage_on
 }
 
 
+/*----------------------------------------------------------------------------*/
+/**
+* @brief on the images shift and added, find maximum and perform gaussian fit
+*
+ * @param pupilImage_shiftandadd:   input imagelist, pupil images after shift and add
+ * @param bad_frames_short:  output array of (0/1) int which tells if the pupil offset was found.
+ * @param o_header:          output header
+ * @param diode_pos_offset:   output bivectori, the initial pupil shift caused by the shift and add algorithm
+ * @param nrow_on:   the number of input frames
+ .
+*
+* \exception CPL_ERROR_NULL_INPUT input data is missing
+*
+ *
+* The output bi-vector is of size n_onx4  (4 telescopes, n_on frames).
+ * They correspond to the x and y pupil shift observe at each 'beacon ON' frames
+ * The diode_pos_offset bivector correspond to the offset of the pupil with respect to the theoretical position
+*/
+/*----------------------------------------------------------------------------*/
+
+
 cpl_error_code gravi_acqcam_get_pupil_offset_v2(cpl_imagelist ** pupilImage_shiftandadd,
                                                      cpl_array * bad_frames_short,
                                                 cpl_bivector **  diode_pos_offset, cpl_propertylist * o_header,
                                                 cpl_size nrow_on)
 {
     gravi_msg_function_start(1);
+    
     cpl_ensure_code(pupilImage_shiftandadd, CPL_ERROR_NULL_INPUT);
     cpl_ensure_code(bad_frames_short, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code(diode_pos_offset, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code(o_header, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code(nrow_on, CPL_ERROR_NULL_INPUT);
     
     int nv =0;
     
@@ -2386,6 +1710,31 @@ cpl_error_code gravi_acqcam_get_pupil_offset_v2(cpl_imagelist ** pupilImage_shif
     gravi_msg_function_exit(1);
     return CPL_ERROR_NONE;
 }
+
+
+/*----------------------------------------------------------------------------*/
+/**
+* @brief store the pupil offset in the table, and create QC parameters.
+*
+ * @param acqcam_table:   input /output table
+ * @param header:          input header
+ * @param o_header:          output header
+ * @param good_frames:  input array of (0/1) int which tells if the pupil beacons are "on"
+ * @param scale_vector: optional --   input  bivectori, the initial pupil shift caused by the shift and add algorithm
+ * @param bad_frames_short:  optional --  input array of (0/1) int which tells if the pupil offset was found.
+ * @param diode_pos_offset:  optional --   input bivectori, the initial pupil shift caused by the shift and add algorithm
+ * @param focus_value:    optional -- input bivectori, the initial pupil shift caused by the shift and add algorithm
+ * @param static_param_data:  optional --  static parameter table
+ .
+*
+* \exception CPL_ERROR_NULL_INPUT input data is missing
+*
+ *
+* Populate the table of in pupil offset (and u-v plane shift).
+ * if no good_frames (sum(good_frames==0), than all the other parameters can be put to NULL
+ * In that case, the table will be filled with zeros.
+*/
+/*----------------------------------------------------------------------------*/
 
 
 
@@ -2609,6 +1958,29 @@ gravi_msg_function_exit(1);
 return CPL_ERROR_NONE;
 }
 
+
+
+/*----------------------------------------------------------------------------*/
+/**
+* @brief extract sub window of image (similar to cpl_image_extract)
+*
+ * @param image_in:   input image
+ * @param header:          input header
+ * @param o_header:          output header
+ * @param good_frames:  input array of (0/1) int which tells if the pupil beacons are "on"
+ * @param scale_vector: optional --   input  bivectori, the initial pupil shift caused by the shift and add algorithm
+ * @param bad_frames_short:  optional --  input array of (0/1) int which tells if the pupil offset was found.
+ * @param diode_pos_offset:  optional --   input bivectori, the initial pupil shift caused by the shift and add algorithm
+ * @param focus_value:    optional -- input bivectori, the initial pupil shift caused by the shift and add algorithm
+ * @param static_param_data:  optional --  static parameter table
+ .
+ *
+* Pupilate output image with zero if corrdinates outside range (instead of giving error).
+*/
+/*----------------------------------------------------------------------------*/
+
+
+
 cpl_image * gravi_image_extract(cpl_image * image_in, cpl_size llx, cpl_size lly, cpl_size urx, cpl_size ury)
     {
         
@@ -2667,6 +2039,13 @@ cpl_image * gravi_image_extract(cpl_image * image_in, cpl_size llx, cpl_size lly
         return image_out;
     }
     
+/*----------------------------------------------------------------------------*/
+/**
+* @brief gives focus value as in a list of value
+*
+*/
+/*----------------------------------------------------------------------------*/
+
 
 double gravi_acqcam_defocus_scaling(int focus)
 {
