@@ -376,6 +376,16 @@ cpl_vector * gravi_ellipse_meanopd_create (cpl_table * spectrum_table,
     /* Init mean_opd to average over channel and polar */
     cpl_vector * mean_opd = cpl_vector_new (nrow);
     cpl_vector_fill (mean_opd, 0.0);
+    
+    /*
+    if (base == 0)
+    {
+                                FILE *fAst=fopen("opd_text.txt","a");
+    fprintf(fAst, "%i\n" , wave_start);
+        fprintf(fAst, "%i\n" , wave_end);
+        fprintf(fAst, "%i\n" , 555);
+                                fclose(fAst);
+    }*/
 
     /* Do the computation twice, first without enveloppe and 
      * then with enveloppe correction */
@@ -431,6 +441,42 @@ cpl_vector * gravi_ellipse_meanopd_create (cpl_table * spectrum_table,
                 cpl_vector_subtract (vector_Y, vector_T);
                 FREE (cpl_vector_delete, vector_T);
                 
+                if (wave_end < 10)
+                {
+                    cpl_vector* vector_X1= cpl_vector_duplicate (vector_X);
+                    cpl_vector* vector_Y1= cpl_vector_duplicate (vector_Y);
+                    double new_scalar;
+                    for (cpl_size n=1; n < cpl_vector_get_size(vector_X)-1;n++)
+                    {
+                        new_scalar=cpl_vector_get(vector_X1,n-1);
+                        new_scalar+=cpl_vector_get(vector_X1,n);
+                        new_scalar+=cpl_vector_get(vector_X1,n+1);
+                        cpl_vector_set(vector_X,n,new_scalar/3);
+                    }
+                    for (cpl_size n=1; n < cpl_vector_get_size(vector_Y)-1;n++)
+                    {
+                        new_scalar=cpl_vector_get(vector_Y1,n-1);
+                        new_scalar+=cpl_vector_get(vector_Y1,n);
+                        new_scalar+=cpl_vector_get(vector_Y1,n+1);
+                        cpl_vector_set(vector_Y,n,new_scalar/3);
+                    }
+                    FREE (cpl_vector_delete, vector_X1);
+                    FREE (cpl_vector_delete, vector_Y1);
+                }
+                /*
+                if ((base == 0)&&(wave_end == 4))
+                {
+                    FILE *fAst=fopen("opd_text.txt","a");
+                    fprintf(fAst, "%i\n" , 500);
+                    for (cpl_size n=0; n < cpl_vector_get_size(vector_X);n++)
+                        fprintf(fAst, "%g\n" , cpl_vector_get(vector_X,n) );
+                    fprintf(fAst, "%i\n" , 600);
+                    for (cpl_size n=0; n < cpl_vector_get_size(vector_Y);n++)
+                        fprintf(fAst, "%g\n" , cpl_vector_get(vector_Y,n) );
+                    fclose(fAst);
+                }
+                 */
+                
                 CPLCHECK_NUL ("Cannot extract the X and Y vectors");
 
                 /* Compute envelope from OPD for this channel */
@@ -468,12 +514,23 @@ cpl_vector * gravi_ellipse_meanopd_create (cpl_table * spectrum_table,
                 }
                 if (wave != wave_end)
                     phase_previous = cpl_vector_duplicate (phase);
-
+                
+                /*
+                if ((base == 0)&&(wave_end == 4))
+                {
+                    FILE *fAst=fopen("opd_text.txt","a");
+                    fprintf(fAst, "%i\n" , 400);
+                    for (cpl_size n=0; n < cpl_vector_get_size(phase);n++)
+                        fprintf(fAst, "%g\n" , cpl_vector_get(phase,n) );
+                    fclose(fAst);
+                }*/
+                
                 /* Convert phase to opd and accumulate the mean
                  * phase opd over the spectral channels */
                 cpl_vector_multiply_scalar (phase, lbd_channel / CPL_MATH_2PI);
                 cpl_vector_add (pol_opd, phase);
                 CPLCHECK_NUL ("Cannot accumulate phase");
+                
                 
                 FREE (cpl_vector_delete, phase);
             } /* end loop on wave */
