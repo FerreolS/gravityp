@@ -1822,7 +1822,7 @@ cpl_error_code gravi_image_replace_window (cpl_image * img1, const cpl_image * i
     cpl_size ny = cpl_image_get_size_y (img1);
     cpl_size nx2 = cpl_image_get_size_x (img2);
     cpl_size ny2 = cpl_image_get_size_y (img2);
-    cpl_msg_info(cpl_func, "Size image 1 %lli/%lli, Size image 2 %lli/%lli" , nx,ny,nx2,ny2);
+    cpl_msg_info(cpl_func, "Size image 1 %lli/%lli, Size window %lli/%lli" , nx,ny,nx2,ny2);
                  
     urx = CPL_MIN (urx, nx);
     ury = CPL_MIN (ury, ny);

@@ -668,7 +668,7 @@ const cpl_size ury = (ny>1100) ? 1200 : 745;
     
     cpl_image *  pupilImage_onFrames_collapse=cpl_imagelist_collapse_create (pupilImage_onFrames);
     gravi_image_replace_window (mean_img, pupilImage_onFrames_collapse,
-                                         1, ury, nx, ny, 0, 1 - ury);
+                                         1, ury, nx, ny, 1, 1);
     cpl_image_delete(pupilImage_onFrames_collapse);
     CPLCHECK_MSG("Cannot modify mean_image");
     
@@ -833,7 +833,6 @@ cpl_error_code gravi_acqcam_clean_pupil_v2(cpl_imagelist * acqcam_imglist, cpl_i
     cpl_image * small_img_tmp = cpl_imagelist_get (acqcam_imglist, n);
     cpl_image * small_img = cpl_image_extract( small_img_tmp, 1, ury, nx, ny);
     cpl_imagelist_set(pupilImage, small_img,n);
-        /*cpl_msg_info (cpl_func, "1 image valeur %lli = %.2f, after filtering %.2f",n, cpl_image_get(small_img_tmp, 101, 151, &nv), cpl_image_get(small_img, 101, 151, &nv));*/
     }
     
     nx=cpl_image_get_size_x (cpl_imagelist_get (pupilImage, 0));
@@ -869,6 +868,7 @@ cpl_error_code gravi_acqcam_clean_pupil_v2(cpl_imagelist * acqcam_imglist, cpl_i
     cpl_imagelist_set(pupilImage_filtered, filtered_img,n);
         if (n %10 == 0 || n == (nrow-1))
         cpl_msg_info_overwritable (cpl_func, "Convolution of pupil frame %lli over %lli frames",n, nrow);
+        
     }
     
     cpl_matrix_delete(kernel1);
