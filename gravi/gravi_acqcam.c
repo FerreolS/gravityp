@@ -262,93 +262,7 @@ cpl_error_code gravi_preproc_acqcam (gravi_data *output_data,
     
     FREE (cpl_mask_delete, badpix_mask);
 
-    /* Get the size */
-    cpl_image * img = cpl_imagelist_get (imglist, 0);
-    cpl_size nx = cpl_image_get_size_x (img);
-    cpl_size ny = cpl_image_get_size_y (img);
-
-    /* FIXME: Deal with the case full-frame in a better way */
-    cpl_size ury = (ny>1100) ? 1200 : 750;        
-
-    /* Add new image list for acqucam pupil v2 (untouched) */
-    cpl_imagelist * imglist2;
-    imglist2 = cpl_imagelist_duplicate (imglist);
-    
-    /* 
-     * Remove the pupil background by the mean of blinking
-     */
-    if (nrow == 1) {
-        gravi_msg_warning ("FIXME","Cannot remove blinked pupil (no blink)");
-        
-    } else {
-        cpl_msg_info (cpl_func, "Remove the blinking");
-
-        /* Get pupil diode flux for all images. Deal with the
-         * change of format (FIXME: make it more clean) */
-        double flux[nrow];
-        for (cpl_size row = 0; row < nrow; row ++) {
-            cpl_image * img = cpl_imagelist_get (imglist,row);
-            if (nx < 1100)                
-                flux[row] = cpl_image_get_flux_window (img, 1, 800, 1000, 1000) - 
-                            cpl_image_get_median_window (img, 1, 800, 1000, 1000) * 1000 * 200;
-            else
-                flux[row] = cpl_image_get_flux_window (img, 1, 1200, 2048, 1536) -
-                            cpl_image_get_median_window (img, 1, 1200, 2048, 1536) * 2048 * 336;
-
-            cpl_msg_debug (cpl_func, "flux %lli = %.2f",row, flux[row]);
-        }
-            
-        for (cpl_size row = 0; row < nrow; row ++) {
-
-            /* Find the best possible blink, default is
-             * current (hence frame will be zero) */
-            cpl_size blink = row;
-            if ( (flux[row] - flux[CPL_MAX(row-1,0)] ) > GRAVI_ACQ_PUP_FLUX) blink = row-1;
-            if ( (flux[row] - flux[CPL_MIN(row+1,nrow-1)] ) > GRAVI_ACQ_PUP_FLUX) blink = row+1;
-
-            cpl_msg_debug (cpl_func, "row %lli is debiased with %lli",row,blink);
-            
-            /* Remove the blink only for pupil part of the camera */
-            gravi_image_subtract_window (cpl_imagelist_get (imglist, row),
-                                         cpl_imagelist_get (imglist, blink),
-                                         1, ury, nx, ny, 1, ury);
-            CPLCHECK_MSG ("Cannot remove blinked pupil");
-        }
-    }
-
-    /* 
-     * Run a median filter for bias
-     */
-    cpl_msg_info (cpl_func, "Remove a median filter");
-    
-    cpl_mask * kernel = cpl_mask_new (11, 11);
-    cpl_mask_not (kernel);
-    
-    for (cpl_size row = 0; row < nrow; row ++) {
-        if (row %10 == 0)
-            cpl_msg_info_overwritable (cpl_func, "Median filter of ACQ %lld over %lld", row+1, nrow);
-        
-        cpl_image * img = cpl_imagelist_get (imglist, row);
-        cpl_image * unfiltered_img = cpl_image_extract (img, 1, ury, nx, ny);
-        cpl_image * filtered_img   = cpl_image_duplicate (unfiltered_img);
-        
-        cpl_image_filter_mask (filtered_img, unfiltered_img, kernel,
-                               CPL_FILTER_MEDIAN, CPL_BORDER_FILTER);
-        gravi_image_subtract_window (img, filtered_img,
-                                     1, ury, nx, ny, 1, 1);
-        
-        FREE (cpl_image_delete, unfiltered_img);
-        FREE (cpl_image_delete, filtered_img);
-        CPLCHECK_MSG ("Cannot run median filter");
-    }
-    
-    FREE (cpl_mask_delete, kernel);
-    
-    /* 
-     * Set in output 
-     */
     gravi_data_add_cube (output_data, NULL, GRAVI_IMAGING_DATA_ACQ_EXT, imglist);
-    gravi_data_add_cube (output_data, NULL, GRAVI_IMAGING_DATA_ACQ_EXT_V2, imglist2);
 
     gravi_msg_function_exit(1);
     return CPL_ERROR_NONE;   
@@ -724,8 +638,14 @@ cpl_ensure_code(header, CPL_ERROR_NULL_INPUT);
 cpl_ensure_code(acqcam_table, CPL_ERROR_NULL_INPUT);
 cpl_ensure_code(o_header, CPL_ERROR_NULL_INPUT);
     
-/* Not sure it works in full frame case (ny>1100) */
+cpl_size  nx = cpl_image_get_size_x (cpl_imagelist_get (acqcam_imglist, 0));
 cpl_size  ny = cpl_image_get_size_y (cpl_imagelist_get (acqcam_imglist, 0));
+
+/*
+ * constant ury is the beginning of the upper part of the acquisition camera
+ * It delimitates where the pupil beacon images starts
+ * Not sure it works in full frame case (ny>1100)
+ */
 const cpl_size ury = (ny>1100) ? 1200 : 745;
     
 /*
@@ -745,6 +665,12 @@ const cpl_size ury = (ny>1100) ? 1200 : 745;
     cpl_imagelist * pupilImage_onFrames = cpl_imagelist_new ();
     gravi_acqcam_select_good_frames_v2(pupilImage_filtered,pupilImage_onFrames,good_frames);
     CPLCHECK_MSG("Cannot find blinking pupil frames");
+    
+    cpl_image *  pupilImage_onFrames_collapse=cpl_imagelist_collapse_create (pupilImage_onFrames);
+    gravi_image_replace_window (mean_img, pupilImage_onFrames_collapse,
+                                         1, ury, nx, ny, 0, 1 - ury);
+    cpl_image_delete(pupilImage_onFrames_collapse);
+    CPLCHECK_MSG("Cannot modify mean_image");
     
 /* Third step. The goal is to initialize the vectors which will be used to know where the diodes
  * are on the detectors (hence the use of bivectors, which contains x and y positions
@@ -2722,7 +2648,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
     cpl_imagelist * acqcam_imglist;
     cpl_imagelist * acqcam_imglist_v2;
     acqcam_imglist = gravi_data_get_cube (input_data, GRAVI_IMAGING_DATA_ACQ_EXT);
-    acqcam_imglist_v2 = gravi_data_get_cube (input_data, GRAVI_IMAGING_DATA_ACQ_EXT_V2);
+    acqcam_imglist_v2 = gravi_data_get_cube (input_data, GRAVI_IMAGING_DATA_ACQ_EXT);
     CPLCHECK_MSG ("Cannot get data or header");
     
     /* Build the table */

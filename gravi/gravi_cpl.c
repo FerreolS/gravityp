@@ -1787,6 +1787,7 @@ cpl_error_code gravi_image_subtract_window (cpl_image * img1, const cpl_image * 
     /* Ensure size */
     cpl_size nx = cpl_image_get_size_x (img1);
     cpl_size ny = cpl_image_get_size_y (img1);
+    
     urx = CPL_MIN (urx, nx);
     ury = CPL_MIN (ury, ny);
     llx2 -= llx;
@@ -1803,6 +1804,41 @@ cpl_error_code gravi_image_subtract_window (cpl_image * img1, const cpl_image * 
     
 	gravi_msg_function_exit(0);
 	return CPL_ERROR_NONE;
+}
+
+/*----------------------------------------------------------------------------*/
+
+cpl_error_code gravi_image_replace_window (cpl_image * img1, const cpl_image * img2,
+                                            cpl_size llx, cpl_size lly,
+                                            cpl_size urx, cpl_size ury,
+                                            cpl_size llx2, cpl_size lly2)
+{
+    gravi_msg_function_start(1);
+    cpl_ensure_code (img1, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (img2, CPL_ERROR_NULL_INPUT);
+
+    /* Ensure size */
+    cpl_size nx = cpl_image_get_size_x (img1);
+    cpl_size ny = cpl_image_get_size_y (img1);
+    cpl_size nx2 = cpl_image_get_size_x (img2);
+    cpl_size ny2 = cpl_image_get_size_y (img2);
+    cpl_msg_info(cpl_func, "Size image 1 %lli/%lli, Size image 2 %lli/%lli" , nx,ny,nx2,ny2);
+                 
+    urx = CPL_MIN (urx, nx);
+    ury = CPL_MIN (ury, ny);
+    llx2 -= llx;
+    lly2 -= lly;
+
+    int nv;
+    for (cpl_size x=llx; x<=urx; x++) {
+        for (cpl_size y=lly; y<=ury; y++) {
+            cpl_image_set (img1, x, y,
+                           cpl_image_get (img2,x+llx2,y+lly2,&nv));
+        }
+    }
+    
+    gravi_msg_function_exit(1);
+    return CPL_ERROR_NONE;
 }
 
 /*---------------------------------------------------------------------------*/
