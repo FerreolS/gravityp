@@ -2240,11 +2240,12 @@ cpl_error_code gravi_data_clean_for_astro (gravi_data * data)
 		  continue;
 		}
 
-		/* Keep all INSNAME_SC */
+		/* Keep all INSNAME_SC and ACQ camera mean image */
 		if (cpl_propertylist_has (plist, "INSNAME") &&
 			( (!strcmp (gravi_pfits_get_insname (plist), INSNAME_SC_P1)) ||
 			  (!strcmp (gravi_pfits_get_insname (plist), INSNAME_SC_P2)) ||
-			  (!strcmp (gravi_pfits_get_insname (plist), INSNAME_SC)) ) ) {
+             (!strcmp (gravi_pfits_get_insname (plist), INSNAME_SC)) ||
+             (!strcmp (gravi_pfits_get_insname (plist), INSNAME_ACQ)) )) {
 		  cpl_msg_debug (cpl_func,"NAME: %s kept", plist_name);
 		  continue;
 		}

@@ -666,12 +666,6 @@ const cpl_size ury = (ny>1100) ? 1200 : 745;
     gravi_acqcam_select_good_frames_v2(pupilImage_filtered,pupilImage_onFrames,good_frames);
     CPLCHECK_MSG("Cannot find blinking pupil frames");
     
-    cpl_image *  pupilImage_onFrames_collapse=cpl_imagelist_collapse_create (pupilImage_onFrames);
-    gravi_image_replace_window (mean_img, pupilImage_onFrames_collapse,
-                                         1, ury, nx, ny, 1, 1);
-    cpl_image_delete(pupilImage_onFrames_collapse);
-    CPLCHECK_MSG("Cannot modify mean_image");
-    
 /* Third step. The goal is to initialize the vectors which will be used to know where the diodes
  * are on the detectors (hence the use of bivectors, which contains x and y positions
  * the size of the arrays are defined using several fixed parameters:
@@ -761,10 +755,13 @@ const cpl_size ury = (ny>1100) ? 1200 : 745;
     CPLCHECK_MSG("Cannot stor pupil offset values in OI_ACQ table");
     
  /*
-  * Bonus. Add best position as a cross in image
+  * Bonus. Add collapsed image to mean image and imprint best position as a cross in image
   */
     
+    cpl_image *  pupilImage_onFrames_collapse=cpl_imagelist_collapse_create (pupilImage_onFrames);
+    gravi_image_replace_window (mean_img, pupilImage_onFrames_collapse, 1, ury, nx, ny, 1, 1);
     gravi_acqcam_spot_imprint_v2(mean_img, diode_pos_offset, diode_pos_theoretical, ury);
+    CPLCHECK_MSG("Cannot modify mean_image");
     
 /* cleaning all arrays ( free memory ) */
     
@@ -787,6 +784,7 @@ FREE (cpl_free, pupilImage_shiftandadd);
     FREE (cpl_free, diode_pos_offset);
 
     cpl_bivector_delete( diode_pos_subwindow);
+    cpl_image_delete(pupilImage_onFrames_collapse);
     cpl_imagelist_delete(pupilImage_onFrames);
     cpl_imagelist_delete(pupilImage_filtered);
     cpl_array_delete(good_frames);
@@ -853,10 +851,13 @@ cpl_error_code gravi_acqcam_clean_pupil_v2(cpl_imagelist * acqcam_imglist, cpl_i
         cpl_matrix_set(kernel1,x,y,exp(- radius_square /30));
         cpl_matrix_set(kernel2,x,y,exp(- radius_square /40));
     }
-    cpl_matrix_get_mean (kernel2);
-    cpl_matrix_multiply_scalar (kernel1, 1./cpl_matrix_get_mean (kernel1));
-    cpl_matrix_multiply_scalar (kernel2, 1./cpl_matrix_get_mean (kernel2));
+    
+    cpl_matrix_divide_scalar (kernel1, cpl_matrix_get_mean (kernel1));
+    cpl_matrix_divide_scalar (kernel2, cpl_matrix_get_mean (kernel2));
     cpl_matrix_subtract    (kernel1,kernel2);
+    cpl_matrix_divide_scalar (kernel1, cpl_matrix_get_stdev (kernel1));
+    cpl_matrix_divide_scalar (kernel1, cpl_matrix_get_max (kernel1));
+    
     CPLCHECK_MSG("Error computing gaussian Kernel");
     
     for (cpl_size n = 0; n < nrow ; n++)
@@ -864,7 +865,7 @@ cpl_error_code gravi_acqcam_clean_pupil_v2(cpl_imagelist * acqcam_imglist, cpl_i
     cpl_image * small_img_tmp = cpl_imagelist_get (pupilImage, n);
     cpl_image * filtered_img = cpl_image_new (nx, ny, CPL_TYPE_DOUBLE);
     cpl_image_filter    (    filtered_img,
-                         small_img_tmp, kernel1,CPL_FILTER_LINEAR_SCALE,CPL_BORDER_FILTER);
+                         small_img_tmp, kernel1,CPL_FILTER_LINEAR,CPL_BORDER_FILTER);
     cpl_imagelist_set(pupilImage_filtered, filtered_img,n);
         if (n %10 == 0 || n == (nrow-1))
         cpl_msg_info_overwritable (cpl_func, "Convolution of pupil frame %lli over %lli frames",n, nrow);
@@ -2685,7 +2686,9 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
     CPLCHECK_MSG ("Cannot reduce pupil images");
     
     /* Add this output table in the gravi_data */
-	gravi_data_add_img (output_data, NULL, GRAVI_IMAGING_DATA_ACQ_EXT, mean_img);
+    cpl_propertylist * plist_acq_cam = cpl_propertylist_new ();
+    cpl_propertylist_update_string (plist_acq_cam, "INSNAME", INSNAME_ACQ);
+	gravi_data_add_img (output_data, plist_acq_cam, GRAVI_IMAGING_DATA_ACQ_EXT, mean_img);
 	CPLCHECK_MSG ("Cannot add acqcam_table in data");
     
 	gravi_data_add_table (output_data, NULL, GRAVI_OI_VIS_ACQ_EXT, acqcam_table);

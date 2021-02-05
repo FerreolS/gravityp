@@ -180,6 +180,7 @@ enum gravi_detector_type
 #define INSNAME_FT "GRAVITY_FT"
 #define INSNAME_SC "GRAVITY_SC"
 #define GRAVI_INSNAME(type,pol,npol) (type==GRAVI_SC ? (npol==1?INSNAME_SC:(pol==0?INSNAME_SC_P1:INSNAME_SC_P2) ) : (npol==1?INSNAME_FT:(pol==0?INSNAME_FT_P1:INSNAME_FT_P2) ) )
+#define INSNAME_ACQ "GRAVITY_ACQ"
 
 /* EXTVER = {10,11,12} for SC
    EXTVER = {20,21,22} for FT
