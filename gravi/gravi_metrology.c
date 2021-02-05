@@ -2313,7 +2313,7 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
     
     for (cpl_size row = DIT_smooth; row < nrow_met-DIT_smooth; row ++)
         for (cpl_size diode = 0; diode < 64; diode ++)
-            volts[row][diode]=volts_smooth[row-DIT_smooth][diode];
+            volts[row][diode]=volts_smooth[row-DIT_smooth][diode]/(DIT_smooth*2+1);
     
     CPLCHECK_MSG ("Cannot smooth the metrology data");
     
