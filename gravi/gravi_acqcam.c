@@ -687,7 +687,7 @@ const cpl_size ury = (ny>1100) ? 1200 : 745;
         cpl_imagelist_delete(pupilImage_onFrames);
         cpl_imagelist_delete(pupilImage_filtered);
         cpl_array_delete(good_frames);
-        cpl_msg_error (cpl_func, "Cannot reduce the %lli frames (not enough frames)",nrow);
+        cpl_msg_warning (cpl_func, "Cannot reduce the %lli frames (not enough frames)",nrow);
         gravi_msg_function_exit(1);
         return CPL_ERROR_NONE;
     }
