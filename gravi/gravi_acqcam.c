@@ -1751,6 +1751,8 @@ for (int tel = 0; tel < GRAVI_SPOT_NTEL; tel++)
     double u_shift_sum = 0.0;
     double v_shift_sum = 0.0;
     int n_sum = 0;
+    int n_bad_snr = 0;
+    int n_bad_distance = 0;
     
     for (cpl_size row = 0; row < nrow; row++)
     {
@@ -1765,63 +1767,70 @@ for (int tel = 0; tel < GRAVI_SPOT_NTEL; tel++)
         {
             
             int is_it_bad=cpl_array_get_int (bad_frames_short,n_on,&nv);
+            
+            cpl_vector * x_pos_offset = cpl_bivector_get_x (diode_pos_offset[n_on]);
+            cpl_vector * y_pos_offset = cpl_bivector_get_y (diode_pos_offset[n_on]);
+            CPLCHECK_MSG("Cannot put data from the offset bivector");
+
+            x_shift = cpl_vector_get(x_pos_offset,tel);
+            y_shift = cpl_vector_get(y_pos_offset,tel);
+
+            /* In UV [m] */
+            u_shift = (cfangle * x_shift - sfangle * y_shift)
+                    / scale;
+            v_shift = (sfangle * x_shift + cfangle * y_shift)
+                    / scale;
+            double opd_pupil = -(u_shift * sobj_x + v_shift * sobj_y)
+                    * GRAVI_MATH_RAD_MAS;
+            
+            CPLCHECK_MSG("Cannot prepare data to be put in the ACQ PUPIL table");
+            
+            
             if (CHECK_BIT(is_it_bad,tel)||CHECK_BIT(is_it_bad,tel+4))
             {
-            cpl_table_set(acqcam_table, "PUPIL_NSPOT", row * GRAVI_SPOT_NTEL + tel, 0);
-                CPLCHECK_MSG("Also cannot put 0 in NSPOT data in the ACQ PUPIL");
+                cpl_table_set(acqcam_table, "PUPIL_NSPOT", row * GRAVI_SPOT_NTEL + tel, 0);
+                
+                /* increasing counters */
+                if (CHECK_BIT(is_it_bad,tel  )) n_bad_snr += 1;
+                if (CHECK_BIT(is_it_bad,tel+4)) n_bad_distance += 1;
             }
             else
             {
-                
-                cpl_vector * x_pos_offset = cpl_bivector_get_x (diode_pos_offset[n_on]);
-                cpl_vector * y_pos_offset = cpl_bivector_get_y (diode_pos_offset[n_on]);
-                CPLCHECK_MSG("Cannot put data from the offset bivector");
-
-                x_shift = cpl_vector_get(x_pos_offset,tel);
-                y_shift = cpl_vector_get(y_pos_offset,tel);
-
-                /* In UV [m] */
-                u_shift = (cfangle * x_shift - sfangle * y_shift)
-                        / scale;
-                v_shift = (sfangle * x_shift + cfangle * y_shift)
-                        / scale;
-                double opd_pupil = -(u_shift * sobj_x + v_shift * sobj_y)
-                        * GRAVI_MATH_RAD_MAS;
-                
-                CPLCHECK_MSG("Cannot prepare data to be put in the ACQ PUPIL table");
-
                 cpl_table_set(acqcam_table, "PUPIL_NSPOT", row * GRAVI_SPOT_NTEL + tel,
                         16);
-                cpl_table_set(acqcam_table, "PUPIL_X", row * GRAVI_SPOT_NTEL + tel,
-                        x_shift);
-                cpl_table_set(acqcam_table, "PUPIL_Y", row * GRAVI_SPOT_NTEL + tel,
-                        y_shift);
-                cpl_table_set(acqcam_table, "PUPIL_Z", row * GRAVI_SPOT_NTEL + tel,
-                        z_shift);
-                cpl_table_set(acqcam_table, "PUPIL_R", row * GRAVI_SPOT_NTEL + tel,
-                        r_shift);
-                cpl_table_set(acqcam_table, "PUPIL_U", row * GRAVI_SPOT_NTEL + tel,
-                        u_shift);
-                cpl_table_set(acqcam_table, "PUPIL_V", row * GRAVI_SPOT_NTEL + tel,
-                        v_shift);
-                cpl_table_set(acqcam_table, "PUPIL_W", row * GRAVI_SPOT_NTEL + tel,
-                        w_shift);
-                cpl_table_set(acqcam_table, "OPD_PUPIL", row * GRAVI_SPOT_NTEL + tel,
-                        opd_pupil);
-                CPLCHECK_MSG("Cannot put data in the ACQ PUPIL table");
                 
                 /* averaging positions */
                 x_shift_sum += x_shift;
                 y_shift_sum += y_shift;
                 u_shift_sum += u_shift;
                 v_shift_sum += v_shift;
+                
+                /* increasing counter */
                 n_sum += 1;
             }
+            
+            cpl_table_set(acqcam_table, "PUPIL_X", row * GRAVI_SPOT_NTEL + tel,
+                    x_shift);
+            cpl_table_set(acqcam_table, "PUPIL_Y", row * GRAVI_SPOT_NTEL + tel,
+                    y_shift);
+            cpl_table_set(acqcam_table, "PUPIL_Z", row * GRAVI_SPOT_NTEL + tel,
+                    z_shift);
+            cpl_table_set(acqcam_table, "PUPIL_R", row * GRAVI_SPOT_NTEL + tel,
+                    r_shift);
+            cpl_table_set(acqcam_table, "PUPIL_U", row * GRAVI_SPOT_NTEL + tel,
+                    u_shift);
+            cpl_table_set(acqcam_table, "PUPIL_V", row * GRAVI_SPOT_NTEL + tel,
+                    v_shift);
+            cpl_table_set(acqcam_table, "PUPIL_W", row * GRAVI_SPOT_NTEL + tel,
+                    w_shift);
+            cpl_table_set(acqcam_table, "OPD_PUPIL", row * GRAVI_SPOT_NTEL + tel,
+                    opd_pupil);
+            CPLCHECK_MSG("Cannot put data in the ACQ PUPIL table");
+                
             n_on++;
         }
         CPLCHECK_MSG("Cannot put data in the ACQ PUPIL table");
     }
-        
         
         /* Add QC parameters */
         char qc_name[100];
@@ -1836,7 +1845,19 @@ for (int tel = 0; tel < GRAVI_SPOT_NTEL; tel++)
         cpl_msg_info(cpl_func, "%s = %i", qc_name, n_sum);
         cpl_propertylist_update_double(o_header, qc_name, n_sum);
         cpl_propertylist_set_comment(o_header, qc_name,
-                "Used ACQ pupil frames");
+                "Good ACQ pupil frames");
+                    
+        sprintf(qc_name, "ESO QC ACQ PUP%i BADSNR", tel + 1);
+        cpl_msg_info(cpl_func, "%s = %i", qc_name, n_bad_snr);
+        cpl_propertylist_update_double(o_header, qc_name, n_bad_snr);
+        cpl_propertylist_set_comment(o_header, qc_name,
+                "Frames with low SNR");
+                    
+        sprintf(qc_name, "ESO QC ACQ PUP%i JUMP", tel + 1);
+        cpl_msg_info(cpl_func, "%s = %i", qc_name, n_bad_distance);
+        cpl_propertylist_update_double(o_header, qc_name, n_bad_distance);
+        cpl_propertylist_set_comment(o_header, qc_name,
+                "Frames with position jump");
     
         sprintf(qc_name, "ESO QC ACQ PUP%i SCALE", tel + 1);
         cpl_msg_info(cpl_func, "%s = %f", qc_name, scale);
@@ -1849,6 +1870,9 @@ for (int tel = 0; tel < GRAVI_SPOT_NTEL; tel++)
         cpl_propertylist_update_int(o_header, qc_name, z_shift);
         cpl_propertylist_set_comment(o_header, qc_name,
                 "[pix] defocus of pupil plane");
+                
+        /* to avoid division by zero */
+        if (n_sum ==0) n_sum+=1;
 
         sprintf(qc_name, "ESO QC ACQ PUP%i XPOS", tel + 1);
         cpl_msg_info(cpl_func, "%s = %f", qc_name, x_shift_sum/n_sum);
