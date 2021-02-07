@@ -2235,7 +2235,8 @@ cpl_error_code gravi_data_clean_for_astro (gravi_data * data)
 		const char * plist_name = gravi_pfits_get_extname (plist);
 		if (!(strcmp (plist_name, GRAVI_OI_ARRAY_EXT)) ||
 			!(strcmp (plist_name, GRAVI_OI_TARGET_EXT)) ||
-            !(strcmp (plist_name, GRAVI_OI_VIS_ACQ_EXT)) ) {
+            !(strcmp (plist_name, GRAVI_OI_VIS_ACQ_EXT))||
+            !(strcmp (plist_name, GRAVI_OI_VIS_MET_EXT)) ) {
 		  cpl_msg_debug (cpl_func,"NAME: %s kept", plist_name);
 		  continue;
 		}
