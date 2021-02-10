@@ -2374,9 +2374,9 @@ cpl_error_code gravi_vis_create_phaseref_sc (cpl_table * vis_SC,
   cpl_vector * wave_sc = cpl_vector_new (nwave_sc);
   cpl_array * wavenumber_ft = cpl_array_new (nwave_ft, CPL_TYPE_DOUBLE);
 
-  double lbd0   = cpl_table_get_column_mean (waveft_table, "EFF_WAVE");
-  double delta0 = cpl_table_get_column_max (waveft_table, "EFF_WAVE") -
-                  cpl_table_get_column_min (waveft_table, "EFF_WAVE");
+  double lbd0   = cpl_table_get_column_mean (wavesc_table, "EFF_WAVE");
+  double delta0 = cpl_table_get_column_max (wavesc_table, "EFF_WAVE") -
+                  cpl_table_get_column_min (wavesc_table, "EFF_WAVE");
   for (cpl_size wave = 0; wave < nwave_ft; wave ++) {
       double lbd = cpl_table_get (waveft_table, "EFF_WAVE", wave, NULL);
       cpl_matrix_set (sigma_ft, 0, wave, (lbd0/lbd - 1.) * lbd0/delta0 );
