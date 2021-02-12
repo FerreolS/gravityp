@@ -35,8 +35,7 @@
 cpl_table * gravi_compute_argon_wave (cpl_table * spectrum_table);
 
 cpl_error_code gravi_wave_compute_opds (gravi_data * spectrum_data,
-                                        cpl_table  * met_table,
-                                        enum gravi_detector_type det_type);
+                                        cpl_table  * met_table);
 
 cpl_error_code  gravi_compute_wave (gravi_data * wave_map,
                                     gravi_data * spectrum_data,
