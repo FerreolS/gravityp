@@ -635,8 +635,7 @@ static int gravity_p2vm(cpl_frameset            * frameset,
         /* Computing OPDs */
         cpl_msg_info (cpl_func, "Compute OPDs for WAVE_RAW");
         gravi_wave_compute_opds (spectrum_data, 
-                                 gravi_data_get_table (wave_met_data, GRAVI_METROLOGY_EXT),
-                                 GRAVI_DET_ALL);
+                                 gravi_data_get_table (wave_met_data, GRAVI_METROLOGY_EXT));
         FREE (gravi_data_delete, wave_met_data);        
 
         CPLCHECK_CLEAN ("Cannot compute OPDs");
@@ -698,8 +697,7 @@ static int gravity_p2vm(cpl_frameset            * frameset,
 
             cpl_msg_info (cpl_func, "Compute OPDs for WAVESC_RAW");
             gravi_wave_compute_opds (spectrum_data, 
-                                     gravi_data_get_table (wavesc_met_data, GRAVI_METROLOGY_EXT),
-                                     GRAVI_DET_SC);
+                                     gravi_data_get_table (wavesc_met_data, GRAVI_METROLOGY_EXT));
             FREE (gravi_data_delete, wavesc_met_data);
 
             CPLCHECK_CLEAN ("Cannot process the WAVESC_RAW");

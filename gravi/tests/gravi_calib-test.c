@@ -395,8 +395,7 @@ int gravi_calib_test(void){
                                                          GRAVI_DET_ALL);
 
     cpl_msg_info (cpl_func, "Compute OPDs for WAVE_RAW");
-    gravi_wave_compute_opds (spectrum_data, gravi_data_get_table (data, GRAVI_METROLOGY_EXT),
-                             GRAVI_DET_ALL);
+    gravi_wave_compute_opds (spectrum_data, gravi_data_get_table (data, GRAVI_METROLOGY_EXT));
     FREE (gravi_data_delete, data);
 
     /* Compute wave calibration for FT and SC */
