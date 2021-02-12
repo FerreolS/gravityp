@@ -1311,6 +1311,7 @@ return CPL_ERROR_NONE;
  * @param diode_pos_theoretical:   input bivectori, expected position of the beacons on the acq camera
  * @param ury:  separation between pupil images and rest of acq camera (typically 750)
  .
+*/
 /*----------------------------------------------------------------------------*/
 
 
@@ -1491,9 +1492,6 @@ cpl_error_code gravi_acqcam_perform_shiftandadd_v2(cpl_imagelist * pupilImage_on
             cpl_vector * x_pos_offset = cpl_bivector_get_x (diode_pos_offset[n]);
             cpl_vector * y_pos_offset = cpl_bivector_get_y (diode_pos_offset[n]);
             
-            cpl_size nx=cpl_image_get_size_x (cpl_image_combined[0]);
-            cpl_size ny=cpl_image_get_size_y (cpl_image_combined[0]);
-                          
             cpl_image * image_mean = cpl_image_extract (cpl_image_combined[0], 4, 4, GRAVI_SPOT_NSEARCH*2-3, GRAVI_SPOT_NSEARCH*2-3);
             
             cpl_vector_set(x_pos_offset, tel, ppos_x+3);
@@ -1743,7 +1741,6 @@ for (int tel = 0; tel < GRAVI_SPOT_NTEL; tel++)
     double y_shift = 0.0;
     double u_shift = 0.0;
     double v_shift = 0.0;
-    double opd_pupil = 0.0;
     
     /* buffers to average values */
     double x_shift_sum = 0.0;
