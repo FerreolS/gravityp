@@ -759,7 +759,8 @@ const cpl_size ury = (ny>1100) ? 1200 : 745;
   */
     
     cpl_image *  pupilImage_onFrames_collapse=cpl_imagelist_collapse_create (pupilImage_onFrames);
-    gravi_image_replace_window (mean_img, pupilImage_onFrames_collapse, 1, ury, nx, ny, 1, 1);
+    cpl_image *  pupilImage_onFrames_1frame=cpl_imagelist_get (pupilImage_onFrames,0);
+    gravi_image_replace_window (mean_img, pupilImage_onFrames_1frame, 1, ury, nx, ny, 1, 1);
     gravi_acqcam_spot_imprint_v2(mean_img, diode_pos_offset, diode_pos_theoretical, ury);
     CPLCHECK_MSG("Cannot modify mean_image");
     
@@ -1317,7 +1318,7 @@ return CPL_ERROR_NONE;
 
 cpl_error_code gravi_acqcam_spot_imprint_v2(cpl_image *mean_img, cpl_bivector ** diode_pos_offset, cpl_bivector **  diode_pos_theoretical, int ury)
 {
-    gravi_msg_function_start(0);
+    gravi_msg_function_start(1);
     
     cpl_ensure_code(mean_img, CPL_ERROR_NULL_INPUT);
     cpl_ensure_code(diode_pos_offset, CPL_ERROR_NULL_INPUT);
@@ -1357,7 +1358,7 @@ cpl_error_code gravi_acqcam_spot_imprint_v2(cpl_image *mean_img, cpl_bivector **
     }
     
     CPLCHECK ("Cannot imprint cross in image");
-    gravi_msg_function_exit(0);
+    gravi_msg_function_exit(1);
     return CPL_ERROR_NONE;
 }
 
@@ -1691,10 +1692,12 @@ double sobj_x = gravi_pfits_get_sobj_x(header);
 double sobj_y = gravi_pfits_get_sobj_y(header);
 CPLCHECK_MSG("Cannot determine SOBJ X and Y");
     
-if (cpl_array_get_mean(good_frames)<.5)
+if (cpl_array_get_mean(good_frames)*nrow<.5)
 {
     /* no good frames */
     /* filling the table with zeros */
+    cpl_msg_info(cpl_func,"No good pupil images ==> no good pupil position available");
+    
     for (int tel = 0; tel < GRAVI_SPOT_NTEL; tel++)
     for (cpl_size row = 0; row < nrow; row++)
     {
@@ -1777,7 +1780,7 @@ for (int tel = 0; tel < GRAVI_SPOT_NTEL; tel++)
                     / scale;
             v_shift = (sfangle * x_shift + cfangle * y_shift)
                     / scale;
-            double opd_pupil = -(u_shift * sobj_x + v_shift * sobj_y)
+            opd_pupil = -(u_shift * sobj_x + v_shift * sobj_y)
                     * GRAVI_MATH_RAD_MAS;
             
             CPLCHECK_MSG("Cannot prepare data to be put in the ACQ PUPIL table");
@@ -1790,6 +1793,10 @@ for (int tel = 0; tel < GRAVI_SPOT_NTEL; tel++)
                 /* increasing counters */
                 if (CHECK_BIT(is_it_bad,tel  )) n_bad_snr += 1;
                 if (CHECK_BIT(is_it_bad,tel+4)) n_bad_distance += 1;
+                u_shift = 0.0;
+                v_shift = 0.0;
+                opd_pupil = 0.0;
+                cpl_msg_info(cpl_func,"Pupil image number%4lli is un-usable for tel %i",row,tel);
             }
             else
             {
