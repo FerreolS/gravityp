@@ -1744,6 +1744,7 @@ for (int tel = 0; tel < GRAVI_SPOT_NTEL; tel++)
     double y_shift = 0.0;
     double u_shift = 0.0;
     double v_shift = 0.0;
+    double opd_pupil = 0.0;
     
     /* buffers to average values */
     double x_shift_sum = 0.0;
