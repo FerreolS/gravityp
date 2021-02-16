@@ -2226,6 +2226,8 @@ cpl_error_code gravi_data_clean_for_astro (gravi_data * data)
 {
 	gravi_msg_function_start(1);
     cpl_ensure_code (data, CPL_ERROR_NULL_INPUT);
+    
+    cpl_table * new_oimet_table;
 
 	/* Loop on extension in file ?? */
 	for (int i = 0; i < gravi_data_get_size (data); i++) {
@@ -2235,8 +2237,7 @@ cpl_error_code gravi_data_clean_for_astro (gravi_data * data)
 		const char * plist_name = gravi_pfits_get_extname (plist);
 		if (!(strcmp (plist_name, GRAVI_OI_ARRAY_EXT)) ||
 			!(strcmp (plist_name, GRAVI_OI_TARGET_EXT)) ||
-            !(strcmp (plist_name, GRAVI_OI_VIS_ACQ_EXT))||
-            !(strcmp (plist_name, GRAVI_OI_VIS_MET_EXT)) ) {
+            !(strcmp (plist_name, GRAVI_OI_VIS_ACQ_EXT)) ) {
 		  cpl_msg_debug (cpl_func,"NAME: %s kept", plist_name);
 		  continue;
 		}
@@ -2250,7 +2251,27 @@ cpl_error_code gravi_data_clean_for_astro (gravi_data * data)
 		  cpl_msg_debug (cpl_func,"NAME: %s kept", plist_name);
 		  continue;
 		}
-
+        
+        if (!(strcmp (plist_name, GRAVI_OI_VIS_MET_EXT)))
+            {
+                
+            cpl_table * old_oimet_table = gravi_data_get_table_x (data, i);
+                
+            CPLCHECK_MSG ("Cannot read OI_MET table");
+            cpl_size length = cpl_table_get_nrow (old_oimet_table);
+            new_oimet_table = cpl_table_new(length);
+                
+            CPLCHECK_MSG ("Cannot create new OI_MET table");
+                
+            int nb_names = 6;
+            const char *names[] = {"TIME", "PHASE_FC_DRS", "PHASE_TELFC_CORR", "PHASE_TELFC_CORR_XY","OPD_FC_CORR","OPD_TELFC_MCORR"};
+            for (int j =0; j<nb_names;j++)
+                {
+                cpl_msg_info(cpl_func,"duplicating columns %s",names[j]);
+                cpl_table_duplicate_column (new_oimet_table, names[j], old_oimet_table, names[j]);
+                CPLCHECK_MSG ("Failed at duplicating column to new OI_VIS_MET table");
+                }
+           }
 
 		/* Delete */
 		cpl_msg_debug (cpl_func,"NAME: %s deleted", plist_name);
@@ -2258,7 +2279,11 @@ cpl_error_code gravi_data_clean_for_astro (gravi_data * data)
 		FREE (cpl_table_delete, data->exts_tbs[i]);
 		FREE (cpl_imagelist_delete, data->exts_imgl[i]);
 	}
-
+    
+    /* storing new OI_MET table */
+    if (new_oimet_table != NULL)
+    gravi_data_add_table (data, NULL, GRAVI_OI_VIS_MET_EXT, new_oimet_table);
+    
 	/* Loop on extension in file to move the
 	 * extension consecutively */
 	int j = 0;

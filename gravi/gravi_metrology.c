@@ -2058,8 +2058,12 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
 	cpl_array_fill_window_complex(phase_ft, 0, 16, 0.+I*0.);
 	cpl_array_fill_window_complex(phase_sc_conj, 0, 16, 0.+I*0.);
 	CPLCHECK_MSG("Fill win met phase at tel");
+    
 	int n_filter=25;
-
+    if (gravi_pfits_get_axis (header) == MODE_ONAXIS)  n_filter=40;
+    
+    cpl_msg_info (cpl_func,"Smoothing metrology voltage by %d DITS",n_filter*2+1);
+    
 	/* Compute the sum phase_ft and phase_sc_conj of the first n_filter*2+1 row
 	 *  phase_ft=<cos_ft>+i<sin_ft>
 	 *  phase_sc_conj=<cos_sc>-i<sin_sc> */
@@ -2328,8 +2332,8 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
     gravi_table_new_column (vismet_table, "OPD_FC", "m", CPL_TYPE_DOUBLE);
     double * opd_fc = cpl_table_get_data_double (vismet_table, "OPD_FC");
 
-    gravi_table_new_column (vismet_table, "PHASE_FC", "rad", CPL_TYPE_DOUBLE);
-    double * phase_fc = cpl_table_get_data_double (vismet_table, "PHASE_FC");
+    gravi_table_new_column (vismet_table, "PHASE_FC_TAC", "rad", CPL_TYPE_DOUBLE);
+    double * phase_fc = cpl_table_get_data_double (vismet_table, "PHASE_FC_TAC");
 
     gravi_table_new_column (vismet_table, "VAMP_FC_FT", "V", CPL_TYPE_DOUBLE);
     double * coher_fc_ft = cpl_table_get_data_double (vismet_table, "VAMP_FC_FT");
@@ -2348,6 +2352,9 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
     gravi_table_new_column_array (vismet_table, "OPD_TEL", "m", CPL_TYPE_DOUBLE, ndiode);
     cpl_array ** opd_tel_array = cpl_table_get_data_array (vismet_table,"OPD_TEL");
     
+    gravi_table_new_column_array (vismet_table, "PHASE_TEL_TAC", "rad", CPL_TYPE_DOUBLE, ndiode);
+    cpl_array ** phase_tel_array = cpl_table_get_data_array (vismet_table, "PHASE_TEL_TAC");
+    
     gravi_table_new_column_array (vismet_table, "VAMP_TEL_FT", "V", CPL_TYPE_DOUBLE, ndiode);
     cpl_array ** coher_tel_ft_array = cpl_table_get_data_array (vismet_table,"VAMP_TEL_FT");
     
@@ -2358,6 +2365,7 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
     /* Wrap the newly computed phi_tel into the cpl_table. Wrapping make
      * the data 'valid' without having to copy them. Thus efficient */
     double ** opd_tel      = cpl_malloc (sizeof(double*) * nrow_met * ntel);
+    double ** phase_tel      = cpl_malloc (sizeof(double*) * nrow_met * ntel);
     int ** flag_tel        = cpl_malloc (sizeof(int*) * nrow_met * ntel);
     double ** coher_tel_ft = cpl_malloc (sizeof(double*) * nrow_met * ntel);
     double ** coher_tel_sc = cpl_malloc (sizeof(double*) * nrow_met * ntel);
@@ -2368,6 +2376,9 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
         
         opd_tel[row]        = cpl_malloc (sizeof(double) * ndiode);
         opd_tel_array[row]  = cpl_array_wrap_double (opd_tel[row], ndiode);
+        
+        phase_tel[row]        = cpl_malloc (sizeof(double) * ndiode);
+        phase_tel_array[row]  = cpl_array_wrap_double (phase_tel[row], ndiode);
         
         coher_tel_ft[row]       = cpl_malloc (sizeof(double) * ndiode);
         coher_tel_ft_array[row] = cpl_array_wrap_double (coher_tel_ft[row], ndiode);
@@ -2409,6 +2420,7 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
             for (int diode = 0; diode < ndiode; diode++) {
                 /* TAC computation */
                 opd_tel[nmet][diode] = tacData->opl_telescope_diode[tel][diode];
+                phase_tel[nmet][diode] = - tacData->opl_telescope_diode[tel][diode] * CPL_MATH_2PI / lambda_met_mean;
                 flag_tel[nmet][diode] = tacData->total_flag_telescope[tel][diode][FT] | tacData->total_flag_telescope[tel][diode][SC];
                 
                 /* Volt amplitude */
@@ -2489,8 +2501,10 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
                 (cpl_propertylist_get_double (header, card_sc) - cpl_propertylist_get_double (header, card_ft)) - 
                 opd_tel[row_ref*ntel+tel][diode];
             double opd_ref_int = gravi_round (opd_ref / lambda_met_mean) * lambda_met_mean;
+            double phase_ref_int = gravi_round (opd_ref / lambda_met_mean) * CPL_MATH_2PI;
             for (cpl_size row = 0; row < nrow_met; row++) {
                 opd_tel[row*ntel+tel][diode] += opd_ref_int;
+                phase_tel[row*ntel+tel][diode] -= phase_ref_int;
             }
         }
     }
@@ -2501,6 +2515,7 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
     FREELOOP (cpl_free, volts, nrow_met);
     FREELOOP (cpl_free, volts_smooth, nrow_met-DIT_smooth*2);
     FREE (cpl_free, opd_tel);
+    FREE (cpl_free, phase_tel);
     FREE (cpl_free, flag_tel);
     FREE (cpl_free, coher_tel_ft);
     FREE (cpl_free, coher_tel_sc);
@@ -2547,9 +2562,14 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     double ** opd_tel = gravi_table_get_data_array_double (vismet_table, "OPD_TEL");
     CPLCHECK_MSG ("Cannot get OPD_TEL from vismet_table");
     
+    double ** phase_tel = gravi_table_get_data_array_double (vismet_table, "PHASE_TEL_DRS");
+    CPLCHECK_MSG ("Cannot get PHASE_TEL_DRS from vismet_table");
+    
+    
     /* get the laser wavelength data */
     double lambda_met_mean =  gravi_pfits_get_met_wavelength_mean(header, metrology_table);
     cpl_msg_info (cpl_func,"Lambda met mean :%f nm",  lambda_met_mean*1e9);
+    CPLCHECK_MSG ("Cannot get laser wavelength data");
     
     
     /************************************************/
@@ -2609,6 +2629,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                                         + opd_fc_shift;
         }
     }
+    CPLCHECK_MSG ("Cannot caculate OPD_FC_CORR");
     
     
     /*****************************************************************/
@@ -2767,6 +2788,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     /* Free memory */
     FREE (cpl_vector_delete, rec);
     FREE (cpl_vector_delete, sobj);
+    CPLCHECK_MSG ("Cannot caculate OPD_TEL_CORR (SX and SY)");
     
     /*----- Part II.b: Astigmatism -----*/
     
@@ -2780,11 +2802,12 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     double astradius;
     
     /* Paralactic angle is averaged from fitsheader */
-    // TODO: This needs to be improved
-    double parang = (cpl_propertylist_get_double(header, "ESO ISS PARANG START")
-                   + cpl_propertylist_get_double(header, "ESO ISS PARANG END"  ))/2. * (TWOPI/360.0); // in [rad]
+    
+    double parang1 = cpl_propertylist_get_double(header, "ESO ISS PARANG START") * (TWOPI/360.0); // in [rad]
+    double parang2 = cpl_propertylist_get_double(header, "ESO ISS PARANG END"  ) * (TWOPI/360.0); // in [rad]
+    double parang = (parang1 + parang2) / 2;
     CPLCHECK_MSG ("Cannot get paralactic angle");
-    cpl_msg_info (cpl_func,"FE: paralactic angle in degrees: %g ", parang * (360.0/TWOPI) );
+    cpl_msg_info (cpl_func,"FE: paralactic angle in degrees: %g ", (parang1 + parang2) / 2 * (360.0/TWOPI) );
     
     /* Posangle is calculated from SOBJX ansd SOBJY already read before 
        x,y are exchanged following coordinate systems in Stefan's slide */
@@ -2812,7 +2835,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         for (cpl_size row = 0; row < nrow_met; row++) {
             for (int diode = 0; diode < ndiode; diode++) {
                 diodeang = myAtan(-rec_zd[tel][diode],-rec_az[tel][diode], &flag);  // [rad]
-                astang = posang - parang - diodeang + AstigmTheta*(TWOPI/360.); // [rad]
+                double parang2 = parang1 + (parang2-parang1) * row / nrow_met;  // [rad]
+                astang = posang - parang2 - diodeang + AstigmTheta*(TWOPI/360.); // [rad]
                 astradius = sqrt(rec_az[tel][diode]*rec_az[tel][diode] + rec_zd[tel][diode]*rec_zd[tel][diode]) / AstigmRadius; /* normalized */
                 astigm = (AstigmAmplitude*1e-9) * sqrt(6) * astradius * astradius * sin(2. * astang); // [m]
                 
@@ -2839,9 +2863,10 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
             }
         }
     }
+    CPLCHECK_MSG ("Cannot caculate OPD_TEL_CORR (Astigmatism part)");
     
     /*****************************************************************/
-    /*                    PART III:  OPD_TELFC_CORR                  */
+    /*                    PART III:  PHASE_TELFC_CORR                  */
     /*****************************************************************/
     /* Calculation of the difference between the best correction of  */
     /* the metrology receivers and the best correction of the fiber  */
@@ -2853,6 +2878,10 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     /* Create OPD_TELFC_CORR array in OI_VIS_MET table, fill with zeros, and get pointer */
     gravi_table_init_column_array (vismet_table, "OPD_TELFC_CORR", "m", CPL_TYPE_DOUBLE, ndiode);
     double ** opd_telfc_corr = gravi_table_get_data_array_double (vismet_table, "OPD_TELFC_CORR");
+    
+    gravi_table_init_column_array (vismet_table, "PHASE_TELFC_CORR", "rad", CPL_TYPE_DOUBLE, ndiode);
+    double ** phase_telfc_corr = gravi_table_get_data_array_double (vismet_table, "PHASE_TELFC_CORR");
+    
     
     /* Compute OPD_TELFC_CORR as (OPD_TEL + OPD_TEL_CORR) - (OPD_FC + OPD_FC_CORR) */
     /* going to complex phasor notation and then back to opd */
@@ -2868,49 +2897,195 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                       / lambda_met_mean * TWOPI; /* fiber coupler */
             phasorfc = cos(phifc) + sin(phifc) * I;
             for (int diode = 0; diode < ndiode; diode++) {
-                phi = (opd_tel[row*ntel+tel][diode] + opd_tel_corr[row*ntel+tel][diode]) 
+                /* SL : previous code
+                  phi = (opd_tel[row*ntel+tel][diode] + opd_tel_corr[row*ntel+tel][diode])
+                        / lambda_met_mean * TWOPI;
+                 * SL: using DRS phase instead of TAC OPD
+                 * this is important for correlation issues
+                 * we want the telescope phase to be untainted by the FC phase error */
+                phi = - phase_tel[row*ntel+tel][diode] + (opd_tel_corr[row*ntel+tel][diode])
                         / lambda_met_mean * TWOPI; /* telescope receiver */
                 phasor = cos(phi) + sin(phi) * I;
                 dphasor = phasor*conj(phasorfc);
-                opd_telfc_corr[row*ntel+tel][diode] = carg(dphasor) / TWOPI * lambda_met_mean ;
+                phase_telfc_corr[row*ntel+tel][diode] = carg(dphasor);
             }
         }
     }
     
-    /* wrap around median */
+    CPLCHECK_MSG ("Cannot caculate PHASE_TELFC_CORR");
+    
+    /*****************************************************************
+     *                    PART III:  OPD_TELFC_CORR_XY
+     ****************************************************************
+     * Calculation of the actual astimatism (smoothed over 5s)
+     * Calculation of the separation of the 2 fibers (smoothed over 5s)
+     * Correction of both are stored in PHASE_TELFC_CORR_XY
+     * Correction of both are subtracted to create PHASE_TELFC_CORR
+     * PHASE_TELFC_CORR is wrapped around its mean value
+     * PHASE_TELFC_CORR is then stored in OPD_TELFC_CORR
+     *****************************************************************/
+    
+    
+    gravi_table_init_column_array (vismet_table, "PHASE_TELFC_CORR_XY", "rad", CPL_TYPE_DOUBLE, ndiode);
+    double ** phase_telfc_corr_xy = gravi_table_get_data_array_double (vismet_table, "PHASE_TELFC_CORR_XY");
+    
+    int Nsmooth = 1250; /* 5 seconds smoothing */
+    
+    for (int tel = 0; tel < ntel; tel++)
+    {
+        cpl_array * phase_astig_corr_array = cpl_array_new (nrow_met ,CPL_TYPE_DOUBLE_COMPLEX);
+        cpl_array * phase_sepX_corr_array  = cpl_array_new (nrow_met ,CPL_TYPE_DOUBLE_COMPLEX);
+        cpl_array * phase_sepY_corr_array  = cpl_array_new (nrow_met ,CPL_TYPE_DOUBLE_COMPLEX);
+        
+        cpl_array_fill_window_complex(phase_astig_corr_array, 0, nrow_met, 0.+I*0.);
+        cpl_array_fill_window_complex(phase_sepX_corr_array , 0, nrow_met, 0.+I*0.);
+        cpl_array_fill_window_complex(phase_sepY_corr_array , 0, nrow_met, 0.+I*0.);
+        
+        /* get smoothed value of astigmatism */
+        for (cpl_size row = 0; row < nrow_met; row++)
+        {
+            double phase_ast = phase_telfc_corr[row*ntel+tel][3] -
+            phase_telfc_corr[row*ntel+tel][2] +
+            phase_telfc_corr[row*ntel+tel][1] -
+            phase_telfc_corr[row*ntel+tel][0];
+            double complex complex_ast = cos(phase_ast)+I*sin(phase_ast);
+            
+            for (cpl_size row_s = -Nsmooth; row_s <= Nsmooth; row_s++)
+                if ((row+row_s>=0)&&(row+row_s<nrow_met))
+                {
+                    cpl_size row_d= row+row_s;
+                    double complex astig_sum=cpl_array_get_complex(phase_astig_corr_array, row_d, NULL);
+                    astig_sum +=complex_ast;
+                    cpl_array_set_complex(phase_astig_corr_array, row_d,astig_sum);
+                }
+            
+        }
+        cpl_array_arg(phase_astig_corr_array);
+        
+        CPLCHECK_MSG ("Failed when smoothing astigmatism");
+        
+        cpl_msg_info(cpl_func,"Mean astigmatism  for tel %i : %.2f radians",tel,cpl_array_get_mean(phase_astig_corr_array));
+        
+        /* get smoothed value of X separation angle */
+        for (cpl_size row = 0; row < nrow_met; row++)
+        {
+            double phase_ast_2=cpl_array_get_double(phase_astig_corr_array,row,NULL)/2.;
+            
+            double phase_sepX1 = phase_telfc_corr[row*ntel+tel][3] -
+            phase_telfc_corr[row*ntel+tel][2] - phase_ast_2;
+            double phase_sepX2 = phase_telfc_corr[row*ntel+tel][0] -
+            phase_telfc_corr[row*ntel+tel][1] + phase_ast_2;
+            
+            double phase_sepY1 = phase_telfc_corr[row*ntel+tel][3] -
+            phase_telfc_corr[row*ntel+tel][0] - phase_ast_2;
+            double phase_sepY2 = phase_telfc_corr[row*ntel+tel][2] -
+            phase_telfc_corr[row*ntel+tel][1] + phase_ast_2;
+            
+            double complex phase_sepX = cos(phase_sepX1) + cos(phase_sepX2)
+                        +  I*( sin(phase_sepX1) + sin(phase_sepX2) );
+            double complex phase_sepY = cos(phase_sepY1) + cos(phase_sepY2)
+                        +  I*( sin(phase_sepY1) + sin(phase_sepY2) );
+            
+            for (cpl_size row_s = -Nsmooth; row_s <= Nsmooth; row_s++)
+                if ((row+row_s>=0)&&(row+row_s<nrow_met))
+                {
+                    cpl_size row_d= row+row_s;
+                    
+                    double complex sepX_sum=cpl_array_get_complex(phase_sepX_corr_array, row_d, NULL);
+                    double complex sepY_sum=cpl_array_get_complex(phase_sepY_corr_array, row_d, NULL);
+                    
+                    sepX_sum+=phase_sepX;
+                    sepY_sum+=phase_sepY;
+                    
+                    cpl_array_set_complex(phase_sepX_corr_array, row_d,sepX_sum);
+                    cpl_array_set_complex(phase_sepY_corr_array, row_d,sepY_sum);
+                    
+                }
+        }
+        cpl_array_arg(phase_sepX_corr_array);
+        cpl_array_arg(phase_sepY_corr_array);
+        
+        CPLCHECK_MSG ("Failed when smoothing X and Y separation vectors");
+        
+        cpl_msg_info(cpl_func,"Mean X separation for tel %i : %.2f radians",tel,cpl_array_get_mean(phase_sepX_corr_array));
+        cpl_msg_info(cpl_func,"Mean y separation for tel %i : %.2f radians",tel,cpl_array_get_mean(phase_sepY_corr_array));
+        
+        /* compute the values to be stored in phase_telfc_corr_xy */
+        /* subtract the values to phase_telfc_corr */
+        for (cpl_size row = 0; row < nrow_met; row++)
+        {
+            
+            phase_telfc_corr_xy[row*ntel+tel][0]=
+            -cpl_array_get_double(phase_astig_corr_array,row,NULL)/4
+            +cpl_array_get_double(phase_sepX_corr_array,row,NULL)/2
+            -cpl_array_get_double(phase_sepY_corr_array,row,NULL)/2;
+            phase_telfc_corr_xy[row*ntel+tel][1]=
+             cpl_array_get_double(phase_astig_corr_array,row,NULL)/4
+            -cpl_array_get_double(phase_sepX_corr_array,row,NULL)/2
+            -cpl_array_get_double(phase_sepY_corr_array,row,NULL)/2;
+            phase_telfc_corr_xy[row*ntel+tel][2]=
+            -cpl_array_get_double(phase_astig_corr_array,row,NULL)/4
+            -cpl_array_get_double(phase_sepX_corr_array,row,NULL)/2
+            +cpl_array_get_double(phase_sepY_corr_array,row,NULL)/2;
+            phase_telfc_corr_xy[row*ntel+tel][3]=
+             cpl_array_get_double(phase_astig_corr_array,row,NULL)/4
+            +cpl_array_get_double(phase_sepX_corr_array,row,NULL)/2
+            +cpl_array_get_double(phase_sepY_corr_array,row,NULL)/2;
+            
+            for (int diode = 0; diode < ndiode; diode++) {
+                phase_telfc_corr[row*ntel+tel][diode]-=phase_telfc_corr_xy[row*ntel+tel][diode];
+                if (phase_telfc_corr[row*ntel+tel][diode] > PI)
+                    phase_telfc_corr[row*ntel+tel][diode] -= TWOPI;
+                if (phase_telfc_corr[row*ntel+tel][diode] < -PI)
+                    phase_telfc_corr[row*ntel+tel][diode] += TWOPI;
+            }
+        }
+        
+        CPLCHECK_MSG ("Failed when computing PHASE_TELFC_CORR_XY");
+        cpl_array_delete(phase_astig_corr_array);
+        cpl_array_delete(phase_sepX_corr_array);
+        cpl_array_delete(phase_sepY_corr_array);
+        
+    }
+    
+    
+    /* wrap around mean value */
     cpl_vector * phasor_real ;
     phasor_real = cpl_vector_new (nrow_met);
     cpl_vector * phasor_imag ;
     phasor_imag = cpl_vector_new (nrow_met);
-    double real_median;
-    double imag_median;
-    double phi_median,cos_phi,sin_phi;
+    double real_mean;
+    double imag_mean;
+    double phi_mean,cos_phi,sin_phi;
     
     for (int tel = 0; tel < ntel; tel++) {
         for (int diode = 0; diode < ndiode; diode++) {
             /* fill tmp_vector with opd_telfc_corr for given telescope and diode */
             for (cpl_size row = 0; row < nrow_met; row++) {
-                phi=opd_telfc_corr[row*ntel+tel][diode] * TWOPI / lambda_met_mean;
+                phi=phase_telfc_corr[row*ntel+tel][diode];
                 cpl_vector_set (phasor_real, row, cos(phi) );
                 cpl_vector_set (phasor_imag, row, sin(phi) );
             }
             /* calculate mean ; mean is better than median */
-            real_median =  cpl_vector_get_mean(phasor_real);
-            imag_median =  cpl_vector_get_mean(phasor_imag);
+            real_mean =  cpl_vector_get_mean(phasor_real);
+            imag_mean =  cpl_vector_get_mean(phasor_imag);
             
-            phi_median=atan2(imag_median,real_median);
+            phi_mean=atan2(imag_mean,real_mean);
             
-            /* wrap to median */
+            /* wrap to mean */
             for (cpl_size row = 0; row < nrow_met; row++) {
                 
-                phi = opd_telfc_corr[row*ntel+tel][diode] * TWOPI / lambda_met_mean;
+                phi = phase_telfc_corr[row*ntel+tel][diode];
                 cos_phi=cos(phi);
                 sin_phi=sin(phi);
-                dphasor = cos_phi*real_median + sin_phi*imag_median + I * ( sin_phi*real_median - cos_phi*imag_median );
-                opd_telfc_corr[row*ntel+tel][diode] = (carg(dphasor)+phi_median) / TWOPI * lambda_met_mean ;
+                dphasor = cos_phi*real_mean + sin_phi*imag_mean + I * ( sin_phi*real_mean - cos_phi*imag_mean );
+                phase_telfc_corr[row*ntel+tel][diode] = (carg(dphasor)+phi_mean);
+                opd_telfc_corr[row*ntel+tel][diode] = phase_telfc_corr[row*ntel+tel][diode] / TWOPI * lambda_met_mean ;
+                opd_telfc_corr[row*ntel+tel][diode] += phase_telfc_corr_xy[row*ntel+tel][diode] / TWOPI * lambda_met_mean ;
             }
         }
     }
+    CPLCHECK_MSG ("Cannot caculate OPD_TELFC_CORR");
 
     cpl_vector * tmp_vector;
     tmp_vector = cpl_vector_new (nrow_met);
@@ -3164,42 +3339,6 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         }
     }
     
-    // FE 2019-05-15 wrap around median might help
-    /* /\* wrap around median to lambda/4 range *\/ */
-    /* for (int tel = 0; tel < ntel; tel++) { */
-    /*     /\* fill tmp_vector with opd_telfc_corr for given telescope and diode *\/ */
-    /*     for (cpl_size row = 0; row < nrow_met; row++) { */
-    /* 	    cpl_vector_set (tmp_vector, row, opd_telfc_mcorr[row*ntel+tel]); */
-    /*         } */
-    /*         /\* calculate median *\/ */
-    /*         tmp_median =  cpl_vector_get_median_const(tmp_vector); */
-    /*         high_limit = (tmp_median + lambda_met_mean / 8.); */
-    /*         low_limit = (tmp_median - lambda_met_mean / 8.); */
-    /*         /\* wrap to median *\/ */
-    /*         for (cpl_size row = 0; row < nrow_met; row++) { */
-    /*             if (opd_telfc_mcorr[row*ntel+tel] > high_limit) { */
-    /*                 opd_telfc_mcorr[row*ntel+tel] -= lambda_met_mean / 4.; */
-    /*             } */
-    /*             if (opd_telfc_mcorr[row*ntel+tel] < low_limit) { */
-    /*                 opd_telfc_mcorr[row*ntel+tel] += lambda_met_mean / 4.; */
-    /*             } */
-    /*         } */
-    /*         /\* do a second wrap around median for better estimate *\/ */
-    /*         for (cpl_size row = 0; row < nrow_met; row++) { */
-    /*             cpl_vector_set (tmp_vector, row, opd_telfc_mcorr[row*ntel+tel]); */
-    /*         } */
-    /*         tmp_median =  cpl_vector_get_median_const(tmp_vector); */
-    /*         high_limit = (tmp_median + lambda_met_mean / 8.); */
-    /*         low_limit = (tmp_median - lambda_met_mean / 8.); */
-    /*         for (cpl_size row = 0; row < nrow_met; row++) { */
-    /*             if (opd_telfc_mcorr[row*ntel+tel] > high_limit) { */
-    /*                 opd_telfc_mcorr[row*ntel+tel] -= lambda_met_mean / 4.; */
-    /*             } */
-    /*             if (opd_telfc_mcorr[row*ntel+tel] < low_limit) { */
-    /*                 opd_telfc_mcorr[row*ntel+tel] += lambda_met_mean / 4.; */
-    /*             } */
-    /* 	    } */
-    /* } */
 
     FREE (cpl_vector_delete, tmp_vector);
     FREE (cpl_vector_delete, phasor_real);
@@ -3301,8 +3440,11 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     
     /* Free the pointer to pointer to data */
     FREE (cpl_free, opd_tel);
+    FREE (cpl_free, phase_tel);
     FREE (cpl_free, opd_tel_corr);
     FREE (cpl_free, opd_telfc_corr);
+    FREE (cpl_free, phase_telfc_corr);
+    FREE (cpl_free, phase_telfc_corr_xy);
     
     gravi_msg_function_exit(1);
     return CPL_ERROR_NONE;
