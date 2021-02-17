@@ -1604,7 +1604,7 @@ cpl_error_code gravi_acqcam_get_pupil_offset_v2(cpl_imagelist ** pupilImage_shif
             if (n>0)
                 {
                     double distance=(xsc-previous_xsc)*(xsc-previous_xsc)+(ysc-previous_ysc)*(ysc-previous_ysc);
-                    if (distance > 5*5)
+                    if (distance > 10*10)
                     {
                         previous = cpl_array_get_int (bad_frames_short,n-1,&nv);
                         cpl_array_set_int (bad_frames_short,n-1,previous|(1<<(tel+4)));
