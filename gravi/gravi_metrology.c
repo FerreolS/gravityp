@@ -1925,8 +1925,39 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
 	int ind_cosfc_SC[4]={73,75,77,79};
     
 	cpl_array ** raw_met=cpl_table_get_data_array(metrology_table,"VOLT");
-	CPLCHECK_MSG("get data met phase at tel");
+    cpl_size nbrow_met = cpl_table_get_nrow (metrology_table);
+    CPLCHECK_MSG ("Cannot load metrology data");
     
+    /*
+     * Perform initial smoothing of the voltage values
+     * By 21 DITS in off-axis (42ms), and by 81 DITS in on-axis (162ms)
+     */
+    
+    int DIT_smooth=20;
+    if (gravi_pfits_get_axis (header) == MODE_ONAXIS)  DIT_smooth=40;
+    
+    /* avoid segmentation fault if nrow < DIT_smooth */
+    if (nbrow_met-DIT_smooth*2-1<0) DIT_smooth=nbrow_met/2;
+    
+    cpl_msg_info (cpl_func,"Smoothing volts for a lower correlation bias by %d metrology DITS",DIT_smooth*2+1);
+    
+    double** volts_smooth = cpl_malloc ((nbrow_met-DIT_smooth*2) * sizeof(double*));
+    
+    for (cpl_size row = 0; row < nbrow_met-DIT_smooth*2; row ++) {
+        volts_smooth[row] = cpl_malloc (64 * sizeof(double));
+        for (cpl_size diode = 0; diode < 64; diode ++) {
+            volts_smooth[row][diode]=0.0;
+            for (int row_smooth = 0; row_smooth < DIT_smooth*2+1; row_smooth ++)
+                volts_smooth[row][diode]+=cpl_array_get (raw_met[row+row_smooth], diode, NULL);
+        }
+    }
+    
+    for (cpl_size row = DIT_smooth; row < nbrow_met-DIT_smooth; row ++)
+        for (cpl_size diode = 0; diode < 64; diode ++)
+    cpl_array_set(raw_met[row],diode,volts_smooth[row-DIT_smooth][diode]/(DIT_smooth*2+1));
+    
+    CPLCHECK_MSG ("Cannot smooth the metrology data");
+    FREELOOP (cpl_free, volts_smooth, nbrow_met-DIT_smooth*2);
 	
 	/* 
 	 * Create the vismet_table
@@ -1934,7 +1965,6 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
 
 	cpl_msg_info (cpl_func,"Fill the OI_VIS_MET table with the DRS algorithm");
 	
-	cpl_size nbrow_met = cpl_table_get_nrow (metrology_table);
 	 
 	double phase_temp[4]={0,0,0,0}, phase_rtc;
 	int k_wrap[4]={0,0,0,0};
@@ -2059,8 +2089,8 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
 	cpl_array_fill_window_complex(phase_sc_conj, 0, 16, 0.+I*0.);
 	CPLCHECK_MSG("Fill win met phase at tel");
     
-	int n_filter=25;
-    if (gravi_pfits_get_axis (header) == MODE_ONAXIS)  n_filter=40;
+	int n_filter=40;
+    if (gravi_pfits_get_axis (header) == MODE_ONAXIS)  n_filter=80;
     
     cpl_msg_info (cpl_func,"Smoothing metrology voltage by %d DITS",n_filter*2+1);
     
@@ -2296,7 +2326,7 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
      * By 21 DITS in off-axis (42ms), and by 81 DITS in on-axis (162ms)
      */
     
-    int DIT_smooth=10;
+    int DIT_smooth=20;
     if (gravi_pfits_get_axis (header) == MODE_ONAXIS)  DIT_smooth=40;
     
     /* avoid segmentation fault if nrow < DIT_smooth */
@@ -2929,7 +2959,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     gravi_table_init_column_array (vismet_table, "PHASE_TELFC_CORR_XY", "rad", CPL_TYPE_DOUBLE, ndiode);
     double ** phase_telfc_corr_xy = gravi_table_get_data_array_double (vismet_table, "PHASE_TELFC_CORR_XY");
     
-    int Nsmooth = 1250; /* 5 seconds smoothing */
+    int Nsmooth_astig = 2000; /* 8 seconds smoothing */
+    int Nsmooth_sep   = 1250; /* 5 seconds smoothing */
     
     for (int tel = 0; tel < ntel; tel++)
     {
@@ -2950,7 +2981,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
             phase_telfc_corr[row*ntel+tel][0];
             double complex complex_ast = cos(phase_ast)+I*sin(phase_ast);
             
-            for (cpl_size row_s = -Nsmooth; row_s <= Nsmooth; row_s++)
+            for (cpl_size row_s = -Nsmooth_astig; row_s <= Nsmooth_astig; row_s++)
                 if ((row+row_s>=0)&&(row+row_s<nrow_met))
                 {
                     cpl_size row_d= row+row_s;
@@ -2986,7 +3017,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
             double complex phase_sepY = cos(phase_sepY1) + cos(phase_sepY2)
                         +  I*( sin(phase_sepY1) + sin(phase_sepY2) );
             
-            for (cpl_size row_s = -Nsmooth; row_s <= Nsmooth; row_s++)
+            for (cpl_size row_s = -Nsmooth_sep; row_s <= Nsmooth_sep; row_s++)
                 if ((row+row_s>=0)&&(row+row_s<nrow_met))
                 {
                     cpl_size row_d= row+row_s;
