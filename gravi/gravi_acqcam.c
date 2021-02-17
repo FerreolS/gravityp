@@ -109,8 +109,6 @@ int gravi_acqcam_xy_diode (const double v[], double *xd, double *yd);
 static int gravi_acqcam_spot (const double x_in[], const double v[], double *result);
 static int gravi_acqcam_xy_sub (const double v[], double *xsub, double *ysub);
 
-static int gravi_acqcam_spot_dfda (const double x_in[], const double v[], double result[]);
-
 double gravi_acqcam_z2meter (double PositionPixels, gravi_data *static_param_data);
 
 cpl_error_code gravi_acqcam_pupil (cpl_image * mean_img,
@@ -366,7 +364,7 @@ static int gravi_acqcam_spot (const double x_in[], const double v[], double *res
 }
 
 /*----------------------------------------------------------------------------*/
-
+#if 0
 static int gravi_acqcam_spot_dfda (const double x_in[], const double v[], double result[])
 {
     double next = 0.0, here = 0.0, epsilon = 1e-8;
@@ -401,6 +399,7 @@ static int gravi_acqcam_spot_dfda (const double x_in[], const double v[], double
 
     return 0;
 }
+#endif
 
 /*----------------------------------------------------------------------------*/
 /**
