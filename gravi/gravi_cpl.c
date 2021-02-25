@@ -961,8 +961,8 @@ cpl_error_code gravi_array_phase_unwrap (cpl_array * input)
 
 		d_phi = phi_i + k_wrap * 2 * M_PI - phi_ii;
 
-		if (d_phi > M_PI) k_wrap ++;
-		if (d_phi < - M_PI) k_wrap --;
+		if (d_phi > M_PI) k_wrap --;
+		if (d_phi < - M_PI) k_wrap ++;
 
 		cpl_array_set(input, i_data, cpl_array_get(input, i_data, NULL) + k_wrap * 2 * M_PI);
 	}
@@ -1140,47 +1140,98 @@ cpl_error_code gravi_array_multiply_conj (cpl_array * input1, cpl_array * input2
  * Returned a smoothed version of an array of DOUBLE
  * Invalid data are not checked (all considered as valid)
  */
-cpl_array * gravi_array_smooth (cpl_array * input, int nsmooth)
+cpl_array * gravi_array_smooth (cpl_array * input_array, int DIT_smooth)
 {
-  cpl_ensure (nsmooth>0, CPL_ERROR_ILLEGAL_INPUT, NULL);
-  cpl_ensure (input,     CPL_ERROR_NULL_INPUT, NULL);
+  cpl_ensure (DIT_smooth>=0, CPL_ERROR_ILLEGAL_INPUT, NULL);
+  cpl_ensure (input_array,     CPL_ERROR_NULL_INPUT, NULL);
   
-  cpl_type type  = cpl_array_get_type (input);
-  cpl_size row, n_row = cpl_array_get_size ( input );
-  int row_add, row_sub;
-
-  /* Allocate memory of the output -- no check of valid/invalid data */
-  cpl_array * output = cpl_array_duplicate (input);
-
-  if ( type == CPL_TYPE_DOUBLE ) {
-	double * data_input  = cpl_array_get_data_double (input);
-	double * data_output = cpl_array_get_data_double (output);
-	double buffer = 0.0;
-	int norm=0; // counter number of summed elements
-	
-	/* Running buffer -- FIXME: check arount limits */
-	for ( row=-nsmooth ; row<n_row ; row++) {
-	  row_add = row+nsmooth;
-	  row_sub = row-nsmooth-1;
-	  if ( row_add < n_row ) {
-		  buffer += data_input[row_add];
-		  norm+=1;
-	  }
-	  if ( row_sub >= 0 ) {
-		  buffer -= data_input[row_sub];
-		  norm-=1;
-	  }
-	  if( row>=0 && row<n_row ) data_output[row] = (double)(buffer)/norm;
-	}
-	/* End loop on rows */
-	
-  } else {
-	cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
-						   "This type is not supported... report this error to DRS team !!");
-	return NULL;
-  }
-
-  return output;
+  cpl_type type  = cpl_array_get_type (input_array);
+  cpl_size row, nrow = cpl_array_get_size ( input_array );
+    
+  /* avoid segmentation fault if nrow < DIT_smooth */
+   if (nrow-DIT_smooth*2-1<0) DIT_smooth=nrow/2;
+    
+    /* create output array */
+    cpl_array * output_smooth_array;
+    
+    /* create data buffers and data carrier (the smoothed buffer)*/
+    if ( type == CPL_TYPE_DOUBLE ) {
+        double* input = cpl_array_get_data_double (input_array);
+        double* output_smooth = cpl_malloc (nrow * sizeof(double));
+        double data_carrier = 0.0;
+        
+        /* smooth data */
+        int int_carrier = 0;
+        for (cpl_size row = - DIT_smooth; row < 0; row ++)
+        {
+            data_carrier+=input[row+DIT_smooth];
+            int_carrier+=1;
+        }
+        for (cpl_size row = 0; row < DIT_smooth+1; row ++)
+        {
+            data_carrier+=input[row+DIT_smooth];
+            int_carrier+=1;
+            output_smooth[row]=data_carrier/int_carrier;
+        }
+        double inv_int_carrier= 1.0/int_carrier;
+        for (cpl_size row = DIT_smooth+1; row < nrow-DIT_smooth; row ++)
+        {
+            data_carrier-=input[row-DIT_smooth-1];
+            data_carrier+=input[row+DIT_smooth];
+            output_smooth[row]=data_carrier*inv_int_carrier;
+        }
+        for (cpl_size row = nrow-DIT_smooth; row < nrow; row ++)
+        {
+            data_carrier-=input[row-DIT_smooth-1];
+            int_carrier-=1;
+            output_smooth[row]=data_carrier/int_carrier;
+        }
+        
+        /* wrap data into array */
+        output_smooth_array=cpl_array_wrap_double (output_smooth,  nrow);
+        
+    } else if ( type == CPL_TYPE_DOUBLE_COMPLEX ){
+        double complex * input = cpl_array_get_data_double_complex (input_array);
+        double complex * output_smooth = cpl_malloc (nrow * sizeof(double complex));
+        double complex data_carrier = 0.0;
+    
+    /* smooth data */
+    int int_carrier = 0;
+    for (cpl_size row = - DIT_smooth; row < 0; row ++)
+    {
+        data_carrier+=input[row+DIT_smooth];
+        int_carrier+=1;
+    }
+    for (cpl_size row = 0; row < DIT_smooth+1; row ++)
+    {
+        data_carrier+=input[row+DIT_smooth];
+        int_carrier+=1;
+        output_smooth[row]=data_carrier/int_carrier;
+    }
+    double inv_int_carrier= 1.0/int_carrier;
+    for (cpl_size row = DIT_smooth+1; row < nrow-DIT_smooth; row ++)
+    {
+        data_carrier-=input[row-DIT_smooth-1];
+        data_carrier+=input[row+DIT_smooth];
+        output_smooth[row]=data_carrier*inv_int_carrier;
+    }
+    for (cpl_size row = nrow-DIT_smooth; row < nrow; row ++)
+    {
+        data_carrier-=input[row-DIT_smooth-1];
+        int_carrier-=1;
+        output_smooth[row]=data_carrier/int_carrier;
+    }
+    
+    /* wrap data into array */
+        output_smooth_array=cpl_array_wrap_double_complex (output_smooth,  nrow);
+    
+        
+    } else {
+        cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
+                               "This type is not supported... report this error to DRS team !!");
+        return NULL;
+      }
+  return output_smooth_array;
 }
 
 /*----------------------------------------------------------------------------*/
