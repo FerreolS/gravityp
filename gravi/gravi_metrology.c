@@ -1929,54 +1929,89 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
     CPLCHECK_MSG ("Cannot load metrology data");
     
     /*
-     * Perform initial smoothing of the voltage values
-     * By 21 DITS in off-axis (42ms), and by 81 DITS in on-axis (162ms)
+     * Perform smoothing of the voltage values
+     * First the Fiber coupler metrology
+     * By 11 DITs (22ms)
      */
     
-    int DIT_smooth=20;
-    if (gravi_pfits_get_axis (header) == MODE_ONAXIS)  DIT_smooth=40;
+    int DIT_smooth=1;
     
-    /* avoid segmentation fault if nrow < DIT_smooth */
-    if (nbrow_met-DIT_smooth*2-1<0) DIT_smooth=nbrow_met/2;
+    cpl_msg_info (cpl_func,"Smoothing volts of the FC diodes by %d metrology DITS",DIT_smooth*2+1);
     
-    cpl_msg_info (cpl_func,"Smoothing volts for a lower correlation bias by %d metrology DITS",DIT_smooth*2+1);
-    
-    double** volts_smooth = cpl_malloc ((nbrow_met-DIT_smooth*2) * sizeof(double*));
-    
-    for (cpl_size row = 0; row < nbrow_met-DIT_smooth*2; row ++) {
-        volts_smooth[row] = cpl_malloc (64 * sizeof(double));
-        for (cpl_size diode = 0; diode < 64; diode ++) {
-            volts_smooth[row][diode]=0.0;
-            for (int row_smooth = 0; row_smooth < DIT_smooth*2+1; row_smooth ++)
-                volts_smooth[row][diode]+=cpl_array_get (raw_met[row+row_smooth], diode, NULL);
-        }
+    for (cpl_size diode = 64; diode < 80; diode ++) {
+        
+        cpl_array * volt_array = cpl_array_new(nbrow_met,CPL_TYPE_DOUBLE);
+
+        for (cpl_size row = 0; row < nbrow_met; row ++)
+            cpl_array_set_double(volt_array,row,cpl_array_get (raw_met[row], diode, NULL) );
+        
+        cpl_array * volts_smooth_array=gravi_array_smooth (volt_array, DIT_smooth);
+        
+        CPLCHECK_MSG ("Cannot smooth the metrology data");
+        
+        
+        for (cpl_size row = 0; row < nbrow_met; row ++)
+        cpl_array_set_float(raw_met[row],diode,cpl_array_get_double (volts_smooth_array, row, NULL) );
+        
+        cpl_array_delete(volt_array);
+        cpl_array_delete(volts_smooth_array);
+        
     }
     
-    for (cpl_size row = DIT_smooth; row < nbrow_met-DIT_smooth; row ++)
-        for (cpl_size diode = 0; diode < 64; diode ++)
-    cpl_array_set(raw_met[row],diode,volts_smooth[row-DIT_smooth][diode]/(DIT_smooth*2+1));
+    cpl_msg_info (cpl_func,"Smoothing volts of the TEL diodes done");
+        
+    /*
+     * Perform smoothing of the voltage values
+     * By 41 DITS in off-axis (82ms), and by 81 DITS in on-axis (162ms)
+     */
+    
+    DIT_smooth=20;
+    if (gravi_pfits_get_axis (header) == MODE_ONAXIS)  DIT_smooth=40;
+    
+    cpl_msg_info (cpl_func,"Smoothing volts of the TEL diodes by %d metrology DITS",DIT_smooth*2+1);
+    
+    for (cpl_size diode = 0; diode < 64; diode ++) {
+        
+        cpl_array * volt_array = cpl_array_new(nbrow_met,CPL_TYPE_DOUBLE);
+
+        for (cpl_size row = 0; row < nbrow_met; row ++)
+            cpl_array_set_double(volt_array,row,cpl_array_get (raw_met[row], diode, NULL) );
+        
+        cpl_array * volts_smooth_array=gravi_array_smooth (volt_array, DIT_smooth);
+        
+        CPLCHECK_MSG ("Cannot smooth the metrology data");
+        
+        
+        for (cpl_size row = 0; row < nbrow_met; row ++)
+        cpl_array_set_float(raw_met[row],diode,cpl_array_get_double (volts_smooth_array, row, NULL) );
+        
+        cpl_array_delete(volt_array);
+        cpl_array_delete(volts_smooth_array);
+        
+    }
     
     CPLCHECK_MSG ("Cannot smooth the metrology data");
-    FREELOOP (cpl_free, volts_smooth, nbrow_met-DIT_smooth*2);
-	
+    cpl_msg_info (cpl_func,"Smoothing volts of the TEL diodes done");
+    
+    
+    
 	/* 
 	 * Create the vismet_table
 	 */
 
 	cpl_msg_info (cpl_func,"Fill the OI_VIS_MET table with the DRS algorithm");
 	
-	 
-	double phase_temp[4]={0,0,0,0}, phase_rtc;
-	int k_wrap[4]={0,0,0,0};
 
 	/* Create the output table for VIS_MET
 	 * PHASE_TEL and PHASE_FC are defined as FT-SC */
 	cpl_table_new_column (vismet_table, "PHASE_FC_DRS", CPL_TYPE_DOUBLE);
 	cpl_table_set_column_unit (vismet_table, "PHASE_FC_DRS", "rad");
-    cpl_table_fill_column_window (vismet_table, "PHASE_FC_DRS", 0, nbrow_met * ntel, 0.0);
 	cpl_table_new_column_array (vismet_table, "PHASE_TEL_DRS", CPL_TYPE_DOUBLE, ndiode);
 	cpl_table_set_column_unit (vismet_table, "PHASE_TEL_DRS", "rad");
 	
+    
+    /* get the reference DIT for phasing metrology */
+    
 	const char * date = gravi_pfits_get_met_ph(header);
 	const char * acq_date = gravi_pfits_get_start_prcacq(header);
     CPLCHECK_MSG ("Cannot get dates");
@@ -1985,258 +2020,147 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
 								gravi_convert_to_mjd(acq_date));
     CPLCHECK_MSG ("Cannot convert dates");
     
-
-    
-	/*
-	 * Compute the metrology phase at FC, without 
-     * any smoothing
-	 */
-    double k_phase[4]={0,0,0,0};
-    
 	/* Loop on row of the metrology */
 	int met_date_row = -1;
-	for (cpl_size row = 0; row < nbrow_met; row ++) {
-	  
+	for (cpl_size row = 1; row < nbrow_met; row ++) {
 	  /* Look for the reference row */
-	  int time_met = cpl_table_get_int (metrology_table, "TIME", row, NULL);
-	  if (row > 0) {
-		if ((time_met > met_mjd) && (cpl_table_get_int (metrology_table, "TIME", row-1, NULL) < met_mjd)) {
-		  met_date_row = row;
-		}
+        int time_met = cpl_table_get_int (metrology_table, "TIME", row, NULL);
+        int time_met_minus = cpl_table_get_int (metrology_table, "TIME", row-1, NULL);
+        CPLCHECK_MSG("Cannot get Time for Metrology phase date");
+        if ((time_met > met_mjd) && (time_met_minus < met_mjd)) met_date_row = row;
 	  }
-	  
-	  /* Loop on tel */
-	  for (int tel = 0; tel < ntel; tel++) {
-				
-        /* Compute the phase from the VOLTs */
-        double phi_ft = atan2 (cpl_array_get (raw_met[row],ind_sinfc_FT[tel], NULL),
-                               cpl_array_get (raw_met[row],ind_cosfc_FT[tel], NULL));
-        
-        double phi_sc = atan2 (cpl_array_get (raw_met[row],ind_sinfc_SC[tel], NULL),
-                               cpl_array_get (raw_met[row],ind_cosfc_SC[tel], NULL));
-		
-		/* Catch errors */
-		CPLCHECK_MSG("Error at computation of phase");
-
-		/* unwrap (phi_ft - phi_sc) */
-		if ((phi_ft - phi_sc) > M_PI)  phi_ft-=2*M_PI;
-		if ((phi_ft - phi_sc) < -M_PI) phi_ft+=2*M_PI;
-
-		/* Keep memory of wraps */
-		if      ((phi_ft - phi_sc)-phase_temp[tel] > M_PI)  k_wrap[tel]--;
- 		else if ((phi_ft - phi_sc)-phase_temp[tel] < -M_PI) k_wrap[tel]++;
-
-        /* Integrate phase */
-		phase_temp[tel] = (phi_ft - phi_sc);
-		double phase_d = (phase_temp[tel] + 2 *k_wrap[tel]* M_PI) ;
-
-		/* When we reach the metrology reference date */
-		if (met_date_row == row){
-            sprintf (name, "ESO OCS MET PH_FC%d_FT", tel+1);
-            phase_rtc = cpl_propertylist_get_double (header, name);
-            sprintf (name, "ESO OCS MET PH_FC%d_SC", tel+1);
-            phase_rtc = phase_rtc - cpl_propertylist_get_double (header, name);
-            k_phase[tel] = phase_rtc - (phase_temp[tel] + 2 *k_wrap[tel]* M_PI);
-            k_phase[tel] = floor(k_phase[tel]/(2*M_PI)+0.5)*2*M_PI;
-		}
-		
-		/* Set the PHASE_SC and the TIME */
-        cpl_table_set (vismet_table, "PHASE_FC_DRS", row*ntel+tel, phase_d);
-        
-        CPLCHECK_MSG("Computing the metrology phase at FC");
-	  }
-	  /* End loop on tel */
-	}
-	/* End loop on rows */
-
-	/* IF error of timing */
-	if (met_date_row == -1){
-	  cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
+    cpl_msg_info(cpl_func,"Found DIT corresponding to metrology phase date at number %i",met_date_row);
+    /* IF error of timing */
+    if (met_date_row == -1){
+      cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
                              "The metrology phase date is not within"
                              " the boundaries of RMN acquisition");
-	  return CPL_ERROR_ILLEGAL_INPUT;
-	}
+      return CPL_ERROR_ILLEGAL_INPUT;
+    }
+       
+    /*
+     * Compute the metrology phase on the Fiber Coupler (FC), without a temporal
+     * smoothing over n_filter samples
+     */
     
-    /* Loop on rows to re-apply to k_phase */
-    for (cpl_size row = 0; row < nbrow_met; row++) {
-        for (int tel = 0; tel < 4 ; tel++) {
-            double value = cpl_table_get (vismet_table, "PHASE_FC_DRS", row*ntel+tel, NULL);
-            cpl_table_set (vismet_table, "PHASE_FC_DRS", row*ntel+tel, value + k_phase[tel]);
-        }
-    } /* End loop on rows */
-	
-	CPLCHECK_MSG("Computing the metrology phase at FC");
-
+	  for (int tel = 0; tel < ntel; tel++) {
+          
+          /* make an array of double complex */
+          
+          cpl_array * phasor_array = cpl_array_new(nbrow_met,CPL_TYPE_DOUBLE_COMPLEX);
+          
+          for (cpl_size row = 0; row < nbrow_met; row ++)
+          {
+              double complex phasor_ft =
+              cpl_array_get (raw_met[row],ind_cosfc_FT[tel], NULL)
+              + I*cpl_array_get (raw_met[row],ind_sinfc_FT[tel], NULL);
+              double complex conj_phasor_sc =
+              cpl_array_get (raw_met[row],ind_cosfc_SC[tel], NULL)
+              - I*cpl_array_get (raw_met[row],ind_sinfc_SC[tel], NULL);
+              
+              cpl_array_set_double_complex(phasor_array,row,phasor_ft*conj_phasor_sc);
+          }
+          CPLCHECK_MSG("Error at computation of phasors");
+          
+          cpl_array *  phase_array =  cpl_array_duplicate (phasor_array);
+          cpl_array_arg(phase_array);
+          gravi_array_phase_unwrap (phase_array);
+          
+          /* get the phase at correct time to compare with reference phase */
+          double phase_reference = cpl_array_get_double(phase_array, met_date_row, NULL);
+          
+          /* get the phase from rtc */
+          sprintf (name, "ESO OCS MET PH_FC%d_FT", tel+1);
+          double phase_rtc = cpl_propertylist_get_double (header, name);
+          sprintf (name, "ESO OCS MET PH_FC%d_SC", tel+1);
+          phase_rtc = phase_rtc - cpl_propertylist_get_double (header, name);
+          double k_phase = phase_rtc - phase_reference;
+          /* get the 2 pi offset from rtc */
+          k_phase = floor(k_phase/(2*M_PI)+0.5)*2*M_PI;
+          cpl_array_add_scalar (phase_array, k_phase);
+          
+          /* store data in gravi table */
+          for (cpl_size row = 0; row < nbrow_met; row ++)
+          {
+              cpl_table_set (vismet_table, "PHASE_FC_DRS", row*ntel+tel, cpl_array_get_double (phase_array, row, NULL));
+          }
+          
+          cpl_array_delete(phasor_array);
+          cpl_array_delete(phase_array);
+        CPLCHECK_MSG("Error while computing the metrology phase at FC");
+	  }
+	  /* End loop on tel */
     
+    cpl_msg_info(cpl_func,"Finished computing phase (stored in PHASE_FC_DRS)");
 
 	/*
 	 * Compute the metrology phase at telescope, with a temporal
-     * smoothing over n_filter samples
+     * smoothing over twice the DIT_smoothed used on the raw signal
 	 */
     
-    cpl_array * tel_phase = cpl_array_new (ndiode, CPL_TYPE_DOUBLE);
-    
-	int k_wrap_tel[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-	double phase_temp_tel[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
-    double k_phase_tel[16]={0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0};
+        for (int tel = 0; tel < ntel; tel++){
+            
+            /* prepare the arrays to store the tel data */
+            cpl_array **  tel_phase = cpl_malloc (nbrow_met * sizeof(cpl_array *)) ;
+            for (cpl_size row = 0; row < nbrow_met; row ++)
+                tel_phase[row]=cpl_array_new (ndiode, CPL_TYPE_DOUBLE);
+            
+            for (int diode = 0; diode < ndiode; diode++){
+                      
+                      /* make an array of double complex */
+                      cpl_array * phasor_array = cpl_array_new(nbrow_met,CPL_TYPE_DOUBLE_COMPLEX);
 
-	cpl_array * phase;
-	cpl_array * phase_ft = cpl_array_new (16, CPL_TYPE_DOUBLE_COMPLEX);
-	cpl_array * phase_sc_conj = cpl_array_new (16, CPL_TYPE_DOUBLE_COMPLEX);
-	CPLCHECK_MSG("creat array met phase at tel");
-
-	cpl_array_fill_window_complex(phase_ft, 0, 16, 0.+I*0.);
-	cpl_array_fill_window_complex(phase_sc_conj, 0, 16, 0.+I*0.);
-	CPLCHECK_MSG("Fill win met phase at tel");
-    
-	int n_filter=40;
-    if (gravi_pfits_get_axis (header) == MODE_ONAXIS)  n_filter=80;
-    
-    cpl_msg_info (cpl_func,"Smoothing metrology voltage by %d DITS",n_filter*2+1);
-    
-	/* Compute the sum phase_ft and phase_sc_conj of the first n_filter*2+1 row
-	 *  phase_ft=<cos_ft>+i<sin_ft>
-	 *  phase_sc_conj=<cos_sc>-i<sin_sc> */
-	CPLCHECK_MSG("Init met phase at tel");
-	for (cpl_size row=0; row<n_filter*2+1; row++) {
-		for (int tel = 0; tel < ntel; tel++){
-			for (int diode = 0; diode < ndiode; diode++){
-                int ind = tel*ndiode+diode;
-				cpl_array_set_complex(phase_ft, ind,
-									  cpl_array_get_complex(phase_ft,ind, NULL)
-									  +cpl_array_get(raw_met[row],ind_costel_FT[tel][diode], NULL)
-									  +I*cpl_array_get(raw_met[row],ind_sintel_FT[tel][diode], NULL));
-				cpl_array_set_complex(phase_sc_conj,ind,
-									  cpl_array_get_complex(phase_sc_conj,ind, NULL)
-									  +cpl_array_get(raw_met[row],ind_costel_SC[tel][diode], NULL)
-									  -I*cpl_array_get(raw_met[row],ind_sintel_SC[tel][diode], NULL));
-			}
-		}
-	}
-	CPLCHECK_MSG("Computing met phase at tel");
-
-    /* arg{FT - SC} */
-	phase = cpl_array_duplicate (phase_ft);
-	cpl_array_multiply (phase, phase_sc_conj);
-	cpl_array_arg (phase);
-
-	/* case for n_filter first lines */
-	for (cpl_size row=0; row<n_filter+1; row++) {
-		for (int tel = 0; tel < ntel; tel++) {
-            for (int diode = 0; diode < ndiode; diode++) {
-                cpl_array_set (tel_phase, diode, cpl_array_get (phase,tel*ndiode+diode, NULL));
+                      for (cpl_size row = 0; row < nbrow_met; row ++)
+                      {
+                          double complex phasor_ft =
+                          cpl_array_get(raw_met[row],ind_costel_FT[tel][diode], NULL)
+                          +I*cpl_array_get(raw_met[row],ind_sintel_FT[tel][diode], NULL);
+                          double complex conj_phasor_sc =
+                          cpl_array_get(raw_met[row],ind_costel_SC[tel][diode], NULL)
+                          -I*cpl_array_get(raw_met[row],ind_sintel_SC[tel][diode], NULL);
+                          
+                          cpl_array_set_double_complex(phasor_array,row,phasor_ft*conj_phasor_sc);
+                      }
+                      CPLCHECK_MSG("Error at computation of phasors");
+                
+                      /* smoothing diode phase by a factor 2 with respect to before*/
+                      cpl_array *  phase_array =  gravi_array_smooth (phasor_array, DIT_smooth*2);
+                      cpl_array_arg(phase_array);
+                      gravi_array_phase_unwrap (phase_array);
+                      
+                      /* get the phase at correct time to compare with reference phase */
+                      double phase_reference = cpl_array_get_double(phase_array, met_date_row, NULL);
+                
+                      /* get the phase from rtc */
+                      sprintf (name, "ESO OCS MET PH_FC%d_FT", tel+1);
+                      double phase_rtc = cpl_propertylist_get_double (header, name);
+                      sprintf (name, "ESO OCS MET PH_FC%d_SC", tel+1);
+                      phase_rtc = phase_rtc - cpl_propertylist_get_double (header, name);
+                      double k_phase = phase_rtc - phase_reference;
+                      /* get the 2 pi offset from rtc */
+                      k_phase = floor(k_phase/(2*M_PI)+0.5)*2*M_PI;
+                      cpl_array_add_scalar (phase_array, k_phase);
+                      CPLCHECK_MSG("could not get met phase offset from headers");
+                      
+                      for (cpl_size row = 0; row < nbrow_met; row ++)
+                      {
+                          cpl_array_set_double(tel_phase[row],diode,cpl_array_get_double (phase_array, row, NULL));
+                      }
+                
+                    cpl_array_delete(phasor_array);
+                    cpl_array_delete(phase_array);
+                    CPLCHECK_MSG("Computing the metrology phase for TEL diodes failed");
+                  } /* End loop on diodes */
+            /* store into the table*/
+            for (cpl_size row = 0; row < nbrow_met; row ++){
+                cpl_table_set_array (vismet_table, "PHASE_TEL_DRS", row*ntel+tel, tel_phase[row]);
+                cpl_array_delete(tel_phase[row]);
             }
-            cpl_table_set_array (vismet_table, "PHASE_TEL_DRS", row*ntel+tel, tel_phase);
-            CPLCHECK_MSG ("Cannot set");
-        }
-    }
-
-	/* case for all lines */
-	for (cpl_size row=n_filter+1; row<nbrow_met-n_filter; row++) {
-        
-		/* update the mean phase_ft=<cos_ft>+i<sin_ft> and phase_sc_conj=<cos_sc>-i<sin_sc>
-		 * 	Remove element row-n_filter-1 and add row+n_filter*/
-		for (int tel = 0; tel < ntel; tel++){
-			for (int diode = 0; diode < ndiode; diode++){
-                int ind = tel*ndiode+diode;
-				cpl_array_set_complex(phase_ft, ind,
-						cpl_array_get_complex(phase_ft,ind, NULL)
-									  -(cpl_array_get(raw_met[row-n_filter-1],ind_costel_FT[tel][diode], NULL)
-										+I*cpl_array_get(raw_met[row-n_filter-1],ind_sintel_FT[tel][diode], NULL))
-									  +cpl_array_get(raw_met[row+n_filter],ind_costel_FT[tel][diode], NULL)
-									  +I*cpl_array_get(raw_met[row+n_filter],ind_sintel_FT[tel][diode], NULL));
-				cpl_array_set_complex(phase_sc_conj,ind,
-						cpl_array_get_complex(phase_sc_conj,ind, NULL)
-									  -(cpl_array_get(raw_met[row-n_filter-1],ind_costel_SC[tel][diode], NULL)
-										-I*cpl_array_get(raw_met[row-n_filter-1],ind_sintel_SC[tel][diode], NULL))
-									  +cpl_array_get(raw_met[row+n_filter],ind_costel_SC[tel][diode], NULL)
-									  -I*cpl_array_get(raw_met[row+n_filter],ind_sintel_SC[tel][diode], NULL));
-				CPLCHECK_MSG("loop met phase at tel");
-			}
-		}
-
-		cpl_array_delete (phase);
-        
-		/* compute the phase */
-		CPLCHECK_MSG("Computing met phase at tel");
-		phase=cpl_array_duplicate(phase_ft);
-		cpl_array_multiply(phase, phase_sc_conj);
-		cpl_array_arg(phase);
-
-		/* Keep memory of wraps */
-		for (int ind=0; ind<16; ind++){
-			if      (cpl_array_get(phase, ind, NULL)-phase_temp_tel[ind] > M_PI)  k_wrap_tel[ind]--;
-			else if (cpl_array_get(phase, ind, NULL)-phase_temp_tel[ind] < -M_PI) k_wrap_tel[ind]++;
-
-			phase_temp_tel[ind]=cpl_array_get(phase, ind, NULL);
-			cpl_array_set(phase, ind,(phase_temp_tel[ind] + 2 *k_wrap_tel[ind]* M_PI)) ;
-		}
-		CPLCHECK_MSG("Unwrap met phase at tel");
-
-		/* When we reach the metrology reference date */
-		if (met_date_row == row){
-			for (int tel = 0; tel < ntel; tel++){
-				for (int diode = 0; diode < 4; diode++){
-                    int ind = tel*ndiode+diode;
-					sprintf (name, "ESO OCS MET PH_T%d_D%d_FT",tel+1, diode+1);
-					phase_rtc = cpl_propertylist_get_double (header, name);
-					sprintf (name, "ESO OCS MET PH_T%d_D%d_SC",tel+1, diode+1);
-					phase_rtc = phase_rtc - cpl_propertylist_get_double (header, name);
-					k_phase_tel[ind] = phase_rtc - (phase_temp_tel[ind] + 2 *k_wrap_tel[ind]* M_PI);
-					k_phase_tel[ind] = floor(k_phase_tel[ind]/(2*M_PI)+0.5)*2*M_PI;
-				}
-			}
-			CPLCHECK_MSG("Unwrap met phase at tel");
-		}
-
-        /* Descramble and set */
-        for (int tel = 0; tel < ntel; tel++) {
-            for (int diode = 0; diode < ndiode; diode++) {
-                cpl_array_set (tel_phase, diode, cpl_array_get (phase,tel*ndiode+diode, NULL));
-            }
-            cpl_table_set_array (vismet_table, "PHASE_TEL_DRS", row*ntel+tel, tel_phase);
-            CPLCHECK_MSG ("Cannot set");
-        }
-        
-	} /* End loop on rows */
-
-    cpl_array_delete (phase_sc_conj);
-	cpl_array_delete (phase);
-	cpl_array_delete (phase_ft);
-    cpl_array_delete (tel_phase);
-
-	/* case for n_filter last lines */
-    for (int tel = 0; tel < ntel; tel++) {
-        const cpl_array * last_phase = cpl_table_get_array (vismet_table,"PHASE_TEL_DRS", (nbrow_met-n_filter-1)*ntel+tel);
-        for (cpl_size row = nbrow_met-n_filter; row<nbrow_met; row++) {
-            cpl_table_set_array (vismet_table,"PHASE_TEL_DRS", row*ntel+tel, last_phase);
-            CPLCHECK_MSG ("Cannot set");
-        }
-    }
-
-	/* IF error of timing */
-	if (met_date_row == -1){
-        cpl_error_set_message(cpl_func, CPL_ERROR_ILLEGAL_INPUT,
-                              "The metrology phase date is not within"
-                              " the boundaries of RMN acquisition");
-	  return CPL_ERROR_ILLEGAL_INPUT;
-	}
+            FREE (cpl_free, tel_phase);
+        } /* End loop on tel */
     
-    /* Loop on rows to re-apply to k_phase */
-    cpl_array ** all_phase = cpl_table_get_data_array (vismet_table, "PHASE_TEL_DRS");
-    
-    for (cpl_size row = 0; row < nbrow_met; row++) {
-		for (int tel = 0; tel < ntel; tel++) {
-			for (int diode = 0; diode < 4; diode++) {
-                int ind = tel*ndiode+diode;
-                double value = cpl_array_get (all_phase[row*ntel+tel], diode, NULL);
-				cpl_array_set (all_phase[row*ntel+tel], diode, value + k_phase_tel[ind]);
-            }
-        }
-    }
-    /* End loop on rows */
+        cpl_msg_info(cpl_func,"Finished computing phase (stored in PHASE_TEL_DRS)");
 
-    
 	/*
 	 * Compute the TEL-FC complex phasor = Vtel * conj (Vfc)
      * without any smoothing
@@ -2320,36 +2244,6 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
     }
     
     CPLCHECK_MSG ("Cannot load metrology data");
-    
-    /*
-     * Perform initial smoothing of the voltage values
-     * By 21 DITS in off-axis (42ms), and by 81 DITS in on-axis (162ms)
-     */
-    
-    int DIT_smooth=20;
-    if (gravi_pfits_get_axis (header) == MODE_ONAXIS)  DIT_smooth=40;
-    
-    /* avoid segmentation fault if nrow < DIT_smooth */
-    if (nrow_met-DIT_smooth*2-1<0) DIT_smooth=nrow_met/2;
-    
-    cpl_msg_info (cpl_func,"Smoothing volts for a lower correlation bias by %d metrology DITS",DIT_smooth*2+1);
-    
-    double** volts_smooth = cpl_malloc ((nrow_met-DIT_smooth*2) * sizeof(double*));
-    
-    for (cpl_size row = 0; row < nrow_met-DIT_smooth*2; row ++) {
-        volts_smooth[row] = cpl_malloc (64 * sizeof(double));
-        for (cpl_size diode = 0; diode < 64; diode ++) {
-            volts_smooth[row][diode]=0.0;
-            for (int row_smooth = 0; row_smooth < DIT_smooth*2+1; row_smooth ++)
-                volts_smooth[row][diode]+=volts[row+row_smooth][diode];
-        }
-    }
-    
-    for (cpl_size row = DIT_smooth; row < nrow_met-DIT_smooth; row ++)
-        for (cpl_size diode = 0; diode < 64; diode ++)
-            volts[row][diode]=volts_smooth[row-DIT_smooth][diode]/(DIT_smooth*2+1);
-    
-    CPLCHECK_MSG ("Cannot smooth the metrology data");
     
     /* 
      * Allocate memory for FC the output
@@ -2543,7 +2437,6 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
     
     /* Free the pointer to pointer to data */
     FREELOOP (cpl_free, volts, nrow_met);
-    FREELOOP (cpl_free, volts_smooth, nrow_met-DIT_smooth*2);
     FREE (cpl_free, opd_tel);
     FREE (cpl_free, phase_tel);
     FREE (cpl_free, flag_tel);
@@ -2586,15 +2479,17 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     cpl_size ndiode = 4, ntel = 4;
     cpl_size nrow_met = cpl_table_get_nrow (metrology_table);
     
-    /* get OPD_FC and OPD_TEL */
-    double * opd_fc = cpl_table_get_data_double (vismet_table, "OPD_FC");
-    CPLCHECK_MSG ("Cannot get OPD_FC from vismet_table");
-    double ** opd_tel = gravi_table_get_data_array_double (vismet_table, "OPD_TEL");
-    CPLCHECK_MSG ("Cannot get OPD_TEL from vismet_table");
+    /* loading phase data
+    * The choice is yours here. Either you use PHASE_FC_DRS and PHASE_TEL_DRS
+    * Or you can use PHASE_FC_TAC and PHASE_TEL_TAC
+    * DSR version is prefered by me
+    */
+    
+    double * phase_fc = cpl_table_get_data_double (vismet_table, "PHASE_FC_DRS");
+    CPLCHECK_MSG ("Cannot get PHASE_FC_DRS from vismet_table");
     
     double ** phase_tel = gravi_table_get_data_array_double (vismet_table, "PHASE_TEL_DRS");
     CPLCHECK_MSG ("Cannot get PHASE_TEL_DRS from vismet_table");
-    
     
     /* get the laser wavelength data */
     double lambda_met_mean =  gravi_pfits_get_met_wavelength_mean(header, metrology_table);
@@ -2913,7 +2808,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     double ** phase_telfc_corr = gravi_table_get_data_array_double (vismet_table, "PHASE_TELFC_CORR");
     
     
-    /* Compute OPD_TELFC_CORR as (OPD_TEL + OPD_TEL_CORR) - (OPD_FC + OPD_FC_CORR) */
+    /* Compute PHASE_TELFC_CORR as (PHASE_TEL + OPD_TEL_CORR*2*pi/lambda) - (PHASE_FC + OPD_FC_CORR*2*pi/lambda) */
     /* going to complex phasor notation and then back to opd */
     double phi;
     double phifc;
@@ -2923,16 +2818,10 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     
     for (int tel = 0; tel < ntel; tel++) {
         for (cpl_size row = 0; row < nrow_met; row++) {
-            phifc = (opd_fc[row*ntel+tel] + opd_fc_corr[row*ntel+tel]) 
-                      / lambda_met_mean * TWOPI; /* fiber coupler */
+            phifc = - phase_fc[row*ntel+tel]
+            + opd_fc_corr[row*ntel+tel] / lambda_met_mean * TWOPI; /* fiber coupler */
             phasorfc = cos(phifc) + sin(phifc) * I;
             for (int diode = 0; diode < ndiode; diode++) {
-                /* SL : previous code
-                  phi = (opd_tel[row*ntel+tel][diode] + opd_tel_corr[row*ntel+tel][diode])
-                        / lambda_met_mean * TWOPI;
-                 * SL: using DRS phase instead of TAC OPD
-                 * this is important for correlation issues
-                 * we want the telescope phase to be untainted by the FC phase error */
                 phi = - phase_tel[row*ntel+tel][diode] + (opd_tel_corr[row*ntel+tel][diode])
                         / lambda_met_mean * TWOPI; /* telescope receiver */
                 phasor = cos(phi) + sin(phi) * I;
@@ -2964,15 +2853,9 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     
     for (int tel = 0; tel < ntel; tel++)
     {
-        cpl_array * phase_astig_corr_array = cpl_array_new (nrow_met ,CPL_TYPE_DOUBLE_COMPLEX);
-        cpl_array * phase_sepX_corr_array  = cpl_array_new (nrow_met ,CPL_TYPE_DOUBLE_COMPLEX);
-        cpl_array * phase_sepY_corr_array  = cpl_array_new (nrow_met ,CPL_TYPE_DOUBLE_COMPLEX);
+        cpl_msg_info (cpl_func,"Smoothing astigmatism by %d metrology DITS (tel=%i)",Nsmooth_astig*2+1,tel);
         
-        cpl_array_fill_window_complex(phase_astig_corr_array, 0, nrow_met, 0.+I*0.);
-        cpl_array_fill_window_complex(phase_sepX_corr_array , 0, nrow_met, 0.+I*0.);
-        cpl_array_fill_window_complex(phase_sepY_corr_array , 0, nrow_met, 0.+I*0.);
-        
-        /* get smoothed value of astigmatism */
+        cpl_array * phasor_array = cpl_array_new(nrow_met,CPL_TYPE_DOUBLE_COMPLEX);
         for (cpl_size row = 0; row < nrow_met; row++)
         {
             double phase_ast = phase_telfc_corr[row*ntel+tel][3] -
@@ -2980,22 +2863,21 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
             phase_telfc_corr[row*ntel+tel][1] -
             phase_telfc_corr[row*ntel+tel][0];
             double complex complex_ast = cos(phase_ast)+I*sin(phase_ast);
-            
-            for (cpl_size row_s = -Nsmooth_astig; row_s <= Nsmooth_astig; row_s++)
-                if ((row+row_s>=0)&&(row+row_s<nrow_met))
-                {
-                    cpl_size row_d= row+row_s;
-                    double complex astig_sum=cpl_array_get_complex(phase_astig_corr_array, row_d, NULL);
-                    astig_sum +=complex_ast;
-                    cpl_array_set_complex(phase_astig_corr_array, row_d,astig_sum);
-                }
-            
+        
+            cpl_array_set_double_complex(phasor_array,row,complex_ast);
         }
+        CPLCHECK_MSG("Error at computation of phasors");
+        
+        cpl_array *  phase_astig_corr_array =  gravi_array_smooth (phasor_array, Nsmooth_astig);
         cpl_array_arg(phase_astig_corr_array);
+        cpl_msg_info(cpl_func,"Mean astigmatism  for tel %i : %.2f radians",tel,cpl_array_get_mean(phase_astig_corr_array));
         
         CPLCHECK_MSG ("Failed when smoothing astigmatism");
+        cpl_array_delete(phasor_array);
         
-        cpl_msg_info(cpl_func,"Mean astigmatism  for tel %i : %.2f radians",tel,cpl_array_get_mean(phase_astig_corr_array));
+    
+        cpl_array * phasor_array_X = cpl_array_new(nrow_met,CPL_TYPE_DOUBLE_COMPLEX);
+        cpl_array * phasor_array_Y = cpl_array_new(nrow_met,CPL_TYPE_DOUBLE_COMPLEX);
         
         /* get smoothed value of X separation angle */
         for (cpl_size row = 0; row < nrow_met; row++)
@@ -3017,32 +2899,26 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
             double complex phase_sepY = cos(phase_sepY1) + cos(phase_sepY2)
                         +  I*( sin(phase_sepY1) + sin(phase_sepY2) );
             
-            for (cpl_size row_s = -Nsmooth_sep; row_s <= Nsmooth_sep; row_s++)
-                if ((row+row_s>=0)&&(row+row_s<nrow_met))
-                {
-                    cpl_size row_d= row+row_s;
-                    
-                    double complex sepX_sum=cpl_array_get_complex(phase_sepX_corr_array, row_d, NULL);
-                    double complex sepY_sum=cpl_array_get_complex(phase_sepY_corr_array, row_d, NULL);
-                    
-                    sepX_sum+=phase_sepX;
-                    sepY_sum+=phase_sepY;
-                    
-                    cpl_array_set_complex(phase_sepX_corr_array, row_d,sepX_sum);
-                    cpl_array_set_complex(phase_sepY_corr_array, row_d,sepY_sum);
-                    
-                }
+            cpl_array_set_double_complex(phasor_array_X,row,phase_sepX);
+            cpl_array_set_double_complex(phasor_array_Y,row,phase_sepY);
+            
         }
+        cpl_msg_info (cpl_func,"Smoothing X and Y sep by %d metrology DITS (tel=%i)",Nsmooth_sep*2+1,tel);
+        cpl_array *  phase_sepX_corr_array =  gravi_array_smooth (phasor_array_X, Nsmooth_sep);
+        cpl_array *  phase_sepY_corr_array =  gravi_array_smooth (phasor_array_Y, Nsmooth_sep);
         cpl_array_arg(phase_sepX_corr_array);
         cpl_array_arg(phase_sepY_corr_array);
-        
-        CPLCHECK_MSG ("Failed when smoothing X and Y separation vectors");
-        
         cpl_msg_info(cpl_func,"Mean X separation for tel %i : %.2f radians",tel,cpl_array_get_mean(phase_sepX_corr_array));
-        cpl_msg_info(cpl_func,"Mean y separation for tel %i : %.2f radians",tel,cpl_array_get_mean(phase_sepY_corr_array));
+        cpl_msg_info(cpl_func,"Mean Y separation for tel %i : %.2f radians",tel,cpl_array_get_mean(phase_sepY_corr_array));
+    
+        CPLCHECK_MSG ("Failed when smoothing separation vectors");
+        cpl_array_delete(phasor_array_X);
+        cpl_array_delete(phasor_array_Y);
         
         /* compute the values to be stored in phase_telfc_corr_xy */
         /* subtract the values to phase_telfc_corr */
+    
+        cpl_msg_info(cpl_func,"Computing the PHASE_TELFC_CORR_XY column");
         for (cpl_size row = 0; row < nrow_met; row++)
         {
             
@@ -3470,7 +3346,6 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     CPLCHECK_MSG ("Cannot fill result of TEL vs FC computation");
     
     /* Free the pointer to pointer to data */
-    FREE (cpl_free, opd_tel);
     FREE (cpl_free, phase_tel);
     FREE (cpl_free, opd_tel_corr);
     FREE (cpl_free, opd_telfc_corr);

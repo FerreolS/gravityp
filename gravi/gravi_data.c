@@ -2262,7 +2262,6 @@ cpl_error_code gravi_data_clean_for_astro (gravi_data * data)
             new_oimet_table = cpl_table_new(length);
                 
             CPLCHECK_MSG ("Cannot create new OI_MET table");
-                
             int nb_names = 6;
             const char *names[] = {"TIME", "PHASE_FC_DRS", "PHASE_TELFC_CORR", "PHASE_TELFC_CORR_XY","OPD_FC_CORR","OPD_TELFC_MCORR"};
             for (int j =0; j<nb_names;j++)
