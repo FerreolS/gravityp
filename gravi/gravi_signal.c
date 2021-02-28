@@ -1371,8 +1371,8 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET,
   CPLCHECK_MSG("Cannot get direct pointer to data");
 
   /* New columns */
-  gravi_table_new_column_array (vis_SC, "PHASE_MET_ASTRO", "rad", CPL_TYPE_DOUBLE, nwave_sc);
-  cpl_array ** phase_astro = cpl_table_get_data_array (vis_SC, "PHASE_MET_ASTRO");
+  gravi_table_new_column_array (vis_SC, "PHASE_MET_TELFC", "rad", CPL_TYPE_DOUBLE, nwave_sc);
+  cpl_array ** phase_metdit_telfc = cpl_table_get_data_array (vis_SC, "PHASE_MET_TELFC");
     
   gravi_table_new_column (vis_SC, "PHASE_MET_FC", "rad", CPL_TYPE_DOUBLE);
   double * phase_metdit_fc = cpl_table_get_data_double (vis_SC, "PHASE_MET_FC");
@@ -1405,7 +1405,7 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET,
       /* init cpl arrays */
 	  opd_metdit_tel[nsc]      = gravi_array_init_double (ndiode, 0.0);
       opd_metdit_telfc_corr[nsc] = gravi_array_init_double (ndiode, 0.0);
-      cpl_array * phasor_astro = gravi_array_init_double_complex (nwave_sc, 0.0+I*0.0);
+      cpl_array * phasor_metdit_telfc = gravi_array_init_double_complex (nwave_sc, 0.0+I*0.0);
         
 	  /* Sum over synch MET frames */
 	  for (cpl_size row_met = first_met[nsc] ; row_met < last_met[nsc]; row_met++) {
@@ -1415,8 +1415,8 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET,
         /* compute phasor of astrometric quantity */
           double opd_astro = opd_met_fc_corr[nmet0] - opd_met_fc_corr[nmet1] + opd_met_telfc_mcorr[nmet0] - opd_met_telfc_mcorr[nmet1];
           for (cpl_size wave = 0; wave < nwave_sc ; wave ++) {
-              cpl_array_set_complex(phasor_astro,wave,
-                                    cpl_array_get_complex(phasor_astro,wave,NULL)+
+              cpl_array_set_complex(phasor_metdit_telfc,wave,
+                                    cpl_array_get_complex(phasor_metdit_telfc,wave,NULL)+
                                       cexp(opd_astro*I*twopi_wavenumber_sc[wave]));
                                                           };
           
@@ -1458,10 +1458,10 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET,
 	    opd_metdit_fc[nsc]  /= nframe;
           
         /* get the astro phase by taking the argument of astro phasor */
-        cpl_array_arg (phasor_astro);
-        phase_astro[nsc]=cpl_array_cast(phasor_astro, CPL_TYPE_DOUBLE);
+        cpl_array_arg (phasor_metdit_telfc);
+        phase_metdit_telfc[nsc]=cpl_array_cast(phasor_metdit_telfc, CPL_TYPE_DOUBLE);
 	  }
-      cpl_array_delete(phasor_astro);
+      cpl_array_delete(phasor_metdit_telfc);
 	  CPLCHECK_MSG ("Fail to compute metrology per base from metrology per tel");
 	  
 	} /* End loop on SC frames */
@@ -2920,6 +2920,9 @@ cpl_error_code gravi_vis_create_imagingref_sc (cpl_table * vis_SC,
 
     cpl_array ** opd_disp  = cpl_table_get_data_array  (vis_SC, "OPD_DISP");
     CPLCHECK_MSG ("Cannot get OPD_DISP data");
+    
+    cpl_array ** phase_met_telfc  = cpl_table_get_data_array  (vis_SC, "PHASE_MET_TELFC");
+    CPLCHECK_MSG ("Cannot get PHASE_MET_TELFC data");
 
     /* Get from header the separation, converted from mas to radian */
     double sep_U = gravi_pfits_get_sobj_x (header)*1e-3/3600.0/CPL_MATH_DEG_RAD;
@@ -2971,6 +2974,15 @@ cpl_error_code gravi_vis_create_imagingref_sc (cpl_table * vis_SC,
                            - cpl_array_get (opd_disp[row],  w, NULL)  * CPL_MATH_2PI / wavelength
                            + (ucoord[row] * sep_U + vcoord[row] * sep_V) * CPL_MATH_2PI / wavelength
                            - opd_met_corr * CPL_MATH_2PI / wavelength);
+            
+            /* Here, we are using the new computation of phase_met_telfc (overide previous calculation) */
+            if (!strcmp (imaging_ref_met,"TEL"))
+                cpl_array_set (imaging_ref[row], w,
+                               cpl_array_get (phase_ref[row], w, NULL)
+                               - cpl_array_get (opd_disp[row],  w, NULL)  * CPL_MATH_2PI / wavelength
+                               + (ucoord[row] * sep_U + vcoord[row] * sep_V) * CPL_MATH_2PI / wavelength
+                               - cpl_array_get (phase_met_telfc[row],  w, NULL) );
+                
             CPLCHECK_MSG ("Cannot compute the imaging phase");
         }
 
