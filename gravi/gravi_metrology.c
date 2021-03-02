@@ -2478,6 +2478,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     /* get size of arrays */
     cpl_size ndiode = 4, ntel = 4;
     cpl_size nrow_met = cpl_table_get_nrow (metrology_table);
+    char qc_name[100];
     
     /* loading phase data
     * The choice is yours here. Either you use PHASE_FC_DRS and PHASE_TEL_DRS
@@ -2488,6 +2489,9 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     double * phase_fc = cpl_table_get_data_double (vismet_table, "PHASE_FC_DRS");
     CPLCHECK_MSG ("Cannot get PHASE_FC_DRS from vismet_table");
     
+    double * phase_fc_2 = cpl_table_get_data_double (vismet_table, "PHASE_FC_TAC");
+    CPLCHECK_MSG ("Cannot get PHASE_FC_TAC from vismet_table");
+    
     double ** phase_tel = gravi_table_get_data_array_double (vismet_table, "PHASE_TEL_DRS");
     CPLCHECK_MSG ("Cannot get PHASE_TEL_DRS from vismet_table");
     
@@ -2496,6 +2500,22 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     cpl_msg_info (cpl_func,"Lambda met mean :%f nm",  lambda_met_mean*1e9);
     CPLCHECK_MSG ("Cannot get laser wavelength data");
     
+    /* Calculate difference in phase between TAC and DRS */
+    
+    for (int tel = 0; tel < ntel; tel++) {
+        double phase_diff = 0;
+        for (cpl_size row = 0; row < nrow_met; row++)
+            phase_diff += phase_fc[row*ntel+tel] - phase_fc_2[row*ntel+tel];
+        phase_diff /= nrow_met;
+        sprintf (qc_name, "ESO QC MET DRS DIFF%i", tel+1);
+        if (phase_diff<0.02)
+            cpl_msg_info (cpl_func, "%s = %f", qc_name, phase_diff);
+        else
+            cpl_msg_warning (cpl_func, "%s = %f", qc_name, phase_diff);
+        cpl_propertylist_update_double (header, qc_name,phase_diff);
+        cpl_propertylist_set_comment (header, qc_name, "[rad] TAC and DRS phase difference");
+    }
+        
     
     /************************************************/
     /*              PART I:  OPD_FC_CORR            */
@@ -2505,7 +2525,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     /************************************************/
     
     
-    cpl_msg_info (cpl_func,"FE: calculate OPD_FC_CORR from OPD_PUPIL and pickup/defocus.");
+    cpl_msg_info (cpl_func,"Calculate OPD_FC_CORR from OPD_PUPIL and pickup/defocus.");
     
     /* Create array in OI_VIS_MET table, fill with zeros, and get pointer */
     gravi_table_new_column (vismet_table, "OPD_FC_CORR", "m", CPL_TYPE_DOUBLE);
@@ -2595,6 +2615,12 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     double deproject, northangle, field_dU, field_dV;
     char card[100];
     
+    /* Load North angle array */
+    cpl_array * northangle_array = cpl_array_new(4,CPL_TYPE_DOUBLE);
+    
+    for (cpl_size tel=0;tel < 4; tel++)
+    cpl_array_set_double(northangle_array,tel,gravi_pfits_get_fangle_acqcam (header, tel));
+    
     /* Vectors used in Julien's formula */
     cpl_vector * rec = cpl_vector_new (3);
     cpl_vector * sobj = cpl_vector_new (3);	
@@ -2647,7 +2673,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         cpl_msg_info (cpl_func,"Tel %i; diodes RA=%g, RZ=%g, ABS=%g", tel, RA, RZ, sqrt(RA*RA+RZ*RZ));
         
         /* compute the north angle on acqcam [deg] */
-        northangle =  gravi_pfits_get_fangle_acqcam (header, tel);
+        northangle =  cpl_array_get_double(northangle_array,tel,NULL);
         
         /* If available, get average image scale on acqcam [mas/pix] */
         double scale = 0.0;
@@ -2730,6 +2756,9 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     
     double parang1 = cpl_propertylist_get_double(header, "ESO ISS PARANG START") * (TWOPI/360.0); // in [rad]
     double parang2 = cpl_propertylist_get_double(header, "ESO ISS PARANG END"  ) * (TWOPI/360.0); // in [rad]
+    if (parang2-parang1 > TWOPI/2) parang2-=TWOPI;
+    if (parang2-parang1 < -TWOPI/2) parang2+=TWOPI;
+    
     double parang = (parang1 + parang2) / 2;
     CPLCHECK_MSG ("Cannot get paralactic angle");
     cpl_msg_info (cpl_func,"FE: paralactic angle in degrees: %g ", (parang1 + parang2) / 2 * (360.0/TWOPI) );
@@ -2747,6 +2776,11 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         double dy_off = gravi_pfits_get_double_default (header, "ESO INS SOBJ OFFY", 0.0);
         posang = myAtan (dy_in-dy_off,dx_in-dx_off, &flag);
     }
+    
+    char name[90];
+    sprintf (name, "ESO INS DROTOFF1");
+    double drottoff = cpl_propertylist_get_double (header, name);
+    posang = (270.0 - cpl_array_get_mean(northangle_array) - drottoff) * TWOPI / 360.0;
     
     cpl_msg_info (cpl_func,"FE: position angle in degrees: %g ", posang / TWOPI * 360. );
     
@@ -2798,7 +2832,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     /* coupler. This quantity should be close to zero.               */
     /*****************************************************************/
     
-    cpl_msg_info (cpl_func,"FE: calculate difference between corrected telescope diodes and fiber coupler in OPD_TELFC_CORR.");
+    cpl_msg_info (cpl_func,"Calculate difference between corrected telescope diodes and fiber coupler in OPD_TELFC_CORR.");
     
     /* Create OPD_TELFC_CORR array in OI_VIS_MET table, fill with zeros, and get pointer */
     gravi_table_init_column_array (vismet_table, "OPD_TELFC_CORR", "m", CPL_TYPE_DOUBLE, ndiode);
@@ -3008,7 +3042,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
             }
             /* calculate median */
             tmp_median =  cpl_vector_get_median_const(tmp_vector);
-            cpl_msg_info (cpl_func,"FE: median TEL-FC in nm for Tel %d Diode %d : %g ",
+            cpl_msg_info (cpl_func,"Median TEL-FC in nm for Tel %d Diode %d : %g ",
                             tel, diode, tmp_median*1e9);
             /* FE: put results in a local variable for below residual tilt calculation */
             mmet[tel][diode] = tmp_median;
@@ -3029,7 +3063,6 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                  = (D0 - D1 + D2 - D3) / 4
     */
     
-    char qc_name[100];
     for (int tel=0; tel<ntel; tel++) {
         sprintf (qc_name, "ESO QC MET OFF%i", tel+1);
         cpl_msg_info (cpl_func, "%s = %f", qc_name, (mmet[tel][0]+mmet[tel][1]+mmet[tel][2]+mmet[tel][3])/4.*1e9);
@@ -3116,7 +3149,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         mtte[tel] =   mttx[tel]*cos(parang) + mtty[tel]*sin(parang);
         mttn[tel] = - mttx[tel]*sin(parang) + mtty[tel]*cos(parang);
         // rotate to acqcam
-        double northangle = gravi_pfits_get_fangle_acqcam (header, tel);
+        northangle =  cpl_array_get_double(northangle_array,tel,NULL);
         mttdx[tel] = mttn[tel]*sin(northangle * CPL_MATH_RAD_DEG ) + mtte[tel]*cos(northangle * CPL_MATH_RAD_DEG );
         mttdy[tel] = mttn[tel]*cos(northangle * CPL_MATH_RAD_DEG ) - mtte[tel]*sin(northangle * CPL_MATH_RAD_DEG );
     }
@@ -3196,7 +3229,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
            offset including offset measured on acqcam */
         // rotate from acqcam to sky 
         // FE 2018-02-10: below declaration should be done one in the beginning
-        double northangle = gravi_pfits_get_fangle_acqcam (header, tel);
+        northangle =  cpl_array_get_double(northangle_array,tel,NULL);
         sobj_dra[tel]  = sobj_dx[tel]*cos(northangle * CPL_MATH_RAD_DEG ) - sobj_dy[tel]*sin(northangle * CPL_MATH_RAD_DEG ); 
         sobj_ddec[tel] = sobj_dx[tel]*sin(northangle * CPL_MATH_RAD_DEG ) + sobj_dy[tel]*cos(northangle * CPL_MATH_RAD_DEG );
         // convert to mas 
@@ -3346,6 +3379,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     CPLCHECK_MSG ("Cannot fill result of TEL vs FC computation");
     
     /* Free the pointer to pointer to data */
+    cpl_array_delete(northangle_array);
     FREE (cpl_free, phase_tel);
     FREE (cpl_free, opd_tel_corr);
     FREE (cpl_free, opd_telfc_corr);

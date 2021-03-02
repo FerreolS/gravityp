@@ -1165,7 +1165,7 @@ cpl_error_code gravi_acqcam_get_diode_ref_v2 (cpl_propertylist * header,
          by design of telescope spiders. This model angle should be
          angle = north_angle + paralactic angle + 45
          Remark: checking the angles for the GC easter flare night, we get an offset of 45.75 degrees */
-        double fangle = gravi_pfits_get_fangle_acqcam(header, tel);
+        double northangle = gravi_pfits_get_fangle_acqcam(header, tel);
         CPLCHECK_MSG("Cannot determine field angle");
 
             
@@ -1183,7 +1183,7 @@ cpl_error_code gravi_acqcam_get_diode_ref_v2 (cpl_propertylist * header,
                 double parang= parang1 + padif*n/(nrow-1);
                 
                 // TODO: FE handle case of calibration unit //
-                double angle = fangle + parang + 45.;
+                double angle = northangle + parang + 45.;
                 if (angle < 0)   angle += 180;
                 if (angle > 180) angle -= 180;
                 double cang = cos(angle * CPL_MATH_RAD_DEG) * scale;
@@ -1727,9 +1727,9 @@ for (int tel = 0; tel < GRAVI_SPOT_NTEL; tel++)
     int n_on=0;
     
     /* Get the conversion angle xy to uv in [rad] */
-    double fangle = gravi_pfits_get_fangle_acqcam(header, tel);
-    double cfangle = cos(fangle * CPL_MATH_RAD_DEG);
-    double sfangle = sin(fangle * CPL_MATH_RAD_DEG);
+    double northangle = gravi_pfits_get_fangle_acqcam(header, tel);
+    double cfangle = cos(northangle * CPL_MATH_RAD_DEG);
+    double sfangle = sin(northangle * CPL_MATH_RAD_DEG);
     double scale = cpl_vector_get(scale_vector,tel);
     CPLCHECK_MSG("Cannot determine field angle");
     
@@ -1840,8 +1840,8 @@ for (int tel = 0; tel < GRAVI_SPOT_NTEL; tel++)
         char qc_name[100];
 
         sprintf(qc_name, "ESO QC ACQ FIELD%i NORTH_ANGLE", tel + 1);
-        cpl_msg_info(cpl_func, "%s = %f", qc_name, fangle);
-        cpl_propertylist_update_double(o_header, qc_name, fangle);
+        cpl_msg_info(cpl_func, "%s = %f", qc_name, northangle);
+        cpl_propertylist_update_double(o_header, qc_name, northangle);
         cpl_propertylist_set_comment(o_header, qc_name,
                 "[deg] y->x, predicted North direction on ACQ");
     
@@ -2268,13 +2268,13 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         double fiber_ft_sc_y=fiber_ysc-fiber_yft;
         
         /* Get the North position angle on the camera */
-        double fangle = gravi_pfits_get_fangle_acqcam (header, tel);
+        double northangle = gravi_pfits_get_fangle_acqcam (header, tel);
         CPLCHECK ("Cannot get rotation");
         
         /* Mapping/mosaicing offset on acq cam axes, in mas, */
         /* neglecting amnamorphism variations */
-        double sobj_offx_cam = sobj_drho * sin((fangle+sobj_dth)/180.*M_PI);
-        double sobj_offy_cam = sobj_drho * cos((fangle+sobj_dth)/180.*M_PI);
+        double sobj_offx_cam = sobj_drho * sin((northangle+sobj_dth)/180.*M_PI);
+        double sobj_offy_cam = sobj_drho * cos((northangle+sobj_dth)/180.*M_PI);
         
         /* If sub-windowing, we read the sub-window start for field */
         if ( nsx != 512 ) {
