@@ -2586,7 +2586,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     /*****************************************************************/
     
     
-    cpl_msg_info (cpl_func,"FE: deproject telescope diodes to center of telescope in OPD_TEL_CORR.");
+    cpl_msg_info (cpl_func,"Deproject telescope diodes to center of telescope in OPD_TEL_CORR.");
     
     /* Create array in OI_VIS_MET table, fill with zeros, and get list of pointer. 
      * Note that this list has to be free */
@@ -2718,16 +2718,16 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                 
                 /* some debug messages */
                 if (row == 0 && tel == 0 && diode == 0) { 
-                    cpl_msg_info (cpl_func,"FE: Julien deproject diode 0 in nm: %g", deproject*1e9);
+                    cpl_msg_debug (cpl_func,"FE: Julien deproject diode 0 in nm: %g", deproject*1e9);
                 }
                 if (row == 0 && tel == 0 && diode == 1) {
-                    cpl_msg_info (cpl_func,"FE: Julien deproject diode 1 in nm: %g", deproject*1e9);
+                    cpl_msg_debug (cpl_func,"FE: Julien deproject diode 1 in nm: %g", deproject*1e9);
                 }
                 if (row == 0 && tel == 0 && diode == 2) {
-                    cpl_msg_info (cpl_func,"FE: Julien deproject diode 2 in nm: %g", deproject*1e9);
+                    cpl_msg_debug (cpl_func,"FE: Julien deproject diode 2 in nm: %g", deproject*1e9);
                 }
                 if (row == 0 && tel == 0 && diode == 3) {
-                    cpl_msg_info (cpl_func,"FE: Julien deproject diode 3 in nm: %g", deproject*1e9);
+                    cpl_msg_debug (cpl_func,"FE: Julien deproject diode 3 in nm: %g", deproject*1e9);
                 }
                 
                 /* store deprojection in opd_tel_corr */
@@ -2782,7 +2782,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     double drottoff = cpl_propertylist_get_double (header, name);
     posang = (270.0 - cpl_array_get_mean(northangle_array) - drottoff) * TWOPI / 360.0;
     
-    cpl_msg_info (cpl_func,"FE: position angle in degrees: %g ", posang / TWOPI * 360. );
+    cpl_msg_info (cpl_func,"Position angle in degrees: %g ", posang / TWOPI * 360. );
     
     /* loop over all diodes and beams */
     for (int tel = 0; tel < ntel; tel++) {
@@ -2801,19 +2801,19 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                 
                 /* some debug messages */
                 if (row == 0 && tel == 0 && diode == 0) { 
-                    cpl_msg_info (cpl_func,"FE: Frank diode angle [deg]: %g", diodeang / TWOPI * 360.);
-                    cpl_msg_info (cpl_func,"FE: Frank astigmatism angle [deg]: %g", astang / TWOPI * 360.);
-                    cpl_msg_info (cpl_func,"FE: Frank normalized astradius: %g", astradius);
-                    cpl_msg_info (cpl_func,"FE: Frank astigmatism diode 0 in nm: %g", astigm*1e9);
+                    cpl_msg_debug (cpl_func,"FE: Frank diode angle [deg]: %g", diodeang / TWOPI * 360.);
+                    cpl_msg_debug (cpl_func,"FE: Frank astigmatism angle [deg]: %g", astang / TWOPI * 360.);
+                    cpl_msg_debug (cpl_func,"FE: Frank normalized astradius: %g", astradius);
+                    cpl_msg_debug (cpl_func,"FE: Frank astigmatism diode 0 in nm: %g", astigm*1e9);
                 }
                 if (row == 0 && tel == 0 && diode == 1) {
-                    cpl_msg_info (cpl_func,"FE: Frank astigmatism diode 1 in nm: %g", astigm*1e9);
+                    cpl_msg_debug (cpl_func,"FE: Frank astigmatism diode 1 in nm: %g", astigm*1e9);
                 }
                 if (row == 0 && tel == 0 && diode == 2) {
-                    cpl_msg_info (cpl_func,"FE: Frank astigmatism diode 2 in nm: %g", astigm*1e9);
+                    cpl_msg_debug (cpl_func,"FE: Frank astigmatism diode 2 in nm: %g", astigm*1e9);
                 }
                 if (row == 0 && tel == 0 && diode == 3) {
-                    cpl_msg_info (cpl_func,"FE: Frank astigmatism diode 3 in nm: %g", astigm*1e9);
+                    cpl_msg_debug (cpl_func,"FE: Frank astigmatism diode 3 in nm: %g", astigm*1e9);
                 }
                 
 
@@ -3155,18 +3155,18 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     }
     
     // FE 20190509 changed uvw -> telescope, beause I think mttxy are in telescope coordinate system, not uvw (which is aligned to N/E 
-    cpl_msg_info (cpl_func,"FE: mttx, mtty in telescope coordinates of GV1: %g %g pixel", mttx[0], mtty[0]);
-    cpl_msg_info (cpl_func,"FE: mttx, mtty in telescope coordinates of GV2: %g %g pixel", mttx[1], mtty[1]);
-    cpl_msg_info (cpl_func,"FE: mttx, mtty in telescope coordinates of GV3: %g %g pixel", mttx[2], mtty[2]);
-    cpl_msg_info (cpl_func,"FE: mttx, mtty in telescope coordinates of GV4: %g %g pixel", mttx[3], mtty[3]);
-    cpl_msg_info (cpl_func,"FE: mttx, mtty in RA DEC coordinates of GV1: %g %g pixel", mtte[0], mttn[0]);
-    cpl_msg_info (cpl_func,"FE: mttx, mtty in RA DEC coordinates of GV2: %g %g pixel", mtte[1], mttn[1]);
-    cpl_msg_info (cpl_func,"FE: mttx, mtty in RA DEC coordinates of GV3: %g %g pixel", mtte[2], mttn[2]);
-    cpl_msg_info (cpl_func,"FE: mttx, mtty in RA DEC coordinates of GV4: %g %g pixel", mtte[3], mttn[3]);
-    cpl_msg_info (cpl_func,"FE: correction for dxy of GV1: %g %g pixel", mttdx[0], mttdy[0]);
-    cpl_msg_info (cpl_func,"FE: correction for dxy of GV2: %g %g pixel", mttdx[1], mttdy[1]);
-    cpl_msg_info (cpl_func,"FE: correction for dxy of GV3: %g %g pixel", mttdx[2], mttdy[2]);
-    cpl_msg_info (cpl_func,"FE: correction for dxy of GV4: %g %g pixel", mttdx[3], mttdy[3]);
+    cpl_msg_debug (cpl_func,"FE: mttx, mtty in telescope coordinates of GV1: %g %g pixel", mttx[0], mtty[0]);
+    cpl_msg_debug (cpl_func,"FE: mttx, mtty in telescope coordinates of GV2: %g %g pixel", mttx[1], mtty[1]);
+    cpl_msg_debug (cpl_func,"FE: mttx, mtty in telescope coordinates of GV3: %g %g pixel", mttx[2], mtty[2]);
+    cpl_msg_debug (cpl_func,"FE: mttx, mtty in telescope coordinates of GV4: %g %g pixel", mttx[3], mtty[3]);
+    cpl_msg_debug (cpl_func,"FE: mttx, mtty in RA DEC coordinates of GV1: %g %g pixel", mtte[0], mttn[0]);
+    cpl_msg_debug (cpl_func,"FE: mttx, mtty in RA DEC coordinates of GV2: %g %g pixel", mtte[1], mttn[1]);
+    cpl_msg_debug (cpl_func,"FE: mttx, mtty in RA DEC coordinates of GV3: %g %g pixel", mtte[2], mttn[2]);
+    cpl_msg_debug (cpl_func,"FE: mttx, mtty in RA DEC coordinates of GV4: %g %g pixel", mtte[3], mttn[3]);
+    cpl_msg_debug (cpl_func,"FE: correction for dxy of GV1: %g %g pixel", mttdx[0], mttdy[0]);
+    cpl_msg_debug (cpl_func,"FE: correction for dxy of GV2: %g %g pixel", mttdx[1], mttdy[1]);
+    cpl_msg_debug (cpl_func,"FE: correction for dxy of GV3: %g %g pixel", mttdx[2], mttdy[2]);
+    cpl_msg_debug (cpl_func,"FE: correction for dxy of GV4: %g %g pixel", mttdx[3], mttdy[3]);
     
     /* Add QC parameters for the corrections */
     // FE: declared above
@@ -3262,7 +3262,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     // FE 2019-05-15 remark: using less noisy mean of opposite diodes 
     // show systematic differences in the one case I carefully checked    
     
-    cpl_msg_info (cpl_func,"FE: calculate OPD_TELFC_MCORR.");
+    cpl_msg_info (cpl_func,"Calculate OPD_TELFC_MCORR.");
     
     /* Create array in OI_VIS_MET table, fill with zeros, and get pointer */
     gravi_table_new_column (vismet_table, "OPD_TELFC_MCORR", "m", CPL_TYPE_DOUBLE);
@@ -3283,8 +3283,6 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     FREE (cpl_vector_delete, tmp_vector);
     FREE (cpl_vector_delete, phasor_real);
     FREE (cpl_vector_delete, phasor_imag);
-    
-    cpl_msg_info (cpl_func,"FE: end.");
     
 
     /*****************************************************************/
