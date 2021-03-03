@@ -2868,7 +2868,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     CPLCHECK_MSG ("Cannot caculate PHASE_TELFC_CORR");
     
     /*****************************************************************
-     *                    PART III:  OPD_TELFC_CORR_XY
+     *                    PART III:  PHASE_TELFC_CORR_XY
      ****************************************************************
      * Calculation of the actual astimatism (smoothed over 5s)
      * Calculation of the separation of the 2 fibers (smoothed over 5s)
