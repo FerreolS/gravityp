@@ -585,7 +585,7 @@ cpl_table * gravi_opds_compute_guess (cpl_table * spectrumsc_table,
 
     /* Pointer on MET data */
     int * time_MET     = cpl_table_get_data_int (vismet_table, "TIME");
-    double * phase_MET = cpl_table_get_data_double (vismet_table, "PHASE_FC_TAC");
+    double * phase_MET = cpl_table_get_data_double (vismet_table, "PHASE_FC_DRS");
     CPLCHECK_NUL ("Cannot get MET data");
 
     /* Pointer on OPD data */
