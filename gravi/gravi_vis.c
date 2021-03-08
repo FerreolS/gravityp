@@ -2208,11 +2208,6 @@ cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data)
             for (int base = 0; base < nbase; base++) {
                 
                 /* Add the QC parameters for FT */
-                sprintf (qc_name, "ESO QC ACCEPTED_RATIO_FT%s_P%d", GRAVI_BASE_NAME[base], pol+1);
-                double ratio = gravi_table_get_column_mean (oi_vis_FT, "NVALID", base, nbase) /
-                               gravi_table_get_column_mean (oi_vis_FT, "NDIT", base, nbase);
-                cpl_propertylist_update_double (plist, qc_name, round(100 * ratio * 1e2) / 1e2);
-                cpl_propertylist_set_comment (plist, qc_name, "[%] of accepted frames");
                 
                 sprintf (qc_name, "ESO QC VISPHIERR_FT%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
                 cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_FT, "VISPHIERR", base, nbase));
@@ -2320,12 +2315,6 @@ cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data)
                 // double pmean = gravi_table_get_column_mean (vis_SC, "P_FACTOR", base, nbase);
                 // cpl_propertylist_update_double (plist, qc_name, pmean);
                 // cpl_propertylist_set_comment (plist, qc_name, "mean p-factor");
-                
-                sprintf (qc_name, "ESO QC ACCEPTED_RATIO_SC%s_P%d", GRAVI_BASE_NAME[base], pol+1);
-                double ratio = gravi_table_get_column_mean (oi_vis_SC, "NVALID", base, nbase) /
-                               gravi_table_get_column_mean (oi_vis_SC, "NDIT", base, nbase);
-                cpl_propertylist_update_double (plist, qc_name, round(100 * ratio * 1e2) / 1e2);
-                cpl_propertylist_set_comment (plist, qc_name, "[%] of accepted frames");
                 
                 sprintf (qc_name, "ESO QC GD_SC%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
                 cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_SC, "GDELAY", base, nbase));

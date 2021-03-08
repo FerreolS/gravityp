@@ -2989,7 +2989,6 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         
     }
     
-    
     /* wrap around mean value */
     cpl_vector * phasor_real ;
     phasor_real = cpl_vector_new (nrow_met);

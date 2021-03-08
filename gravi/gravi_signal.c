@@ -3251,13 +3251,18 @@ cpl_error_code gravi_compute_rejection (gravi_data * p2vmred_data,
 {
   gravi_msg_function_start(1);
   cpl_ensure_code (p2vmred_data, CPL_ERROR_NULL_INPUT);
-
+    
+  char qc_name[100];
   int nbase = 6;
 
   /* Get header data */
   cpl_propertylist * p2vmred_header = gravi_data_get_header (p2vmred_data);
   CPLCHECK_MSG ("Cannot get header");
 
+  /* create array to store rejection rate */
+  cpl_array * rejected_array = cpl_array_new(nbase,CPL_TYPE_DOUBLE);
+  cpl_array_fill_window_double (rejected_array, 0, nbase, 0.0);
+    
   /* 
    * (1) Do the FT rejection flags 
    */
@@ -3279,6 +3284,7 @@ cpl_error_code gravi_compute_rejection (gravi_data * p2vmred_data,
 
       /* Loop on polarisations */
       int npol_ft = gravi_pfits_get_pola_num (p2vmred_header, GRAVI_FT);
+      cpl_size nrow_ft = 0;
       for (int pol = 0; pol < npol_ft; pol++) {
           
           /* Get the pointer to data */
@@ -3293,29 +3299,64 @@ cpl_error_code gravi_compute_rejection (gravi_data * p2vmred_data,
           CPLCHECK_MSG ("Cannot create columns");
 
           /* Loop on base and rows */
-          cpl_size nrow_ft  = cpl_table_get_nrow (vis_FT) / nbase;
+          nrow_ft  = cpl_table_get_nrow (vis_FT) / nbase;
           for (cpl_size row = 0; row < nrow_ft * nbase; row ++) {
 
               /* Rejection based on SNR (first bit) */
               int snr_bit = 0;
+              int reject = 0;
               if ( snr[row] < threshold_SNR_ft )
+              {
                   gravi_bit_set (reject_flag_ft[row], snr_bit);
+                  reject = 1;
+              }
               else
+              {
                   gravi_bit_clear (reject_flag_ft[row], snr_bit);
+              }
               
               /* Rejection based on STATE (2sd bit) */
               int state_bit = 1;
               if ( state[row] < threshold_STATE_ft ||
                    gstate[row] < min_GSTATE_ft ||
                    gstate[row] > max_GSTATE_ft )
+              {
                   gravi_bit_set (reject_flag_ft[row], state_bit);
+                  reject = 1;
+              }
               else
+              {
                   gravi_bit_clear (reject_flag_ft[row], state_bit);
+              }
+              
+              /* add 1 if rejected to array */
+              cpl_array_set_double(rejected_array,row%nbase,
+                                 cpl_array_get_double(rejected_array,row%nbase,NULL)+reject );
           }
           
       } /* End loop on polarisation */
+    
+    /* normalize the rejection ratio as percent */
+    cpl_array_multiply_scalar (rejected_array,100./(npol_ft*nrow_ft));
+      
+      /* store rejection ratio in QC */
+    for (int base = 0; base < nbase; base++) {
+        
+        sprintf (qc_name, "ESO QC REJECTED RATIO FT%s", GRAVI_BASE_NAME[base]);
+        double ratio = cpl_array_get_double (rejected_array, base, NULL);
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, ratio);
+        cpl_propertylist_update_int (p2vmred_header, qc_name, round(ratio));
+        cpl_propertylist_set_comment (p2vmred_header, qc_name, "[%] ratio of FT data flagged");
+    }
+      
+      sprintf (qc_name, "ESO QC REJECTED RATIO FT");
+      double ratio = cpl_array_get_mean (rejected_array);
+      cpl_msg_info (cpl_func, "%s = %f", qc_name, ratio);
+      cpl_propertylist_update_int (p2vmred_header, qc_name, round(ratio));
+      cpl_propertylist_set_comment (p2vmred_header, qc_name, "[%] ratio of FT data flagged");
+      cpl_array_fill_window_double (rejected_array, 0, nbase, 0.0);
+      
   } /* End FT */
-
   
   /* 
    * (2) Ratio of FT valid inside each SC DIT
@@ -3363,6 +3404,7 @@ cpl_error_code gravi_compute_rejection (gravi_data * p2vmred_data,
 
       /* Loop on polarisations */
       int npol_sc = gravi_pfits_get_pola_num (p2vmred_header, GRAVI_SC);
+      cpl_size nrow_sc = 0;
       for (int pol = 0; pol < npol_sc; pol++) {
 
           /* Get the table of reduced data */
@@ -3388,45 +3430,87 @@ cpl_error_code gravi_compute_rejection (gravi_data * p2vmred_data,
           CPLCHECK_MSG ("Cannot create columns");
 
           /* Loop on base and row SC */
-          cpl_size nrow_sc  = cpl_table_get_nrow (vis_SC) / nbase;
+          nrow_sc  = cpl_table_get_nrow (vis_SC) / nbase;
           for (cpl_size row_sc = 0; row_sc < nrow_sc * nbase; row_sc++) {
               
               /* Rejection based in lockratio (first bit) */
               int lock_bit = 0;
-              if ( fringedet_ftdit[row_sc] < minlockratio_sc ) 
+              int reject = 0;
+              if ( fringedet_ftdit[row_sc] < minlockratio_sc )
+              {
                   gravi_bit_set (reject_flag_sc[row_sc], lock_bit);
+                  reject = 1;
+              }
               else
                   gravi_bit_clear (reject_flag_sc[row_sc], lock_bit);
               
               /* Rejection based in the white-light vFactor (second bit) */
               int vfactor_bit = 1;
               if ( vFactor_wl[row_sc] < minvfactor_sc )
+              {
                   gravi_bit_set (reject_flag_sc[row_sc], vfactor_bit);
+                  reject = 1;
+              }
               else
+              {
                   gravi_bit_clear (reject_flag_sc[row_sc], vfactor_bit);
+              }
 
               /* Rejection based on OPD_PUPIL (third bit) */
               int opd_pupil_bit = 2;
     	      if ( opd_metdit_pupil ) {
     	    	  if ( fabs(opd_metdit_pupil[row_sc]) > opd_pupil_max_sc )
+                  {
                       gravi_bit_set (reject_flag_sc[row_sc], opd_pupil_bit);
+                      reject = 1;
+                  }
                   else
+                  {
                       gravi_bit_clear (reject_flag_sc[row_sc], opd_pupil_bit);
+                  }
     	      }
 
               /* Rejection based on OPD_PUPIL_STDDEV (fourth bit) */
               int opd_pupil_stddev_bit = 3;
     	      if ( opd_metdit_pupil_stddev ) {
     	    	  if ( opd_metdit_pupil_stddev[row_sc] > opd_pupil_stddev_max_sc )
+                  {
                       gravi_bit_set (reject_flag_sc[row_sc], opd_pupil_stddev_bit);
+                      reject = 1;
+                  }
                   else
+                  {
                       gravi_bit_clear (reject_flag_sc[row_sc], opd_pupil_stddev_bit);
+                  }
     	      }
+              
+              /* add 1 if rejected to array */
+              cpl_array_set_double(rejected_array,row_sc%nbase,
+                                 cpl_array_get_double(rejected_array,row_sc%nbase,NULL)+reject );
           }
-          
       } /* End loop on pol */
+      
+      /* normalize the rejection ratio as percent */
+      cpl_array_multiply_scalar (rejected_array,100./(npol_sc*nrow_sc));
+        
+        /* store rejection ratio in QC */
+      for (int base = 0; base < nbase; base++) {
+          
+          sprintf (qc_name, "ESO QC REJECTED RATIO SC%s", GRAVI_BASE_NAME[base]);
+          double ratio = cpl_array_get_double (rejected_array, base, NULL);
+          cpl_msg_info (cpl_func, "%s = %f", qc_name, ratio);
+          cpl_propertylist_update_int (p2vmred_header, qc_name, ratio);
+          cpl_propertylist_set_comment (p2vmred_header, qc_name, "[%] ratio of SC data flagged");
+      }
+        
+        sprintf (qc_name, "ESO QC REJECTED RATIO SC");
+        double ratio = cpl_array_get_mean (rejected_array);
+        cpl_msg_info (cpl_func, "%s = %f", qc_name, ratio);
+        cpl_propertylist_update_int (p2vmred_header, qc_name, ratio);
+        cpl_propertylist_set_comment (p2vmred_header, qc_name, "[%] ratio of SC data flagged");
   } /* End SC */
 
+    cpl_array_delete(rejected_array);
   gravi_msg_function_exit(1);
   return CPL_ERROR_NONE;
 }

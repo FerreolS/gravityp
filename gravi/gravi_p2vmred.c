@@ -1077,7 +1077,7 @@ cpl_error_code gravi_compute_opdc_state (gravi_data * p2vmred_data)
 
 	  /* Write the QC parameter for this base */
 	  sprintf (qc_name, "ESO QC TRACKING_RATIO_FT%d%d",GRAVI_BASE_TEL[base][0]+1, GRAVI_BASE_TEL[base][1]+1);
-	  cpl_propertylist_update_double (header, qc_name, sum*100.0/nrow_ft);
+	  cpl_propertylist_update_int (header, qc_name, sum*100.0/nrow_ft);
 	  cpl_propertylist_set_comment (header, qc_name, "[%] ratio of time with tracking");
 	}
 	/* End loop on base */
