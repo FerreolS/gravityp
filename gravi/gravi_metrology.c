@@ -2761,7 +2761,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     
     double parang = (parang1 + parang2) / 2;
     CPLCHECK_MSG ("Cannot get paralactic angle");
-    cpl_msg_info (cpl_func,"FE: paralactic angle in degrees: %g ", (parang1 + parang2) / 2 * (360.0/TWOPI) );
+    cpl_msg_info (cpl_func,"FE: paralactic angle in degrees: %g ", parang * (360.0/TWOPI) );
     
     /* Posangle is calculated from SOBJX ansd SOBJY already read before 
        x,y are exchanged following coordinate systems in Stefan's slide */
@@ -2794,8 +2794,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         for (cpl_size row = 0; row < nrow_met; row++) {
             for (int diode = 0; diode < ndiode; diode++) {
                 diodeang = myAtan(-rec_zd[tel][diode],-rec_az[tel][diode], &flag);  // [rad]
-                double parang2 = parang1 + (parang2-parang1) * row / nrow_met;  // [rad]
-                astang = posang - parang2 - diodeang + AstigmTheta*(TWOPI/360.); // [rad]
+                double parang3 = parang1 + (parang2-parang1) * row / nrow_met;  // [rad]
+                astang = posang - parang3 - diodeang + AstigmTheta*(TWOPI/360.); // [rad]
                 astradius = sqrt(rec_az[tel][diode]*rec_az[tel][diode] + rec_zd[tel][diode]*rec_zd[tel][diode]) / AstigmRadius; /* normalized */
                 astigm = (AstigmAmplitude*1e-9) * sqrt(6) * astradius * astradius * sin(2. * astang); // [m]
                 
