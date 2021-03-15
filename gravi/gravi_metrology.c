@@ -97,11 +97,11 @@ double  gravi_metrology_get_posy (cpl_propertylist * header,
 
 double gravi_metrology_get_fc_focus (cpl_propertylist * header, int gv, gravi_data *static_param_data);
 
-double gravi_metrology_get_fc_shift (cpl_propertylist * header, int gv, gravi_data *default_focus_data);
+double gravi_metrology_get_fc_shift (cpl_propertylist * header, int gv, gravi_data *static_param_data);
 
 cpl_error_code gravi_metrology_get_astig (cpl_propertylist * header, int gv,
                                           double * ampltiude, double * angle,
-                                          double * radius);
+                                          double * radius, gravi_data *static_param_data);
 
 long gravi_round (double number);
 long gravi_round (double number)
@@ -1475,10 +1475,10 @@ double gravi_metrology_get_fc_focus (cpl_propertylist * header, int gv, gravi_da
     /* read value from calibration file */
     if (static_param_data)
     {
-        cpl_table * default_focus_table = gravi_data_get_table (static_param_data, "FOCUSPAR");
-        if  ( cpl_table_has_column(default_focus_table , column_name) )
+        cpl_table * static_param_table = gravi_data_get_table (static_param_data, "FOCUSPAR");
+        if  ( cpl_table_has_column(static_param_table , column_name) )
         {
-            defocus = cpl_table_get_data_double (default_focus_table, column_name)[gv];
+            defocus = cpl_table_get_data_double (static_param_table, column_name)[gv];
             get_default=0;
         } else {
             cpl_msg_warning(cpl_func,"Cannot get the column %s from the calibration file",column_name);
@@ -1549,10 +1549,10 @@ double gravi_metrology_get_fc_shift (cpl_propertylist * header, int gv, gravi_da
     /* read value from calibration file */
     if (static_param_data)
     {
-        cpl_table * default_focus_table = gravi_data_get_table (static_param_data, "FOCUSPAR");
-        if  ( cpl_table_has_column(default_focus_table , column_name) )
+        cpl_table * static_param_table = gravi_data_get_table (static_param_data, "FOCUSPAR");
+        if  ( cpl_table_has_column(static_param_table , column_name) )
         {
-            shift = cpl_table_get_data_double (default_focus_table, column_name)[gv];
+            shift = cpl_table_get_data_double (static_param_table, column_name)[gv];
             get_default=0;
         } else {
             cpl_msg_warning(cpl_func,"Cannot get the column %s from the calibration file",column_name);
@@ -1592,10 +1592,22 @@ double gravi_metrology_get_fc_shift (cpl_propertylist * header, int gv, gravi_da
 /*----------------------------------------------------------------------------*/
 cpl_error_code gravi_metrology_get_astig (cpl_propertylist * header, int gv,
                                           double * amplitude, double * angle,
-                                          double * radius)
+                                          double * radius, gravi_data *static_param_data)
 {
     gravi_msg_function_start(0);
     cpl_ensure (header, CPL_ERROR_NULL_INPUT, 0);
+    
+    /* Default values to be used, just in case no data in calibration file or header */
+    const double amplitude_at[4] = {164.37970, 166.604301,  99.612594, 266.071934}; // [nm]
+    const double amplitude_ut[4] = {182.16255, 185.116601, 113.190052, 242.351495}; // [nm]
+    const double angle_at[4] = { 1.116211914, 28.48113853,  0.42385066, 25.92291209}; // [deg]]
+    const double angle_ut[4] = {-2.696882009, 18.07496983, 20.56624745, 19.13334754}; // [deg]
+    
+    double amplitude_header; // [nm]
+    double angle_header; // [deg]]
+    
+    double amplitude_static; // [nm]
+    double angle_static; // [deg]]
     
     /* Identify telescope name of requested GV input */
     const char * telname = gravi_conf_get_telname (gv, header);
@@ -1627,18 +1639,64 @@ cpl_error_code gravi_metrology_get_astig (cpl_propertylist * header, int gv,
         strcat(name_ang," OFA");
     }
     
-    /* If keywords available, read it, otherwise use defaults with warning */
-    /* These are given in telescope order */
-    const double amplitude_at[4] = {164.37970, 166.604301,  99.612594, 266.071934}; // [nm]
-    const double amplitude_ut[4] = {182.16255, 185.116601, 113.190052, 242.351495}; // [nm]
-    const double angle_at[4] = { 1.116211914, 28.48113853,  0.42385066, 25.92291209}; // [deg]]
-    const double angle_ut[4] = {-2.696882009, 18.07496983, 20.56624745, 19.13334754}; // [deg]
+    /* Assemble columns names, to read the static file */
+    char column_amp_name[80];
+    if (telname[0] == 'U') strcpy(column_amp_name,"astig_amp_ut");
+    else strcpy(column_amp_name,"astig_amp_at");
+    if (gravi_pfits_get_axis (header) == MODE_ONAXIS) strcat(column_amp_name,"_onaxis");
+    char column_ang_name[80];
+    if (telname[0] == 'U') strcpy(column_ang_name,"astig_ang_ut");
+    else strcpy(column_ang_name,"astig_ang_at");
+    if (gravi_pfits_get_axis (header) == MODE_ONAXIS) strcat(column_ang_name,"_onaxis");
+    
+    /* If static file exist, read them, otherwise read value from header  */
+    int got_static=0;
+    if (static_param_data)
+    {
+        cpl_table * static_param_table = gravi_data_get_table (static_param_data, "ASTIGPAR");
+        if  ( cpl_table_has_column(static_param_table , column_amp_name) & cpl_table_has_column(static_param_table , column_ang_name) )
+        {
+            amplitude_static = cpl_table_get_data_double (static_param_table, column_amp_name)[gv];
+            angle_static     = cpl_table_get_data_double (static_param_table, column_ang_name)[gv];
+            got_static=1;
+            cpl_msg_info(cpl_func,"Astigmatism (from static file): GV%i, Amplitude=%.2f nm, Angle=%.2f deg",
+                         gv+1,amplitude_static,angle_static);
+        } else {
+            cpl_msg_warning(cpl_func,"Cannot get the column %s or %s from the static calibration file",column_amp_name, column_ang_name);
+        }
+    } else {
+        cpl_msg_warning (cpl_func,"Cannot find ASTIGPAR header in static calibration file");
+    }
+                         
+     /* If static file exist, read them, otherwise read value from header  */
+    int got_header=0;
     if (cpl_propertylist_has(header, name_amp)
      && cpl_propertylist_has(header, name_ang)) {
-        *amplitude = cpl_propertylist_get_double (header, name_amp);
-        *angle     = cpl_propertylist_get_double (header, name_ang);
+        amplitude_header = cpl_propertylist_get_double (header, name_amp);
+        angle_header     = cpl_propertylist_get_double (header, name_ang);
+        got_header=1;
+        cpl_msg_info(cpl_func,"Astigmatism (from header data): GV%i, Amplitude=%.2f nm, Angle=%.2f deg",
+                     gv+1,amplitude_header,angle_header);
     } else {
-        cpl_msg_warning (cpl_func,"Using static calibration for astigmatism offset for GV%i!", gv+1);
+        cpl_msg_warning (cpl_func,"Cannot get astigmatism parameters from header");
+    }
+    
+    /* Here, the code decide which value to take */
+    /* Also print the value in the log */
+    if (got_static==1)
+    {
+        *amplitude = amplitude_static;
+        *amplitude = angle_static;
+        cpl_msg_info(cpl_func,"Using astigmatism parameters from static file");
+    } else if (got_header==1)
+    {
+        *amplitude = amplitude_header;
+        *amplitude = angle_header;
+        cpl_msg_info(cpl_func,"Using astigmatism parameters from header");
+    } else
+    {
+        /* load default values */
+        /* These are given in telescope order */
         if (telname[0] == 'U') {
             *amplitude = amplitude_ut[3-gv];
             *angle     = angle_ut[3-gv];
@@ -1646,7 +1704,9 @@ cpl_error_code gravi_metrology_get_astig (cpl_propertylist * header, int gv,
             *amplitude = amplitude_at[3-gv];
             *angle     = angle_at[3-gv];
         }
+        cpl_msg_error (cpl_func,"Using static calibration for astigmatism offset for GV%i, probably wrong!", gv+1);
     }
+        
     
     gravi_msg_function_exit(0);
     return CPL_ERROR_NONE;
@@ -2469,7 +2529,7 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
 /*----------------------------------------------------------------------------*/
 cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                                       cpl_table * vismet_table,
-				      gravi_data * default_focus_data,
+				      gravi_data * static_param_data,
                                       cpl_propertylist * header,
                                       int use_fiber_dxy)
 {
@@ -2558,8 +2618,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     /* Apply pupil, focus and pickup offsets */
     for (int tel = 0; tel < ntel; tel++) {
         
-        double opd_fc_focus = gravi_metrology_get_fc_focus (header, tel, default_focus_data); // [m]
-        double opd_fc_shift = gravi_metrology_get_fc_shift (header, tel, default_focus_data) * (rho_in/1000.0); // [m/arcsec] x [arcsec] = [m]
+        double opd_fc_focus = gravi_metrology_get_fc_focus (header, tel, static_param_data); // [m]
+        double opd_fc_shift = gravi_metrology_get_fc_shift (header, tel, static_param_data) * (rho_in/1000.0); // [m/arcsec] x [arcsec] = [m]
         CPLCHECK_INT("Cannot get Static calib");
 
         cpl_msg_info (cpl_func, "FE: Tel %d Pupil %g Focus %g Shift %g",
@@ -2787,7 +2847,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     /* loop over all diodes and beams */
     for (int tel = 0; tel < ntel; tel++) {
         
-        gravi_metrology_get_astig (header, tel, &AstigmAmplitude, &AstigmTheta, &AstigmRadius);
+        gravi_metrology_get_astig (header, tel, &AstigmAmplitude, &AstigmTheta, &AstigmRadius, static_param_data);
         
         cpl_msg_info (cpl_func,"Astigmatism params GV%i : %5g [nm], %5g [deg]", tel, AstigmAmplitude ,AstigmTheta);
         
