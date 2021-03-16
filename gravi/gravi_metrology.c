@@ -1650,19 +1650,24 @@ cpl_error_code gravi_metrology_get_astig (cpl_propertylist * header, int gv,
     int got_static=0;
     if (static_param_data)
     {
-        cpl_table * static_param_table = gravi_data_get_table (static_param_data, "ASTIGPAR");
-        if  ( cpl_table_has_column(static_param_table , column_amp_name) & cpl_table_has_column(static_param_table , column_ang_name) )
+        if (gravi_data_has_extension (static_param_data, "ASTIGPAR"))
         {
-            amplitude_static = cpl_table_get_data_double (static_param_table, column_amp_name)[gv];
-            angle_static     = cpl_table_get_data_double (static_param_table, column_ang_name)[gv];
-            got_static=1;
-            cpl_msg_info(cpl_func,"Astigmatism (from static file): GV%i, Amplitude=%.2f nm, Angle=%.2f deg",
-                         gv+1,amplitude_static,angle_static);
+            cpl_table * static_param_table = gravi_data_get_table (static_param_data, "ASTIGPAR");
+            if  ( cpl_table_has_column(static_param_table , column_amp_name) & cpl_table_has_column(static_param_table , column_ang_name) )
+            {
+                amplitude_static = cpl_table_get_data_double (static_param_table, column_amp_name)[gv];
+                angle_static     = cpl_table_get_data_double (static_param_table, column_ang_name)[gv];
+                got_static=1;
+                cpl_msg_info(cpl_func,"Astigmatism (from static file): GV%i, Amplitude=%.2f nm, Angle=%.2f deg",
+                             gv+1,amplitude_static,angle_static);
+            } else {
+                cpl_msg_warning(cpl_func,"Cannot get the column %s or %s from the static calibration file",column_amp_name, column_ang_name);
+            }
         } else {
-            cpl_msg_warning(cpl_func,"Cannot get the column %s or %s from the static calibration file",column_amp_name, column_ang_name);
+            cpl_msg_warning(cpl_func,"Cannot get the sub-fit ASTIGPAR from the static calibration file");
         }
     } else {
-        cpl_msg_warning (cpl_func,"Cannot find ASTIGPAR header in static calibration file");
+        cpl_msg_warning (cpl_func,"Cannot find the static calibration file");
     }
                          
      /* If static file exist, read them, otherwise read value from header  */
