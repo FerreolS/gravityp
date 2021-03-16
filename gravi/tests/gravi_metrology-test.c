@@ -62,7 +62,7 @@
 /* declaration of functions to test */
 double gravi_metrology_get_fc_focus (cpl_propertylist * header, int gv, gravi_data* gravi_data_focus);
 double gravi_metrology_get_fc_shift (cpl_propertylist * header, int gv, gravi_data* gravi_data_focus);
-cpl_error_code gravi_metrology_get_astig (cpl_propertylist * header, int gv, double * amplitude, double * angle, double * radius);
+cpl_error_code gravi_metrology_get_astig (cpl_propertylist * header, int gv, double * amplitude, double * angle, double * radius, gravi_data * gravi_data_astig );
 
 int gravi_metrology_test(void);
 
@@ -77,6 +77,7 @@ int gravi_metrology_test(void){
     sprintf(filename, "%s%s", STR(DATADIR), "/GRAVI_STATIC_CALIB.fits");
     //sprintf(filename, "%s","/home/grav/pipeline_ekki/execute/GRAVI_STATIC_CALIB.fits");
     gravi_data * gravi_data_focus = gravi_data_load_ext(filename,"FOCUSPAR");
+    gravi_data * gravi_data_astig = gravi_data_load_ext(filename,"ASTIGPAR");
 
     /* Treat header keywords */
     cpl_propertylist *propertylist = cpl_propertylist_new();
@@ -154,13 +155,13 @@ int gravi_metrology_test(void){
     double AstigmRadius; // [m]
     cpl_error_code err;
 
-    err = gravi_metrology_get_astig (propertylist, 0, &AstigmAmplitude, &AstigmTheta, &AstigmRadius);
+    err = gravi_metrology_get_astig (propertylist, 0, &AstigmAmplitude, &AstigmTheta, &AstigmRadius, gravi_data_astig);
     cpl_msg_info (cpl_func,"0: AstigmAmplitude %e  - AstigmTheta %e  - AstigmRadius %e \n",AstigmAmplitude,AstigmTheta, AstigmRadius);
-    err = gravi_metrology_get_astig (propertylist, 1, &AstigmAmplitude, &AstigmTheta, &AstigmRadius);
+    err = gravi_metrology_get_astig (propertylist, 1, &AstigmAmplitude, &AstigmTheta, &AstigmRadius, gravi_data_astig);
     cpl_msg_info (cpl_func,"1: AstigmAmplitude %e  - AstigmTheta %e  - AstigmRadius %e \n",AstigmAmplitude,AstigmTheta, AstigmRadius);
-    err = gravi_metrology_get_astig (propertylist, 2, &AstigmAmplitude, &AstigmTheta, &AstigmRadius);
+    err = gravi_metrology_get_astig (propertylist, 2, &AstigmAmplitude, &AstigmTheta, &AstigmRadius, gravi_data_astig);
     cpl_msg_info (cpl_func,"2: AstigmAmplitude %e  - AstigmTheta %e  - AstigmRadius %e \n",AstigmAmplitude,AstigmTheta, AstigmRadius);
-    err = gravi_metrology_get_astig (propertylist, 3, &AstigmAmplitude, &AstigmTheta, &AstigmRadius);
+    err = gravi_metrology_get_astig (propertylist, 3, &AstigmAmplitude, &AstigmTheta, &AstigmRadius, gravi_data_astig);
     cpl_msg_info (cpl_func,"3: AstigmAmplitude %e  - AstigmTheta %e  - AstigmRadius %e \n",AstigmAmplitude,AstigmTheta, AstigmRadius);
 
     cpl_propertylist_prepend_float (propertylist,"ESO MET GV1 UT ASTIG AMP", 182.0);
@@ -181,13 +182,13 @@ int gravi_metrology_test(void){
     cpl_propertylist_prepend_float (propertylist,"ESO MET GV4 AT ASTIG AMP", 266.0);
     cpl_propertylist_prepend_float (propertylist,"ESO MET GV4 AT ASTIG ANG",  25.0);
 
-    gravi_metrology_get_astig (propertylist, 0, &AstigmAmplitude, &AstigmTheta, &AstigmRadius);
+    gravi_metrology_get_astig (propertylist, 0, &AstigmAmplitude, &AstigmTheta, &AstigmRadius, gravi_data_astig);
     printf ("0 with header AstigmAmplitude %e  - AstigmTheta %e  - AstigmRadius %e \n",AstigmAmplitude,AstigmTheta, AstigmRadius);
-    gravi_metrology_get_astig (propertylist, 1, &AstigmAmplitude, &AstigmTheta, &AstigmRadius);
+    gravi_metrology_get_astig (propertylist, 1, &AstigmAmplitude, &AstigmTheta, &AstigmRadius, gravi_data_astig);
     printf ("1  with header AstigmAmplitude %e  - AstigmTheta %e  - AstigmRadius %e \n",AstigmAmplitude,AstigmTheta, AstigmRadius);
-    gravi_metrology_get_astig (propertylist, 2, &AstigmAmplitude, &AstigmTheta, &AstigmRadius);
+    gravi_metrology_get_astig (propertylist, 2, &AstigmAmplitude, &AstigmTheta, &AstigmRadius, gravi_data_astig);
     printf ("2  with header AstigmAmplitude %e  - AstigmTheta %e  - AstigmRadius %e \n",AstigmAmplitude,AstigmTheta, AstigmRadius);
-    gravi_metrology_get_astig (propertylist, 3, &AstigmAmplitude, &AstigmTheta, &AstigmRadius);
+    gravi_metrology_get_astig (propertylist, 3, &AstigmAmplitude, &AstigmTheta, &AstigmRadius, gravi_data_astig);
     printf ("3  with header AstigmAmplitude %e  - AstigmTheta %e  - AstigmRadius %e \n",AstigmAmplitude,AstigmTheta, AstigmRadius);
 
 
