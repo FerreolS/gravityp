@@ -1598,7 +1598,7 @@ cpl_error_code gravi_metrology_get_astig (cpl_propertylist * header, int gv,
     cpl_ensure (header, CPL_ERROR_NULL_INPUT, 0);
     cpl_ensure (static_param_data, CPL_ERROR_NULL_INPUT, 0);
     
-    /* load defautl "do nothing" values */
+    /* load default "do nothing" values */
     *amplitude = 0.0;
     *angle = 0.0;
     *radius = 1.0;
