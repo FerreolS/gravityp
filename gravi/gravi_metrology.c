@@ -1596,16 +1596,11 @@ cpl_error_code gravi_metrology_get_astig (cpl_propertylist * header, int gv,
 {
     gravi_msg_function_start(0);
     cpl_ensure (header, CPL_ERROR_NULL_INPUT, 0);
+    cpl_ensure (static_param_data, CPL_ERROR_NULL_INPUT, 0);
     
-    /* Default values to be used, just in case no data in calibration file or header */
-    const double amplitude_at[4] = {164.37970, 166.604301,  99.612594, 266.071934}; // [nm]
-    const double amplitude_ut[4] = {182.16255, 185.116601, 113.190052, 242.351495}; // [nm]
-    const double angle_at[4] = { 1.116211914, 28.48113853,  0.42385066, 25.92291209}; // [deg]]
-    const double angle_ut[4] = {-2.696882009, 18.07496983, 20.56624745, 19.13334754}; // [deg]
-    
+    /* variables to store the astigmatism values */
     double amplitude_header; // [nm]
     double angle_header; // [deg]]
-    
     double amplitude_static; // [nm]
     double angle_static; // [deg]]
     
@@ -1695,16 +1690,8 @@ cpl_error_code gravi_metrology_get_astig (cpl_propertylist * header, int gv,
         cpl_msg_info(cpl_func,"Using astigmatism parameters from header");
     } else
     {
-        /* load default values */
-        /* These are given in telescope order */
-        if (telname[0] == 'U') {
-            *amplitude = amplitude_ut[3-gv];
-            *angle     = angle_ut[3-gv];
-        } else {
-            *amplitude = amplitude_at[3-gv];
-            *angle     = angle_at[3-gv];
-        }
-        cpl_msg_error (cpl_func,"Using static calibration for astigmatism offset for GV%i, probably wrong!", gv+1);
+        cpl_msg_error (cpl_func,"The static calibration file is missing astigmatism values");
+        return CPL_ERROR_ILLEGAL_INPUT;
     }
         
     
