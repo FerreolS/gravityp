@@ -1612,7 +1612,7 @@ cpl_error_code gravi_metrology_get_astig (cpl_propertylist * header, int gv,
     /* Identify telescope name of requested GV input */
     const char * telname = gravi_conf_get_telname (gv, header);
     if (telname == NULL) {
-        cpl_msg_warning (cpl_func,"Cannot read the astigmatism offset for GV%i", gv+1);
+        cpl_msg_error (cpl_func,"Cannot read the astigmatism offset for GV%i", gv+1);
         return CPL_ERROR_NONE;
     }
     
