@@ -1598,6 +1598,11 @@ cpl_error_code gravi_metrology_get_astig (cpl_propertylist * header, int gv,
     cpl_ensure (header, CPL_ERROR_NULL_INPUT, 0);
     cpl_ensure (static_param_data, CPL_ERROR_NULL_INPUT, 0);
     
+    /* load defautl "do nothing" values */
+    *amplitude = 0.0;
+    *angle = 0.0;
+    *radius = 1.0;
+    
     /* variables to store the astigmatism values */
     double amplitude_header; // [nm]
     double angle_header; // [deg]]
@@ -1610,9 +1615,6 @@ cpl_error_code gravi_metrology_get_astig (cpl_propertylist * header, int gv,
         cpl_msg_warning (cpl_func,"Cannot read the astigmatism offset for GV%i", gv+1);
         return CPL_ERROR_NONE;
     }
-    *amplitude = 0.0;
-    *angle = 0.0;
-    *radius = 1.0;
     
     /* Assemble header keywords */
     char name_amp[100], name_ang[100];
@@ -1693,7 +1695,6 @@ cpl_error_code gravi_metrology_get_astig (cpl_propertylist * header, int gv,
         cpl_msg_error (cpl_func,"The static calibration file is missing astigmatism values");
         return CPL_ERROR_NONE;
     }
-        
     
     gravi_msg_function_exit(0);
     return CPL_ERROR_NONE;
