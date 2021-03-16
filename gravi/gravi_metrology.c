@@ -1686,12 +1686,12 @@ cpl_error_code gravi_metrology_get_astig (cpl_propertylist * header, int gv,
     if (got_static==1)
     {
         *amplitude = amplitude_static;
-        *amplitude = angle_static;
+        *angle = angle_static;
         cpl_msg_info(cpl_func,"Using astigmatism parameters from static file");
     } else if (got_header==1)
     {
         *amplitude = amplitude_header;
-        *amplitude = angle_header;
+        *angle = angle_header;
         cpl_msg_info(cpl_func,"Using astigmatism parameters from header");
     } else
     {
