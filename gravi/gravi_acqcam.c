@@ -1165,7 +1165,7 @@ cpl_error_code gravi_acqcam_get_diode_ref_v2 (cpl_propertylist * header,
          by design of telescope spiders. This model angle should be
          angle = north_angle + paralactic angle + 45
          Remark: checking the angles for the GC easter flare night, we get an offset of 45.75 degrees */
-        double northangle = gravi_pfits_get_fangle_acqcam(header, tel);
+        double northangle = gravi_pfits_get_northangle_acqcam(header, tel);
         CPLCHECK_MSG("Cannot determine field angle");
 
             
@@ -1727,7 +1727,7 @@ for (int tel = 0; tel < GRAVI_SPOT_NTEL; tel++)
     int n_on=0;
     
     /* Get the conversion angle xy to uv in [rad] */
-    double northangle = gravi_pfits_get_fangle_acqcam(header, tel);
+    double northangle = gravi_pfits_get_northangle_acqcam(header, tel);
     double cfangle = cos(northangle * CPL_MATH_RAD_DEG);
     double sfangle = sin(northangle * CPL_MATH_RAD_DEG);
     double scale = cpl_vector_get(scale_vector,tel);
@@ -2268,7 +2268,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         double fiber_ft_sc_y=fiber_ysc-fiber_yft;
         
         /* Get the North position angle on the camera */
-        double northangle = gravi_pfits_get_fangle_acqcam (header, tel);
+        double northangle = gravi_pfits_get_northangle_acqcam (header, tel);
         CPLCHECK ("Cannot get rotation");
         
         /* Mapping/mosaicing offset on acq cam axes, in mas, */

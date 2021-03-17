@@ -735,7 +735,7 @@ double gravi_pfits_get_drotoff (const cpl_propertylist * plist, int tel)
     return drottoff;
 }
 
-double gravi_pfits_get_fangle_acqcam (const cpl_propertylist * plist, int tel)
+double gravi_pfits_get_northangle_acqcam (const cpl_propertylist * plist, int tel)
 {
     double fangle = 0.0;
     

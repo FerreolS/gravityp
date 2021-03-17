@@ -2689,10 +2689,10 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     cpl_array * northangle_array = cpl_array_new(4,CPL_TYPE_DOUBLE);
     
     /* get North angle array, unwrapped */
-    double north_angle_tmp=gravi_pfits_get_fangle_acqcam (header, 0);
+    double north_angle_tmp=gravi_pfits_get_northangle_acqcam (header, 0);
     for (cpl_size tel=0;tel < 4; tel++)
         {
-            double north_angle_tmp2=gravi_pfits_get_fangle_acqcam (header, tel);
+            double north_angle_tmp2=gravi_pfits_get_northangle_acqcam (header, tel);
             if (north_angle_tmp2-north_angle_tmp >= 180) north_angle_tmp2 -= 360.0;
             if (north_angle_tmp2-north_angle_tmp < -180) north_angle_tmp2 += 360.0;
             cpl_array_set_double(northangle_array,tel,north_angle_tmp2);
@@ -2844,7 +2844,10 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     CPLCHECK_MSG ("Cannot get paralactic angle");
     cpl_msg_info (cpl_func,"FE: paralactic angle in degrees: %g ", parang * (360.0/TWOPI) );
     
+    /* Posangle is calculated from SOBJX ansd SOBJY already read before 
+       x,y are exchanged following coordinate systems in Stefan's slide */
     int flag;
+    
     /* loop over all diodes and beams */
     for (int tel = 0; tel < ntel; tel++) {
         
