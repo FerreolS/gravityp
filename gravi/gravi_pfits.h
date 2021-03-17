@@ -270,6 +270,8 @@ double gravi_pfits_get_sobj_x(const cpl_propertylist * plist);
 double gravi_pfits_get_sobj_y(const cpl_propertylist * plist);
 double gravi_pfits_get_sobj_offx (const cpl_propertylist * plist);
 double gravi_pfits_get_sobj_offy (const cpl_propertylist * plist);
+double gravi_pfits_get_gvctu_x(const cpl_propertylist * plist);
+double gravi_pfits_get_gvctu_y(const cpl_propertylist * plist);
 
 double gravi_pfits_get_plx(const cpl_propertylist * plist);
 double gravi_pfits_get_pmra(const cpl_propertylist * plist);

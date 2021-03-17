@@ -1701,6 +1701,15 @@ cpl_error_code gravi_metrology_get_astig (cpl_propertylist * header, int gv,
         return CPL_ERROR_NONE;
     }
     
+    /* The astigmatism values are now converted with respect to the acquisition camera North Angle */
+    if (gravi_pfits_get_axis (header) == MODE_ONAXIS)
+    {
+        *angle = *angle + 141;
+    } else {
+        *angle = *angle + 231;
+    }
+        
+    
     gravi_msg_function_exit(0);
     return CPL_ERROR_NONE;
 }
@@ -2083,6 +2092,14 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
         if ((time_met > met_mjd) && (time_met_minus < met_mjd)) met_date_row = row;
 	  }
     cpl_msg_info(cpl_func,"Found DIT corresponding to metrology phase date at number %i",met_date_row);
+    /* Store metrology DIT into header */
+    
+    char qc_name[100];
+    sprintf (qc_name, "ESO QC MET REF ROW");
+    cpl_msg_info (cpl_func, "%s = %i", qc_name, met_date_row);
+    cpl_propertylist_update_int (header, qc_name,met_date_row);
+    cpl_propertylist_set_comment (header, qc_name, "met row at unwraped phase ref");
+    
     /* IF error of timing */
     if (met_date_row == -1){
       cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
@@ -2671,8 +2688,15 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     /* Load North angle array */
     cpl_array * northangle_array = cpl_array_new(4,CPL_TYPE_DOUBLE);
     
+    /* get North angle array, unwrapped */
+    double north_angle_tmp=gravi_pfits_get_fangle_acqcam (header, 0);
     for (cpl_size tel=0;tel < 4; tel++)
-    cpl_array_set_double(northangle_array,tel,gravi_pfits_get_fangle_acqcam (header, tel));
+        {
+            double north_angle_tmp2=gravi_pfits_get_fangle_acqcam (header, tel);
+            if (north_angle_tmp2-north_angle_tmp >= 180) north_angle_tmp2 -= 360.0;
+            if (north_angle_tmp2-north_angle_tmp < -180) north_angle_tmp2 += 360.0;
+            cpl_array_set_double(northangle_array,tel,north_angle_tmp2);
+        }
     
     /* Vectors used in Julien's formula */
     cpl_vector * rec = cpl_vector_new (3);
@@ -2688,10 +2712,14 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     double * field_dX = NULL;
     double * field_dY = NULL;
     if ( cpl_table_has_column (vismet_table, "FIELD_FIBER_DX")
-      && cpl_table_has_column (vismet_table, "FIELD_FIBER_DX") ) {
+      && cpl_table_has_column (vismet_table, "FIELD_FIBER_DY") ) {
         field_dX = cpl_table_get_data_double (vismet_table, "FIELD_FIBER_DX");
         field_dY = cpl_table_get_data_double (vismet_table, "FIELD_FIBER_DY");
     }
+    
+    /* read the field error from gvctu */
+    double dx_gvctu = gravi_pfits_get_gvctu_y (header);
+    double dy_gvctu = gravi_pfits_get_gvctu_y (header);
     
     /* some debug messages */
     cpl_msg_info (cpl_func,"FE: E_U = [%g, %g, %g].", 
@@ -2758,12 +2786,12 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                                        +rec_zd[tel][diode] * cpl_array_get (E_ZD[row*ntel+tel], 1, NULL));
                 cpl_vector_set (rec, 2, rec_az[tel][diode] * cpl_array_get (E_AZ[row*ntel+tel], 2, NULL)
                                        +rec_zd[tel][diode] * cpl_array_get (E_ZD[row*ntel+tel], 2, NULL));
-                cpl_vector_set (sobj, 0, (dx_in-field_dU) * cpl_array_get (E_U[row*ntel+tel], 0, NULL)
-                                        +(dy_in-field_dV) * cpl_array_get (E_V[row*ntel+tel], 0, NULL));
-                cpl_vector_set (sobj, 1, (dx_in-field_dU) * cpl_array_get (E_U[row*ntel+tel], 1, NULL)
-                                        +(dy_in-field_dV) * cpl_array_get (E_V[row*ntel+tel], 1, NULL));
-                cpl_vector_set (sobj, 2, (dx_in-field_dU) * cpl_array_get (E_U[row*ntel+tel], 2, NULL)
-                                        +(dy_in-field_dV) * cpl_array_get (E_V[row*ntel+tel], 2, NULL));
+                cpl_vector_set (sobj, 0, (dx_gvctu-field_dU) * cpl_array_get (E_U[row*ntel+tel], 0, NULL)
+                                        +(dy_gvctu-field_dV) * cpl_array_get (E_V[row*ntel+tel], 0, NULL));
+                cpl_vector_set (sobj, 1, (dx_gvctu-field_dU) * cpl_array_get (E_U[row*ntel+tel], 1, NULL)
+                                        +(dy_gvctu-field_dV) * cpl_array_get (E_V[row*ntel+tel], 1, NULL));
+                cpl_vector_set (sobj, 2, (dx_gvctu-field_dU) * cpl_array_get (E_U[row*ntel+tel], 2, NULL)
+                                        +(dy_gvctu-field_dV) * cpl_array_get (E_V[row*ntel+tel], 2, NULL));
                 
                 /* calculate deprojection */
                 deproject = cpl_vector_product(rec, sobj);  /* in m * mas */
@@ -2816,27 +2844,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     CPLCHECK_MSG ("Cannot get paralactic angle");
     cpl_msg_info (cpl_func,"FE: paralactic angle in degrees: %g ", parang * (360.0/TWOPI) );
     
-    /* Posangle is calculated from SOBJX ansd SOBJY already read before 
-       x,y are exchanged following coordinate systems in Stefan's slide */
     int flag;
-    double posang = myAtan (dy_in,dx_in, &flag);
-    
-    /* the posang which matters is the one calculated at acquisition*/
-    if (cpl_propertylist_has(header, "ESO INS SOBJ OFFX") &&
-        cpl_propertylist_has(header, "ESO INS SOBJ OFFY")) {
-        
-        double dx_off = gravi_pfits_get_double_default (header, "ESO INS SOBJ OFFX", 0.0);
-        double dy_off = gravi_pfits_get_double_default (header, "ESO INS SOBJ OFFY", 0.0);
-        posang = myAtan (dy_in-dy_off,dx_in-dx_off, &flag);
-    }
-    
-    char name[90];
-    sprintf (name, "ESO INS DROTOFF1");
-    double drottoff = cpl_propertylist_get_double (header, name);
-    posang = (270.0 - cpl_array_get_mean(northangle_array) - drottoff) * TWOPI / 360.0;
-    
-    cpl_msg_info (cpl_func,"Position angle in degrees: %g ", posang / TWOPI * 360. );
-    
     /* loop over all diodes and beams */
     for (int tel = 0; tel < ntel; tel++) {
         
@@ -2848,7 +2856,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
             for (int diode = 0; diode < ndiode; diode++) {
                 diodeang = myAtan(-rec_zd[tel][diode],-rec_az[tel][diode], &flag);  // [rad]
                 double parang3 = parang1 + (parang2-parang1) * row / nrow_met;  // [rad]
-                astang = posang - parang3 - diodeang + AstigmTheta*(TWOPI/360.); // [rad]
+                astang = (AstigmTheta - cpl_array_get_mean(northangle_array)) * (TWOPI/360.) - parang3 - diodeang ; // [rad]
                 astradius = sqrt(rec_az[tel][diode]*rec_az[tel][diode] + rec_zd[tel][diode]*rec_zd[tel][diode]) / AstigmRadius; /* normalized */
                 astigm = (AstigmAmplitude*1e-9) * sqrt(6) * astradius * astradius * sin(2. * astang); // [m]
                 

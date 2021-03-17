@@ -413,7 +413,6 @@ double gravi_pfits_get_sobj_y (const cpl_propertylist * plist)
     return value;
 }
 
-// FE 20190415
 double gravi_pfits_get_sobj_offx (const cpl_propertylist * plist)
 {
     double value = gravi_pfits_get_double_default (plist, "ESO INS SOBJ OFFX", 0.0);
@@ -425,7 +424,26 @@ double gravi_pfits_get_sobj_offy (const cpl_propertylist * plist)
     double value = gravi_pfits_get_double_default (plist, "ESO INS SOBJ OFFY", 0.0);
     return value;
 }
-//
+
+double gravi_pfits_get_gvctu_x (const cpl_propertylist * plist)
+{
+    double value_default = gravi_pfits_get_sobj_x(plist);
+    double value1 = gravi_pfits_get_double_default (plist, "ESO FT KAL SEPCTUX1", value_default);
+    double value2 = gravi_pfits_get_double_default (plist, "ESO FT KAL SEPCTUX2", value_default);
+    double value3 = gravi_pfits_get_double_default (plist, "ESO FT KAL SEPCTUX3", value_default);
+    double value4 = gravi_pfits_get_double_default (plist, "ESO FT KAL SEPCTUX4", value_default);
+    return (value1+value2+value3+value4)*0.25;
+}
+
+double gravi_pfits_get_gvctu_y (const cpl_propertylist * plist)
+{
+    double value_default = gravi_pfits_get_sobj_y(plist);
+    double value1 = gravi_pfits_get_double_default (plist, "ESO FT KAL SEPCTUY1", value_default);
+    double value2 = gravi_pfits_get_double_default (plist, "ESO FT KAL SEPCTUY2", value_default);
+    double value3 = gravi_pfits_get_double_default (plist, "ESO FT KAL SEPCTUY3", value_default);
+    double value4 = gravi_pfits_get_double_default (plist, "ESO FT KAL SEPCTUY4", value_default);
+    return (value1+value2+value3+value4)*0.25;
+}
 
 const char * gravi_pfits_get_robj (const cpl_propertylist * plist)
 {
