@@ -2539,7 +2539,7 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
 /*----------------------------------------------------------------------------*/
 cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                                       cpl_table * vismet_table,
-				      gravi_data * static_param_data,
+                                      gravi_data * static_param_data,
                                       cpl_propertylist * header,
                                       int use_fiber_dxy)
 {
@@ -2615,8 +2615,13 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     double dx_in = gravi_pfits_get_sobj_x (header);
     double dy_in = gravi_pfits_get_sobj_y (header);
     double rho_in = sqrt(dx_in*dx_in + dy_in*dy_in);
+    /* Also retreive the seperation from gvctu */
+    double dx_gvctu = gravi_pfits_get_gvctu_x (header);
+    double dy_gvctu = gravi_pfits_get_gvctu_y (header);
+    
     CPLCHECK_MSG ("Cannot get separation");
-    cpl_msg_info (cpl_func,"FE: SOBJX, SOBJY in mas: %g, %g ", dx_in, dy_in );
+    cpl_msg_info(cpl_func,"X and Y OFFSET from header = %.2f, %.2f mas",dx_gvctu,dy_gvctu);
+    cpl_msg_info(cpl_func,"X and Y OFFSET from gvctu  = %.2f, %.2f mas",dx_in,dy_in);
     
     /* Force separation to zero in SINGLE */
     if (gravi_pfits_get_mode (header) == MODE_SINGLE) {
@@ -2717,10 +2722,6 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         field_dY = cpl_table_get_data_double (vismet_table, "FIELD_FIBER_DY");
     }
     
-    /* read the field error from gvctu */
-    double dx_gvctu = gravi_pfits_get_gvctu_y (header);
-    double dy_gvctu = gravi_pfits_get_gvctu_y (header);
-    
     /* some debug messages */
     cpl_msg_info (cpl_func,"FE: E_U = [%g, %g, %g].", 
             cpl_array_get (E_U[0*ntel+0], 0, NULL),
@@ -2739,6 +2740,25 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
             cpl_array_get (E_ZD[0*ntel+0], 1, NULL),
             cpl_array_get (E_ZD[0*ntel+0], 2, NULL));
 
+    /* use reference value for X and Y fiber offset */
+    /* if separation tracking is on , it is better to use X and Y position */
+    /* if separation tracking is off, it is better to use the gvctu estimate */
+    double dx_sep_diode = dx_gvctu;
+    double dy_sep_diode = dy_gvctu;
+    if (cpl_propertylist_has (header, "ESO FT KAL SEPTRK"))
+    {
+        if (cpl_propertylist_get_int (header, "ESO FT KAL SEPTRK") == 1)
+        {
+            dx_sep_diode = dx_in;
+            dy_sep_diode = dy_in;
+            cpl_msg_info (cpl_func,"Using X/Y offset from header");
+        } else {
+            cpl_msg_info (cpl_func,"Using X/Y offset from gvctu");
+        }
+    } else {
+        cpl_msg_info (cpl_func,"Using X/Y offset from gvctu");
+    }
+    
     /* Verbose about option before the loop */    
     cpl_msg_info (cpl_func,"Use fiber dxy is set to %s", use_fiber_dxy ? "TRUE" : "FALSE");
 
@@ -2775,7 +2795,6 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                 field_dU = 0.0;
                 field_dV = 0.0;
             }
-
                 
             for (int diode = 0; diode < ndiode; diode++) {
                 
@@ -2786,12 +2805,12 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                                        +rec_zd[tel][diode] * cpl_array_get (E_ZD[row*ntel+tel], 1, NULL));
                 cpl_vector_set (rec, 2, rec_az[tel][diode] * cpl_array_get (E_AZ[row*ntel+tel], 2, NULL)
                                        +rec_zd[tel][diode] * cpl_array_get (E_ZD[row*ntel+tel], 2, NULL));
-                cpl_vector_set (sobj, 0, (dx_gvctu-field_dU) * cpl_array_get (E_U[row*ntel+tel], 0, NULL)
-                                        +(dy_gvctu-field_dV) * cpl_array_get (E_V[row*ntel+tel], 0, NULL));
-                cpl_vector_set (sobj, 1, (dx_gvctu-field_dU) * cpl_array_get (E_U[row*ntel+tel], 1, NULL)
-                                        +(dy_gvctu-field_dV) * cpl_array_get (E_V[row*ntel+tel], 1, NULL));
-                cpl_vector_set (sobj, 2, (dx_gvctu-field_dU) * cpl_array_get (E_U[row*ntel+tel], 2, NULL)
-                                        +(dy_gvctu-field_dV) * cpl_array_get (E_V[row*ntel+tel], 2, NULL));
+                cpl_vector_set (sobj, 0, (dx_sep_diode-field_dU) * cpl_array_get (E_U[row*ntel+tel], 0, NULL)
+                                        +(dy_sep_diode-field_dV) * cpl_array_get (E_V[row*ntel+tel], 0, NULL));
+                cpl_vector_set (sobj, 1, (dx_sep_diode-field_dU) * cpl_array_get (E_U[row*ntel+tel], 1, NULL)
+                                        +(dy_sep_diode-field_dV) * cpl_array_get (E_V[row*ntel+tel], 1, NULL));
+                cpl_vector_set (sobj, 2, (dx_sep_diode-field_dU) * cpl_array_get (E_U[row*ntel+tel], 2, NULL)
+                                        +(dy_sep_diode-field_dV) * cpl_array_get (E_V[row*ntel+tel], 2, NULL));
                 
                 /* calculate deprojection */
                 deproject = cpl_vector_product(rec, sobj);  /* in m * mas */
