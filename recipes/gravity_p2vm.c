@@ -979,6 +979,13 @@ static int gravity_p2vm(cpl_frameset            * frameset,
 
     CPLCHECK_CLEAN ("Cannot compute the transmission");
 
+    /* Add the bad pixel masks to the P2VM if we are making the P2VM for TAC */
+    if (gravi_param_get_bool(parlist, "gravity.calib.force-wave-ft-equal"))
+    {
+        cpl_msg_info(cpl_func,"storing bad pixel mask for TAC");
+        gravi_data_copy_ext (p2vm_map, badpix_map, GRAVI_IMAGING_DATA_FT_EXT);
+        CPLCHECK_CLEAN ("Cannot append bad pixel mask");
+    }
     /* 
      * (9) Create product frame, add DataFlow keywords, save the file, log the
      * saved file in the input frameset. Note that the output filename
