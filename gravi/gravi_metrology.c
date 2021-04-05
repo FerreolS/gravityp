@@ -1993,7 +1993,7 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
     /*
      * Perform smoothing of the voltage values
      * First the Fiber coupler metrology
-     * By 11 DITs (22ms)
+     * By 3 DITs (6ms)
      */
     
     int DIT_smooth=1;
@@ -2066,8 +2066,12 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
 
 	/* Create the output table for VIS_MET
 	 * PHASE_TEL and PHASE_FC are defined as FT-SC */
-	cpl_table_new_column (vismet_table, "PHASE_FC_DRS", CPL_TYPE_DOUBLE);
-	cpl_table_set_column_unit (vismet_table, "PHASE_FC_DRS", "rad");
+    cpl_table_new_column (vismet_table, "PHASE_FC_DRS", CPL_TYPE_DOUBLE);
+    cpl_table_set_column_unit (vismet_table, "PHASE_FC_DRS", "rad");
+    cpl_table_new_column (vismet_table, "PHASE_FCFT_DRS", CPL_TYPE_DOUBLE);
+    cpl_table_set_column_unit (vismet_table, "PHASE_FCFT_DRS", "rad");
+    cpl_table_new_column (vismet_table, "PHASE_FCSC_DRS", CPL_TYPE_DOUBLE);
+    cpl_table_set_column_unit (vismet_table, "PHASE_FCSC_DRS", "rad");
 	cpl_table_new_column_array (vismet_table, "PHASE_TEL_DRS", CPL_TYPE_DOUBLE, ndiode);
 	cpl_table_set_column_unit (vismet_table, "PHASE_TEL_DRS", "rad");
 	
@@ -2109,7 +2113,7 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
     }
        
     /*
-     * Compute the metrology phase on the Fiber Coupler (FC), without a temporal
+     * Compute the metrology phase on the Fiber Coupler (FC), WITHOUT a temporal
      * smoothing over n_filter samples
      */
     
@@ -2117,46 +2121,59 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
           
           /* make an array of double complex */
           
-          cpl_array * phasor_array = cpl_array_new(nbrow_met,CPL_TYPE_DOUBLE_COMPLEX);
+          cpl_array * phasor_array_ft = cpl_array_new(nbrow_met,CPL_TYPE_DOUBLE_COMPLEX);
+          cpl_array * phasor_array_sc = cpl_array_new(nbrow_met,CPL_TYPE_DOUBLE_COMPLEX);
           
           for (cpl_size row = 0; row < nbrow_met; row ++)
           {
               double complex phasor_ft =
               cpl_array_get (raw_met[row],ind_cosfc_FT[tel], NULL)
               + I*cpl_array_get (raw_met[row],ind_sinfc_FT[tel], NULL);
-              double complex conj_phasor_sc =
+              double complex phasor_sc =
               cpl_array_get (raw_met[row],ind_cosfc_SC[tel], NULL)
-              - I*cpl_array_get (raw_met[row],ind_sinfc_SC[tel], NULL);
+              + I*cpl_array_get (raw_met[row],ind_sinfc_SC[tel], NULL);
               
-              cpl_array_set_double_complex(phasor_array,row,phasor_ft*conj_phasor_sc);
+              cpl_array_set_double_complex(phasor_array_ft,row,phasor_ft);
+              cpl_array_set_double_complex(phasor_array_sc,row,phasor_sc);
           }
           CPLCHECK_MSG("Error at computation of phasors");
           
-          cpl_array *  phase_array =  cpl_array_duplicate (phasor_array);
-          cpl_array_arg(phase_array);
-          gravi_array_phase_unwrap (phase_array);
+          cpl_array *  phase_array_ft =  cpl_array_duplicate (phasor_array_ft);
+          cpl_array *  phase_array_sc =  cpl_array_duplicate (phasor_array_sc);
+          cpl_array_arg(phase_array_ft);
+          cpl_array_arg(phase_array_sc);
+          gravi_array_phase_unwrap (phase_array_ft);
+          gravi_array_phase_unwrap (phase_array_sc);
           
           /* get the phase at correct time to compare with reference phase */
-          double phase_reference = cpl_array_get_double(phase_array, met_date_row, NULL);
+          double phase_reference_ft = cpl_array_get_double(phase_array_ft, met_date_row, NULL);
+          double phase_reference_sc = cpl_array_get_double(phase_array_sc, met_date_row, NULL);
           
           /* get the phase from rtc */
           sprintf (name, "ESO OCS MET PH_FC%d_FT", tel+1);
-          double phase_rtc = cpl_propertylist_get_double (header, name);
+          double k_phase_ft = cpl_propertylist_get_double (header, name) - phase_reference_ft;
           sprintf (name, "ESO OCS MET PH_FC%d_SC", tel+1);
-          phase_rtc = phase_rtc - cpl_propertylist_get_double (header, name);
-          double k_phase = phase_rtc - phase_reference;
+          double k_phase_sc = cpl_propertylist_get_double (header, name) - phase_reference_sc;
+          
           /* get the 2 pi offset from rtc */
-          k_phase = floor(k_phase/(2*M_PI)+0.5)*2*M_PI;
-          cpl_array_add_scalar (phase_array, k_phase);
+          k_phase_ft = floor(k_phase_ft/(2*M_PI)+0.5)*2*M_PI;
+          k_phase_sc = floor(k_phase_sc/(2*M_PI)+0.5)*2*M_PI;
+          cpl_array_add_scalar (phase_array_ft, k_phase_ft);
+          cpl_array_add_scalar (phase_array_sc, k_phase_sc);
           
           /* store data in gravi table */
           for (cpl_size row = 0; row < nbrow_met; row ++)
           {
-              cpl_table_set (vismet_table, "PHASE_FC_DRS", row*ntel+tel, cpl_array_get_double (phase_array, row, NULL));
+              cpl_table_set (vismet_table, "PHASE_FC_DRS", row*ntel+tel, cpl_array_get_double (phase_array_ft, row, NULL)
+                             - cpl_array_get_double (phase_array_sc, row, NULL) );
+              cpl_table_set (vismet_table, "PHASE_FCFT_DRS", row*ntel+tel, cpl_array_get_double (phase_array_ft, row, NULL));
+              cpl_table_set (vismet_table, "PHASE_FCSC_DRS", row*ntel+tel, cpl_array_get_double (phase_array_sc, row, NULL));
           }
           
-          cpl_array_delete(phasor_array);
-          cpl_array_delete(phase_array);
+          cpl_array_delete(phasor_array_ft);
+          cpl_array_delete(phasor_array_sc);
+          cpl_array_delete(phase_array_ft);
+          cpl_array_delete(phase_array_sc);
         CPLCHECK_MSG("Error while computing the metrology phase at FC");
 	  }
 	  /* End loop on tel */

@@ -1359,7 +1359,9 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET,
   CPLCHECK_MSG("Cannot get data");
 
   /* Get MET data */
-  double * phase_met_fc         = cpl_table_get_data_double (vis_MET, "PHASE_FC_DRS");
+    double * phase_met_fc         = cpl_table_get_data_double (vis_MET, "PHASE_FC_DRS");
+    double * phase_met_fcft         = cpl_table_get_data_double (vis_MET, "PHASE_FCFT_DRS");
+    double * phase_met_fcsc         = cpl_table_get_data_double (vis_MET, "PHASE_FCSC_DRS");
   double * opd_met_fc           = cpl_table_get_data_double (vis_MET, "OPD_FC");
   cpl_array ** phase_met_tel    = cpl_table_get_data_array (vis_MET, "PHASE_TEL_DRS");
   cpl_array ** opd_met_tel      = cpl_table_get_data_array (vis_MET, "OPD_TEL");
@@ -1376,6 +1378,12 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET,
     
   gravi_table_new_column (vis_SC, "PHASE_MET_FC", "rad", CPL_TYPE_DOUBLE);
   double * phase_metdit_fc = cpl_table_get_data_double (vis_SC, "PHASE_MET_FC");
+    
+    gravi_table_new_column (vis_SC, "PHASE_MET_FCFT", "rad", CPL_TYPE_DOUBLE);
+    double * phase_metdit_fcft = cpl_table_get_data_double (vis_SC, "PHASE_MET_FCFT");
+    
+    gravi_table_new_column (vis_SC, "PHASE_MET_FCSC", "rad", CPL_TYPE_DOUBLE);
+    double * phase_metdit_fcsc = cpl_table_get_data_double (vis_SC, "PHASE_MET_FCSC");
 	
   gravi_table_new_column (vis_SC, "PHASE_MET_TEL", "rad", CPL_TYPE_DOUBLE);
   double * phase_metdit_tel = cpl_table_get_data_double (vis_SC, "PHASE_MET_TEL");
@@ -1438,6 +1446,12 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET,
           
 	    /* Mean PHASE_MET_FC at Beam Combiner */
 	    phase_metdit_fc[nsc] += phase_met_fc[nmet0] - phase_met_fc[nmet1];
+          
+          /* Mean PHASE_MET_FCFT at Beam Combiner */
+          phase_metdit_fcft[nsc] += phase_met_fcft[nmet0] - phase_met_fcft[nmet1];
+          
+          /* Mean PHASE_MET_FCSC at Beam Combiner */
+          phase_metdit_fcsc[nsc] += phase_met_fcsc[nmet0] - phase_met_fcsc[nmet1];
 	    
 	    /* Mean OPD_MET_FC at Beam Combiner */
 	    opd_metdit_fc[nsc] += opd_met_fc[nmet0] - opd_met_fc[nmet1];
@@ -1454,7 +1468,9 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET,
 	    cpl_array_divide_scalar (opd_metdit_telfc_corr[nsc], (double)nframe);
 	    cpl_array_divide_scalar (opd_metdit_tel[nsc], (double)nframe);
 	    phase_metdit_tel[nsc] /= nframe;
-	    phase_metdit_fc[nsc]  /= nframe;
+        phase_metdit_fc[nsc]  /= nframe;
+        phase_metdit_fcft[nsc]  /= nframe;
+        phase_metdit_fcsc[nsc]  /= nframe;
 	    opd_metdit_fc[nsc]  /= nframe;
           
         /* get the astro phase by taking the argument of astro phasor */
@@ -2619,9 +2635,13 @@ cpl_error_code gravi_flux_create_fddllin_sc (cpl_table * flux_SC,
   cpl_size ntel = 4;
   cpl_size nrow = cpl_table_get_nrow (flux_SC) / ntel;
 
-  /* Create the column */
+  /* Create the columns */
   gravi_table_new_column (flux_SC, "FDDL", "m", CPL_TYPE_DOUBLE);
   CPLCHECK_MSG ("Cannot create columns");
+    gravi_table_new_column (flux_SC, "FDDL_FT", "m", CPL_TYPE_DOUBLE);
+    CPLCHECK_MSG ("Cannot create columns");
+    gravi_table_new_column (flux_SC, "FDDL_SC", "m", CPL_TYPE_DOUBLE);
+    CPLCHECK_MSG ("Cannot create columns");
   
   /* If not DISP_DATA, we just create the columns */
   if (disp_table == NULL) {
@@ -2640,7 +2660,9 @@ cpl_error_code gravi_flux_create_fddllin_sc (cpl_table * flux_SC,
   /* Get data */
   double * ftpos = cpl_table_get_data_double (flux_SC, "FT_POS");
   double * scpos = cpl_table_get_data_double (flux_SC, "SC_POS");
-  double * fddl  = cpl_table_get_data_double (flux_SC, "FDDL");
+    double * fddl  = cpl_table_get_data_double (flux_SC, "FDDL");
+    double * fddl_ft  = cpl_table_get_data_double (flux_SC, "FDDL_FT");
+    double * fddl_sc  = cpl_table_get_data_double (flux_SC, "FDDL_SC");
   CPLCHECK_MSG ("Cannot get POS data");
   
   /* Loop on tel and frames */
@@ -2650,11 +2672,13 @@ cpl_error_code gravi_flux_create_fddllin_sc (cpl_table * flux_SC,
 
           /* Apply the non-linearity to the FDDL while 
            * computing the mean of SC and FT: [V] -> [m] */
-          fddl[nsc] = 0;
+          fddl_ft[nsc] = 0.0;
+          fddl_sc[nsc] = 0.0;
           for (int o = 0; o < disp_order; o++) {
-              fddl[nsc] += lin_fddl_sc[tel][o] * pow (scpos[nsc], (double)o) * 0.5e-6;
-              fddl[nsc] += lin_fddl_ft[tel][o] * pow (ftpos[nsc], (double)o) * 0.5e-6;
+              fddl_ft[nsc] += lin_fddl_sc[tel][o] * pow (scpos[nsc], (double)o) * 1.0e-6;
+              fddl_sc[nsc] += lin_fddl_ft[tel][o] * pow (ftpos[nsc], (double)o) * 1.0e-6;
           }
+          fddl[nsc]=0.5*(fddl_ft[nsc]+fddl_sc[nsc]);
       } /* End loop on rows */
   } /* End loop on base */
 
