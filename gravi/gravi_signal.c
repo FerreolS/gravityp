@@ -1360,8 +1360,6 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET,
 
   /* Get MET data */
     double * phase_met_fc         = cpl_table_get_data_double (vis_MET, "PHASE_FC_DRS");
-    double * phase_met_fcft         = cpl_table_get_data_double (vis_MET, "PHASE_FCFT_DRS");
-    double * phase_met_fcsc         = cpl_table_get_data_double (vis_MET, "PHASE_FCSC_DRS");
   double * opd_met_fc           = cpl_table_get_data_double (vis_MET, "OPD_FC");
   cpl_array ** phase_met_tel    = cpl_table_get_data_array (vis_MET, "PHASE_TEL_DRS");
   cpl_array ** opd_met_tel      = cpl_table_get_data_array (vis_MET, "OPD_TEL");
@@ -1378,12 +1376,6 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET,
     
   gravi_table_new_column (vis_SC, "PHASE_MET_FC", "rad", CPL_TYPE_DOUBLE);
   double * phase_metdit_fc = cpl_table_get_data_double (vis_SC, "PHASE_MET_FC");
-    
-    gravi_table_new_column (vis_SC, "PHASE_MET_FCFT", "rad", CPL_TYPE_DOUBLE);
-    double * phase_metdit_fcft = cpl_table_get_data_double (vis_SC, "PHASE_MET_FCFT");
-    
-    gravi_table_new_column (vis_SC, "PHASE_MET_FCSC", "rad", CPL_TYPE_DOUBLE);
-    double * phase_metdit_fcsc = cpl_table_get_data_double (vis_SC, "PHASE_MET_FCSC");
 	
   gravi_table_new_column (vis_SC, "PHASE_MET_TEL", "rad", CPL_TYPE_DOUBLE);
   double * phase_metdit_tel = cpl_table_get_data_double (vis_SC, "PHASE_MET_TEL");
@@ -1443,18 +1435,12 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET,
 	    /* Mean PHASE_MET at Telescope (mean of 4 diodes) */
 	    phase_metdit_tel[nsc] += cpl_array_get_mean (phase_met_tel[nmet0]) -
 	      cpl_array_get_mean (phase_met_tel[nmet1]);
-          
-	    /* Mean PHASE_MET_FC at Beam Combiner */
-	    phase_metdit_fc[nsc] += phase_met_fc[nmet0] - phase_met_fc[nmet1];
-          
-          /* Mean PHASE_MET_FCFT at Beam Combiner */
-          phase_metdit_fcft[nsc] += phase_met_fcft[nmet0] - phase_met_fcft[nmet1];
-          
-          /* Mean PHASE_MET_FCSC at Beam Combiner */
-          phase_metdit_fcsc[nsc] += phase_met_fcsc[nmet0] - phase_met_fcsc[nmet1];
 	    
 	    /* Mean OPD_MET_FC at Beam Combiner */
 	    opd_metdit_fc[nsc] += opd_met_fc[nmet0] - opd_met_fc[nmet1];
+          
+       /* Mean PHASE_MET_FC at Beam Combiner */
+       phase_metdit_fc[nsc] += phase_met_fc[nmet0] - phase_met_fc[nmet1];
 
 	    CPLCHECK_MSG ("Fail to integrate the metrology");
 	  }
@@ -1469,8 +1455,6 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET,
 	    cpl_array_divide_scalar (opd_metdit_tel[nsc], (double)nframe);
 	    phase_metdit_tel[nsc] /= nframe;
         phase_metdit_fc[nsc]  /= nframe;
-        phase_metdit_fcft[nsc]  /= nframe;
-        phase_metdit_fcsc[nsc]  /= nframe;
 	    opd_metdit_fc[nsc]  /= nframe;
           
         /* get the astro phase by taking the argument of astro phasor */
@@ -1845,10 +1829,23 @@ cpl_error_code gravi_flux_create_met_sc (cpl_table * flux_SC, cpl_table * vis_ME
   double * opd_met_fc_corr        = cpl_table_get_data_double (vis_MET, "OPD_FC_CORR");
   double * opd_met_telfc_mcorr    = cpl_table_get_data_double (vis_MET, "OPD_TELFC_MCORR");
   cpl_array ** opd_met_telfc_corr = cpl_table_get_data_array (vis_MET, "OPD_TELFC_CORR");
+    double * phase_met_fc           = cpl_table_get_data_double (vis_MET, "PHASE_FC_DRS");
+    double * phase_met_fcft         = cpl_table_get_data_double (vis_MET, "PHASE_FCFT_DRS");
+    double * phase_met_fcsc         = cpl_table_get_data_double (vis_MET, "PHASE_FCSC_DRS");
+
 
   CPLCHECK_MSG("Cannot get direct pointer to data");
 
   /* New columns */
+    gravi_table_new_column (flux_SC, "PHASE_MET_FC", "rad", CPL_TYPE_DOUBLE);
+    double * phase_metdit_fc = cpl_table_get_data_double (flux_SC, "PHASE_MET_FC");
+      
+      gravi_table_new_column (flux_SC, "PHASE_MET_FCFT", "rad", CPL_TYPE_DOUBLE);
+      double * phase_metdit_fcft = cpl_table_get_data_double (flux_SC, "PHASE_MET_FCFT");
+      
+      gravi_table_new_column (flux_SC, "PHASE_MET_FCSC", "rad", CPL_TYPE_DOUBLE);
+      double * phase_metdit_fcsc = cpl_table_get_data_double (flux_SC, "PHASE_MET_FCSC");
+    
   gravi_table_new_column (flux_SC, "OPD_MET_FC", "m", CPL_TYPE_DOUBLE);
   double * opd_metdit_fc = cpl_table_get_data_double (flux_SC, "OPD_MET_FC");
 
@@ -1890,6 +1887,15 @@ cpl_error_code gravi_flux_create_met_sc (cpl_table * flux_SC, cpl_table * vis_ME
         
 	    /* Mean OPD_TELFC_CORR for each BASELINE and diode */
 	    cpl_array_add (opd_metdit_telfc_corr[nsc], opd_met_telfc_corr[nmet]);
+          
+        /* Mean PHASE_MET_FC at Beam Combiner */
+        phase_metdit_fc[nsc] += phase_met_fc[nmet];
+          
+        /* Mean PHASE_MET_FCFT at Beam Combiner */
+        phase_metdit_fcft[nsc] += phase_met_fcft[nmet];
+          
+        /* Mean PHASE_MET_FCSC at Beam Combiner */
+        phase_metdit_fcsc[nsc] += phase_met_fcsc[nmet];
 		
 		CPLCHECK_MSG ("Fail to integrate the metrology");
 	  }
@@ -1899,6 +1905,9 @@ cpl_error_code gravi_flux_create_met_sc (cpl_table * flux_SC, cpl_table * vis_ME
 	  if (nframe != 0 ){
           opd_metdit_fc_corr[nsc] /= nframe;
           opd_metdit_telfc_mcorr[nsc] /= nframe;
+          phase_metdit_fc[nsc]  /= nframe;
+          phase_metdit_fcft[nsc]  /= nframe;
+          phase_metdit_fcsc[nsc]  /= nframe;
           cpl_array_divide_scalar (opd_metdit_telfc_corr[nsc], (double)nframe);
           
 		  cpl_array_divide_scalar (opd_metdit_tel[nsc], (double)nframe);
