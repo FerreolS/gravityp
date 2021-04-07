@@ -2684,8 +2684,8 @@ cpl_error_code gravi_flux_create_fddllin_sc (cpl_table * flux_SC,
           fddl_ft[nsc] = 0.0;
           fddl_sc[nsc] = 0.0;
           for (int o = 0; o < disp_order; o++) {
-              fddl_ft[nsc] += lin_fddl_sc[tel][o] * pow (scpos[nsc], (double)o) * 1.0e-6;
-              fddl_sc[nsc] += lin_fddl_ft[tel][o] * pow (ftpos[nsc], (double)o) * 1.0e-6;
+              fddl_sc[nsc] += lin_fddl_sc[tel][o] * pow (scpos[nsc], (double)o) * 1.0e-6;
+              fddl_ft[nsc] += lin_fddl_ft[tel][o] * pow (ftpos[nsc], (double)o) * 1.0e-6;
           }
           fddl[nsc]=0.5*(fddl_ft[nsc]+fddl_sc[nsc]);
       } /* End loop on rows */
