@@ -2851,7 +2851,8 @@ cpl_error_code gravi_vis_create_opddisp_sc (cpl_table * vis_SC,
   } else {
     cpl_msg_info (cpl_func, "Metrology zero calculation is disabled!");
   }
-
+    
+    
   /* Loop on tel and frames */
   for (cpl_size base = 0; base < nbase; base++) {
 	for (cpl_size row_sc = 0; row_sc < nrow_sc; row_sc ++) {
