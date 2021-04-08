@@ -2540,6 +2540,8 @@ cpl_error_code gravi_create_outlier_flag_sc (cpl_table * flux_SC,
 
     /* Normalise the chi2 by median in spectral direction */
     med = gravi_vector_median (vector, 50);
+    /* remove risk of divide by zero */
+    cpl_vector_add_scalar(med, cpl_vector_get_mean(med)*1e-9);
     cpl_vector_divide (vector, med);
     FREE (cpl_vector_delete, med);
 
@@ -2554,6 +2556,8 @@ cpl_error_code gravi_create_outlier_flag_sc (cpl_table * flux_SC,
     cpl_vector_subtract_scalar (vector, 1.0);
     gravi_vector_abs (vector);
     med = gravi_vector_median (vector, 50);
+    /* remove risk of divide by zero */
+    cpl_vector_add_scalar(med, cpl_vector_get_mean(med)*1e-9);
     cpl_vector_divide (vector, med);
     FREE (cpl_vector_delete, med);
     
