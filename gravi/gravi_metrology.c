@@ -2637,8 +2637,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     double dy_gvctu = gravi_pfits_get_gvctu_y (header);
     
     CPLCHECK_MSG ("Cannot get separation");
-    cpl_msg_info(cpl_func,"X and Y OFFSET from header = %.2f, %.2f mas",dx_gvctu,dy_gvctu);
-    cpl_msg_info(cpl_func,"X and Y OFFSET from gvctu  = %.2f, %.2f mas",dx_in,dy_in);
+    cpl_msg_info(cpl_func,"X and Y OFFSET from gvctu  = %.2f, %.2f mas",dx_gvctu,dy_gvctu);
+    cpl_msg_info(cpl_func,"X and Y OFFSET from header = %.2f, %.2f mas",dx_in,dy_in);
     
     /* Force separation to zero in SINGLE */
     if (gravi_pfits_get_mode (header) == MODE_SINGLE) {
@@ -2666,7 +2666,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                                         + opd_fc_shift;
         }
     }
-    CPLCHECK_MSG ("Cannot caculate OPD_FC_CORR");
+    CPLCHECK_MSG ("Cannot calculate OPD_FC_CORR");
     
     
     /*****************************************************************/
@@ -2856,7 +2856,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     /* Free memory */
     FREE (cpl_vector_delete, rec);
     FREE (cpl_vector_delete, sobj);
-    CPLCHECK_MSG ("Cannot caculate OPD_TEL_CORR (SX and SY)");
+    CPLCHECK_MSG ("Cannot calculate OPD_TEL_CORR (SX and SY)");
     
     /*----- Part II.b: Astigmatism -----*/
     
@@ -2922,7 +2922,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
             }
         }
     }
-    CPLCHECK_MSG ("Cannot caculate OPD_TEL_CORR (Astigmatism part)");
+    CPLCHECK_MSG ("Cannot calculate OPD_TEL_CORR (Astigmatism part)");
     
     /*****************************************************************/
     /*                    PART III:  PHASE_TELFC_CORR                  */
@@ -2965,7 +2965,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         }
     }
     
-    CPLCHECK_MSG ("Cannot caculate PHASE_TELFC_CORR");
+    CPLCHECK_MSG ("Cannot calculate PHASE_TELFC_CORR");
     
     /*****************************************************************
      *                    PART III:  PHASE_TELFC_CORR_XY
@@ -3125,7 +3125,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
             }
         }
     }
-    CPLCHECK_MSG ("Cannot caculate OPD_TELFC_CORR");
+    CPLCHECK_MSG ("Cannot calculate OPD_TELFC_CORR");
 
     cpl_vector * tmp_vector;
     tmp_vector = cpl_vector_new (nrow_met);
