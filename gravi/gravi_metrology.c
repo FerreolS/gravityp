@@ -2320,7 +2320,7 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
      * Copy data to ensure they are of type DOUBLE
      *    volts[nrow][ndiode] 
      */
-     
+    
     double** volts = cpl_malloc (nrow_met * sizeof(double*));
     cpl_array ** volts_array = cpl_table_get_data_array (metrology_table,"VOLT");
     for (cpl_size row = 0; row < nrow_met; row ++) {
@@ -2340,8 +2340,8 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
     gravi_table_new_column (vismet_table, "FLAG_FC", NULL, CPL_TYPE_INT);
     int * flag_fc = cpl_table_get_data_int (vismet_table, "FLAG_FC");
     
-    gravi_table_new_column (vismet_table, "OPD_FC", "m", CPL_TYPE_DOUBLE);
-    double * opd_fc = cpl_table_get_data_double (vismet_table, "OPD_FC");
+    /* allocate opd_fc space but not yet in vismet_table */
+    double * opd_fc = cpl_malloc (sizeof(double) * nrow_met * ntel);
 
     gravi_table_new_column (vismet_table, "PHASE_FC_TAC", "rad", CPL_TYPE_DOUBLE);
     double * phase_fc = cpl_table_get_data_double (vismet_table, "PHASE_FC_TAC");
@@ -2359,9 +2359,6 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
      
     gravi_table_new_column_array (vismet_table, "FLAG_TEL", NULL, CPL_TYPE_INT, ndiode);
     cpl_array ** flag_tel_array = cpl_table_get_data_array (vismet_table,"FLAG_TEL");
-    
-    gravi_table_new_column_array (vismet_table, "OPD_TEL", "m", CPL_TYPE_DOUBLE, ndiode);
-    cpl_array ** opd_tel_array = cpl_table_get_data_array (vismet_table,"OPD_TEL");
     
     gravi_table_new_column_array (vismet_table, "PHASE_TEL_TAC", "rad", CPL_TYPE_DOUBLE, ndiode);
     cpl_array ** phase_tel_array = cpl_table_get_data_array (vismet_table, "PHASE_TEL_TAC");
@@ -2386,7 +2383,6 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
         flag_tel_array[row] = cpl_array_wrap_int (flag_tel[row], ndiode);
         
         opd_tel[row]        = cpl_malloc (sizeof(double) * ndiode);
-        opd_tel_array[row]  = cpl_array_wrap_double (opd_tel[row], ndiode);
         
         phase_tel[row]        = cpl_malloc (sizeof(double) * ndiode);
         phase_tel_array[row]  = cpl_array_wrap_double (phase_tel[row], ndiode);
@@ -2524,7 +2520,8 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
     
     /* Free the pointer to pointer to data */
     FREELOOP (cpl_free, volts, nrow_met);
-    FREE (cpl_free, opd_tel);
+    FREELOOP (cpl_free, opd_tel, nrow_met*ntel);
+    FREE (cpl_free, opd_fc);
     FREE (cpl_free, phase_tel);
     FREE (cpl_free, flag_tel);
     FREE (cpl_free, coher_tel_ft);
@@ -2602,7 +2599,29 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         cpl_propertylist_update_double (header, qc_name,phase_diff);
         cpl_propertylist_set_comment (header, qc_name, "[rad] TAC and DRS phase difference");
     }
-        
+    
+
+    /************************************************/
+    /*              PART O:  OPD_TEL and OPD_FC     */
+    /************************************************/
+    /*   Populate the OPD_TEL and OPD_FC columns    */
+    /*  this is important to do it here because there should be an */
+    /*  agreement between these columns and the TAC or DRS choice above */
+    /*  also with the exact metrology value used */
+    /************************************************/
+    
+    gravi_table_new_column (vismet_table, "OPD_FC", "m", CPL_TYPE_DOUBLE);
+    double * opd_fc = cpl_table_get_data_double (vismet_table, "OPD_FC");
+    
+    gravi_table_init_column_array (vismet_table, "OPD_TEL", "m", CPL_TYPE_DOUBLE, ndiode);
+    double ** opd_tel = gravi_table_get_data_array_double (vismet_table, "OPD_TEL");
+    
+    for (cpl_size row = 0; row < nrow_met*ntel; row++) {
+        opd_fc[row]= - lambda_met_mean / CPL_MATH_2PI * phase_fc[row];
+        for (int diode = 0; diode < ndiode; diode++)
+            opd_tel[row][diode]= - lambda_met_mean / CPL_MATH_2PI * phase_fc[row];
+        }
+    
     
     /************************************************/
     /*              PART I:  OPD_FC_CORR            */
@@ -3478,6 +3497,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     /* Free the pointer to pointer to data */
     cpl_array_delete(northangle_array);
     FREE (cpl_free, phase_tel);
+    FREE (cpl_free, opd_tel);
     FREE (cpl_free, opd_tel_corr);
     FREE (cpl_free, opd_telfc_corr);
     FREE (cpl_free, phase_telfc_corr);
