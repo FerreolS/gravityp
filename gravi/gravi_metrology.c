@@ -2962,7 +2962,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     
     
     /* Compute PHASE_TELFC_CORR as (PHASE_TEL + OPD_TEL_CORR*2*pi/lambda) - (PHASE_FC + OPD_FC_CORR*2*pi/lambda) */
-    /* going to complex phasor notation and then back to opd */
+    /* going to complex phasor notation and then back to phase */
     double phi;
     double phifc;
     double complex phasor;
@@ -2987,7 +2987,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     CPLCHECK_MSG ("Cannot calculate PHASE_TELFC_CORR");
     
     /*****************************************************************
-     *                    PART III:  PHASE_TELFC_CORR_XY
+     *                    PART IV:  PHASE_TELFC_CORR_XY
      ****************************************************************
      * Calculation of the actual astimatism (smoothed over 5s)
      * Calculation of the separation of the 2 fibers (smoothed over 5s)
@@ -3140,7 +3140,6 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                 dphasor = cos_phi*real_mean + sin_phi*imag_mean + I * ( sin_phi*real_mean - cos_phi*imag_mean );
                 phase_telfc_corr[row*ntel+tel][diode] = (carg(dphasor)+phi_mean);
                 opd_telfc_corr[row*ntel+tel][diode] = phase_telfc_corr[row*ntel+tel][diode] / TWOPI * lambda_met_mean ;
-                opd_telfc_corr[row*ntel+tel][diode] += phase_telfc_corr_xy[row*ntel+tel][diode] / TWOPI * lambda_met_mean ;
             }
         }
     }
@@ -3371,7 +3370,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     
     
     /*****************************************************************/
-    /*                   PART IV:  OPD_TELFC_MCORR                   */
+    /*                   PART V:  OPD_TELFC_MCORR                   */
     /*****************************************************************/
     /* Average the four telescope diodes.                            */
     /* Note: could also be other combinations, e.g. the less noisy   */
@@ -3404,7 +3403,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     
 
     /*****************************************************************/
-    /*                   PART V:  OPD_TTPUP                          */
+    /*                   PART VI:  OPD_TTPUP                          */
     /*****************************************************************/
     /* Calculate the combined tip/tilt*pupil error                   */
     /*****************************************************************/
