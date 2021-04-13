@@ -2914,7 +2914,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
             for (int diode = 0; diode < ndiode; diode++) {
                 diodeang = myAtan(-rec_zd[tel][diode],-rec_az[tel][diode], &flag);  // [rad]
                 double parang3 = parang1 + (parang2-parang1) * row / nrow_met;  // [rad]
-                astang = (AstigmTheta - cpl_array_get_mean(northangle_array)) * (TWOPI/360.) - parang3 - diodeang ; // [rad]
+                astang = (AstigmTheta - cpl_array_get_double(northangle_array,tel,NULL)) * (TWOPI/360.) - parang3 - diodeang ; // [rad]
                 astradius = sqrt(rec_az[tel][diode]*rec_az[tel][diode] + rec_zd[tel][diode]*rec_zd[tel][diode]) / AstigmRadius; /* normalized */
                 astigm = (AstigmAmplitude*1e-9) * sqrt(6) * astradius * astradius * sin(2. * astang); // [m]
                 
