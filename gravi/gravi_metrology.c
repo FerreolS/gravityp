@@ -2987,19 +2987,22 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     CPLCHECK_MSG ("Cannot calculate PHASE_TELFC_CORR");
     
     /*****************************************************************
-     *                    PART IV:  PHASE_TELFC_CORR_XY
+     *                    PART IV:  OPD_TELFC_CORR_XY
      ****************************************************************
      * Calculation of the actual astimatism (smoothed over 5s)
      * Calculation of the separation of the 2 fibers (smoothed over 5s)
-     * Correction of both are stored in PHASE_TELFC_CORR_XY
+     * Correction of both are stored in OPD_TELFC_CORR_XY
+      * but calculations are all done in phase (hence the name phase_telfc_corr_xy)
      * Correction of both are subtracted to create PHASE_TELFC_CORR
      * PHASE_TELFC_CORR is wrapped around its mean value
      * PHASE_TELFC_CORR is then stored in OPD_TELFC_CORR
      *****************************************************************/
     
     
-    gravi_table_init_column_array (vismet_table, "PHASE_TELFC_CORR_XY", "rad", CPL_TYPE_DOUBLE, ndiode);
-    double ** phase_telfc_corr_xy = gravi_table_get_data_array_double (vismet_table, "PHASE_TELFC_CORR_XY");
+    gravi_table_init_column_array (vismet_table, "OPD_TELFC_CORR_XY", "rad", CPL_TYPE_DOUBLE, ndiode);
+    double ** phase_telfc_corr_xy = gravi_table_get_data_array_double (vismet_table, "OPD_TELFC_CORR_XY");
+    /* the variable name phase_telfc_corr_xy is used because calculated in phase */
+    /* It is changed at the last moment to an OPD (for verification by user) */
     
     int Nsmooth_astig = 2000; /* 8 seconds smoothing */
     int Nsmooth_sep   = 1250; /* 5 seconds smoothing */
@@ -3098,6 +3101,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                     phase_telfc_corr[row*ntel+tel][diode] -= TWOPI;
                 if (phase_telfc_corr[row*ntel+tel][diode] < -PI)
                     phase_telfc_corr[row*ntel+tel][diode] += TWOPI;
+            /* changing to opd value to store in fits file */
+                phase_telfc_corr_xy[row*ntel+tel][diode]*=lambda_met_mean /TWOPI ;
             }
         }
         
