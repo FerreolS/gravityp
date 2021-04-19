@@ -2219,9 +2219,9 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
                       double phase_reference = cpl_array_get_double(phase_array, met_date_row, NULL);
                 
                       /* get the phase from rtc */
-                      sprintf (name, "ESO OCS MET PH_FC%d_FT", tel+1);
+                      sprintf (name, "ESO OCS MET PH_T%d_D%d_FT", tel+1,diode+1);
                       double phase_rtc = cpl_propertylist_get_double (header, name);
-                      sprintf (name, "ESO OCS MET PH_FC%d_SC", tel+1);
+                      sprintf (name, "ESO OCS MET PH_T%d_D%d_SC", tel+1,diode+1);
                       phase_rtc = phase_rtc - cpl_propertylist_get_double (header, name);
                       double k_phase = phase_rtc - phase_reference;
                       /* get the 2 pi offset from rtc */
