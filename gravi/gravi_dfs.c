@@ -488,6 +488,14 @@ cpl_parameter * gravi_parameter_add_metrology (cpl_parameterlist *self)
 	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
 	cpl_parameterlist_append (self, p);
 
+	p = cpl_parameter_new_value ("gravity.metrology.use-met-rtc", CPL_TYPE_BOOL,
+                                 "Reduce metrology voltage with the real time algorithm\n"
+                   	   	   	   	 "instead of using the pipeline’s algorithm.",
+                                 "gravity.metrology", FALSE);
+	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "use-met-rtc");
+	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	cpl_parameterlist_append (self, p);
+
     return p;
 }
     

@@ -79,7 +79,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                                       cpl_table * vismet_table,
 				      gravi_data *static_param_data,
                                       cpl_propertylist * header,
-                                      int use_fiber_dxy);
+									  const cpl_parameterlist * parlist);
 
 cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
                                     cpl_table * vismet_table,
@@ -2555,7 +2555,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
                                       cpl_table * vismet_table,
                                       gravi_data * static_param_data,
                                       cpl_propertylist * header,
-                                      int use_fiber_dxy)
+									  const cpl_parameterlist * parlist)
 {
     gravi_msg_function_start(1);
     
@@ -2564,20 +2564,39 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     cpl_size nrow_met = cpl_table_get_nrow (metrology_table);
     char qc_name[100];
     
+    /* get the options */
+    int use_fiber_dxy = gravi_param_get_bool (parlist, "gravity.metrology.use-fiber-dxy");
+    int use_met_rtc = gravi_param_get_bool (parlist, "gravity.metrology.use-met-rtc");
+
     /* loading phase data
     * The choice is yours here. Either you use PHASE_FC_DRS and PHASE_TEL_DRS
     * Or you can use PHASE_FC_TAC and PHASE_TEL_TAC
     * DSR version is prefered by me
     */
-    
-    double * phase_fc = cpl_table_get_data_double (vismet_table, "PHASE_FC_DRS");
-    CPLCHECK_MSG ("Cannot get PHASE_FC_DRS from vismet_table");
-    
-    double * phase_fc_2 = cpl_table_get_data_double (vismet_table, "PHASE_FC_TAC");
-    CPLCHECK_MSG ("Cannot get PHASE_FC_TAC from vismet_table");
-    
-    double ** phase_tel = gravi_table_get_data_array_double (vismet_table, "PHASE_TEL_DRS");
-    CPLCHECK_MSG ("Cannot get PHASE_TEL_DRS from vismet_table");
+    double * phase_fc;
+	double * phase_fc_2;
+	double ** phase_tel;
+
+	if (use_met_rtc == 0) {
+        phase_fc = cpl_table_get_data_double (vismet_table, "PHASE_FC_DRS");
+        CPLCHECK_MSG ("Cannot get PHASE_FC_DRS from vismet_table");
+
+        phase_fc_2 = cpl_table_get_data_double (vismet_table, "PHASE_FC_TAC");
+        CPLCHECK_MSG ("Cannot get PHASE_FC_TAC from vismet_table");
+
+         phase_tel = gravi_table_get_data_array_double (vismet_table, "PHASE_TEL_DRS");
+        CPLCHECK_MSG ("Cannot get PHASE_TEL_DRS from vismet_table");
+    }
+    else{
+		phase_fc = cpl_table_get_data_double (vismet_table, "PHASE_FC_TAC");
+		CPLCHECK_MSG ("Cannot get PHASE_FC_DRS from vismet_table");
+
+		phase_fc_2 = cpl_table_get_data_double (vismet_table, "PHASE_FC_DRS");
+		CPLCHECK_MSG ("Cannot get PHASE_FC_TAC from vismet_table");
+
+		phase_tel = gravi_table_get_data_array_double (vismet_table, "PHASE_TEL_TAC");
+		CPLCHECK_MSG ("Cannot get PHASE_TEL_DRS from vismet_table");
+    }
     
     /* get the laser wavelength data */
     double lambda_met_mean =  gravi_pfits_get_met_wavelength_mean(header, metrology_table);
@@ -3778,8 +3797,7 @@ cpl_error_code gravi_metrology_reduce (gravi_data * data,
     CPLCHECK_MSG ("Cannot reduce metrology with TAC algo");
     
     /* Compute TEL vs FC corrections */
-    int use_fiber_dxy = gravi_param_get_bool (parlist, "gravity.metrology.use-fiber-dxy");
-    gravi_metrology_telfc (metrology_table, vismet_table, static_param_data, header, use_fiber_dxy);
+    gravi_metrology_telfc (metrology_table, vismet_table, static_param_data, header, parlist);
     CPLCHECK_MSG ("Cannot compute TEL vs FC reference");
     
     /* Add the VISMET_TABLE table to the gravi_data */
