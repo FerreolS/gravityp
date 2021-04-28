@@ -743,7 +743,7 @@ double gravi_pfits_get_northangle_acqcam (const cpl_propertylist * plist, int te
         {
         fangle = cpl_propertylist_get_double (plist, "ESO ACQ NORTHANG");
         cpl_msg_warning( cpl_func, "Using ACQ Camera North angle from header" );
-        cpl_msg_warning (cpl_func, "fangle = %.2f [deg] / NorthACQ in Y to X", fangle);
+        cpl_msg_warning (cpl_func, "North angle = %.2f [deg] / NorthACQ in Y to X", fangle);
     } else {
     if (cpl_propertylist_has (plist, "ESO INS SOBJ X") &&
         cpl_propertylist_has (plist, "ESO INS SOBJ Y") ) {
@@ -775,9 +775,9 @@ double gravi_pfits_get_northangle_acqcam (const cpl_propertylist * plist, int te
         if (fangle >= 180) fangle -= 360.0;
         if (fangle < -180) fangle += 360.0;
         
-        cpl_msg_info (cpl_func, "fangle = %.2f [deg] / NorthACQ in Y to X", fangle);
+        cpl_msg_info (cpl_func, "Acquisition camera North angle (tel=%i) = %.2f [deg] / NorthACQ in Y to X", (tel+1), fangle);
     } else {
-        cpl_msg_warning (cpl_func, "Cannot compute field angle: fangle = 0.0");
+        cpl_msg_warning (cpl_func, "Cannot compute North angle: fangle = 0.0");
     }
     }
     
