@@ -2754,7 +2754,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     
     /* get North angle array, unwrapped */
     double north_angle_tmp=gravi_pfits_get_northangle_acqcam (header, 0);
-    for (cpl_size tel=0;tel < 4; tel++)
+    cpl_array_set_double(northangle_array,0,north_angle_tmp);
+    for (cpl_size tel=1;tel < 4; tel++)
         {
             double north_angle_tmp2=gravi_pfits_get_northangle_acqcam (header, tel);
             if (north_angle_tmp2-north_angle_tmp >= 180) north_angle_tmp2 -= 360.0;
