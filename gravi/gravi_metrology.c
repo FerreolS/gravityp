@@ -2299,7 +2299,7 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
  * 
  * Wrapper to interface with the TAC real-time algorithm.
  * This fill new columns in the existing OI_VIS_MET table:
- * OPD_MET_FC and OPD_MET_TEL, as well as FLAGs...
+ * PHASE_FC_TAC and PHASE_TEL_TAC, as well as FLAGs...
  */
 /*----------------------------------------------------------------------------*/
 cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
@@ -2642,7 +2642,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     for (cpl_size row = 0; row < nrow_met*ntel; row++) {
         opd_fc[row]= - lambda_met_mean / CPL_MATH_2PI * phase_fc[row];
         for (int diode = 0; diode < ndiode; diode++)
-            opd_tel[row][diode]= - lambda_met_mean / CPL_MATH_2PI * phase_fc[row];
+            opd_tel[row][diode]= - lambda_met_mean / CPL_MATH_2PI * phase_tel[row][diode];
         }
     
     
