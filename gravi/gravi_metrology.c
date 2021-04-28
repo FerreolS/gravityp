@@ -2578,6 +2578,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
 	double ** phase_tel;
 
 	if (use_met_rtc == 0) {
+        cpl_msg_info (cpl_func,"Using DRS metrology algorithm");
+        
         phase_fc = cpl_table_get_data_double (vismet_table, "PHASE_FC_DRS");
         CPLCHECK_MSG ("Cannot get PHASE_FC_DRS from vismet_table");
 
@@ -2588,6 +2590,8 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         CPLCHECK_MSG ("Cannot get PHASE_TEL_DRS from vismet_table");
     }
     else{
+        cpl_msg_info (cpl_func,"Using RTC (TAC) metrology algorithm");
+        
 		phase_fc = cpl_table_get_data_double (vismet_table, "PHASE_FC_TAC");
 		CPLCHECK_MSG ("Cannot get PHASE_FC_DRS from vismet_table");
 
