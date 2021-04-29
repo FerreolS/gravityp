@@ -65,8 +65,6 @@ gravi_data * gravi_compute_biasmask (gravi_data * dark_map,
                                      int nflat,
                                      const cpl_parameterlist * params);
 
-gravi_data * gravi_compute_baseline (gravi_data * );
-
 gravi_data * gravi_compute_piezotf (gravi_data * data,
                                     const cpl_parameterlist * params);
 

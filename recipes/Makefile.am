@@ -39,7 +39,6 @@ plugin_LTLIBRARIES = gravity_dark.la \
 						gravity_postprocess.la \
 						gravity_viscal.la \
 						gravity_eop.la \
-						gravity_nab.la \
 						gravity_disp.la \
 						gravity_piezo.la \
 						gravity_vis_from_p2vmred.la \
@@ -101,11 +100,6 @@ gravity_biasmask_la_SOURCES = gravity_biasmask.c
 gravity_biasmask_la_LIBADD = $(LIBGRAVI) $(HDRL_LIBS)
 gravity_biasmask_la_LDFLAGS = -module -avoid-version $(HDRL_LDFLAGS)
 gravity_biasmask_la_DEPENDENCIES = $(LIBGRAVI) $(LIBHDRL)
-
-gravity_nab_la_SOURCES = gravity_nab.c 
-gravity_nab_la_LIBADD = $(LIBGRAVI) $(HDRL_LIBS)
-gravity_nab_la_LDFLAGS = -module -avoid-version $(HDRL_LDFLAGS)
-gravity_nab_la_DEPENDENCIES = $(LIBGRAVI) $(LIBHDRL)
 
 gravity_eop_la_SOURCES = gravity_eop.c 
 gravity_eop_la_LIBADD = $(LIBGRAVI) $(HDRL_LIBS)
