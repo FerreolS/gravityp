@@ -1,4 +1,69 @@
 ------------------------------------------
+2021/05/01 : New version 1.4.3
+------------------------------------------
+
+- Numerous changes to improve support for astrometry mode (PIPE-9427)
+- Store bad pixel map in P2VM if force-wave-ft-equal=TRUE (PIPE-9466)
+- Save astrored files when option astro-file is enabled (PIPE-9362)
+- New version of the pupil tracking algorithm (PIPE-9367)
+- Fix some failures in the gravity_p2vm recipe due to glitches
+  in the metrology (PIPE-9382)
+- Smooth the FT metrology over 3 DITs to avoid high residuals when 
+  fitting the FT phase metrology (PIPE-9394)
+- Use by default the median column bias subtraction (PIPE-9423)
+- Fix installation issue with XCode 12.4 under macOS.
+
+------------------------------------------
+2021/03/01 : New version 1.4.2
+------------------------------------------
+
+- Include new roof position after hw intervention (PIPE-9048)
+- Solved pipeline failure with Strehl=nan (PIPE-9123)
+- Solved acquisition camera reduction failure when FEED MODE is DUAL-STS (PIPE-9329)
+- Solved GRAVITY pipeline crash when reducing the acquisition camera (PIPE-9360)
+
+------------------------------------------
+2020/04/01 : New version 1.4.1
+------------------------------------------
+
+- Fix installation problem with XCode 12 in macOS.
+
+------------------------------------------
+2020/06/01 : New version 1.4.0
+------------------------------------------
+
+- New static calibration files after hardware intervention.
+- Fixed problem loading gravity_viscal workflow with Reflex 2.10.
+- New calibration file GRAVI_OI_WAVE has been added that contains the effective 
+  wavelength bandwidth of each pixel. Also the minimum and maximum wavelengths 
+  to extract have been added to the static calibration file.
+- Added new QC parameters P2VM_MAXCOHERENCE and P2VM_TRANS_AVG/MIN/MAX to test 
+  the goodness of the P2VM.
+- Fix problem with wrong PA calculation of the camera when On-Axis.
+- Fix issue with QC P2VM_MINCOHERENCE_SC13 parameter which was always 0 in low 
+  resolution mode.
+- Fix issue with QC P2VM_PHASERMS_AVG_SC parameter which was too high low 
+  resolution mode.
+- Improved bias removal by detecting and discarding the illuminated pixels.
+- Ported workflow to Python 3 stack.
+- Added parameter gravity.viscal.smoothing to control TF smoothing.
+- The gravity_vis recipe now averages all accepted frames identifying affected 
+  channels and frames by cosmic rays and discarding them.
+- Dark compuation now uses sigma clipping instead of median.
+- The DISP_MODEL static calibration has been updated after the physical change 
+  of the grism.
+- PHASE_REF is now fitted against 1/lambda, rather than lambda.
+- The gravi_piezo recipe now handles main delay lines response measurement.
+- The residuals of the DISP fit are now included in the products.
+- For FT data the 6th pixel is now included in the reduction.
+- New QC parameters to judge the quality of the metrology dark: QC DARKRANGE MET and QC DARKRMS MET.
+- Support for reduction of dual-field on-axis data.
+- Synchronisation of the acquisition camera with respect to the metrology values is now supported.
+- OPD_TELFC is now unwrap around median value.
+- gravity_p2vm recipe does not use first pixel in calculation of QC parameters in low res.
+- Metrology data is now smoothed.
+
+------------------------------------------
 2020/04/01 : New version 1.3.1
 ------------------------------------------
 
