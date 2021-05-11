@@ -1121,6 +1121,7 @@ cpl_mask * gravi_data_create_bias_mask (cpl_table * detector_table,
           int y0 = gravi_table_get_value (detector_table, names[n], reg, 1) - 1;
           cpl_matrix_set (xp, 0, n, x0);
           cpl_vector_set (yp, n, y0);
+          CPLCHECK_NUL ("Cannot get position from table");
       }
 
       /* Solve polynomial */
@@ -1130,10 +1131,12 @@ cpl_mask * gravi_data_create_bias_mask (cpl_table * detector_table,
       /* Evaluate polynomial for all column, and fill the pixels
          around expected spectrum position with 1 */
       for (cpl_size x = 0; x < nx ; x++) {
-          cpl_size y0 = cpl_polynomial_eval_1d (fit, x, NULL);
-          for (cpl_size y = y0-hw; y <= y0+hw; y++) {
-              cpl_mask_set (mask, x+1, y+1, CPL_BINARY_1);
-          }
+    	  cpl_size y0 = cpl_polynomial_eval_1d (fit, x, NULL);
+    	  for (cpl_size y = y0-hw; y <= y0+hw; y++) {
+    		  if (y >= 0 & y <ny)
+    			  cpl_mask_set (mask, x+1, y+1, CPL_BINARY_1);
+    		  CPLCHECK_NUL ("Cannot set mask");
+    	  }
       }
   } /* End loop on regions */
 
