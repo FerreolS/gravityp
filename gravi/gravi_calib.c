@@ -1823,10 +1823,12 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
 	  
 	    /* This is the FT */
 		cpl_table * dark_table = gravi_data_get_table (dark_map, GRAVI_IMAGING_DATA_FT_EXT);
+        cpl_table * std_table  = gravi_data_get_table (dark_map, GRAVI_IMAGING_ERR_FT_EXT);
 
         /* Verify it has one single row */
-		cpl_size n_row = cpl_table_get_nrow (dark_table);
+        cpl_size n_row = cpl_table_get_nrow (dark_table);
         cpl_ensure (n_row == 1, CPL_ERROR_ILLEGAL_INPUT, NULL);
+        cpl_ensure (n_row == cpl_table_get_nrow (std_table), CPL_ERROR_ILLEGAL_INPUT, NULL);
         
 		/* Get the rms factor for dark bad pixel threshold */
 		int bad_dark_factor = gravi_param_get_int (params, "gravity.calib.bad-dark-threshold");
@@ -1836,9 +1838,28 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
 		/* Get the dark rms and the mean dark */
 		double dark_rms = cpl_propertylist_get_double (dark_header, QC_DARKRMS_FT);
 		double dark_mean = cpl_propertylist_get_double (dark_header, QC_MEANDARK_FT);
+        CPLCHECK_NUL ("Cannot get QC");
+        
 
-		/* Compute the specified range are declared as bad pixels */
-		double range_max = dark_mean + bad_dark_factor * dark_rms;
+        /* Compute the specified range are declared as bad pixels */
+        double range_max = dark_mean + bad_dark_factor * dark_rms;
+        cpl_msg_info (cpl_func,"FT threshold on mean value = %f",range_max);
+        
+        /* Get the min std to declare pixel as bad */
+        double std_min = 1e-3;
+        
+        /* Get the max std to declare pixel as bad */
+        cpl_size npix = cpl_table_get_column_depth (dark_table, "PIX");
+        cpl_array * std_array  = cpl_table_get_data_array (std_table, "PIX")[0];
+        cpl_vector * std_vector = cpl_vector_new (npix);
+        for (cpl_size pix = 0; pix < npix; pix++) {
+            cpl_vector_set (std_vector, pix, cpl_array_get (std_array, pix, NULL));
+        }
+        cpl_vector_sort (std_vector, CPL_SORT_ASCENDING);
+        /* use 21/24 percentil to include the rms of the metrology*/
+        cpl_size percentil = (int) npix*0.875;
+        double std_max = cpl_vector_get (std_vector, percentil)*(1+bad_dark_factor/10.0);
+        cpl_msg_info (cpl_func,"FT threshold on std value = %f",std_max);
 
 		/* Compute the number of bad pixel */
 		int count_bp_dark = 0;
@@ -1847,16 +1868,24 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
 		cpl_table * bad_table = cpl_table_extract (dark_table, 0, 1);
 
         /* Loop on pixels */
-        cpl_size npix = cpl_table_get_column_depth (dark_table, "PIX");
         cpl_array * dark_array = cpl_table_get_data_array (dark_table, "PIX")[0];
         cpl_array * bad_array  = cpl_table_get_data_array (bad_table, "PIX")[0];
 
         for (cpl_size pix = 0; pix < npix; pix++) {
             cpl_array_set (bad_array, pix, 0);
+            /* flag on the mean value of the dark */
             if (cpl_array_get (dark_array, pix, NULL) > range_max) {
                 cpl_array_set (bad_array, pix, BADPIX_DARK);
                 count_bp_dark ++;
+            } else if (cpl_array_get (std_array, pix, NULL) < std_min) {
+                cpl_array_set (bad_array, pix, BADPIX_DARK);
+                count_bp_dark ++;
+            } else if (cpl_array_get (std_array, pix, NULL) > std_max) {
+                cpl_array_set (bad_array, pix, BADPIX_DARK);
+                count_bp_dark ++;
+                cpl_msg_info(cpl_func,"Detected a bad FT pixel based on maximal variance");
             }
+                
         }
 
         /* Set QC parameter */
@@ -1865,7 +1894,8 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
 
         /* Set the badpixel map of FT in output data */
 		gravi_data_add_table (bad_map, NULL, GRAVI_IMAGING_DATA_FT_EXT, bad_table);
-        
+    
+      FREE (cpl_vector_delete, std_vector);
 	} /* End FT case */
     
     /* 
