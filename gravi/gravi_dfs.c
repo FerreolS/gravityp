@@ -704,8 +704,8 @@ cpl_error_code gravi_parameter_add_rejection (cpl_parameterlist *self, int isCal
     
     /* Flag to activate metrology zero calculation */
     p = cpl_parameter_new_value ("gravity.signal.use-met-zero", CPL_TYPE_BOOL,
-                                 "Flag to activate metrology zero calculation in OPD_DISP.\n "
-                                 "If disabled all metrology zeroes are set to zero.",
+                                 "Flag to add a constant value to OPD_DISP.\n "
+                                 "This constant value is taken from the header.",
                                  "gravity.signal", FALSE);
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "use-met-zero");
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
