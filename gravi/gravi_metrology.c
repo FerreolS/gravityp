@@ -1697,7 +1697,7 @@ cpl_error_code gravi_metrology_get_astig (cpl_propertylist * header, int gv,
         cpl_msg_info(cpl_func,"Using astigmatism parameters from header");
     } else
     {
-        cpl_msg_error (cpl_func,"The static calibration file is missing astigmatism values");
+        cpl_msg_warning (cpl_func,"The static calibration file is missing astigmatism values");
         return CPL_ERROR_NONE;
     }
     
