@@ -1883,7 +1883,7 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
             } else if (cpl_array_get (std_array, pix, NULL) > std_max) {
                 cpl_array_set (bad_array, pix, BADPIX_DARK);
                 count_bp_dark ++;
-                cpl_msg_info(cpl_func,"Detected a bad FT pixel based on maximal variance");
+                cpl_msg_warning(cpl_func,"Detected a bad FT pixel at position %lli based on its variance: %f", pix, cpl_array_get (std_array, pix, NULL));
             }
                 
         }
