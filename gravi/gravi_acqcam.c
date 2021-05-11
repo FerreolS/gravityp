@@ -230,9 +230,8 @@ cpl_error_code gravi_preproc_acqcam (gravi_data *output_data,
     }
 
 
-    /* Construct a mask of badpixels */
+    /* get image of badpixels */
     cpl_image * badpix_img = gravi_data_get_img (bad_map, GRAVI_IMAGING_DATA_ACQ_EXT);
-    cpl_mask * badpix_mask = cpl_mask_threshold_image_create (badpix_img, 0.5, 10000);
     CPLCHECK_MSG ("Cannot get BAD map for ACQ");
 
     /* Get the imagelist */
@@ -240,8 +239,20 @@ cpl_error_code gravi_preproc_acqcam (gravi_data *output_data,
     imglist = gravi_data_get_cube (input_data, GRAVI_IMAGING_DATA_ACQ_EXT);
     CPLCHECK_MSG ("Cannot get image for ACQ");
     
+    /* check for image size */
+    cpl_image *  image0 =   cpl_imagelist_get (imglist, 0);
+    if ( (cpl_image_get_size_x (image0) != cpl_image_get_size_x (badpix_img) ) ||
+         (cpl_image_get_size_y (image0) != cpl_image_get_size_y (badpix_img) ) ) {
+        gravi_msg_warning (cpl_func,"Cannot preproc the ACQCAM. Bad pixel mask does not have correct size.");
+        return CPL_ERROR_NONE;
+    }
+    
+    /* Construct a mask of badpixels */
+    cpl_mask * badpix_mask = cpl_mask_threshold_image_create (badpix_img, 0.5, 10000);
+    
     /* Allocate new memory */
     imglist = cpl_imagelist_duplicate (imglist);
+    
     
     /* 
      * Loop on images to cleanup-badpixels 
