@@ -599,14 +599,19 @@ cpl_error_code gravi_parameter_add_compute_snr (cpl_parameterlist *self)
     
     /* chi2r */
 	p = cpl_parameter_new_value ("gravity.signal.chi2r-threshold", CPL_TYPE_DOUBLE,
-                                 "Threshold in chi2r to declare a bad value ",
+                                 "Threshold in chi2r of the fringe-fit to declare\n "
+                                 "a bad value. This is usefull to detect outliers\n "
+								 "or cosmic in individual frames",
                                  "gravity.signal", 50.0);
 	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "chi2r-threshold");
 	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
 	cpl_parameterlist_append (self, p);
     
 	p = cpl_parameter_new_value ("gravity.signal.chi2r-sigma", CPL_TYPE_DOUBLE,
-                                 "Threshold in sigma of chi2r to declare a bad value ",
+                                 "Threshold in chi2r of the fringe-fit (in unit of the \n "
+								 "the std of chi2r in the spectral direction) to declare\n "
+                                 "a bad value. This is usefull to detect outliers\n "
+								 "or cosmic in individual frames",
                                  "gravity.signal", 100.0);
 	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "chi2r-sigma");
 	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
@@ -821,8 +826,8 @@ cpl_error_code gravi_parameter_add_compute_vis (cpl_parameterlist *self, int isC
                                 "With DIFFERENTIAL, the mean group-delay and mean\n "
                                 "phases are removed from the output VISPHI in the\n "
                                 "final OIFITS file. With ABSOLUTE, the VISPHI is\n "
-                                "kept unmodified. With SELF_VISPHI, the internal differential\n"
-                                "phase between each spectral channel and a common \n"
+                                "kept unmodified. With SELF_VISPHI, the internal differential\n "
+                                "phase between each spectral channel and a common \n "
                                 "reference channel is computed.\n",
                                 "gravity.vis", "AUTO", 4,
                                 "DIFFERENTIAL","ABSOLUTE","AUTO", "SELF_VISPHI");
@@ -841,7 +846,9 @@ cpl_error_code gravi_parameter_add_compute_vis (cpl_parameterlist *self, int isC
     
 	/* Number of bootstrap */
 	p = cpl_parameter_new_value ("gravity.vis.outlier-fraction-threshold", CPL_TYPE_DOUBLE,
-                                 "Flag channels with more than this fraction of outliers",
+                                 "Flag channels with more than this fraction of the frames\n "
+								 "affected by outliers or cosmics. These are typically detected\n "
+								 "with the thresholds options in chi2 of the fringe-fit.",
                                  "gravity.vis", 0.5);
 	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "outlier-fraction-threshold");
 	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
