@@ -3,6 +3,9 @@
 ------------------------------------------
 
 - Numerous changes to improve support for astrometry mode (PIPE-9427)
+- Fix failures in gravity_vis for old data (PIPE-9560, PIPE-9428)
+- Fix failures in gravity_dark and gravity_p2vm for data before 11/2019 (PIPE-9562)
+- Improve the detection of a hot pixel by using thresholds on the variance rather than mean (PIPE-9490)
 - Store bad pixel map in P2VM if force-wave-ft-equal=TRUE (PIPE-9466)
 - Save astrored files when option astro-file is enabled (PIPE-9362)
 - New version of the pupil tracking algorithm (PIPE-9367)
