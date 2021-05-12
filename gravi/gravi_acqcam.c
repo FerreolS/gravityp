@@ -215,7 +215,7 @@ cpl_error_code gravi_preproc_acqcam (gravi_data *output_data,
 
     /* Check if extension exist */
     if (!gravi_data_has_extension (input_data, GRAVI_IMAGING_DATA_ACQ_EXT)) {
-        gravi_msg_warning (cpl_func,"Cannot preproc the ACQCAM, not data in file");
+        gravi_msg_warning (cpl_func,"Cannot preproc the ACQCAM, no data in file");
         return CPL_ERROR_NONE;
     }
     if (!gravi_data_has_extension (bad_map, GRAVI_IMAGING_DATA_ACQ_EXT)) {
