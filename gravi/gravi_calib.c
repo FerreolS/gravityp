@@ -1858,7 +1858,7 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
         cpl_vector_sort (std_vector, CPL_SORT_ASCENDING);
         /* use 21/24 percentil to include the rms of the metrology*/
         cpl_size percentil = (int) npix*0.875;
-        double std_max = cpl_vector_get (std_vector, percentil)*(1+bad_dark_factor/10.0);
+        double std_max = cpl_vector_get (std_vector, percentil)*(1+bad_dark_factor/8.75);
         cpl_msg_info (cpl_func,"FT threshold on std value = %f",std_max);
 
 		/* Compute the number of bad pixel */
@@ -1877,13 +1877,14 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
             if (cpl_array_get (dark_array, pix, NULL) > range_max) {
                 cpl_array_set (bad_array, pix, BADPIX_DARK);
                 count_bp_dark ++;
+                cpl_msg_info(cpl_func,"Detected a bad FT pixel at position %lli based on its mean flux: %f ADU", pix, cpl_array_get (dark_array, pix, NULL));
             } else if (cpl_array_get (std_array, pix, NULL) < std_min) {
                 cpl_array_set (bad_array, pix, BADPIX_DARK);
                 count_bp_dark ++;
             } else if (cpl_array_get (std_array, pix, NULL) > std_max) {
                 cpl_array_set (bad_array, pix, BADPIX_DARK);
                 count_bp_dark ++;
-                cpl_msg_warning(cpl_func,"Detected a bad FT pixel at position %lli based on its variance: %f", pix, cpl_array_get (std_array, pix, NULL));
+                cpl_msg_warning(cpl_func,"Detected a bad FT pixel at position %lli based on its rms: %f ADU", pix, cpl_array_get (std_array, pix, NULL));
             }
                 
         }
