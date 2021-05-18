@@ -2152,8 +2152,23 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
           /* get the phase from rtc */
           sprintf (name, "ESO OCS MET PH_FC%d_FT", tel+1);
           double k_phase_ft = cpl_propertylist_get_double (header, name) - phase_reference_ft;
+          sprintf (name, "ESO ADD MET PH_FC%d_FT", tel+1);
+          if (cpl_propertylist_has(header, name))
+          {
+              /* if keyword in header, add 2 pi value to metrology FT -- dev use only  */
+              k_phase_ft += cpl_propertylist_get_int (header, name) * TWOPI;
+              cpl_msg_warning( cpl_func, "Adding to FC FT metrology %i 2pi rad from header", cpl_propertylist_get_int (header, name));
+          }
+              
           sprintf (name, "ESO OCS MET PH_FC%d_SC", tel+1);
           double k_phase_sc = cpl_propertylist_get_double (header, name) - phase_reference_sc;
+          sprintf (name, "ESO ADD MET PH_FC%d_SC", tel+1);
+          if (cpl_propertylist_has(header, name))
+          {
+              /* if keyword in header, add 2 pi value to metrology SC -- dev use only */
+              k_phase_sc += cpl_propertylist_get_int (header, name) * TWOPI;
+              cpl_msg_warning( cpl_func, "Adding to FC SC metrology %i 2pi rad from header", cpl_propertylist_get_int (header, name));
+          }
           
           /* get the 2 pi offset from rtc */
           k_phase_ft = floor(k_phase_ft/(2*M_PI)+0.5)*2*M_PI;
