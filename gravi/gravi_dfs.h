@@ -59,6 +59,7 @@
 #define GRAVI_DISP_VIS                      "DISP_VIS"
 #define GRAVI_PREPROC                       "PREPROC"
 #define GRAVI_SPECTRUM                      "SPECTRUM"
+#define GRAVI_SPECTRUM_ALIGNED              "SPECTRUM_ALIGNED"
 #define GRAVI_P2VMRED_SINGLE_CALIB          "SINGLE_CAL_P2VMRED"
 #define GRAVI_P2VMRED_SINGLE_SCIENCE        "SINGLE_SCI_P2VMRED"
 #define GRAVI_P2VMRED_DUAL_CALIB            "DUAL_CAL_P2VMRED"

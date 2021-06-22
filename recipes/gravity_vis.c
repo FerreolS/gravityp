@@ -715,6 +715,14 @@ static int gravity_vis(cpl_frameset * frameset,
         gravi_align_spectrum (preproc_data, wave_map, p2vm_map, GRAVI_DET_ALL);
 		CPLCHECK_CLEAN ("Cannot re-interpolate spectrum");
 
+		/* Option save the spectrum-aligned file */
+		if (gravi_param_get_bool (parlist,"gravity.dfs.spectrum-file")) {
+			gravi_data_save_new (preproc_data, frameset, NULL, filename_suffix,
+			                     parlist, current_frameset, frame,
+			                     "gravity_vis", NULL, GRAVI_SPECTRUM_ALIGNED);
+			CPLCHECK_CLEAN ("Cannot save the SPECTRUM_ALIGNED product");
+		}
+        
         /* Preproc the Acquisition Camera */
         if (gravi_param_get_bool (parlist,"gravity.test.reduce-acq-cam")) {
             gravi_preproc_acqcam (preproc_data, data, badpix_map);
