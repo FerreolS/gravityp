@@ -1107,6 +1107,15 @@ cpl_mask * gravi_data_create_bias_mask (cpl_table * detector_table,
   int nnames = 5;
   const char * names[] = {"LEFT","HALFLEFT","CENTER","HALFRIGHT","RIGHT"};
 
+  /* Check if these names exist */
+  for (int n = 0; n < nnames; n++) {
+	
+	if (cpl_table_has_column (detector_table, names[n]) == 0) {
+	  CPLCHECK_NUL ("Missing LEFT,HALFLEFT,CENTER,HALFRIGHT,RIGHT "
+					"column in detector table (old data?), use another bias-method");
+	}
+  }
+
   /* Prepare to fit the position from table */
   cpl_polynomial * fit = cpl_polynomial_new (1);
   cpl_matrix * xp = cpl_matrix_new (1,nnames);
