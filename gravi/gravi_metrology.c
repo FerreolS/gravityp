@@ -2755,6 +2755,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
             rec_zd[tel][diode] = gravi_metrology_get_posy (header, tel, diode); /* in [m] in order GV 1,2,3,4 */
         }
     }
+    CPLCHECK_MSG ("Cannot read metrology reciever position from MET_POS");
     
     /*----- PART II.a: Separation deprojection with acqcam correction -----*/
     
@@ -2768,14 +2769,17 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     cpl_array * northangle_array = cpl_array_new(4,CPL_TYPE_DOUBLE);
     
     /* get North angle array, unwrapped */
-    double north_angle_tmp=gravi_pfits_get_northangle_acqcam (header, 0);
-    cpl_array_set_double(northangle_array,0,north_angle_tmp);
+    double north_angle_tmp = gravi_pfits_get_northangle_acqcam (header, 0);
+    cpl_array_set_double (northangle_array,0,north_angle_tmp);
+    CPLCHECK_MSG ("Cannot get north angle");
+    
     for (cpl_size tel=1;tel < 4; tel++)
         {
-            double north_angle_tmp2=gravi_pfits_get_northangle_acqcam (header, tel);
+            double north_angle_tmp2 = gravi_pfits_get_northangle_acqcam (header, tel);
             if (north_angle_tmp2-north_angle_tmp >= 180) north_angle_tmp2 -= 360.0;
             if (north_angle_tmp2-north_angle_tmp < -180) north_angle_tmp2 += 360.0;
-            cpl_array_set_double(northangle_array,tel,north_angle_tmp2);
+            cpl_array_set_double (northangle_array,tel,north_angle_tmp2);
+            CPLCHECK_MSG ("Cannot get north angle for tel");
         }
     
     /* Vectors used in Julien's formula */
@@ -2787,6 +2791,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     cpl_array ** E_V = cpl_table_get_data_array (vismet_table,"E_V");
     cpl_array ** E_AZ = cpl_table_get_data_array (vismet_table,"E_AZ");
     cpl_array ** E_ZD = cpl_table_get_data_array (vismet_table,"E_ZD");
+    CPLCHECK_MSG ("Cannot get E_U, E_V, E_AZ, E_ZD");
     
     /* read the field fiber offset */
     double * field_dX = NULL;
@@ -2796,6 +2801,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         field_dX = cpl_table_get_data_double (vismet_table, "FIELD_FIBER_DX");
         field_dY = cpl_table_get_data_double (vismet_table, "FIELD_FIBER_DY");
     }
+    CPLCHECK_MSG ("Cannot get FIELD_FIBER_DX/DY");
     
     /* some debug messages */
     cpl_msg_info (cpl_func,"FE: E_U = [%g, %g, %g].", 
@@ -2833,6 +2839,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     } else {
         cpl_msg_info (cpl_func,"Using X/Y offset from gvctu");
     }
+    CPLCHECK_MSG ("Cannot get ESO FT KAL SEPTRK");
     
     /* Verbose about option before the loop */    
     cpl_msg_info (cpl_func,"Use fiber dxy is set to %s", use_fiber_dxy ? "TRUE" : "FALSE");
@@ -2850,12 +2857,14 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         
         /* compute the north angle on acqcam [deg] */
         northangle =  cpl_array_get_double(northangle_array,tel,NULL);
+        CPLCHECK_MSG ("Cannot get North Angle");
         
         /* If available, get average image scale on acqcam [mas/pix] */
         double scale = 0.0;
         sprintf (card,"ESO QC ACQ FIELD%d SCALE", tel+1);
         if (cpl_propertylist_has (header, card))
             scale = cpl_propertylist_get_double (header, card);
+        CPLCHECK_MSG ("Cannot get ACQ FIELD SCALE");
         
         for (cpl_size row = 0; row < nrow_met; row++) {
             

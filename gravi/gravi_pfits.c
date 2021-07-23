@@ -738,19 +738,23 @@ double gravi_pfits_get_drotoff (const cpl_propertylist * plist, int tel)
 double gravi_pfits_get_northangle_acqcam (const cpl_propertylist * plist, int tel)
 {
     double fangle = 0.0;
+
+    char name[90];
+    sprintf (name, "ESO INS DROTOFF%i", tel+1);
     
     if (cpl_propertylist_has(plist, "ESO ACQ NORTHANG"))
-        {
+    {
         fangle = cpl_propertylist_get_double (plist, "ESO ACQ NORTHANG");
         cpl_msg_warning( cpl_func, "Using ACQ Camera North angle from header" );
         cpl_msg_warning (cpl_func, "North angle = %.2f [deg] / NorthACQ in Y to X", fangle);
-    } else {
+    }
+    else
+    {
     if (cpl_propertylist_has (plist, "ESO INS SOBJ X") &&
-        cpl_propertylist_has (plist, "ESO INS SOBJ Y") ) {
+        cpl_propertylist_has (plist, "ESO INS SOBJ Y") &&
+        cpl_propertylist_has (plist, name)) {
         
         /* Angle of binary on ACQ image */
-        char name[90];
-        sprintf (name, "ESO INS DROTOFF%i", tel+1);
         double drottoff = cpl_propertylist_get_double (plist, name);
         
         /* Position angle of binary */
@@ -776,7 +780,9 @@ double gravi_pfits_get_northangle_acqcam (const cpl_propertylist * plist, int te
         if (fangle < -180) fangle += 360.0;
         
         cpl_msg_info (cpl_func, "Acquisition camera North angle (tel=%i) = %.2f [deg] / NorthACQ in Y to X", (tel+1), fangle);
-    } else {
+    }
+    else
+    {
         cpl_msg_warning (cpl_func, "Cannot compute North angle: fangle = 0.0");
     }
     }

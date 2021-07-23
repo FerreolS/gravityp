@@ -2225,6 +2225,9 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             rp = cpl_propertylist_get_double(header, name);
             CPLCHECK ("Cannot get rotation");
         }
+        else {
+            cpl_msg_info (cpl_func, "%s not in header, use %f", name, rp);
+        }
         
         /* Approx. position angle of the binary, left from top */ 
         double approx_PA = 270.-rp;
