@@ -2345,8 +2345,10 @@ cpl_error_code gravi_vis_create_lockratio_sc (cpl_table * vis_SC,
 /* -------------------------------------------------------------------------- */
 
 cpl_error_code gravi_vis_create_phaseref_sc (cpl_table * vis_SC,
-											 cpl_table * wavesc_table,
-											 cpl_table * waveft_table)
+					     cpl_table * wavesc_table,
+					     cpl_table * waveft_table,
+					     cpl_propertylist * header,
+					     const cpl_parameterlist * parlist)
 {
   gravi_msg_function_start(1);
   cpl_ensure_code (vis_SC,        CPL_ERROR_NULL_INPUT);
@@ -2380,10 +2382,21 @@ cpl_error_code gravi_vis_create_phaseref_sc (cpl_table * vis_SC,
 
   /* Variable for fit */
 
+  /* Create maxdeg as an option for user */
+  cpl_size mindeg = 0;
+  cpl_size maxdeg = gravi_param_get_int (parlist, "gravity.signal.phaseref-sc-maxdeg");
+
   /* FE 2019-08-01: proper imaging phase requires higher order phase reference */
-  cpl_size mindeg = 0, maxdeg = 3;  
+  // cpl_size mindeg = 0, maxdeg = 3;  
   /* SG 2019-08-07: trying order 2 and phase-calibration=FULL */
   /* cpl_size mindeg = 0, maxdeg = 2;  */
+
+  cpl_msg_info (cpl_func, "phaseref with polynomial mindeg=%i to maxdeg=%i", mindeg, maxdeg);
+  cpl_propertylist_update_int (header, "ESO QC PHASEREF_SC MINDEG", mindeg);
+  cpl_propertylist_set_comment (header, "ESO QC PHASEREF_SC MINDEG", "fit of FT phase");
+  cpl_propertylist_update_int (header, "ESO QC PHASEREF_SC MAXDEG", maxdeg);
+  cpl_propertylist_set_comment (header, "ESO QC PHASEREF_SC MAXDEG", "fit of FT phase");
+
   
   cpl_polynomial * fit = cpl_polynomial_new (1);
 

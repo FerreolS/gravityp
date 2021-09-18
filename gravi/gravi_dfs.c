@@ -249,7 +249,6 @@ cpl_parameter * gravi_parameter_add_profile (cpl_parameterlist *self)
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
     cpl_parameterlist_append (self, p);
     
-
     return p;
 }
 
@@ -634,8 +633,37 @@ cpl_error_code gravi_parameter_add_compute_snr (cpl_parameterlist *self)
 cpl_error_code gravi_parameter_add_compute_signal (cpl_parameterlist *self)
 {
     cpl_ensure_code (self, CPL_ERROR_NULL_INPUT);
-    // cpl_parameter *p;
+    cpl_parameter *p;
     
+    /* Maxdeg */
+    p = cpl_parameter_new_value ("gravity.signal.phaseref-sc-maxdeg", CPL_TYPE_INT,
+                                 "Maximum deg for the fit of PHASE_REF",
+                                 "gravity.signal", 3);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "phaseref-sc-maxdeg");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (self, p);
+    
+    /* Flag to activate metrology zero calculation */
+    p = cpl_parameter_new_value ("gravity.signal.use-met-zero", CPL_TYPE_BOOL,
+                                 "Flag to add a constant value to OPD_DISP.\n "
+                                 "This constant value is taken from the header.",
+                                 "gravity.signal", FALSE);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "use-met-zero");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (self, p);
+    
+    /* Flag to control the use of metrology in IMAGING_REF calculation */
+    p = cpl_parameter_new_enum  ("gravity.signal.imaging-ref-met", CPL_TYPE_STRING,
+                                 "Metrology source used for IMAGING_REF calculation:\n "
+                                 "Use fibre coupler metrology (FC);\n "
+                                 "Use fibre coupler metrology corrected from pupil motion (FC_CORR);\n "
+                                 "Use telescope metrology (TEL).",
+                                 "gravity.signal", "FC", 3,
+                                 "FC", "FC_CORR", "TEL");
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "imaging-ref-met");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (self, p);
+
     return CPL_ERROR_NONE;
 }
 
@@ -704,27 +732,6 @@ cpl_error_code gravi_parameter_add_rejection (cpl_parameterlist *self, int isCal
                                  "It raises the second bit (<<1) of column REJECTION_FLAG of SC",
                                  "gravity.signal", isCalib ? 0.8 : 0.1);
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "vfactor-min-sc");
-    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
-    cpl_parameterlist_append (self, p);
-    
-    /* Flag to activate metrology zero calculation */
-    p = cpl_parameter_new_value ("gravity.signal.use-met-zero", CPL_TYPE_BOOL,
-                                 "Flag to add a constant value to OPD_DISP.\n "
-                                 "This constant value is taken from the header.",
-                                 "gravity.signal", FALSE);
-    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "use-met-zero");
-    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
-    cpl_parameterlist_append (self, p);
-    
-    /* Flag to control the use of metrology in IMAGING_REF calculation */
-    p = cpl_parameter_new_enum  ("gravity.signal.imaging-ref-met", CPL_TYPE_STRING,
-                                 "Metrology source used for IMAGING_REF calculation:\n "
-                                 "Use fibre coupler metrology (FC);\n "
-                                 "Use fibre coupler metrology corrected from pupil motion (FC_CORR);\n "
-                                 "Use telescope metrology (TEL).",
-                                 "gravity.signal", "FC", 3,
-                                 "FC", "FC_CORR", "TEL");
-    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "imaging-ref-met");
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
     cpl_parameterlist_append (self, p);
 
