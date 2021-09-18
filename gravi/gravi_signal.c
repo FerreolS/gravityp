@@ -111,8 +111,9 @@ cpl_error_code gravi_vis_create_lockratio_sc (cpl_table * vis_SC,
 
 cpl_error_code gravi_vis_create_phaseref_sc (cpl_table * vis_SC,
                                              cpl_table * wave_table_sc,
-                                             cpl_table * wave_table_ft);
-
+                                             cpl_table * wave_table_ft,
+					     cpl_propertylist * header,
+					     const cpl_parameterlist * parlist);
 
 cpl_error_code gravi_vis_create_opddisp_sc (cpl_table * vis_SC,
                                             cpl_table * flux_SC,
@@ -2391,7 +2392,7 @@ cpl_error_code gravi_vis_create_phaseref_sc (cpl_table * vis_SC,
   /* SG 2019-08-07: trying order 2 and phase-calibration=FULL */
   /* cpl_size mindeg = 0, maxdeg = 2;  */
 
-  cpl_msg_info (cpl_func, "phaseref with polynomial mindeg=%i to maxdeg=%i", mindeg, maxdeg);
+  cpl_msg_info (cpl_func, "phaseref with polynomial mindeg=%lli to maxdeg=%lli", mindeg, maxdeg);
   cpl_propertylist_update_int (header, "ESO QC PHASEREF_SC MINDEG", mindeg);
   cpl_propertylist_set_comment (header, "ESO QC PHASEREF_SC MINDEG", "fit of FT phase");
   cpl_propertylist_update_int (header, "ESO QC PHASEREF_SC MAXDEG", maxdeg);
@@ -3244,10 +3245,10 @@ cpl_error_code gravi_compute_signals (gravi_data * p2vmred_data,
      CPLCHECK_MSG ("Cannot compute the GDELAYs");
 
      /* Compute the SELF_REF phase reference for SC (first) */
-     gravi_vis_create_phaseref_sc (vis_SC, oi_wavelengthsc, NULL);
+     gravi_vis_create_phaseref_sc (vis_SC, oi_wavelengthsc, NULL, p2vmred_header, parlist);
 	
      /* Compute the PHASE_REF reference for SC */
-     gravi_vis_create_phaseref_sc (vis_SC, oi_wavelengthsc, oi_wavelengthft);
+     gravi_vis_create_phaseref_sc (vis_SC, oi_wavelengthsc, oi_wavelengthft, p2vmred_header, parlist);
 
      /* Create the IMAGING_REF phase ref, need PHASE_REF */
      gravi_vis_create_imagingref_sc (vis_SC, oi_wavelengthsc, p2vmred_header, parlist);
