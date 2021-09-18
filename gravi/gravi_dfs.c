@@ -636,10 +636,10 @@ cpl_error_code gravi_parameter_add_compute_signal (cpl_parameterlist *self)
     cpl_parameter *p;
     
     /* Maxdeg */
-    p = cpl_parameter_new_value ("gravity.signal.phaseref-sc-maxdeg", CPL_TYPE_INT,
+    p = cpl_parameter_new_value ("gravity.signal.phase-ref-sc-maxdeg", CPL_TYPE_INT,
                                  "Maximum deg for the fit of PHASE_REF",
                                  "gravity.signal", 3);
-    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "phaseref-sc-maxdeg");
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "phase-ref-sc-maxdeg");
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
     cpl_parameterlist_append (self, p);
     

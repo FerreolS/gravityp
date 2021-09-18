@@ -2385,7 +2385,7 @@ cpl_error_code gravi_vis_create_phaseref_sc (cpl_table * vis_SC,
 
   /* Create maxdeg as an option for user */
   cpl_size mindeg = 0;
-  cpl_size maxdeg = gravi_param_get_int (parlist, "gravity.signal.phaseref-sc-maxdeg");
+  cpl_size maxdeg = gravi_param_get_int (parlist, "gravity.signal.phase-ref-sc-maxdeg");
 
   /* FE 2019-08-01: proper imaging phase requires higher order phase reference */
   // cpl_size mindeg = 0, maxdeg = 3;  
