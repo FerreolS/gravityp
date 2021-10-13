@@ -1901,7 +1901,6 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
         /* 
          * Loop on polarisations
          */
-        int npol_sc = gravi_pfits_get_pola_num (p2vmred_header, GRAVI_SC);
         for (int pol = 0; pol < npol_sc; pol++) {
             cpl_msg_info (cpl_func, "Start SC polarisation %d over %d",pol+1, npol_sc);
             
