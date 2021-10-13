@@ -946,7 +946,8 @@ cpl_image * gravi_create_profile_image (cpl_image * mean_img,
  * @brief Computes the spatial profile of each spectrum for
  * 	  	  optimal extraction purpose.
  * 
- * @param flats_data	The FLAT_RAW datas
+ * @param flats_data	The FLAT_RAW datas. Each of the flats has
+ *                      the shutter of only one telescope open
  * @param dark_map	 	The DARK calibration map
  * @param bad_map	    BAD calibration map
  * @param nflat  	    The number of FLAT file inputs
@@ -1046,7 +1047,7 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
             cpl_array_set(array_flux_FT, file, cpl_image_get_flux(cpl_imagelist_get(imglist_ft, file)));
         }
 
-        /* Collapse the FLAT files together */
+        /* Collapse the FLAT files for all telescopes together */
         cpl_image * flatft_img = cpl_imagelist_collapse_create (imglist_ft);
         cpl_imagelist_delete (imglist_ft);
 
@@ -1097,7 +1098,7 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
      */
     cpl_msg_info (cpl_func, "Computing the FLAT of SC");
     
-    /* Imagelist to store the collapsed FLATs */
+    /* Imagelist to store the collapsed FLATs with all telescopes */
 	cpl_imagelist * temp_imglist = cpl_imagelist_new ();
 
 	for (int file = 0; file < nflat; file++){
@@ -1125,14 +1126,14 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
 		CPLCHECK_NUL ("Error");
 	} /* End loop on FLATs*/
 
-    /* Collapse the FLATs together */
+    /* Collapse the FLATs for all telescopes together */
     cpl_image * allflat_img;
 	allflat_img = cpl_imagelist_collapse_create (temp_imglist);
 	FREE (cpl_imagelist_delete, temp_imglist);
 
 	CPLCHECK_NUL ("Cannot collapse FLATs");
 
-    /* Get the extension (illumated part) of the FLAT */
+    /* Get the extension (illumated part) of the combined FLAT */
     int * ext_dim = gravi_image_extract_dimension (allflat_img);
     int fullstartx = ext_dim[0] + det_startx - 2;
 
