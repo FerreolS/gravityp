@@ -383,7 +383,7 @@ double gravi_pfits_get_geoelev (const cpl_propertylist * plist)
 
 const char * gravi_pfits_get_feed (const cpl_propertylist * plist)
 {
-    const char * value = gravi_pfits_get_string_default (plist, "ESO ISS FEED MODE", "SINGLE-STS");
+    const char * value = gravi_pfits_get_string_default (plist, "ESO ISS FEED MODE", "SINGLE_STS");
     return value;
 }
 

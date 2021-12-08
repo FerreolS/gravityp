@@ -222,13 +222,6 @@ cpl_error_code gravi_preproc_acqcam (gravi_data *output_data,
         gravi_msg_warning (cpl_func,"Cannot preproc the ACQCAM, no badpixel in BAD");
         return CPL_ERROR_NONE;
     }
-    /* check the feed mode */
-    if ( !strcmp(gravi_pfits_get_feed (gravi_data_get_plist(input_data, GRAVI_PRIMARY_HDR_EXT)), "DUAL_STS") ) {
-        printf("WARNING\n");
-        gravi_msg_warning (cpl_func,"Cannot preproc the ACQCAM in DUAL_STS feed mode. AcqCam data is invalid in this context.");
-        return CPL_ERROR_NONE;
-    }
-
 
     /* get image of badpixels */
     cpl_image * badpix_img = gravi_data_get_img (bad_map, GRAVI_IMAGING_DATA_ACQ_EXT);
@@ -2056,7 +2049,17 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
     
     char qc_name[100];
     int ntel = 4;
-    
+
+    int sts_mode = 0;
+
+    /* check the feed mode */
+    if ( !strcmp(gravi_pfits_get_feed (header), "DUAL_STS") ) {
+        sts_mode = DUAL_STS;
+    }
+    else{
+        sts_mode = SINGLE_STS;
+    }
+
     /* Number of row */
     cpl_size nrow = cpl_imagelist_get_size (acqcam_imglist);
 
@@ -2280,7 +2283,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         }
         double fiber_ft_sc_x=fiber_xsc-fiber_xft;
         double fiber_ft_sc_y=fiber_ysc-fiber_yft;
-        
+
         /* Get the North position angle on the camera */
         double northangle = gravi_pfits_get_northangle_acqcam (header, tel);
         CPLCHECK ("Cannot get rotation");
@@ -2317,6 +2320,11 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             yFT = spot_y[tel] - sy + 1;
             xSC = xFT;
             ySC = yFT;
+        } else if (sts_mode == DUAL_STS) {
+            xFT = fiber_xft - sx + nsx*tel + 1;
+            yFT = fiber_yft - sy + 1;
+            xSC = fiber_xsc - sx + nsx*tel + 1;
+            ySC = fiber_ysc - sy + 1;
         } else {
             /* Pixel position of roof center on cut-out frame */
             /* Shift from full frame to cut-out */

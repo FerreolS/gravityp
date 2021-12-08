@@ -172,6 +172,9 @@ enum gravi_detector_type
 #define MODE_ONAXIS  1
 #define MODE_OFFAXIS 2
 
+#define SINGLE_STS 1
+#define DUAL_STS 2
+
 /* INSNAME_SC or INSNAME_FT. Deal with polar */
 #define INSNAME_FT_P1 "GRAVITY_FT_P1"
 #define INSNAME_FT_P2 "GRAVITY_FT_P2"
