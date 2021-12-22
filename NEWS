@@ -1,4 +1,12 @@
 ------------------------------------------
+2021/12/22 : New version 1.5.1
+------------------------------------------
+
+- Fixed reducing acquisition frames in wide field mode (PIPE-9864)
+- OCA rules updated to handle INS.MET.MODE (PIPE-9806)
+- Reflex OCA rules to distinguish between low and high FT detector gain (PIPE-8184)
+
+------------------------------------------
 2021/05/01 : New version 1.5.0
 ------------------------------------------
 
