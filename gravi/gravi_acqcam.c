@@ -2448,7 +2448,8 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             sprintf (qc_name, "ESO QC ACQ FIELD%i SCALE", tel+1);
             double sep = sqrt((ySC-yFT)*(ySC-yFT)+(xSC-xFT)*(xSC-xFT));
 	    /* FE 2019-10-31 in case separation could not  be measured, i.e. 0, then use default scale */
-            double pscale = sep ? rho_in/sep : scale;
+	    double pscale = scale;
+	    if (sts_mode != DUAL_STS) pscale = sep ? rho_in/sep : scale;
 	    /*            double pscale = sep ? rho_in/sep : 0.; */
             qc_val=pscale;
             cpl_msg_info (cpl_func, "%s = %f", qc_name, qc_val);
@@ -2579,7 +2580,8 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             double eft_sc_x = sqrt(exsc*exsc+exft*exft);
             double eft_sc_y = sqrt(eysc*eysc+eyft*eyft);
             double sep = sqrt(ft_sc_x*ft_sc_x+ft_sc_y*ft_sc_y);
-            double pscale = sep ? rho_in/sep : 0.;
+            double pscale = scale;
+	    if (sts_mode != DUAL_STS) pscale = sep ? rho_in/sep : 0.;
             double escale = 0.;
             if (sep) {
                 escale = rho_in/(sep*sep*sep)*
