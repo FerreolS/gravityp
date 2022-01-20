@@ -2521,7 +2521,29 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         cpl_msg_info (cpl_func, "%s = %f", qc_name, strehl_on_average);
         cpl_propertylist_update_double (o_header, qc_name, strehl_on_average);
         cpl_propertylist_set_comment (o_header, qc_name, "Average Strehl from stacked AcqCam images");
+
+
+        /* Adding Strehl for SC channel in wide mode (PIPE-9913) */
+        if (sts_mode == DUAL_STS) {
+            gravi_acq_measure_strehl(mean_img, xSC, ySC, scale, &strehl_on_average, header);
+	
+            /*
+             * JIRA PIPE-9123 : Pipeline faile with Strehl=NaN
+             * For 2017 AT data the spots jump up by 30 pixel and therefore are not
+             * catched in the subwindow around roof_pos , cut_out +/- 50 pixel
+            */
+            if (cpl_error_get_code() != CPL_ERROR_NONE  ) {
+               cpl_msg_info (cpl_func, "WARNING Filling STREHL SC due to NaN");
+               cpl_error_reset();
+               strehl_on_average = 0.0;
+            }
         
+            /* Update Strehl QC */
+            sprintf (qc_name, "ESO QC ACQ FIELD%i STREHLSC", tel+1);
+            cpl_msg_info (cpl_func, "%s = %f", qc_name, strehl_on_average);
+            cpl_propertylist_update_double (o_header, qc_name, strehl_on_average);
+            cpl_propertylist_set_comment (o_header, qc_name, "Average Strehl from stacked AcqCam images");
+        }
         /*----------------------------*/
         /* Now process frame by frame */
         /*----------------------------*/
