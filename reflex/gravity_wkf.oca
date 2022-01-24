@@ -328,16 +328,16 @@ product P2VM { PRO.CATG = "P2VM_WKF"; PRO.EXT="p2vm.fits";}
 action ACTION_SCIENCE_SINGLE
 {
 minRet = 0; maxRet = 1;
-select file as DARK from calibFiles where PRO.CATG == "DARK_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.DET2.SEQ1.DIT==DET2.SEQ1.DIT and inputFile.DET3.SEQ1.DIT==DET3.SEQ1.DIT and inputFile.INS.FDDL.WINDOW==INS.FDDL.WINDOW and (MJD-OBS <= 58940.0 or (inputFile.TPL.START==TPL.START and inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and ((inputFile.INS.MET.MODE is undefined and INS.MET.MODE is undefined) or (inputFile.INS.MET.MODE==INS.MET.MODE)) and inputFile.INSTRUME==INSTRUME;
+select file as DARK from calibFiles where PRO.CATG == "DARK_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.DET2.SEQ1.DIT==DET2.SEQ1.DIT and inputFile.DET3.SEQ1.DIT==DET3.SEQ1.DIT and inputFile.INS.FDDL.WINDOW==INS.FDDL.WINDOW and (MJD-OBS <= 58940.0 or (inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and ((inputFile.INS.MET.MODE is undefined and INS.MET.MODE is undefined) or (inputFile.INS.MET.MODE==INS.MET.MODE)) and inputFile.INSTRUME==INSTRUME;
 
 minRet = 1; maxRet = 1;
-select file as FLAT from calibFiles where PRO.CATG == "FLAT_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and (MJD-OBS <= 58940.0 or (inputFile.TPL.START==TPL.START and inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and inputFile.INSTRUME==INSTRUME;
+select file as FLAT from calibFiles where PRO.CATG == "FLAT_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and (MJD-OBS <= 58940.0 or (inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and inputFile.INSTRUME==INSTRUME;
 
 minRet = 1; maxRet = 1;
-select file as WAVE from calibFiles where PRO.CATG == "WAVE_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and (MJD-OBS <= 58940.0 or (inputFile.TPL.START==TPL.START and inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and inputFile.INSTRUME==INSTRUME;
+select file as WAVE from calibFiles where PRO.CATG == "WAVE_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and (MJD-OBS <= 58940.0 or (inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and inputFile.INSTRUME==INSTRUME;
 
 minRet = 1; maxRet = 1;
-select file as P2VM from calibFiles where PRO.CATG == "P2VM_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and (MJD-OBS <= 58940.0 or (inputFile.TPL.START==TPL.START and inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and inputFile.INSTRUME==INSTRUME;
+select file as P2VM from calibFiles where PRO.CATG == "P2VM_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and (MJD-OBS <= 58940.0 or (inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and inputFile.INSTRUME==INSTRUME;
 
 minRet = 0; maxRet = 1;
 select file as DISP_MODEL from calibFiles where PRO.CATG == "DISP_MODEL" and inputFile.INSTRUME==INSTRUME;
@@ -352,16 +352,16 @@ product SINGLE_SCI_VIS { PRO.CATG = "SINGLE_SCI_VIS"; PRO.EXT="single_sci_vis.fi
 action ACTION_CALIB_SINGLE
 {
 minRet = 0; maxRet = 1;
-select file as DARK from calibFiles where PRO.CATG == "DARK_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.DET2.SEQ1.DIT==DET2.SEQ1.DIT and inputFile.DET3.SEQ1.DIT==DET3.SEQ1.DIT and inputFile.INS.FDDL.WINDOW==INS.FDDL.WINDOW and (MJD-OBS <= 58940.0 or (inputFile.TPL.START==TPL.START and inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and ((inputFile.INS.MET.MODE is undefined and INS.MET.MODE is undefined) or (inputFile.INS.MET.MODE==INS.MET.MODE)) and inputFile.INSTRUME==INSTRUME;
+select file as DARK from calibFiles where PRO.CATG == "DARK_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.DET2.SEQ1.DIT==DET2.SEQ1.DIT and inputFile.DET3.SEQ1.DIT==DET3.SEQ1.DIT and inputFile.INS.FDDL.WINDOW==INS.FDDL.WINDOW and (MJD-OBS <= 58940.0 or (inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and ((inputFile.INS.MET.MODE is undefined and INS.MET.MODE is undefined) or (inputFile.INS.MET.MODE==INS.MET.MODE)) and inputFile.INSTRUME==INSTRUME;
 
 minRet = 1; maxRet = 1;
-select file as FLAT from calibFiles where PRO.CATG == "FLAT_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and (MJD-OBS <= 58940.0 or (inputFile.TPL.START==TPL.START and inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and inputFile.INSTRUME==INSTRUME;
+select file as FLAT from calibFiles where PRO.CATG == "FLAT_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and (MJD-OBS <= 58940.0 or (inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and inputFile.INSTRUME==INSTRUME;
 
 minRet = 1; maxRet = 1;
-select file as WAVE from calibFiles where PRO.CATG == "WAVE_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and (MJD-OBS <= 58940.0 or (inputFile.TPL.START==TPL.START and inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and inputFile.INSTRUME==INSTRUME;
+select file as WAVE from calibFiles where PRO.CATG == "WAVE_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and (MJD-OBS <= 58940.0 or (and inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and inputFile.INSTRUME==INSTRUME;
 
 minRet = 1; maxRet = 1;
-select file as P2VM from calibFiles where PRO.CATG == "P2VM_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and (MJD-OBS <= 58940.0 or (inputFile.TPL.START==TPL.START and inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and inputFile.INSTRUME==INSTRUME;
+select file as P2VM from calibFiles where PRO.CATG == "P2VM_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and (MJD-OBS <= 58940.0 or (inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and inputFile.INSTRUME==INSTRUME;
 
 minRet = 0; maxRet = 1;
 select file as DISP_MODEL from calibFiles where PRO.CATG == "DISP_MODEL" and inputFile.INSTRUME==INSTRUME;
@@ -376,16 +376,16 @@ product SINGLE_CAL_VIS { PRO.CATG = "SINGLE_CAL_VIS"; PRO.EXT="single_cal_vis.fi
 action ACTION_SCIENCE_DUAL
 {
 minRet = 0; maxRet = 1;
-select file as DARK from calibFiles where PRO.CATG == "DARK_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.DET2.SEQ1.DIT==DET2.SEQ1.DIT and inputFile.DET3.SEQ1.DIT==DET3.SEQ1.DIT and inputFile.INS.FDDL.WINDOW==INS.FDDL.WINDOW and (MJD-OBS <= 58940.0 or (inputFile.TPL.START==TPL.START and inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and ((inputFile.INS.MET.MODE is undefined and INS.MET.MODE is undefined) or (inputFile.INS.MET.MODE==INS.MET.MODE)) and inputFile.INSTRUME==INSTRUME;
+select file as DARK from calibFiles where PRO.CATG == "DARK_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.DET2.SEQ1.DIT==DET2.SEQ1.DIT and inputFile.DET3.SEQ1.DIT==DET3.SEQ1.DIT and inputFile.INS.FDDL.WINDOW==INS.FDDL.WINDOW and (MJD-OBS <= 58940.0 or (inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and ((inputFile.INS.MET.MODE is undefined and INS.MET.MODE is undefined) or (inputFile.INS.MET.MODE==INS.MET.MODE)) and inputFile.INSTRUME==INSTRUME;
 
 minRet = 1; maxRet = 1;
-select file as FLAT from calibFiles where PRO.CATG == "FLAT_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and (MJD-OBS <= 58940.0 or (inputFile.TPL.START==TPL.START and inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and inputFile.INSTRUME==INSTRUME;
+select file as FLAT from calibFiles where PRO.CATG == "FLAT_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and (MJD-OBS <= 58940.0 or (inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and inputFile.INSTRUME==INSTRUME;
 
 minRet = 1; maxRet = 1;
-select file as WAVE from calibFiles where PRO.CATG == "WAVE_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and (MJD-OBS <= 58940.0 or (inputFile.TPL.START==TPL.START and inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and inputFile.INSTRUME==INSTRUME;
+select file as WAVE from calibFiles where PRO.CATG == "WAVE_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and (MJD-OBS <= 58940.0 or (inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and inputFile.INSTRUME==INSTRUME;
 
 minRet = 1; maxRet = 1;
-select file as P2VM from calibFiles where PRO.CATG == "P2VM_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and (MJD-OBS <= 58940.0 or (inputFile.TPL.START==TPL.START and inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and inputFile.INSTRUME==INSTRUME;
+select file as P2VM from calibFiles where PRO.CATG == "P2VM_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and (MJD-OBS <= 58940.0 or (inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and inputFile.INSTRUME==INSTRUME;
 
 minRet = 0; maxRet = 1;
 select file as DISP_MODEL from calibFiles where PRO.CATG == "DISP_MODEL" and inputFile.INSTRUME==INSTRUME;
@@ -400,16 +400,16 @@ product DUAL_SCI_VIS { PRO.CATG = "DUAL_SCI_VIS"; PRO.EXT="dual_sci_vis.fits";}
 action ACTION_CALIB_DUAL
 {
 minRet = 0; maxRet = 1;
-select file as DARK from calibFiles where PRO.CATG == "DARK_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.DET2.SEQ1.DIT==DET2.SEQ1.DIT and inputFile.DET3.SEQ1.DIT==DET3.SEQ1.DIT and inputFile.INS.FDDL.WINDOW==INS.FDDL.WINDOW and (MJD-OBS <= 58940.0 or (inputFile.TPL.START==TPL.START and inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and ((inputFile.INS.MET.MODE is undefined and INS.MET.MODE is undefined) or (inputFile.INS.MET.MODE==INS.MET.MODE)) and inputFile.INSTRUME==INSTRUME;
+select file as DARK from calibFiles where PRO.CATG == "DARK_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and inputFile.DET2.SEQ1.DIT==DET2.SEQ1.DIT and inputFile.DET3.SEQ1.DIT==DET3.SEQ1.DIT and inputFile.INS.FDDL.WINDOW==INS.FDDL.WINDOW and (MJD-OBS <= 58940.0 or (inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and ((inputFile.INS.MET.MODE is undefined and INS.MET.MODE is undefined) or (inputFile.INS.MET.MODE==INS.MET.MODE)) and inputFile.INSTRUME==INSTRUME;
 
 minRet = 1; maxRet = 1;
-select file as FLAT from calibFiles where PRO.CATG == "FLAT_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and (MJD-OBS <= 58940.0 or (inputFile.TPL.START==TPL.START and inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and inputFile.INSTRUME==INSTRUME;
+select file as FLAT from calibFiles where PRO.CATG == "FLAT_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and (MJD-OBS <= 58940.0 or (inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and inputFile.INSTRUME==INSTRUME;
 
 minRet = 1; maxRet = 1;
-select file as WAVE from calibFiles where PRO.CATG == "WAVE_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and (MJD-OBS <= 58940.0 or (inputFile.TPL.START==TPL.START and inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and inputFile.INSTRUME==INSTRUME;
+select file as WAVE from calibFiles where PRO.CATG == "WAVE_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and (MJD-OBS <= 58940.0 or (inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and inputFile.INSTRUME==INSTRUME;
 
 minRet = 1; maxRet = 1;
-select file as P2VM from calibFiles where PRO.CATG == "P2VM_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and (MJD-OBS <= 58940.0 or (inputFile.TPL.START==TPL.START and inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and inputFile.INSTRUME==INSTRUME;
+select file as P2VM from calibFiles where PRO.CATG == "P2VM_WKF" and inputFile.INS.SPEC.RES==INS.SPEC.RES and inputFile.INS.POLA.MODE==INS.POLA.MODE and inputFile.FT.POLA.MODE==FT.POLA.MODE and (MJD-OBS <= 58940.0 or (inputFile.INS.DET3.GAIN==INS.DET3.GAIN)) and inputFile.INSTRUME==INSTRUME;
 
 minRet = 0; maxRet = 1;
 select file as DISP_MODEL from calibFiles where PRO.CATG == "DISP_MODEL" and inputFile.INSTRUME==INSTRUME;
