@@ -491,6 +491,7 @@ int gravi_calib_test(void){
 
 	cpl_parameterlist * parlist = cpl_parameterlist_new();
 
+	cpl_free (calib_data);
     /* Use static names (output_procatg.fits) */
     gravi_parameter_add_static_name (parlist);
 
@@ -730,7 +731,11 @@ int gravi_calib_test(void){
                                                       GRAVI_DET_ALL);
     
 	cpl_parameterlist_delete (paralist);
+	gravi_data_delete (profile_map);
+	gravi_data_delete (dark_map);
+	gravi_data_delete (badpix_data);
     gravi_align_spectrum (preproc_data, data_wave, p2vm_data, GRAVI_DET_ALL);
+	gravi_data_delete (data_wave);
 
     /* Move extensions from raw_data and delete it */
     gravi_data_move_ext (preproc_data, data, GRAVI_ARRAY_GEOMETRY_EXT);
@@ -757,6 +762,8 @@ int gravi_calib_test(void){
     /* Reduce the OPDC table */
 	test (gravi_compute_opdc_state (p2vm_reduced),
 			"gravi_compute_opdc_state :  ...", flag);
+    gravi_data_erase (p2vm_reduced, GRAVI_OPDC_EXT);
+
 
 	/* Reduce the metrology */
     /* Prepare gravi_data *static_param_data with the default focus data */
@@ -769,6 +776,8 @@ int gravi_calib_test(void){
     flag = gravi_metrology_reduce (p2vm_reduced, NULL, gravi_data_focus, NULL, parlist);
     //gravi_data_save_data (p2vm_reduced, "test_files/p2vm_reduced.fits", CPL_IO_CREATE);
     gravi_data_delete(gravi_data_focus);
+    //Delete unnecessary data to avoid too much memory consumption
+    gravi_data_erase (p2vm_reduced, GRAVI_METROLOGY_EXT);
 
 	gravi_parameter_add_compute_snr (parlist);
 	gravi_parameter_add_rejection (parlist, 0);
@@ -797,20 +806,19 @@ int gravi_calib_test(void){
 	cpl_msg_info (cpl_func, "Average the VIS averaged output");
 	gravi_data * oi_vis = NULL;
     cpl_size current_frame = 0;
+
+    //Delete unnecessary data to avoid too much memory consumption
+    gravi_data_erase (p2vm_reduced, GRAVI_FDDL_EXT);
+    gravi_data_erase (p2vm_reduced, GRAVI_OI_VIS_MET_EXT);
+
 	test_data(oi_vis, gravi_compute_vis (p2vm_reduced, parlist, &current_frame),
 				"gravi_vis_reduce in the SINGLE mode: Compute the squared, complex visibilities "
 												   "and the cloture phase...", flag);
 
 	if (COMPUTE_FILES) gravi_data_save_data (oi_vis, "test_files/vis_data.fits", CPL_IO_CREATE);
-    test = gravi_data_load (DATADIR_TEST "vis_data.fits");
-	gravi_data_delete (test);
+    gravi_data_save_data (p2vm_reduced, "p2vm_reduced.fits", CPL_IO_CREATE);
 	gravi_data_delete (oi_vis);
 	gravi_data_delete (p2vm_reduced);
-	gravi_data_delete (data_wave);
-	gravi_data_delete (badpix_data);
-	gravi_data_delete (dark_map);
-	gravi_data_delete (profile_map);
-	cpl_free (calib_data);
 	/* Temp */
 
 	cpl_frameset_delete (p2vm_frameset);
@@ -820,11 +828,6 @@ int gravi_calib_test(void){
 	cpl_parameterlist_delete (parlist);
 
 
-//	for (i = 0; i < 1; i++){
-//		gravi_data_delete (p2vm_reduce[i]);
-//	}
-//	cpl_free(p2vm_reduce);
-//	gravi_data_delete (oi_vis);
 	return flag;
 }
 
