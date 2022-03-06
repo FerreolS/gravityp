@@ -1360,9 +1360,7 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET,
   CPLCHECK_MSG("Cannot get data");
 
   /* Get MET data */
-    double * phase_met_fc         = cpl_table_get_data_double (vis_MET, "PHASE_FC_DRS");
   double * opd_met_fc           = cpl_table_get_data_double (vis_MET, "OPD_FC");
-  cpl_array ** phase_met_tel    = cpl_table_get_data_array (vis_MET, "PHASE_TEL_DRS");
   cpl_array ** opd_met_tel      = cpl_table_get_data_array (vis_MET, "OPD_TEL");
 
   double * opd_met_fc_corr        = cpl_table_get_data_double (vis_MET, "OPD_FC_CORR");
