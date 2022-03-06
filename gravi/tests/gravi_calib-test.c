@@ -816,7 +816,6 @@ int gravi_calib_test(void){
 												   "and the cloture phase...", flag);
 
 	if (COMPUTE_FILES) gravi_data_save_data (oi_vis, "test_files/vis_data.fits", CPL_IO_CREATE);
-    gravi_data_save_data (p2vm_reduced, "p2vm_reduced.fits", CPL_IO_CREATE);
 	gravi_data_delete (oi_vis);
 	gravi_data_delete (p2vm_reduced);
 	/* Temp */
