@@ -352,6 +352,7 @@ int gravi_utils_test(void){
 	test_data (p2vm, gravi_create_p2vm_table (detector_table, 10), "gravi_p2vm_new : "
 			"Create a p2vm table with 10 waves canal ...", flag);
 	cpl_table_delete (p2vm);
+	FREE(gravi_data_delete, profile_map);
 
 	/*
 	 * gravi_table_get_vector
@@ -369,6 +370,7 @@ int gravi_utils_test(void){
 			GRAVI_SPECTRUM_DATA_SC_EXT), 5,
             data_x), "gravi_table_get_vector : get the vector of the wave cal 5 from the column DATA10 ...", flag);
 	cpl_vector_delete (vector);
+	FREE(gravi_data_delete, spectrum_data);
 
 
 	/*
@@ -384,13 +386,11 @@ int gravi_utils_test(void){
 			"Remove the dark and extract the spectrum FT ...", flag);
 
 	cpl_parameterlist_delete (parlist);
+	FREE(gravi_data_delete, data);
 	FREE(cpl_table_delete, tableNew_ft);
 
-	FREE(gravi_data_delete, spectrum_data);
 	FREE(gravi_data_delete, badpix);
 	FREE(gravi_data_delete, dark_map);
-	FREE(gravi_data_delete, profile_map);
-	FREE(gravi_data_delete, data);
 
 	return flag;
 }
