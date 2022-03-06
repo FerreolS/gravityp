@@ -1146,7 +1146,7 @@ cpl_array * gravi_array_smooth (cpl_array * input_array, int DIT_smooth)
   cpl_ensure (input_array,     CPL_ERROR_NULL_INPUT, NULL);
   
   cpl_type type  = cpl_array_get_type (input_array);
-  cpl_size row, nrow = cpl_array_get_size ( input_array );
+  cpl_size nrow = cpl_array_get_size ( input_array );
     
   /* avoid segmentation fault if nrow < DIT_smooth */
    if (nrow-DIT_smooth*2-1<0) DIT_smooth=nrow/2;
