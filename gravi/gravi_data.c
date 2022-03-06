@@ -1218,10 +1218,29 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
   // cpl_imagelist_subtract_image (imglist, median_img);
   // CPLCHECK_MSG ("Cannot remove the median image");
       
-  /* Case --bias-option=MASKED_MEDIAN_PER_COLUMN */
-  if (  !strcmp (gravi_param_get_string_default (parlist,
-                 "gravity.preproc.bias-method","MEDIAN"),
-                 "MASKED_MEDIAN_PER_COLUMN")) {
+  const char * bias_method = gravi_param_get_string_default (parlist,
+                             "gravity.preproc.bias-method","AUTO");
+  // If bias_method is auto then verify the colums present in 
+  // the IMAGING_DETECTOR_SC extension. We check just for LEFT.
+  // It is assumed that HALFLEFT, CENTER, HALFRIGHT, RIGHT
+  // are also present in that case since they were added 
+  // together to the raw data.
+  // If those keywords are present then we use MASKED_MEDIAN_PER_COLUMN
+  // Otherwise we use MEDIAN
+  if (cpl_table_has_column(detector_table, "LEFT") )
+  {
+      bias_method = "MASKED_MEDIAN_PER_COLUMN";
+      cpl_msg_info (cpl_func, "New data format found. "
+          "Using MASKED_MEDIAN_PER_COLUMNM bias method");
+  }
+  else
+  {
+      bias_method = "MEDIAN";
+      cpl_msg_info (cpl_func, "Old data format found. "
+          "Using MEDIAN bias method");
+  }
+  /* Case --bias-method=MASKED_MEDIAN_PER_COLUMN */
+  if (  !strcmp (bias_method, "MASKED_MEDIAN_PER_COLUMN")) {
       
       /* gravi_msg_warning ("FIXME","Bias method MASKED_MEDIAN_PER_COLUMN is experimental"); */
 
@@ -1286,10 +1305,9 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
       FREE (cpl_mask_delete, mask);
   }
   /* Case HIGH spectral resolution and 
-   * --bias-option=MEDIAN_PER_COLUMN */
-  else if (  !strcmp(resolution, "HIGH") && !strcmp (gravi_param_get_string_default (parlist,
-                       "gravity.preproc.bias-method","MEDIAN"),
-                       "MEDIAN_PER_COLUMN")) {
+   * --bias-method=MEDIAN_PER_COLUMN */
+  else if (  !strcmp(resolution, "HIGH") && !strcmp (bias_method,
+      "MEDIAN_PER_COLUMN")) {
       /* TODO High - the n first lines of Image is bias
        * Use the median of the bias-pixel
        * per column !! not correct should do like for MED and LOW */
@@ -1370,8 +1388,7 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
   }
   /* Case LOW or MEDIUM spectral resolution
    * and --bias-method=MEDIAN_PER_COLUMN */
-  else if ( !strcmp (gravi_param_get_string_default (parlist,
-                     "gravity.preproc.bias-method","MEDIAN"),
+  else if ( !strcmp (bias_method,
                      "MEDIAN_PER_COLUMN")) {
     /* Low and Medium - the n_bias_line between
      * each region is bias. Use the median of the bias-pixel
