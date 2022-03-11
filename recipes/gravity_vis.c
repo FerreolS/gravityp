@@ -758,7 +758,7 @@ static int gravity_vis(cpl_frameset * frameset,
 
         /* Reduce the Acquisition Camera and delete data */
         if (gravi_param_get_bool (parlist,"gravity.test.reduce-acq-cam")) {
-            gravi_reduce_acqcam (p2vmred_data, preproc_data, static_param_data);
+            gravi_reduce_acqcam (p2vmred_data, preproc_data, sky_maps[isky], static_param_data);
         }
 
         /* Move extensions and delete preproc */

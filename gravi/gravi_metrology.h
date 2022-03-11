@@ -49,7 +49,8 @@ cpl_table * gravi_metrology_create (cpl_table * metrology_table,
 
 cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
                                     cpl_table * vismet_table,
-                                    cpl_propertylist * header);
+                                    cpl_propertylist * header,
+                                       const cpl_parameterlist * parlist);
 
 cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
                                     cpl_table * vismet_table,

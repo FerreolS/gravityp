@@ -175,6 +175,9 @@ enum gravi_detector_type
 #define SINGLE_STS 1
 #define DUAL_STS 2
 
+#define MET_BRIGHT 1
+#define MET_FAINT 2
+
 /* INSNAME_SC or INSNAME_FT. Deal with polar */
 #define INSNAME_FT_P1 "GRAVITY_FT_P1"
 #define INSNAME_FT_P2 "GRAVITY_FT_P2"
@@ -212,6 +215,8 @@ double gravi_pfits_get_oplzero (const cpl_propertylist * plist, int tel);
 double gravi_pfits_get_metfc_lockmjd (const cpl_propertylist * plist, int tel);
 double gravi_pfits_get_met_wavelength (const cpl_propertylist * plist);
 double gravi_pfits_get_met_wavelength_mean (const cpl_propertylist * plist, cpl_table * met_table);
+int gravi_pfits_get_met_mode (const cpl_propertylist * plist);
+cpl_vector * gravi_pfits_get_met_faint_params (const cpl_propertylist * plist);
 
 const char * gravi_pfits_get_start_sc (const cpl_propertylist * plist);
 const char * gravi_pfits_get_start_acqcam (const cpl_propertylist * plist);

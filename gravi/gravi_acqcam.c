@@ -430,7 +430,7 @@ cpl_error_code gravi_acq_measure_strehl(cpl_image * img, double x, double y,
     cpl_ensure_code (header,     CPL_ERROR_NULL_INPUT);
     cpl_ensure_code (pscale > 0, CPL_ERROR_ILLEGAL_INPUT);
 
-    cpl_size hw = 50;
+    cpl_size hw = 45;
     cpl_ensure_code (x > hw, CPL_ERROR_ILLEGAL_INPUT);
     cpl_ensure_code (y > hw, CPL_ERROR_ILLEGAL_INPUT);
 
@@ -2378,7 +2378,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             xSC = xSCguess;
         } else {
             /* Fiting succeeded: shift into full frame */
-            qc_val = xSC + sx - 1 - nsx*tel;
+            qc_val = xSC;
         }
         cpl_msg_info (cpl_func, "%s = %f", qc_name, qc_val);
         cpl_propertylist_update_double (o_header, qc_name, qc_val);
@@ -2391,7 +2391,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             ySC = ySCguess;
         } else {
             /* Fiting succeeded: shift into full frame */
-            qc_val =  ySC + sy -1;
+            qc_val =  ySC;
         }
         cpl_msg_info (cpl_func, "%s = %f", qc_name, qc_val);
         cpl_propertylist_update_double (o_header, qc_name, qc_val);
@@ -2411,7 +2411,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
         }
         
         /*--------------------------------------------------------*/
-        /* Add QC parameters for SC target position in mean image */
+        /* Add QC parameters for FT target position in mean image */
         /*--------------------------------------------------------*/
         
         sprintf (qc_name, "ESO QC ACQ FIELD%i FT_X", tel+1);
@@ -2421,7 +2421,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             xFT = xFTguess;
         } else {
             /* Fiting succeeded: shift into full frame */
-            qc_val = xFT + sx - 1 - nsx*tel;
+            qc_val = xFT;
         }
         cpl_msg_info (cpl_func, "%s = %f", qc_name, qc_val);
         cpl_propertylist_update_double (o_header, qc_name, qc_val);
@@ -2434,7 +2434,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
             yFT = yFTguess;
         } else {
             /* Fiting succeeded: shift into full frame */
-            qc_val =  yFT + sy -1;
+            qc_val =  yFT;
         }
         cpl_msg_info (cpl_func, "%s = %f", qc_name, qc_val);
         cpl_propertylist_update_double (o_header, qc_name, qc_val);
@@ -2697,6 +2697,7 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
 
 cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
                                     gravi_data * input_data,
+                                    gravi_data * sky_data,
                                     gravi_data * static_param_data)
 {
     gravi_msg_function_start(1);
@@ -2748,8 +2749,14 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
     /* Compute mean image */
     cpl_image * mean_img = cpl_imagelist_collapse_create (acqcam_imglist);
 
+    cpl_image * sky_img = gravi_data_get_img(sky_data, GRAVI_IMAGING_DATA_ACQ_EXT);
+
+    cpl_image_subtract(sky_img,mean_img);
+
+    cpl_image_multiply_scalar(sky_img, -1.0);
+
     /* Compute FIELD columns */
-    gravi_acqcam_field (mean_img, acqcam_imglist, header,
+    gravi_acqcam_field (sky_img, acqcam_imglist, header,
                         acqcam_table, o_header, static_param_data);
 
 	CPLCHECK_MSG ("Cannot reduce field images");
