@@ -1943,7 +1943,8 @@ cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
  *
  * @param metrology_table: input METROLOGY table
  * @param vismet_table: output OI_VIS_MET table
- * @param header:     corresponding HEADER
+ * @param header:     corresponding PRIMARY HEADER
+ * @param parlist  list of recipe options (including acq-correction-delay)
  *
  * Fill the VIS_MET table from the METROLOGY table with
  * the pipeline alorithm. The function creates the columns
@@ -1955,7 +1956,8 @@ cpl_error_code gravi_metrology_acq (cpl_table * visacq_table,
 
 cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
                                     cpl_table * vismet_table,
-                                    cpl_propertylist * header)
+                                    cpl_propertylist * header,
+                                    const cpl_parameterlist * parlist)
 {
     gravi_msg_function_start(1);
 	cpl_ensure_code (metrology_table, CPL_ERROR_NULL_INPUT);
@@ -1963,6 +1965,55 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
 	
 	int ntel = 4, ndiode = 4;
     char name[100];
+
+    double timer1_start=0;
+    double timer2_start=0;
+    double rate1=0;
+    double rate2=0;
+    double repeat1=0;
+    double repeat2=0;
+    
+    int smooth_faint = gravi_param_get_int(parlist, "gravity.metrology.smooth-faint");
+
+    double preswitch_delay = 1e3*gravi_param_get_int(parlist, "gravity.metrology.preswitch-delay");
+    double postswitch_delay = 1e3*gravi_param_get_int(parlist, "gravity.metrology.postswitch-delay");
+
+    if(gravi_pfits_get_met_mode(header)==MET_FAINT)
+    {
+        cpl_vector * faint_params = gravi_pfits_get_met_faint_params(header);
+
+        rate1 = 1e6*cpl_vector_get(faint_params,0);
+        repeat1 = cpl_vector_get(faint_params,1);
+        rate2 = 1e6*cpl_vector_get(faint_params,3);
+        repeat2 = cpl_vector_get(faint_params,4);
+
+        cpl_msg_debug(cpl_func,"ESO INS ANLO3 RATE1: %g",rate1);
+        cpl_msg_debug(cpl_func,"ESO INS ANLO3 REPEAT1: %g",repeat1);
+        cpl_msg_debug(cpl_func,"ESO INS ANLO3 TIMER1: %g",cpl_vector_get(faint_params,2));
+        cpl_msg_debug(cpl_func,"ESO INS ANLO3 RATE2: %g",rate2);
+        cpl_msg_debug(cpl_func,"ESO INS ANLO3 REPEAT2: %g",repeat2);
+        cpl_msg_debug(cpl_func,"ESO INS ANLO3 TIMER2: %g",cpl_vector_get(faint_params,5));
+
+
+
+        /* Get the TIME of the header reference phase */
+        /*const char * date = gravi_pfits_get_met_ph (header);*/
+        /* Convert to UNIX time */
+        double time_ref = 86400*(gravi_pfits_get_mjd(header) - gravi_convert_to_mjd ("1970-01-01T00:00:00"));
+        /* Timer start times relative to metrology table time */
+        timer1_start = 1e6*(cpl_vector_get(faint_params,2) - time_ref);
+        timer2_start = 1e6*(cpl_vector_get(faint_params,5) - time_ref);
+
+
+        cpl_msg_debug(cpl_func,"FAINT TIMER1 phase ref: %g",time_ref);
+        cpl_msg_debug(cpl_func,"FAINT TIMER1 start: %g",timer1_start);
+        cpl_msg_debug(cpl_func,"FAINT TIMER2 start: %g",timer2_start);
+        /*int * time_met = cpl_table_get_data_int (metrology_table, "TIME");*/
+
+        cpl_vector_delete(faint_params);
+    
+    }
+
 
     /* Parameters */
 	int ind_sintel_FT[4][4]={{0,2,4,6},
@@ -1995,7 +2046,7 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
      * First the Fiber coupler metrology
      * By 3 DITs (6ms)
      */
-    
+
     int DIT_smooth=1;
     
     cpl_msg_info (cpl_func,"Smoothing volts of the FC diodes by %d metrology DITS",DIT_smooth*2+1);
@@ -2010,17 +2061,65 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
         cpl_array * volts_smooth_array=gravi_array_smooth (volt_array, DIT_smooth);
         
         CPLCHECK_MSG ("Cannot smooth the metrology data");
-        
-        
-        for (cpl_size row = 0; row < nbrow_met; row ++)
-        cpl_array_set_float(raw_met[row],diode,cpl_array_get_double (volts_smooth_array, row, NULL) );
+
+        int prerow = 0;
+
+        if(gravi_pfits_get_met_mode(header)==MET_FAINT)
+        {
+            int DIT_smooth_faint = DIT_smooth * smooth_faint;
+
+            if (diode==64)
+                cpl_msg_info (cpl_func,"Smoothing faint time volts of the FC diodes by %d metrology DITS",DIT_smooth_faint*2+1);
+
+            cpl_array * volts_smooth_array_faint=gravi_array_smooth (volt_array, DIT_smooth_faint);
+
+            for (cpl_size row = 0; row < nbrow_met; row ++)
+            {
+                int time_met = cpl_table_get_int (metrology_table, "TIME", row, NULL);
+                if ( time_met > timer1_start - preswitch_delay && time_met < timer2_start+rate2*(repeat2-1) + postswitch_delay )
+                {   
+                    if (floor(1 + (time_met-timer1_start)/rate1)*rate1 + timer1_start - time_met < preswitch_delay || time_met - (floor((time_met-timer1_start)/rate1)*rate1 + timer1_start) < postswitch_delay)
+                    {
+                        if (prerow == 0)
+                            prerow = row-1;
+                        cpl_array_set_float(raw_met[row],diode,cpl_array_get_double (volts_smooth_array, prerow, NULL) );
+                    }
+                    else if (floor((time_met-timer1_start-postswitch_delay)/rate1) > (time_met-timer2_start)/rate2){
+                        prerow = 0;
+                        cpl_array_set_float(raw_met[row],diode,cpl_array_get_double (volts_smooth_array_faint, row, NULL) );
+                    }
+                    else if (floor(1 + (time_met-timer2_start)/rate2)*rate2 + timer2_start - time_met < preswitch_delay || time_met - (floor((time_met-timer2_start)/rate2)*rate2 + timer2_start) < postswitch_delay)
+                    {
+                        if (prerow == 0)
+                            prerow = row-1;
+                        cpl_array_set_float(raw_met[row],diode,cpl_array_get_double (volts_smooth_array_faint, prerow, NULL) );
+                    }
+                    else 
+                    {
+                        prerow = 0;
+                        cpl_array_set_float(raw_met[row],diode,cpl_array_get_double (volts_smooth_array, row, NULL) );
+                    }
+                }
+                else 
+                {
+                    cpl_array_set_float(raw_met[row],diode,cpl_array_get_double (volts_smooth_array, row, NULL) );
+                }
+            }
+
+            cpl_array_delete(volts_smooth_array_faint);
+        }
+        else
+        {
+            for (cpl_size row = 0; row < nbrow_met; row ++)
+            cpl_array_set_float(raw_met[row],diode,cpl_array_get_double (volts_smooth_array, row, NULL) );
+        }
         
         cpl_array_delete(volt_array);
         cpl_array_delete(volts_smooth_array);
         
     }
     
-    cpl_msg_info (cpl_func,"Smoothing volts of the TEL diodes done");
+    cpl_msg_info (cpl_func,"Smoothing volts of the FC diodes done");
         
     /*
      * Perform smoothing of the voltage values
@@ -2042,10 +2141,58 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
         cpl_array * volts_smooth_array=gravi_array_smooth (volt_array, DIT_smooth);
         
         CPLCHECK_MSG ("Cannot smooth the metrology data");
-        
-        
-        for (cpl_size row = 0; row < nbrow_met; row ++)
-        cpl_array_set_float(raw_met[row],diode,cpl_array_get_double (volts_smooth_array, row, NULL) );
+
+        int prerow = 0;
+
+        if(gravi_pfits_get_met_mode(header)==MET_FAINT)
+        {
+            int DIT_smooth_faint = DIT_smooth * smooth_faint;
+
+            if (diode==0)
+                cpl_msg_info (cpl_func,"Smoothing faint time volts of the TEL diodes by %d metrology DITS",DIT_smooth_faint*2+1);
+
+            cpl_array * volts_smooth_array_faint=gravi_array_smooth (volt_array, DIT_smooth_faint);
+
+            for (cpl_size row = 0; row < nbrow_met; row ++)
+            {
+                int time_met = cpl_table_get_int (metrology_table, "TIME", row, NULL);
+                if ( time_met > timer1_start - preswitch_delay && time_met < timer2_start+rate2*(repeat2-1) + postswitch_delay )
+                {   
+                    if (floor(1 + (time_met-timer1_start)/rate1)*rate1 + timer1_start - time_met < preswitch_delay || time_met - (floor((time_met-timer1_start)/rate1)*rate1 + timer1_start) < postswitch_delay)
+                    {
+                        if (prerow == 0)
+                            prerow = row-1;
+                        cpl_array_set_float(raw_met[row],diode,cpl_array_get_double (volts_smooth_array, prerow, NULL) );
+                    }
+                    else if (floor((time_met-timer1_start-postswitch_delay)/rate1) > (time_met-timer2_start)/rate2){
+                        prerow = 0;
+                        cpl_array_set_float(raw_met[row],diode,cpl_array_get_double (volts_smooth_array_faint, row, NULL) );
+                    }
+                    else if (floor(1 + (time_met-timer2_start)/rate2)*rate2 + timer2_start - time_met < preswitch_delay || time_met - (floor((time_met-timer2_start)/rate2)*rate2 + timer2_start) < postswitch_delay)
+                    {
+                        if (prerow == 0)
+                            prerow = row-1;
+                        cpl_array_set_float(raw_met[row],diode,cpl_array_get_double (volts_smooth_array_faint, prerow, NULL) );
+                    }
+                    else 
+                    {
+                        prerow = 0;
+                        cpl_array_set_float(raw_met[row],diode,cpl_array_get_double (volts_smooth_array, row, NULL) );
+                    }
+                }
+                else 
+                {
+                    cpl_array_set_float(raw_met[row],diode,cpl_array_get_double (volts_smooth_array, row, NULL) );
+                }
+            }
+
+            cpl_array_delete(volts_smooth_array_faint);
+        }
+        else
+        {
+            for (cpl_size row = 0; row < nbrow_met; row ++)
+            cpl_array_set_float(raw_met[row],diode,cpl_array_get_double (volts_smooth_array, row, NULL) );
+        }
         
         cpl_array_delete(volt_array);
         cpl_array_delete(volts_smooth_array);
@@ -3818,7 +3965,7 @@ cpl_error_code gravi_metrology_reduce (gravi_data * data,
     
     /* Reduce the metrology with the DRS algorithm, this 
      * creates the OI_VIS_MET table */
-    gravi_metrology_drs (metrology_table, vismet_table, header);
+    gravi_metrology_drs (metrology_table, vismet_table, header, parlist);
     CPLCHECK_MSG ("Cannot reduce metrology with DRS algo");
     
     /* Add the columns from TAC algorithm */

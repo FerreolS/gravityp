@@ -494,6 +494,31 @@ cpl_parameter * gravi_parameter_add_metrology (cpl_parameterlist *self)
 	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "use-met-rtc");
 	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
 	cpl_parameterlist_append (self, p);
+    
+    
+	p = cpl_parameter_new_value ("gravity.metrology.smooth-faint", CPL_TYPE_INT,
+                                 "Adds an additional factor to the smoothing of \n"
+                   	   	   	   	 "the metrology voltages in faint mode.",
+                                 "gravity.metrology", 1);
+	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "smooth-faint");
+	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	cpl_parameterlist_append (self, p);
+
+	p = cpl_parameter_new_value ("gravity.metrology.preswitch-delay", CPL_TYPE_INT,
+                                 "Delay where metrology values are ignored before\n"
+                   	   	   	   	 "laser brightness is switched in faint mode, ms.",
+                                 "gravity.metrology", 50);
+	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "preswitch-delay");
+	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	cpl_parameterlist_append (self, p);
+
+	p = cpl_parameter_new_value ("gravity.metrology.postswitch-delay", CPL_TYPE_INT,
+                                 "Delay where metrology values are ignored after\n"
+                   	   	   	   	 "laser brightness is switched in faint mode, ms.",
+                                 "gravity.metrology", 200);
+	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "postswitch-delay");
+	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	cpl_parameterlist_append (self, p);
 
     return p;
 }

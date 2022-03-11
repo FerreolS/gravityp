@@ -820,7 +820,8 @@ cpl_table * gravi_opds_calibration (cpl_table * spectrum_table,
 /*----------------------------------------------------------------------------*/
 
 cpl_error_code gravi_wave_compute_opds (gravi_data * spectrum_data,
-                                        cpl_table  * met_table)
+                                        cpl_table  * met_table,
+                                        const cpl_parameterlist * parlist)
 {
 	gravi_msg_function_start(1);
 	cpl_ensure_code (spectrum_data, CPL_ERROR_NULL_INPUT);
@@ -845,7 +846,7 @@ cpl_error_code gravi_wave_compute_opds (gravi_data * spectrum_data,
 	cpl_msg_info (cpl_func, "Compute the phase of MET_FC");
     
     cpl_table * vismet_table = gravi_metrology_create (met_table, spectrum_header);
-    gravi_metrology_drs (met_table, vismet_table, spectrum_header);
+    gravi_metrology_drs (met_table, vismet_table, spectrum_header, parlist);
     /* also apply the TAC reduction */
     gravi_metrology_tac(met_table, vismet_table, spectrum_header);
     

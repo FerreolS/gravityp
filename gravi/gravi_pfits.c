@@ -357,6 +357,58 @@ double gravi_pfits_get_met_wavelength (const cpl_propertylist * plist)
     return wavelength;
 }
 
+int gravi_pfits_get_met_mode (const cpl_propertylist * plist)
+{
+    const char * value = gravi_pfits_get_string_default (plist, "ESO INS MET MODE","ON");
+
+    if ( !strcmp(value, "FAINT") ) {
+        return MET_FAINT;
+    }
+    else{
+        return MET_BRIGHT;
+    }
+
+}
+
+/*-----------------------------------------------------------------------------*/
+/**
+ * @brief Extract metrology faint settings
+ * @param plist    The input header
+ * @return A new cpl_vector with the parameters
+ */
+/*-----------------------------------------------------------------------------*/
+
+cpl_vector * gravi_pfits_get_met_faint_params (const cpl_propertylist * plist)
+{
+    char * faint_keys[]={"ESO INS ANLO3 RATE1",\
+                        "ESO INS ANLO3 REPEAT1",\
+                        "ESO INS ANLO3 TIMER1",\
+                        "ESO INS ANLO3 RATE2",\
+                        "ESO INS ANLO3 REPEAT2",\
+                        "ESO INS ANLO3 TIMER2"};
+
+    cpl_vector * faint_params = cpl_vector_new(sizeof(faint_keys)/sizeof(faint_keys[0]));
+
+    cpl_vector_fill(faint_params, 0.0);
+
+    for(int i=0;i<sizeof(faint_keys)/sizeof(faint_keys[0]);i++)
+    {
+        cpl_errorstate prestate = cpl_errorstate_get();
+        cpl_type par_type = cpl_propertylist_get_type(plist, faint_keys[i]);
+        if(par_type==CPL_TYPE_INT)
+        {
+            cpl_vector_set(faint_params,i,(double) cpl_propertylist_get_int(plist, faint_keys[i]));
+        }
+        else
+        {
+            cpl_vector_set(faint_params,i,cpl_propertylist_get_double(plist, faint_keys[i]));
+        }
+        cpl_ensure(cpl_errorstate_is_equal(prestate), cpl_error_get_code(), faint_params);
+    }
+
+    return faint_params;
+}
+
 double gravi_pfits_get_geolat (const cpl_propertylist * plist)
 {
     cpl_errorstate prestate = cpl_errorstate_get();
