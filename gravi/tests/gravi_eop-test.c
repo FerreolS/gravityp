@@ -31,7 +31,8 @@
 #include "gravi_eop.h"
 
 #define INVALID_IP_ADDR "0.0.0.0"
-#define ESO_FTP_IP_ADDR "ftp.eso.org"
+#define INVALID_EOP_HOSTNAME "nonexistinghostname.eso.org"
+#define ESO_FTP_HOSTNAME "ftp.eso.org"
 /*-----------------------------------------------------------------------------
                                    Static functions
  -----------------------------------------------------------------------------*/
@@ -82,7 +83,7 @@ static void gravi_eop_retrieve_eop_test(void)
         cpl_msg_debug(__func__, "Trying EOP data retrieval. Trial %d",itry);
         //Test retrieving the EOP data from the server
         raw_text = gravity_eop_download_finals2000A(
-                ESO_FTP_IP_ADDR,
+                ESO_FTP_HOSTNAME,
                 "/pub/dfs/pipelines/gravity/finals2000A.data",
                 &data_length);
         if(raw_text == NULL)
@@ -167,7 +168,7 @@ static void gravi_eop_retrieve_eop_test(void)
         free(raw_text);
     }
 
-    //Test with wrong HOST name
+    //Test with wrong IP
     gravity_eop_download_finals2000A(
             INVALID_IP_ADDR,
             "/products/eop/rapid/standard/finals2000A.data",
@@ -175,9 +176,17 @@ static void gravi_eop_retrieve_eop_test(void)
 
     cpl_test_error(CPL_ERROR_DATA_NOT_FOUND);
 
+    //Test with wrong HOST name
+    gravity_eop_download_finals2000A(
+            INVALID_EOP_HOSTNAME,
+            "/products/eop/rapid/standard/finals2000A.data",
+            &data_length);
+
+    cpl_test_error(CPL_ERROR_DATA_NOT_FOUND);
+
     //Test with wrong URL
     gravity_eop_download_finals2000A(
-            ESO_FTP_IP_ADDR,
+            ESO_FTP_HOSTNAME,
             "/invalid/path",
             &data_length);
 
@@ -185,7 +194,7 @@ static void gravi_eop_retrieve_eop_test(void)
 
     //Test with wrong path
     gravity_eop_download_finals2000A(
-            ESO_FTP_IP_ADDR,
+            ESO_FTP_HOSTNAME,
             "WRONG FORMATTED PATH",
             &data_length);
 
@@ -201,7 +210,7 @@ static void gravi_eop_retrieve_eop_test(void)
 
     //Test with NULL pointers
     gravity_eop_download_finals2000A(
-            ESO_FTP_IP_ADDR,
+            ESO_FTP_HOSTNAME,
             "/products/eop/rapid/standard/finals2000A.data",
             NULL);
 
@@ -215,7 +224,7 @@ static void gravi_eop_retrieve_eop_test(void)
     cpl_test_error(CPL_ERROR_NULL_INPUT);
 
     gravity_eop_download_finals2000A(
-            ESO_FTP_IP_ADDR,
+            ESO_FTP_HOSTNAME,
             NULL,
             &data_length);
 
