@@ -649,7 +649,7 @@ char * gravity_eop_download_finals2000A (const char * eop_host,
 
 int gravity_get_socket_connection (const char * host, const char * port)
 {
-    int sockfd;
+    int sockfd = 0;
     gravi_msg_function_start(0);
 
     /* IP Name resolution */
@@ -662,14 +662,17 @@ int gravity_get_socket_connection (const char * host, const char * port)
     hints.ai_socktype = SOCK_STREAM;
     /* Getting the list of IP addresses */
     cpl_msg_debug(cpl_func, "Getting IP");
-    struct addrinfo * addr_list ;
+    struct addrinfo * addr_list = NULL;
     // Note that after this call errno might be set to non-zero values.
     // Checking errno is only meaningful if getaddrinfo itself returns EAI_SYSTEM
     // https://stackoverflow.com/questions/60288845/getaddrinfo-returns-0-success-but-sets-errno-to-einval-22
-    if (getaddrinfo(host, port, &hints, &addr_list) != 0) {
+    int status = getaddrinfo(host, port, &hints, &addr_list);
+    if (status != 0) {
         cpl_error_set_message(cpl_func, CPL_ERROR_DATA_NOT_FOUND,
             "Couldn't get address for host");
-        freeaddrinfo(addr_list);
+        if (addr_list != NULL) {
+            freeaddrinfo(addr_list);
+        }
         return 0;
     }
 
@@ -700,11 +703,15 @@ int gravity_get_socket_connection (const char * host, const char * port)
     {
         cpl_error_set_message(cpl_func, CPL_ERROR_DATA_NOT_FOUND,
             "Couldn't connect to the host");
-        freeaddrinfo(addr_list);
+        if (addr_list != NULL) {
+            freeaddrinfo(addr_list);
+        }
         return 0;
     }
 
-    freeaddrinfo(addr_list);
+    if (addr_list != NULL) {
+        freeaddrinfo(addr_list);
+    }
 
     gravi_msg_function_exit(0);
     return sockfd;
