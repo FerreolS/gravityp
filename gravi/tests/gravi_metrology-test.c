@@ -199,6 +199,7 @@ int gravi_metrology_test(void){
 
     FREE(cpl_propertylist_delete, propertylist  );
     gravi_data_delete(gravi_data_focus);
+    gravi_data_delete(gravi_data_astig);
 
  return flag;
 }
