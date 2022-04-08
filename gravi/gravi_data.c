@@ -239,31 +239,31 @@ cpl_error_code gravi_data_check_savetypes (cpl_propertylist * hdr, cpl_table * o
 gravi_data * gravi_data_duplicate (const gravi_data *self)
 {
     gravi_msg_function_start(1);
-	cpl_ensure (self, CPL_ERROR_NULL_INPUT, NULL);
-	
-	gravi_data * copy = gravi_data_new(0);
+    cpl_ensure (self, CPL_ERROR_NULL_INPUT, NULL);
+
+    gravi_data * copy = gravi_data_new(0);
     copy->nb_ext = self->nb_ext;
-	
+
     if (self->primary_hdr) {
         cpl_propertylist_delete (copy->primary_hdr);
-    	copy->primary_hdr = cpl_propertylist_duplicate(self->primary_hdr);
+        copy->primary_hdr = cpl_propertylist_duplicate(self->primary_hdr);
     } else {
         cpl_msg_warning (cpl_func,"a data without header shall not exist");
     }
-	
-	CPLCHECK_NUL ("Cannot duplicate header");
+
+    CPLCHECK_NUL ("Cannot duplicate header");
 
     for (int i = 0; i < copy->nb_ext ; i++){
-    	if (self->exts_hdrs[i])
-    		copy->exts_hdrs[i] = cpl_propertylist_duplicate(self->exts_hdrs[i]);
-    	if (self->exts_tbs[i]) {
-    		copy->exts_tbs[i] = cpl_table_duplicate(self->exts_tbs[i]);
-			gravi_data_check_savetypes (copy->exts_hdrs[i], copy->exts_tbs[i]);
-		}
-    	if (self->exts_imgl[i])
-    		copy->exts_imgl[i] = cpl_imagelist_duplicate(self->exts_imgl[i]);
-		
-		CPLCHECK_NUL ("Cannot duplicate extension");
+        if (self->exts_hdrs[i])
+            copy->exts_hdrs[i] = cpl_propertylist_duplicate(self->exts_hdrs[i]);
+        if (self->exts_tbs[i]) {
+            copy->exts_tbs[i] = cpl_table_duplicate(self->exts_tbs[i]);
+            gravi_data_check_savetypes (copy->exts_hdrs[i], copy->exts_tbs[i]);
+        }
+        if (self->exts_imgl[i])
+            copy->exts_imgl[i] = cpl_imagelist_duplicate(self->exts_imgl[i]);
+
+        CPLCHECK_NUL ("Cannot duplicate extension");
     }
 
     gravi_msg_function_exit(1);
