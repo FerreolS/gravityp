@@ -36,4 +36,3 @@ jobs:
           tags: ${{ secrets.DOCKER_HUB_USERNAME }}/gravitypipeline:${{ env.BRANCH }}
           build-args: |
             BRANCH=${{ env.BRANCH }}
-
