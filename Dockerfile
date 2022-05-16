@@ -8,5 +8,3 @@ RUN cd $HOME && wget -nv https://github.com/FerreolS/gravityp/archive/refs/heads
     mv -f gravityp-$BRANCH/gravi/*.{h,c} gravity-kit-1.5.0-6/gravity-1.5.0/gravi/. &&\
     mv -f gravityp-$BRANCH/recipes/*.c gravity-kit-1.5.0-6/gravity-1.5.0/recipes/. &&\
     cd gravity-kit-1.5.0-6/gravity-1.5.0/ && make && make install && make clean
-
-
