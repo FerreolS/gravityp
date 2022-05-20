@@ -2638,7 +2638,7 @@ gravi_imagelist_filter_cosmicrays (cpl_imagelist * imglist,
     */
 
     /* compare MAD and sample variance */
-    cpl_image_subtract_image (std_img, mad_img);
+    cpl_image_subtract (std_img, mad_img);
     cpl_image_get_mad(std_img,&tmad);
     tmad *= CPL_MATH_STD_MAD * threshold_factor;
 
@@ -2650,7 +2650,8 @@ gravi_imagelist_filter_cosmicrays (cpl_imagelist * imglist,
         /* building badpixel map */
         cpl_mask * bpm = cpl_mask_new (nx, ny);
 
-        cpl_image * diff = cpl_image_subtract_create( std_img, frame);
+        cpl_image * diff = cpl_image_duplicate(std_img);
+        cpl_image_subtract ( diff, frame);
         cpl_mask_threshold_image ( bpm, diff, -tmad, +tmad, CPL_BINARY_0);
         cpl_mask * oldbpm = cpl_image_set_bpm(frame,bpm);
         FREE ( cpl_mask_delete, oldbpm);
