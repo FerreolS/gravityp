@@ -2550,6 +2550,96 @@ gravi_data * gravi_compute_piezotf (gravi_data * data,
     return piezo_tf;
 }
 
+
+
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Filter blinking pixel and filter cosmic ray from the image list
+ *
+ * @param imglist  The input/output imagelist
+ *
+ * @param threshold_factor factor used to threshold outliers
+ *
+ * @return The collapsed image or NULL on error case.
+ *
+ * \exception CPL_ERROR_NULL_INPUT no raw_data as input
+ *
+ * The outliers are detected by comparing mad and std for each pixels.
+ * Outliers are flagged  in the badpixel map of each frame.
+ * 
+ * As it is based on temporal static of each pixels, all frames should be taken 
+ * in exactly the same conditions.
+ */
+/*----------------------------------------------------------------------------*/
+
+
+cpl_error_code *
+gravi_imagelist_filter_cosmicrays (cpl_imagelist * imglist,
+                                    double          threshold_factor)
+{
+    gravi_msg_function_start(0);
+    cpl_ensure(imglist        != NULL, CPL_ERROR_NULL_INPUT,          NULL);
+    cpl_ensure(threshold_factor > 0.0, CPL_ERROR_ILLEGAL_INPUT,       NULL);
+
+    const cpl_size    nframe       = cpl_imagelist_get_size(imglist);
+    const cpl_image * img      = cpl_imagelist_get_const(imglist, 0);
+    const cpl_size    nx       = cpl_image_get_size_x(img);
+    const cpl_size    ny       = cpl_image_get_size_y(img);
+    cpl_image * mean_img = NULL;
+    double tmad;
+    /* mean_img = cpl_image_new (nx,ny,CPL_TYPE_DOUBLE);*/
+    cpl_imagelist * imglistbuff = cpl_imagelist_duplicate(imglist);
+    /* Compute MEDIAN */
+    cpl_image * median_img = cpl_imagelist_collapse_median_create (imglistbuff);
+
+    /* Compute MAD */
+	cpl_imagelist_subtract_image (imglistbuff, median_img);
+    cpl_image * mad_img = cpl_imagelist_collapse_median_create (imglistbuff);
+    cpl_image_multiply_scalar (mad_img, CPL_MATH_STD_MAD);
+
+    /* Compute sample VARIANCE */
+    cpl_imagelist_power (imglistbuff, 2.0);
+    cpl_image * std_img = cpl_imagelist_collapse_create (imglistbuff);
+    cpl_image_multiply_scalar (std_img, nframe / (nframe - 1.0));
+    cpl_image_power(std_img,0.5);
+
+    FREE ( cpl_imagelist_delete, imglistbuff);
+
+    /* should we use a single imglist?
+    We power back the data, because we are working in-place
+    cpl_imagelist_power (imglist, 0.5);
+    cpl_imagelist_add_image (imglist, median_img);
+    */
+
+    /* compare MAD and sample variance */
+    cpl_image_subtract_image (std_img, mad_img);
+    cpl_image_get_mad(std_img,&tmad);
+    tmad *= CPL_MATH_STD_MAD * threshold_factor;
+
+
+    /* Loop on frames */
+    for (cpl_size f = 0; f < nframe; f++) {
+        cpl_image  * frame = cpl_imagelist_get (imglist, f);
+
+        /* building badpixel map */
+        cpl_mask * bpm = cpl_mask_new (nx, ny);
+
+        cpl_image * diff = cpl_image_subtract_create( std_img, frame);
+        cpl_mask_threshold_image ( bpm, diff, -tmad, +tmad, CPL_BINARY_0);
+        cpl_mask * oldbpm = cpl_image_set_bpm(frame,bpm);
+        FREE ( cpl_mask_delete, oldbpm);
+        FREE ( cpl_image_delete, diff);
+
+    }
+
+    FREE ( cpl_image_delete, median_img);
+    FREE ( cpl_image_delete, mad_img);
+    FREE ( cpl_image_delete, std_img);
+    mean_img = cpl_imagelist_collapse_create (imglist);
+
+    gravi_msg_function_exit(0);
+    return CPL_ERROR_NONE;
+}
 /*----------------------------------------------------------------------------*/
 
 
