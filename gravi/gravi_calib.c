@@ -162,23 +162,44 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
 		/* Load the IMAGING_DATA table or image list */
 		cpl_imagelist * imglist = gravi_data_get_cube (raw_data, GRAVI_IMAGING_DATA_SC_EXT);
 
-		/* Compute the median image of the imagelist */
-		cpl_image * median_img = cpl_imagelist_collapse_sigclip_create (imglist, 5, 5, 0.6, CPL_COLLAPSE_MEDIAN_MEAN, NULL);
-		CPLCHECK_NUL ("Cannot compute the median dark");
+        cpl_image * median_img;
+        cpl_image * stdev_img;
+        if (FALSE){
+		    /* Compute the median image of the imagelist */
+		    median_img = cpl_imagelist_collapse_sigclip_create (imglist, 5, 5, 0.6, CPL_COLLAPSE_MEDIAN_MEAN, NULL);
+		    CPLCHECK_NUL ("Cannot compute the median dark");
 
-		/* Compute STD. We should see if we use sigma-clipping
-		 * or not for the collapse, it may change the bad pixel detection */
-		cpl_msg_info (cpl_func,"Compute std with imglist");
-		cpl_imagelist * temp_imglist = cpl_imagelist_duplicate (imglist);
-		cpl_imagelist_subtract_image (temp_imglist, median_img);
-		cpl_imagelist_power (temp_imglist, 2.0);
-		// cpl_image * stdev_img = cpl_imagelist_collapse_create (temp_imglist);
-		cpl_image * stdev_img = cpl_imagelist_collapse_sigclip_create (temp_imglist, 5, 5, 0.6,
-									       CPL_COLLAPSE_MEDIAN_MEAN, NULL);
-		FREE (cpl_imagelist_delete, temp_imglist);
-		cpl_image_power (stdev_img, 0.5);
-		CPLCHECK_NUL ("Cannot compute the STD of the DARK");
-		
+		    /* Compute STD. We should see if we use sigma-clipping
+		     * or not for the collapse, it may change the bad pixel detection */
+    		cpl_msg_info (cpl_func,"Compute std with imglist");
+	    	cpl_imagelist * temp_imglist = cpl_imagelist_duplicate (imglist);
+		    cpl_imagelist_subtract_image (temp_imglist, median_img);
+    		cpl_imagelist_power (temp_imglist, 2.0);
+	    	// cpl_image * stdev_img = cpl_imagelist_collapse_create (temp_imglist);
+		    stdev_img = cpl_imagelist_collapse_sigclip_create (temp_imglist, 5, 5, 0.6,
+    									       CPL_COLLAPSE_MEDIAN_MEAN, NULL);
+	    	FREE (cpl_imagelist_delete, temp_imglist);
+		    cpl_image_power (stdev_img, 0.5);
+		    CPLCHECK_NUL ("Cannot compute the STD of the DARK");
+        } else {
+            gravi_imagelist_filter_cosmicrays(imglist, 5.0);
+            /* Compute the median image of the imagelist */
+            cpl_mask *  blinking_map = gravi_imagelist_blinking_map_create (imglist);
+	    	median_img = cpl_imagelist_collapse_create (imglist);
+            cpl_mask * oldbpm = cpl_image_set_bpm (median_img, blinking_map);
+            FREE ( cpl_mask_delete, oldbpm);
+		    CPLCHECK_NUL ("Cannot compute the mean dark");
+
+    		cpl_msg_info (cpl_func,"Compute std with imglist");
+    		cpl_imagelist * temp_imglist = cpl_imagelist_duplicate (imglist);
+    		cpl_imagelist_subtract_image (temp_imglist, median_img);
+    		cpl_imagelist_power (temp_imglist, 2.0);
+    		// cpl_image * stdev_img = cpl_imagelist_collapse_create (temp_imglist);
+    		stdev_img = cpl_imagelist_collapse_create (temp_imglist);
+    		FREE (cpl_imagelist_delete, temp_imglist);
+    		cpl_image_power (stdev_img, 0.5);
+    		CPLCHECK_NUL ("Cannot compute the STD of the DARK");
+        }
 		/* Compute the QC parameters RMS and MEDIAN */
 		cpl_msg_info (cpl_func, "Compute QC parameters");
 		double mean_qc = cpl_image_get_median (median_img);
@@ -2017,6 +2038,7 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
 
         
 		/* Compute the number of bad pixel */
+		int count_bp_blinkdark = 0;
 		int count_bp_dark = 0;
 		int count_bp_rms = 0;
 		int count_bp_flat = 0;
@@ -2036,6 +2058,11 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
                    (dij < dark_min)) {
 				  flag += BADPIX_DARK;
 				  count_bp_dark ++;
+				  is_bad = 1;
+			  }
+              if (nv) {
+				  flag += BADPIX_BLINKDARK;
+				  count_bp_blinkdark ++;
 				  is_bad = 1;
 			  }
 			  /* ... and its variance */
@@ -2577,7 +2604,7 @@ cpl_error_code *
 gravi_imagelist_filter_cosmicrays (cpl_imagelist * imglist,
                                     double          threshold_factor)
 {
-    gravi_msg_function_start(0);
+    gravi_msg_function_start(1);
     cpl_ensure(imglist        != NULL, CPL_ERROR_NULL_INPUT,          NULL);
     cpl_ensure(threshold_factor > 0.0, CPL_ERROR_ILLEGAL_INPUT,       NULL);
 
@@ -2585,7 +2612,6 @@ gravi_imagelist_filter_cosmicrays (cpl_imagelist * imglist,
     const cpl_image * img      = cpl_imagelist_get_const(imglist, 0);
     const cpl_size    nx       = cpl_image_get_size_x(img);
     const cpl_size    ny       = cpl_image_get_size_y(img);
-    cpl_image * mean_img = NULL;
     double tmad;
     /* mean_img = cpl_image_new (nx,ny,CPL_TYPE_DOUBLE);*/
     cpl_imagelist * imglistbuff = cpl_imagelist_duplicate(imglist);
@@ -2635,10 +2661,58 @@ gravi_imagelist_filter_cosmicrays (cpl_imagelist * imglist,
     FREE ( cpl_image_delete, median_img);
     FREE ( cpl_image_delete, mad_img);
     FREE ( cpl_image_delete, std_img);
-    mean_img = cpl_imagelist_collapse_create (imglist);
 
-    gravi_msg_function_exit(0);
+    gravi_msg_function_exit(1);
     return CPL_ERROR_NONE;
+}
+
+cpl_mask *
+gravi_imagelist_blinking_map_create (cpl_imagelist * imglist){
+    gravi_msg_function_start(1);
+    cpl_ensure(imglist        != NULL, CPL_ERROR_NULL_INPUT,          NULL);
+
+    const cpl_size    nframe       = cpl_imagelist_get_size (imglist);
+    const cpl_image * img      = cpl_imagelist_get_const (imglist, 0);
+    const cpl_size    nx       = cpl_image_get_size_x (img);
+    const cpl_size    ny       = cpl_image_get_size_y (img);
+
+        /* building badpixel map */
+    cpl_mask * bpm_blink = cpl_mask_new (nx, ny);
+    cpl_mask * bpm_cr = cpl_mask_new (nx, ny);  
+    cpl_binary * bbpm_blink = cpl_mask_get_data (bpm_blink);
+
+    cpl_size nblink =0;
+    cpl_size ncosmic = 0;
+
+    /* Loop on the pixels */
+    for (cpl_size i = 0; i < nx * ny; i++) {
+        cpl_binary onebad =  CPL_BINARY_0;
+        /* Loop on frames */
+        for (cpl_size f = 0; f < nframe; f++) {
+            const cpl_image  * frame = cpl_imagelist_get_const (imglist, f);
+            const cpl_mask   * bpm  = cpl_image_get_bpm_const (frame);
+            const cpl_binary * bbpm = bpm ? cpl_mask_get_data_const (bpm) : NULL;
+
+            if (bbpm != NULL || bbpm[i]) {
+                
+                if (onebad){
+                    if (!bbpm_blink[i]) {
+                        ncosmic--;
+                    }
+                    bbpm_blink[i] = CPL_BINARY_1;
+                    nblink++;
+                } else {
+                    ncosmic++;
+                }
+                onebad =  CPL_BINARY_1;
+            }
+        }
+    }
+    cpl_msg_info (cpl_func,"Number of blinking pixels = %f ( %f \%)",nblink, nblink/nx * ny*100.0);
+    cpl_msg_info (cpl_func,"Number of cosmic ray pixels = %f ( %f \%)",ncosmic, ncosmic/(nx * ny * nframe)*100.0);
+    
+    gravi_msg_function_exit(1);
+    return bpm_blink;
 }
 /*----------------------------------------------------------------------------*/
 
