@@ -2060,6 +2060,7 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
 				  count_bp_dark ++;
 				  is_bad = 1;
 			  }
+             double mij = cpl_image_get (dark_img, i + 1, j + 1, &nv);
               if (nv) {
 				  flag += BADPIX_BLINKDARK;
 				  count_bp_blinkdark ++;
@@ -2646,13 +2647,15 @@ gravi_imagelist_filter_cosmicrays (cpl_imagelist * imglist,
     /* Loop on frames */
     for (cpl_size f = 0; f < nframe; f++) {
         cpl_image  * frame = cpl_imagelist_get (imglist, f);
-
+        double fmad;
         /* building badpixel map */
         cpl_mask * bpm = cpl_mask_new (nx, ny);
 
         cpl_image * diff = cpl_image_duplicate(std_img);
         cpl_image_subtract ( diff, frame);
-        cpl_mask_threshold_image ( bpm, diff, -tmad, +tmad, CPL_BINARY_0);
+        cpl_image_get_mad ( diff, &fmad );
+        
+        cpl_mask_threshold_image ( bpm, diff, -tmad*fmad, +tmad*fmad, CPL_BINARY_0);
         cpl_mask * oldbpm = cpl_image_set_bpm(frame,bpm);
         FREE ( cpl_mask_delete, oldbpm);
         FREE ( cpl_image_delete, diff);
