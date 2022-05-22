@@ -165,6 +165,8 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
         cpl_image * median_img;
         cpl_image * stdev_img;
         if (FALSE){
+            gravi_imagelist_filter_cosmicrays(imglist, 5.0);
+            CPLCHECK_NUL ("Cannot filter cosmic rays");
 		    /* Compute the median image of the imagelist */
 		    median_img = cpl_imagelist_collapse_sigclip_create (imglist, 5, 5, 0.6, CPL_COLLAPSE_MEDIAN_MEAN, NULL);
 		    CPLCHECK_NUL ("Cannot compute the median dark");
@@ -183,6 +185,7 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
 		    CPLCHECK_NUL ("Cannot compute the STD of the DARK");
         } else {
             gravi_imagelist_filter_cosmicrays(imglist, 5.0);
+            CPLCHECK_NUL ("Cannot filter cosmic rays");
             /* Compute the median image of the imagelist */
             cpl_mask *  blinking_map = gravi_imagelist_blinking_map_create (imglist);
 	    	median_img = cpl_imagelist_collapse_create (imglist);
@@ -2618,17 +2621,23 @@ gravi_imagelist_filter_cosmicrays (cpl_imagelist * imglist,
     cpl_imagelist * imglistbuff = cpl_imagelist_duplicate(imglist);
     /* Compute MEDIAN */
     cpl_image * median_img = cpl_imagelist_collapse_median_create (imglistbuff);
-
-    /* Compute MAD */
-	cpl_imagelist_subtract_image (imglistbuff, median_img);
-    cpl_image * mad_img = cpl_imagelist_collapse_median_create (imglistbuff);
-    cpl_image_multiply_scalar (mad_img, CPL_MATH_STD_MAD);
-
+   cpl_msg_info (cpl_func,"Size imglist = %d x %d x %d" , nx, ny, nframe);
     /* Compute sample VARIANCE */
+	cpl_imagelist_subtract_image (imglistbuff, median_img);
     cpl_imagelist_power (imglistbuff, 2.0);
     cpl_image * std_img = cpl_imagelist_collapse_create (imglistbuff);
-    cpl_image_multiply_scalar (std_img, nframe / (nframe - 1.0));
+    /*cpl_image_multiply_scalar (std_img, nframe / (nframe - 1.0));*/
     cpl_image_power(std_img,0.5);
+    
+    /* Compute MAD */
+    cpl_imagelist_power (imglistbuff, 0.5); /* equiv to abs(imglistbuff - median_img) *.
+    /* Compute MAD 
+    for (cpl_size f = 0; f < nframe; f++) {
+        cpl_image  * frame = cpl_imagelist_get (imglistbuff, f);
+        cpl_image_abs( frame);
+    }*/
+    cpl_image * mad_img = cpl_imagelist_collapse_median_create (imglistbuff);
+    cpl_image_multiply_scalar (mad_img, CPL_MATH_STD_MAD);
 
     FREE ( cpl_imagelist_delete, imglistbuff);
 
@@ -2642,25 +2651,43 @@ gravi_imagelist_filter_cosmicrays (cpl_imagelist * imglist,
     cpl_image_subtract (std_img, mad_img);
     cpl_image_get_mad(std_img,&tmad);
     tmad *= CPL_MATH_STD_MAD * threshold_factor;
+    cpl_mask * blinkmap = cpl_mask_threshold_image_create ( std_img, -tmad, +tmad);
+    cpl_msg_info (cpl_func,"Number of blinking pixels = %d ", cpl_mask_count ( blinkmap));
+    cpl_msg_info (cpl_func,"MAD = %f ", tmad);
+    cpl_mask * oldmask = cpl_image_set_bpm(median_img,blinkmap);
+    FREE ( cpl_mask_delete, oldmask);
 
+    cpl_size blink=0;
+   cpl_msg_info (cpl_func,"Size median = %d x %d " , cpl_image_get_size_x  (median_img),cpl_image_get_size_y (median_img));
 
-    /* Loop on frames */
-    for (cpl_size f = 0; f < nframe; f++) {
-        cpl_image  * frame = cpl_imagelist_get (imglist, f);
-        double fmad;
-        /* building badpixel map */
-        cpl_mask * bpm = cpl_mask_new (nx, ny);
-
-        cpl_image * diff = cpl_image_duplicate(std_img);
-        cpl_image_subtract ( diff, frame);
-        cpl_image_get_mad ( diff, &fmad );
-        
-        cpl_mask_threshold_image ( bpm, diff, -tmad*fmad, +tmad*fmad, CPL_BINARY_0);
-        cpl_mask * oldbpm = cpl_image_set_bpm(frame,bpm);
-        FREE ( cpl_mask_delete, oldbpm);
-        FREE ( cpl_image_delete, diff);
-
+    for (cpl_size i = 1; i <= nx; i++) {
+        for (cpl_size j = 1; j <= ny; j++) {
+            int isbad=0;
+            double med = cpl_image_get (median_img, i,j,&isbad);
+            if (isbad==1) {
+                for (cpl_size f = 0; f < nframe; f++) {
+                    int isbadtmp =0;
+                    cpl_image  * frame = cpl_imagelist_get (imglist, f);
+                    double data = cpl_image_get(frame ,i,j,&isbadtmp);
+                    double madij = cpl_image_get(mad_img ,i,j,&isbadtmp);
+                    if (fabs( data - med) > madij* threshold_factor){
+                        blink ++;
+                        cpl_mask   * bpm  = cpl_image_get_bpm (frame);
+                        if (bpm==NULL){
+                            /*cpl_mask * bpm = cpl_mask_new (nx, ny);
+                            cpl_mask * oldbpm = cpl_image_set_bpm(frame,bpm);
+                            FREE ( cpl_mask_delete, oldbpm);*/
+                            cpl_msg_info (cpl_func,"Bpm NULL");
+                        }
+                        cpl_mask_set (bpm, i, j, CPL_BINARY_1);
+                    }
+                }
+            }
+        }
     }
+
+    cpl_msg_info (cpl_func,"Number of blinking pixels = %d ", blink);
+    
 
     FREE ( cpl_image_delete, median_img);
     FREE ( cpl_image_delete, mad_img);
@@ -2697,7 +2724,7 @@ gravi_imagelist_blinking_map_create (cpl_imagelist * imglist){
             const cpl_mask   * bpm  = cpl_image_get_bpm_const (frame);
             const cpl_binary * bbpm = bpm ? cpl_mask_get_data_const (bpm) : NULL;
 
-            if (bbpm != NULL || bbpm[i]) {
+            if (bbpm != NULL && bbpm[i]) {
                 
                 if (onebad){
                     if (!bbpm_blink[i]) {
@@ -2712,8 +2739,8 @@ gravi_imagelist_blinking_map_create (cpl_imagelist * imglist){
             }
         }
     }
-    cpl_msg_info (cpl_func,"Number of blinking pixels = %f ( %f \%)",nblink, nblink/nx * ny*100.0);
-    cpl_msg_info (cpl_func,"Number of cosmic ray pixels = %f ( %f \%)",ncosmic, ncosmic/(nx * ny * nframe)*100.0);
+    cpl_msg_info (cpl_func,"Number of blinking pixels = %d ( %f \%)",nblink, (double)nblink/(double)(nx * ny*100.0));
+    cpl_msg_info (cpl_func,"Number of cosmic ray pixels = %d ( %f \%)",ncosmic, (double)ncosmic/(double)(nx * ny * nframe)*100.0);
     
     gravi_msg_function_exit(1);
     return bpm_blink;
