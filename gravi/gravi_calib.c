@@ -2617,25 +2617,26 @@ gravi_imagelist_filter_cosmicrays (cpl_imagelist * imglist,
     const cpl_size    nx       = cpl_image_get_size_x(img);
     const cpl_size    ny       = cpl_image_get_size_y(img);
     double tmad;
-    /* mean_img = cpl_image_new (nx,ny,CPL_TYPE_DOUBLE);*/
     cpl_imagelist * imglistbuff = cpl_imagelist_duplicate(imglist);
     /* Compute MEDIAN */
     cpl_image * median_img = cpl_imagelist_collapse_median_create (imglistbuff);
-   cpl_msg_info (cpl_func,"Size imglist = %d x %d x %d" , nx, ny, nframe);
     /* Compute sample VARIANCE */
 	cpl_imagelist_subtract_image (imglistbuff, median_img);
     cpl_imagelist_power (imglistbuff, 2.0);
     cpl_image * std_img = cpl_imagelist_collapse_create (imglistbuff);
-    /*cpl_image_multiply_scalar (std_img, nframe / (nframe - 1.0));*/
+    cpl_image_multiply_scalar (std_img, nframe / (nframe - 1.0));
     cpl_image_power(std_img,0.5);
     
     /* Compute MAD */
-    cpl_imagelist_power (imglistbuff, 0.5); /* equiv to abs(imglistbuff - median_img) *.
-    /* Compute MAD 
+    cpl_imagelist_power (imglistbuff, 0.5); /* equiv to abs(imglistbuff - median_img) */
+    FREE ( cpl_imagelist_delete, imglistbuff);
+    imglistbuff = cpl_imagelist_duplicate(imglist);
+    cpl_imagelist_subtract_image (imglistbuff, median_img);
+    /* Compute MAD  */
     for (cpl_size f = 0; f < nframe; f++) {
         cpl_image  * frame = cpl_imagelist_get (imglistbuff, f);
         cpl_image_abs( frame);
-    }*/
+    }
     cpl_image * mad_img = cpl_imagelist_collapse_median_create (imglistbuff);
     cpl_image_multiply_scalar (mad_img, CPL_MATH_STD_MAD);
 
@@ -2648,6 +2649,8 @@ gravi_imagelist_filter_cosmicrays (cpl_imagelist * imglist,
     */
 
     /* compare MAD and sample variance */
+
+    cpl_msg_info (cpl_func,"std = %f ; mad = %f ", cpl_image_get_median (std_img), cpl_image_get_median (mad_img));
     cpl_image_subtract (std_img, mad_img);
     cpl_image_get_mad(std_img,&tmad);
     tmad *= CPL_MATH_STD_MAD * threshold_factor;
@@ -2739,7 +2742,7 @@ gravi_imagelist_blinking_map_create (cpl_imagelist * imglist){
             }
         }
     }
-    cpl_msg_info (cpl_func,"Number of blinking pixels = %d ( %f \%)",nblink, (double)nblink/(double)(nx * ny*100.0));
+    cpl_msg_info (cpl_func,"Number of blinking pixels = %d ( %f \%)",nblink, (double)nblink/(double)(nx * ny)*100.0);
     cpl_msg_info (cpl_func,"Number of cosmic ray pixels = %d ( %f \%)",ncosmic, (double)ncosmic/(double)(nx * ny * nframe)*100.0);
     
     gravi_msg_function_exit(1);
