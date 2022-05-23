@@ -1973,14 +1973,16 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
         cpl_image_filter_mask (darkhf_img, dark_img, kernel, CPL_FILTER_MEDIAN, CPL_BORDER_FILTER);
         cpl_image * darkmed = cpl_image_duplicate ( darkhf_img);
         FREE (cpl_mask_delete, kernel);
+        cpl_msg_info (cpl_func,"darkhf_img = %f ; darkmed = %f ", cpl_image_get_median (darkhf_img), cpl_image_get_median (darkmed));
 
         cpl_image_subtract ( darkhf_img , dark_img);
         cpl_image_divide ( darkhf_img, darkmed);
         double tmad =0;
         cpl_image_get_mad(darkhf_img,&tmad);
         tmad *= CPL_MATH_STD_MAD * 5.;
-        cpl_mask_threshold_image (darkhf_bad, darkhf_img, -tmad, +tmad, CPL_BINARY_0);
+        cpl_msg_info (cpl_func,"mean(darkhf_img) = %f ; mad = %f ", cpl_image_get_median (darkhf_img), tmad);
 
+        cpl_mask_threshold_image (darkhf_bad, darkhf_img, -tmad, +tmad, CPL_BINARY_0);
         FREE (cpl_image_delete, darkmed);
         }
 
