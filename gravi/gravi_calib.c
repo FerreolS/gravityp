@@ -2647,11 +2647,11 @@ gravi_imagelist_filter_cosmicrays (cpl_imagelist * imglist,
 
     /* compare MAD and sample variance */
 
-    cpl_msg_info (cpl_func,"std = %f ; mad = %f ", cpl_image_get_median (mad_img), cpl_image_get_median (mad_img));
+    cpl_msg_info (cpl_func,"std = %f ; mad = %f ", cpl_image_get_median (std_img), cpl_image_get_median (mad_img));
     cpl_image_subtract (std_img, mad_img);
     cpl_image_get_mad(std_img,&tmad);
     tmad *= CPL_MATH_STD_MAD * threshold_factor;
-    cpl_mask * blinkmap;
+    cpl_mask * blinkmap = cpl_mask_new (nx, ny);;
     cpl_mask_threshold_image (blinkmap, std_img, -tmad, +tmad, CPL_BINARY_0);
     cpl_msg_info (cpl_func,"Number of blinking pixels = %d ", cpl_mask_count ( blinkmap));
     cpl_msg_info (cpl_func,"MAD = %f ", tmad);
