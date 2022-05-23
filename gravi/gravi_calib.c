@@ -2628,15 +2628,12 @@ gravi_imagelist_filter_cosmicrays (cpl_imagelist * imglist,
     cpl_image_power(std_img,0.5);
     
     /* Compute MAD */
-    cpl_imagelist_power (imglistbuff, 0.5); /* equiv to abs(imglistbuff - median_img) */
-    FREE ( cpl_imagelist_delete, imglistbuff);
-    imglistbuff = cpl_imagelist_duplicate(imglist);
-    cpl_imagelist_subtract_image (imglistbuff, median_img);
-    /* Compute MAD  */
+    cpl_imagelist_power (imglistbuff, 0.5); /* equiv to abs(imglistbuff - median_img) *.
+    /* Compute MAD 
     for (cpl_size f = 0; f < nframe; f++) {
         cpl_image  * frame = cpl_imagelist_get (imglistbuff, f);
         cpl_image_abs( frame);
-    }
+    }*/
     cpl_image * mad_img = cpl_imagelist_collapse_median_create (imglistbuff);
     cpl_image_multiply_scalar (mad_img, CPL_MATH_STD_MAD);
 
@@ -2650,11 +2647,12 @@ gravi_imagelist_filter_cosmicrays (cpl_imagelist * imglist,
 
     /* compare MAD and sample variance */
 
-    cpl_msg_info (cpl_func,"std = %f ; mad = %f ", cpl_image_get_median (std_img), cpl_image_get_median (mad_img));
+    cpl_msg_info (cpl_func,"std = %f ; mad = %f ", cpl_image_get_median (mad_img), cpl_image_get_median (mad_img));
     cpl_image_subtract (std_img, mad_img);
     cpl_image_get_mad(std_img,&tmad);
     tmad *= CPL_MATH_STD_MAD * threshold_factor;
-    cpl_mask * blinkmap = cpl_mask_threshold_image_create ( std_img, -tmad, +tmad);
+    cpl_mask * blinkmap;
+    cpl_mask_threshold_image (blinkmap, std_img, -tmad, +tmad, CPL_BINARY_0);
     cpl_msg_info (cpl_func,"Number of blinking pixels = %d ", cpl_mask_count ( blinkmap));
     cpl_msg_info (cpl_func,"MAD = %f ", tmad);
     cpl_mask * oldmask = cpl_image_set_bpm(median_img,blinkmap);
