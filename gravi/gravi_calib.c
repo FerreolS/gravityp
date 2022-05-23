@@ -1946,8 +1946,10 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
 		cpl_size ny = cpl_image_get_size_y (dark_img);
         CPLCHECK_NUL ("Cannot get the SC data");        
 		
+        cpl_image * darkhf_img = cpl_image_cast (dark_img, CPL_TYPE_DOUBLE);
+        cpl_mask * darkhf_bad = cpl_mask_new (nx, ny);
+        if (FALSE){
 		/* Compute an image with only the high-frequency of dark */
-		cpl_image * darkhf_img = cpl_image_cast (dark_img, CPL_TYPE_DOUBLE);
 		cpl_mask * kernel = cpl_mask_new (9, 9);
 		cpl_mask_not (kernel);
 		cpl_image_filter_mask (darkhf_img, dark_img, kernel, CPL_FILTER_MEDIAN, CPL_BORDER_FILTER);
@@ -1956,6 +1958,31 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
 		cpl_image_subtract (darkhf_img, dark_img);
         cpl_image_multiply_scalar (darkhf_img, -1.0);
         CPLCHECK_NUL ("Cannot create darkhf");
+        }else{
+        /* new darkhf
+        /* Create kernel for horizontal median filtering 
+        * Note that the large cluster is ~11 pixel wide */
+        cpl_size kernel_x = 5;
+        if (nx > 100) kernel_x = 11;
+        if (nx > 1000) kernel_x = 31;
+        cpl_msg_info (cpl_func,"Kernel of (%lld,%i) pixels for median filtering", kernel_x, 1);
+        cpl_mask * kernel = cpl_mask_new (kernel_x, 1);
+        cpl_mask_not (kernel);
+    
+        /* Run the median filter */
+        cpl_image_filter_mask (darkhf_img, dark_img, kernel, CPL_FILTER_MEDIAN, CPL_BORDER_FILTER);
+        cpl_image * darkmed = cpl_image_duplicate ( darkhf_img);
+        FREE (cpl_mask_delete, kernel);
+
+        cpl_image_subtract ( darkhf_img , dark_img);
+        cpl_image_divide ( darkhf_img, darkmed);
+        double tmad =0;
+        cpl_image_get_mad(darkhf_img,&tmad);
+        tmad *= CPL_MATH_STD_MAD * 5.;
+        cpl_mask_threshold_image (darkhf_bad, darkhf_img, -tmad, +tmad, CPL_BINARY_0);
+
+        FREE (cpl_image_delete, darkmed);
+        }
 
 		/* Get the rms factor for dark bad pixel threshold */
 		int bad_dark_factor = gravi_param_get_int (params, "gravity.calib.bad-dark-threshold");
@@ -2056,7 +2083,7 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
 			for (cpl_size j = 0; j < ny; j++){
               int nv = 0, is_bad = 0, flag = 0;
 
-			  /* Tag the bad pixel on its mean value ... */
+			  if(FALSE){/* Tag the bad pixel on its mean value ... */
               double dij = cpl_image_get (darkhf_img, i + 1, j + 1, &nv);
 			  if ( (dij > dark_max)||
                    (dij < dark_min)) {
@@ -2064,6 +2091,14 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
 				  count_bp_dark ++;
 				  is_bad = 1;
 			  }
+              }else{
+              
+              if ( cpl_mask_get (darkhf_bad, i + 1, j + 1) == CPL_BINARY_1){
+				  flag += BADPIX_DARK;
+				  count_bp_dark ++;
+				  is_bad = 1;
+			  }
+              }
              double mij = cpl_image_get (dark_img, i + 1, j + 1, &nv);
               if (nv) {
 				  flag += BADPIX_BLINKDARK;
@@ -2629,29 +2664,20 @@ gravi_imagelist_filter_cosmicrays (cpl_imagelist * imglist,
     cpl_image_power(std_img,0.5);
     
     /* Compute MAD */
-    cpl_imagelist_power (imglistbuff, 0.5); /* equiv to abs(imglistbuff - median_img) *.
-    /* Compute MAD 
-    for (cpl_size f = 0; f < nframe; f++) {
-        cpl_image  * frame = cpl_imagelist_get (imglistbuff, f);
-        cpl_image_abs( frame);
-    }*/
+    cpl_imagelist_power (imglistbuff, 0.5); /* equiv to abs(imglistbuff - median_img) */
+  
     cpl_image * mad_img = cpl_imagelist_collapse_median_create (imglistbuff);
     cpl_image_multiply_scalar (mad_img, CPL_MATH_STD_MAD);
 
     FREE ( cpl_imagelist_delete, imglistbuff);
 
-    /* should we use a single imglist?
-    We power back the data, because we are working in-place
-    cpl_imagelist_power (imglist, 0.5);
-    cpl_imagelist_add_image (imglist, median_img);
-    */
 
     /* compare MAD and sample variance */
 
     cpl_image_subtract (std_img, mad_img);
     cpl_image_get_mad(std_img,&tmad);
     tmad *= CPL_MATH_STD_MAD * threshold_factor;
-    cpl_mask * blinkmap = cpl_mask_new (nx, ny);;
+    cpl_mask * blinkmap = cpl_mask_new (nx, ny);
     cpl_mask_threshold_image (blinkmap, std_img, -tmad, +tmad, CPL_BINARY_0);
     cpl_msg_info (cpl_func,"Number of blinking pixels = %d ", cpl_mask_count ( blinkmap));
 /*    cpl_msg_info (cpl_func,"MAD = %f ", tmad);*/
@@ -2674,10 +2700,7 @@ gravi_imagelist_filter_cosmicrays (cpl_imagelist * imglist,
                         blink ++;
                         cpl_mask   * bpm  = cpl_image_get_bpm (frame);
                         if (bpm==NULL){
-                            /*cpl_mask * bpm = cpl_mask_new (nx, ny);
-                            cpl_mask * oldbpm = cpl_image_set_bpm(frame,bpm);
-                            FREE ( cpl_mask_delete, oldbpm);*/
-                            cpl_msg_info (cpl_func,"Bpm NULL");
+                            cpl_msg_error (cpl_func,"Bpm NULL");
                         }
                         cpl_mask_set (bpm, i, j, CPL_BINARY_1);
                     }
@@ -2739,8 +2762,8 @@ gravi_imagelist_blinking_map_create (cpl_imagelist * imglist){
             }
         }
     }
-    cpl_msg_info (cpl_func,"Number of blinking pixels = %d ( %f \%)",nblink, (double)nblink/(double)(nx * ny)*100.0);
-    cpl_msg_info (cpl_func,"Number of cosmic ray pixels = %d ( %f \%)",ncosmic, (double)ncosmic/(double)(nx * ny * nframe)*100.0);
+    cpl_msg_info (cpl_func,"Number of blinking pixels = %d ( %f \%)",nblink, (double)nblink/(double)(nx * ny  * nframe)*100.0);
+    cpl_msg_info (cpl_func,"Number of cosmic ray pixels = %d ( %f \%)",ncosmic, (double)ncosmic/(double)(nx * ny)*100.0);
     
     gravi_msg_function_exit(1);
     return bpm_blink;
