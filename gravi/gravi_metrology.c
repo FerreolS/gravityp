@@ -1973,13 +1973,17 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
     double repeat1=0;
     double repeat2=0;
     
-    int smooth_faint = gravi_param_get_int(parlist, "gravity.metrology.smooth-faint");
-
-    double preswitch_delay = 1e3*gravi_param_get_int(parlist, "gravity.metrology.preswitch-delay");
-    double postswitch_delay = 1e3*gravi_param_get_int(parlist, "gravity.metrology.postswitch-delay");
-
+     
+    int smooth_faint = 0;
+    double preswitch_delay = 0;
+    double postswitch_delay = 0;
     if(gravi_pfits_get_met_mode(header)==MET_FAINT)
     {
+
+        int smooth_faint = gravi_param_get_int(parlist, "gravity.metrology.smooth-faint");
+
+        double preswitch_delay = 1e3*gravi_param_get_int(parlist, "gravity.metrology.preswitch-delay");
+        double postswitch_delay = 1e3*gravi_param_get_int(parlist, "gravity.metrology.postswitch-delay");
         cpl_vector * faint_params = gravi_pfits_get_met_faint_params(header);
 
         rate1 = 1e6*cpl_vector_get(faint_params,0);
