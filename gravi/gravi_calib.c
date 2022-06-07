@@ -1949,41 +1949,41 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
         cpl_image * darkhf_img = cpl_image_cast (dark_img, CPL_TYPE_DOUBLE);
         cpl_mask * darkhf_bad = cpl_mask_new (nx, ny);
         if (FALSE){
-		/* Compute an image with only the high-frequency of dark */
-		cpl_mask * kernel = cpl_mask_new (9, 9);
-		cpl_mask_not (kernel);
-		cpl_image_filter_mask (darkhf_img, dark_img, kernel, CPL_FILTER_MEDIAN, CPL_BORDER_FILTER);
-        FREE (cpl_mask_delete, kernel);
+		    /* Compute an image with only the high-frequency of dark */
+		    cpl_mask * kernel = cpl_mask_new (9, 9);
+		    cpl_mask_not (kernel);
+		    cpl_image_filter_mask (darkhf_img, dark_img, kernel, CPL_FILTER_MEDIAN, CPL_BORDER_FILTER);
+            FREE (cpl_mask_delete, kernel);
         
-		cpl_image_subtract (darkhf_img, dark_img);
-        cpl_image_multiply_scalar (darkhf_img, -1.0);
-        CPLCHECK_NUL ("Cannot create darkhf");
+		    cpl_image_subtract (darkhf_img, dark_img);
+            cpl_image_multiply_scalar (darkhf_img, -1.0);
+            CPLCHECK_NUL ("Cannot create darkhf");
         }else{
         /* new darkhf
         /* Create kernel for horizontal median filtering 
         * Note that the large cluster is ~11 pixel wide */
-        cpl_size kernel_x = 5;
-        if (nx > 100) kernel_x = 11;
-        if (nx > 1000) kernel_x = 31;
-        cpl_msg_info (cpl_func,"Kernel of (%lld,%i) pixels for median filtering", kernel_x, 1);
-        cpl_mask * kernel = cpl_mask_new (kernel_x, 1);
-        cpl_mask_not (kernel);
+            cpl_size kernel_x = 5;
+            if (nx > 100) kernel_x = 11;
+            if (nx > 1000) kernel_x = 31;
+            cpl_msg_info (cpl_func,"Kernel of (%lld,%i) pixels for median filtering", kernel_x, 1);
+            cpl_mask * kernel = cpl_mask_new (kernel_x, 1);
+            cpl_mask_not (kernel);
     
-        /* Run the median filter */
-        cpl_image_filter_mask (darkhf_img, dark_img, kernel, CPL_FILTER_MEDIAN, CPL_BORDER_FILTER);
-        cpl_image * darkmed = cpl_image_duplicate ( darkhf_img);
-        FREE (cpl_mask_delete, kernel);
-        cpl_msg_info (cpl_func,"darkhf_img = %f ; darkmed = %f ", cpl_image_get_median (darkhf_img), cpl_image_get_median (darkmed));
+            /* Run the median filter */
+            cpl_image_filter_mask (darkhf_img, dark_img, kernel, CPL_FILTER_MEDIAN, CPL_BORDER_FILTER);
+            cpl_image * darkmed = cpl_image_duplicate ( darkhf_img);
+            FREE (cpl_mask_delete, kernel);
+            cpl_msg_info (cpl_func,"darkhf_img = %f ; darkmed = %f ", cpl_image_get_median (darkhf_img), cpl_image_get_median (darkmed));
+    
+            cpl_image_subtract ( darkhf_img , dark_img);
+            cpl_image_divide ( darkhf_img, darkmed);
+            double tmad =0;
+            cpl_image_get_mad(darkhf_img,&tmad);
+            tmad *= CPL_MATH_STD_MAD * 5.;
+            cpl_msg_info (cpl_func,"mean(darkhf_img) = %f ; mad = %f ", cpl_image_get_median (darkhf_img), tmad);
 
-        cpl_image_subtract ( darkhf_img , dark_img);
-        cpl_image_divide ( darkhf_img, darkmed);
-        double tmad =0;
-        cpl_image_get_mad(darkhf_img,&tmad);
-        tmad *= CPL_MATH_STD_MAD * 5.;
-        cpl_msg_info (cpl_func,"mean(darkhf_img) = %f ; mad = %f ", cpl_image_get_median (darkhf_img), tmad);
-
-        cpl_mask_threshold_image (darkhf_bad, darkhf_img, -tmad, +tmad, CPL_BINARY_0);
-        FREE (cpl_image_delete, darkmed);
+            cpl_mask_threshold_image (darkhf_bad, darkhf_img, -tmad, +tmad, CPL_BINARY_0);
+            FREE (cpl_image_delete, darkmed);
         }
 
 		/* Get the rms factor for dark bad pixel threshold */
