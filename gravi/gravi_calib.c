@@ -2579,7 +2579,7 @@ cpl_error_code gravi_remove_cosmicrays_sc (cpl_imagelist * imglist_sc)
     cpl_ensure_code (imglist_sc, CPL_ERROR_NULL_INPUT);
         
     cpl_image * img;
-    double clip_thresh = 3.;
+    double clip_thresh = 5.;
 
     const cpl_size    nrow     = cpl_imagelist_get_size(imglist_sc);
     img      = cpl_imagelist_get (imglist_sc, 0);
