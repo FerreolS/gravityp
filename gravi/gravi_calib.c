@@ -165,8 +165,6 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
         cpl_image * median_img;
         cpl_image * stdev_img;
         if (FALSE){
-            gravi_imagelist_filter_cosmicrays(imglist, 5.0);
-            CPLCHECK_NUL ("Cannot filter cosmic rays");
 		    /* Compute the median image of the imagelist */
 		    median_img = cpl_imagelist_collapse_sigclip_create (imglist, 5, 5, 0.6, CPL_COLLAPSE_MEDIAN_MEAN, NULL);
 		    CPLCHECK_NUL ("Cannot compute the median dark");
@@ -186,11 +184,11 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
         } else {
             gravi_imagelist_filter_cosmicrays(imglist, 5.0);
             CPLCHECK_NUL ("Cannot filter cosmic rays");
-            /* Compute the median image of the imagelist */
-            cpl_mask *  blinking_map = gravi_imagelist_blinking_map_create (imglist);
+            /* Compute the median image of the imagelist 
+            cpl_mask *  blinking_map = gravi_imagelist_blinking_map_create (imglist); */
 	    	median_img = cpl_imagelist_collapse_create (imglist);
-            cpl_mask * oldbpm = cpl_image_set_bpm (median_img, blinking_map);
-            FREE ( cpl_mask_delete, oldbpm);
+            /*cpl_mask * oldbpm = cpl_image_set_bpm (median_img, blinking_map);
+            FREE ( cpl_mask_delete, oldbpm);*/
 		    CPLCHECK_NUL ("Cannot compute the mean dark");
 
     		cpl_msg_info (cpl_func,"Compute std with imglist");
@@ -1133,11 +1131,13 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
 
 		/* Extract data with DARK, BADPIX  in  [ADU] */
         data_imglist = cpl_imagelist_duplicate (data_imglist);
+        gravi_imagelist_filter_cosmicrays(data_imglist, 5.0);
+
         cpl_imagelist_subtract_image (data_imglist, dark_img);
         gravi_remove_badpixel_sc (data_imglist, bad_img);
 
         /* Collapse the DITs of this FLAT */
-        cpl_image * collapsed_img = cpl_imagelist_collapse_sigclip_create (data_imglist, 5, 5, 0.6, CPL_COLLAPSE_MEDIAN_MEAN, NULL);
+        cpl_image * collapsed_img = cpl_imagelist_collapse_sigclip_create (data_imglist, 5, 5, 0.6, CPL_COLLAPSE_MEAN, NULL);
 		FREE (cpl_imagelist_delete, data_imglist);
 
         /* Save this FLAT in the imagelist to collapse them */
@@ -1209,11 +1209,12 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
 
 		/* Extract data with DARK, BADPIX  in  [ADU] */
         data_imglist = cpl_imagelist_duplicate (data_imglist);
+        gravi_imagelist_filter_cosmicrays(data_imglist, 5.0);
         cpl_imagelist_subtract_image (data_imglist, dark_img);
         gravi_remove_badpixel_sc (data_imglist, bad_img);
         
         /* Collapse the DITs of this FLAT */
-        cpl_image * collapsed_img = cpl_imagelist_collapse_sigclip_create (data_imglist, 5, 5, 0.6, CPL_COLLAPSE_MEDIAN_MEAN, NULL);
+        cpl_image * collapsed_img = cpl_imagelist_collapse_sigclip_create (data_imglist, 5, 5, 0.6, CPL_COLLAPSE_MEAN, NULL);
         
 		FREE (cpl_imagelist_delete, data_imglist);
 
