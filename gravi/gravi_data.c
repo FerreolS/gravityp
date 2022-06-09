@@ -1205,7 +1205,7 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
   CPLCHECK_MSG ("Cannot get data");
 
   /* Remove cosmic rays */
-  gravi_imagelist_filter_cosmicrays (imglist,5);
+  gravi_imagelist_filter_cosmicrays (imglist,5.0);
   CPLCHECK_MSG ("Cannot filter cosmic rays");
 
   /* To save the list of bias correction */
