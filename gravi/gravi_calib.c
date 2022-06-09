@@ -186,7 +186,9 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
             CPLCHECK_NUL ("Cannot filter cosmic rays");
             /* Compute the median image of the imagelist 
             cpl_mask *  blinking_map = gravi_imagelist_blinking_map_create (imglist); */
-	    	median_img = cpl_imagelist_collapse_create (imglist);
+	    	// median_img = cpl_imagelist_collapse_create (imglist);
+            median_img = cpl_imagelist_collapse_sigclip_create (imglist, 5, 5, 0.6, CPL_COLLAPSE_MEDIAN_MEAN, NULL);
+
             /*cpl_mask * oldbpm = cpl_image_set_bpm (median_img, blinking_map);
             FREE ( cpl_mask_delete, oldbpm);*/
 		    CPLCHECK_NUL ("Cannot compute the mean dark");
@@ -196,7 +198,10 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
     		cpl_imagelist_subtract_image (temp_imglist, median_img);
     		cpl_imagelist_power (temp_imglist, 2.0);
     		// cpl_image * stdev_img = cpl_imagelist_collapse_create (temp_imglist);
-    		stdev_img = cpl_imagelist_collapse_create (temp_imglist);
+    		// stdev_img = cpl_imagelist_collapse_create (temp_imglist);
+            stdev_img = cpl_imagelist_collapse_sigclip_create (temp_imglist, 5, 5, 0.6,
+    			       CPL_COLLAPSE_MEDIAN_MEAN, NULL);
+
     		FREE (cpl_imagelist_delete, temp_imglist);
     		cpl_image_power (stdev_img, 0.5);
     		CPLCHECK_NUL ("Cannot compute the STD of the DARK");
@@ -2654,7 +2659,7 @@ gravi_imagelist_filter_cosmicrays (cpl_imagelist * imglist,
     cpl_mask * blinkmap = cpl_mask_new (nx, ny);;
     cpl_mask_threshold_image (blinkmap, std_img, -tmad, +tmad, CPL_BINARY_0);
     cpl_msg_info (cpl_func,"Number of blinking pixels = %d ", cpl_mask_count ( blinkmap));
-/*    cpl_msg_info (cpl_func,"MAD = %f ", tmad);*/
+    /* cpl_msg_info (cpl_func,"MAD = %f ", tmad); */
     cpl_mask * oldmask = cpl_image_set_bpm(median_img,blinkmap);
     FREE ( cpl_mask_delete, oldmask);
 
