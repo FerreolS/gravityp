@@ -2609,9 +2609,14 @@ cpl_error_code gravi_remove_cosmicrays_sc (cpl_imagelist * imglist_sc)
             } /* End image loop */
 
             /* calculate pixel mean and standard deviation */
-            cpl_array_set (med_val, i, cpl_vector_get_median (val));
-            cpl_array_set (std_val, i, cpl_vector_get_stdev (val));
-                    
+            double median = cpl_vector_get_median (val);
+            cpl_array_set (med_val, i, median);
+            // cpl_array_set (std_val, i, cpl_vector_get_stdev (val));
+            cpl_vector_subtract_scalar (val, median);
+            cpl_vector_multiply (val,val);
+            cpl_vector_sqrt (val ); /* = abs(val) */
+            cpl_array_set (std_val, i, cpl_vector_get_median (val) * CPL_MATH_STD_MAD);
+            
             /* clear vector */
             cpl_vector_delete (val);
         } /* End pixel loop */
