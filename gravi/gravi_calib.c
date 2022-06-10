@@ -163,8 +163,10 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
 		cpl_imagelist * imglist = gravi_data_get_cube (raw_data, GRAVI_IMAGING_DATA_SC_EXT);
 
 		/* Compute the median image of the imagelist */
-		cpl_image * median_img = cpl_imagelist_collapse_sigclip_create (imglist, 5, 5, 0.6, CPL_COLLAPSE_MEDIAN_MEAN, NULL);
-		CPLCHECK_NUL ("Cannot compute the median dark");
+		//cpl_image * median_img = cpl_imagelist_collapse_sigclip_create (imglist, 5, 5, 0.6, CPL_COLLAPSE_MEDIAN_MEAN, NULL);
+		cpl_image * median_img  = cpl_imagelist_collapse_create (imglist);
+
+        CPLCHECK_NUL ("Cannot compute the median dark");
 
 		/* Compute STD. We should see if we use sigma-clipping
 		 * or not for the collapse, it may change the bad pixel detection */
@@ -172,9 +174,9 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
 		cpl_imagelist * temp_imglist = cpl_imagelist_duplicate (imglist);
 		cpl_imagelist_subtract_image (temp_imglist, median_img);
 		cpl_imagelist_power (temp_imglist, 2.0);
-		// cpl_image * stdev_img = cpl_imagelist_collapse_create (temp_imglist);
-		cpl_image * stdev_img = cpl_imagelist_collapse_sigclip_create (temp_imglist, 5, 5, 0.6,
-									       CPL_COLLAPSE_MEDIAN_MEAN, NULL);
+		cpl_image * stdev_img = cpl_imagelist_collapse_create (temp_imglist);
+		/* cpl_image * stdev_img = cpl_imagelist_collapse_sigclip_create (temp_imglist, 5, 5, 0.6,
+									       CPL_COLLAPSE_MEDIAN_MEAN, NULL);*/
 		FREE (cpl_imagelist_delete, temp_imglist);
 		cpl_image_power (stdev_img, 0.5);
 		CPLCHECK_NUL ("Cannot compute the STD of the DARK");
@@ -2677,6 +2679,9 @@ cpl_error_code gravi_remove_cosmicrays_sc (cpl_imagelist * imglist_sc)
                 /* replace CR pixels in image with interpolated values */
                 for (cpl_size i = 0; i < nCR; i++) {
                     cpl_image_set (img, cpl_vector_get (xout, i) +1, k +1, cpl_vector_get (yout, i));
+                    cpl_mask   * bpm  = cpl_image_get_bpm (img);
+                    cpl_mask_set (bpm, cpl_vector_get (xout, i) +1, k +1, CPL_BINARY_1);
+                    
                 }
                 FREE (cpl_bivector_delete, fref);
                 FREE (cpl_bivector_delete, fout);
