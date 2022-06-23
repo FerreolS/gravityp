@@ -232,7 +232,7 @@ double gravi_table_get_column_mean (cpl_table * table, const char * name, int ba
       cpl_ensure (output,  CPL_ERROR_ILLEGAL_INPUT, 0.0);
       for (cpl_size r=1; r<nrow;r++)
           cpl_array_add (output, arrays[r*nbase+base]);
-      mean = cpl_array_get_mean (output) / nrow;
+      mean = cpl_array_get_mean (output);
       FREE (cpl_array_delete, output);
   }
   else {
