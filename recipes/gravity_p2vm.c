@@ -196,6 +196,9 @@ static int gravity_p2vm_create(cpl_plugin * plugin)
     /* Bias-method */
     gravi_parameter_add_biasmethod (recipe->parameters);
 
+    /* Metrology parameters */
+    gravi_parameter_add_metrology (recipe->parameters);
+
     /* Badpix and profile */
     gravi_parameter_add_badpix (recipe->parameters);
     gravi_parameter_add_profile (recipe->parameters);
