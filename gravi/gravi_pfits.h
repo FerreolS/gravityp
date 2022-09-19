@@ -138,7 +138,7 @@
 #define PROFILE_STARTX "ESO PRO PROFILE STARTX"
 #define PROFILE_FULLSTARTX "ESO PRO PROFILE FULLSTARTX"
 #define PROFILE_NX "ESO PRO PROFILE NX"
-    
+
 
 /* QC P2VM */
 #define QC_MEANCOH_SC 		"ESO QC P2VM_COHERENCE_AVG_SC"
@@ -155,7 +155,7 @@
 #define QC_MAXTRANS_SC		"ESO QC P2VM_TRANS_MAX_SC"
 
 /* Type of data */
-#define GRAVI_SC 0 
+#define GRAVI_SC 0
 #define GRAVI_FT 1
 #define GRAVI_TYPE(type) (type==GRAVI_SC?"SC":"FT")
 
@@ -248,6 +248,7 @@ double gravi_pfits_get_diameter(const cpl_propertylist * plist, int type_data);
 double gravi_pfits_get_ptfc_acqcam (const cpl_propertylist * plist, int spot);
 double gravi_pfits_get_drotoff (const cpl_propertylist * plist, int tel);
 double gravi_pfits_get_northangle_acqcam (const cpl_propertylist * plist, int tel);
+double gravi_pfits_get_zenithangle_beamb_acqcam (const cpl_propertylist * plist, int tel, int n, int nrow);
 
 const char * gravi_pfits_get_resolution(const cpl_propertylist * plist);
 const char * gravi_pfits_get_dpr_type(const cpl_propertylist * plist);
