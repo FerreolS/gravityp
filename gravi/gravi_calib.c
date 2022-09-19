@@ -163,8 +163,8 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
 		cpl_imagelist * imglist = gravi_data_get_cube (raw_data, GRAVI_IMAGING_DATA_SC_EXT);
 
 		/* Compute the median image of the imagelist */
-		//cpl_image * median_img = cpl_imagelist_collapse_sigclip_create (imglist, 5, 5, 0.6, CPL_COLLAPSE_MEDIAN_MEAN, NULL);
-		cpl_image * median_img  = cpl_imagelist_collapse_create (imglist);
+		cpl_image * median_img = cpl_imagelist_collapse_sigclip_create (imglist, 5, 5, 0.6, CPL_COLLAPSE_MEDIAN_MEAN, NULL);
+		//cpl_image * median_img  = cpl_imagelist_collapse_create (imglist);
 
         CPLCHECK_NUL ("Cannot compute the median dark");
 
@@ -174,9 +174,9 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
 		cpl_imagelist * temp_imglist = cpl_imagelist_duplicate (imglist);
 		cpl_imagelist_subtract_image (temp_imglist, median_img);
 		cpl_imagelist_power (temp_imglist, 2.0);
-		cpl_image * stdev_img = cpl_imagelist_collapse_create (temp_imglist);
-		/* cpl_image * stdev_img = cpl_imagelist_collapse_sigclip_create (temp_imglist, 5, 5, 0.6,
-									       CPL_COLLAPSE_MEDIAN_MEAN, NULL);*/
+		// cpl_image * stdev_img = cpl_imagelist_collapse_create (temp_imglist);
+		cpl_image * stdev_img = cpl_imagelist_collapse_sigclip_create (temp_imglist, 5, 5, 0.6,
+									       CPL_COLLAPSE_MEDIAN_MEAN, NULL);
 		FREE (cpl_imagelist_delete, temp_imglist);
 		cpl_image_power (stdev_img, 0.5);
 		CPLCHECK_NUL ("Cannot compute the STD of the DARK");
@@ -1115,8 +1115,8 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
         gravi_remove_badpixel_sc (data_imglist, bad_img);
 
         /* Collapse the DITs of this FLAT */
-        // cpl_image * collapsed_img = cpl_imagelist_collapse_sigclip_create (data_imglist, 5, 5, 0.6, CPL_COLLAPSE_MEDIAN_MEAN, NULL);
-		cpl_image * collapsed_img = cpl_imagelist_collapse_create (data_imglist);
+        cpl_image * collapsed_img = cpl_imagelist_collapse_sigclip_create (data_imglist, 5, 5, 0.6, CPL_COLLAPSE_MEDIAN_MEAN, NULL);
+		// cpl_image * collapsed_img = cpl_imagelist_collapse_create (data_imglist);
         FREE (cpl_imagelist_delete, data_imglist);
 
         /* Save this FLAT in the imagelist to collapse them */
@@ -1192,8 +1192,8 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
         gravi_remove_badpixel_sc (data_imglist, bad_img);
         
         /* Collapse the DITs of this FLAT */
-        // cpl_image * collapsed_img = cpl_imagelist_collapse_sigclip_create (data_imglist, 5, 5, 0.6, CPL_COLLAPSE_MEDIAN_MEAN, NULL);
-        cpl_image * collapsed_img = cpl_imagelist_collapse_create (data_imglist);
+        cpl_image * collapsed_img = cpl_imagelist_collapse_sigclip_create (data_imglist, 5, 5, 0.6, CPL_COLLAPSE_MEDIAN_MEAN, NULL);
+        // cpl_image * collapsed_img = cpl_imagelist_collapse_create (data_imglist);
 
 		FREE (cpl_imagelist_delete, data_imglist);
 
@@ -2583,7 +2583,7 @@ cpl_error_code gravi_remove_cosmicrays_sc (cpl_imagelist * imglist_sc)
     cpl_ensure_code (imglist_sc, CPL_ERROR_NULL_INPUT);
         
     cpl_image * img;
-    double clip_thresh = 5.;
+    double clip_thresh = 5.;  // Hard coded threshold for clipping
 
     const cpl_size    nrow     = cpl_imagelist_get_size(imglist_sc);
     img      = cpl_imagelist_get (imglist_sc, 0);
