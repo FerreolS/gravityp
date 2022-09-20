@@ -1,0 +1,56 @@
+
+# /
+/.settings
+/.autotools
+/.cproject
+/.project
+/config.h.in
+/configure
+/aclocal.m4
+/autom4te.cache
+/Makefile.in
+
+# generated files
+Makefile
+config.h
+config.status
+stamp-h1
+
+# /admin/
+/admin/compile
+/admin/config.guess
+/admin/config.sub
+/admin/depcomp
+/admin/install-sh
+/admin/ltmain.sh
+/admin/missing
+/admin/test-driver
+
+# /doxygen/
+/doxygen/Doxyfile
+
+# /gravi/
+/gravi/Makefile.in
+
+# /gravi/tests/
+/gravi/tests/Makefile.in
+
+# /mira/
+/mira/Makefile.in
+
+# /recipes/
+/recipes/Makefile.in
+
+# /reflex/
+/reflex/Makefile.in
+
+# linked repo
+hdrl
+irplib
+libtool
+m4macros
+
+
+.deps
+.libs
+*.xml
