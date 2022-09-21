@@ -167,8 +167,17 @@ cpl_error_code gravi_data_add_img (gravi_data * self,
                                    cpl_image * image);
 
 cpl_error_code gravi_data_copy_ext (gravi_data * output,
-										 gravi_data * input,
-										 const char * name);
+                                    gravi_data * input,
+                                    const char * name);
+
+cpl_error_code gravi_data_copy_ext_i (gravi_data * output,
+                                      gravi_data * input,
+                                      cpl_size num);
+
+cpl_error_code gravi_data_copy_ext_insname (gravi_data * output,
+                                            gravi_data * input,
+                                            const char * name,
+                                            const char * insname);
 
 cpl_error_code gravi_data_move_ext (gravi_data * output,
                                     gravi_data * input,

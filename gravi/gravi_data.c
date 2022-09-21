@@ -295,12 +295,14 @@ cpl_error_code gravi_data_append (gravi_data * first, const gravi_data * second,
   gravi_msg_function_start(1);
   cpl_ensure_code (first,  CPL_ERROR_NULL_INPUT);
   cpl_ensure_code (second, CPL_ERROR_NULL_INPUT);
-  cpl_ensure_code (first->nb_ext == second->nb_ext, CPL_ERROR_INCOMPATIBLE_INPUT);
+  cpl_ensure_code (first->nb_ext > 1, CPL_ERROR_INCOMPATIBLE_INPUT);
+  cpl_ensure_code (second->nb_ext > 1, CPL_ERROR_INCOMPATIBLE_INPUT);
 
   cpl_msg_warning (cpl_func, "Append data: keep only the HEADER of the first data");
   cpl_msg_warning (cpl_func, "Append data: FIXME: only works for OIFITS data");
 
-  for (int i = 0; i < first->nb_ext ; i++) {
+  cpl_size nb_ext = CPL_MIN(first->nb_ext, second->nb_ext);
+  for (int i = 0; i < nb_ext ; i++) {
 
 	/* Check EXTNAME */
 	const char * name1 = gravi_pfits_get_extname (first->exts_hdrs[i]);
@@ -355,6 +357,12 @@ cpl_error_code gravi_data_append (gravi_data * first, const gravi_data * second,
 	}	
 	
 	CPLCHECK_MSG ("Cannot append data");
+  }
+
+  /* Copy remaining extension second -> first */
+  for (int i = nb_ext; i < second->nb_ext; i++)
+  {
+    gravi_data_copy_ext_i (first, (gravi_data *)second, i);    
   }
   
   gravi_msg_function_exit(1);
@@ -1507,6 +1515,111 @@ inline static int _gravi_data_find (const gravi_data *self, const char *name)
     return ext;
 }
 
+
+/*---------------------------------------------------------------------------*/
+/**
+ * @brief Copy extensions from one data to another.
+ *
+ * @param output:  gravi_data to insert the extension
+ * @param input:   gravi_data to read the extension
+ * @param name:    EXTNAME of the extension to copy
+ * @param insname: INSNAME of the extension to copy
+ * 
+ * Deep copy of the extension NAME from input to output
+ * Copy all if several extension with same EXTNAME are found.
+ * Silent if the copy cannot be done.
+ */
+
+/*---------------------------------------------------------------------------*/
+
+cpl_error_code gravi_data_copy_ext_insname (gravi_data * output,
+                                            gravi_data * input,
+                                            const char * name,
+                                            const char * insname)
+{
+  cpl_ensure_code (output,  CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (input,   CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (name,    CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (insname, CPL_ERROR_NULL_INPUT);
+
+  int n = gravi_data_get_size (input);
+  for (int j = 0; j < n; j++){
+	
+	cpl_propertylist * plist = gravi_data_get_plist_x (input, j);
+
+        if (!cpl_propertylist_has (plist, "EXTNAME")) continue;
+        if (!cpl_propertylist_has (plist, "INSNAME")) continue;
+        
+	const char * plist_name = gravi_pfits_get_extname (plist);
+	const char * plist_insname = gravi_pfits_get_insname (plist);
+
+	CPLCHECK_MSG ("Cannot get input data");
+	
+	if (plist_name == NULL) continue;
+	
+	if (!(strcmp (plist_name, name)) &&
+            !(strcmp (plist_insname, insname))) {
+	  int type_data = gravi_pfits_get_extension_type (plist);
+	  
+	  if (type_data == 2) {
+          gravi_data_add_table (output, cpl_propertylist_duplicate (plist), NULL, 
+                                cpl_table_duplicate (gravi_data_get_table_x (input, j)));
+	  }
+	  else if (type_data == 3) {
+          gravi_data_add_cube (output, cpl_propertylist_duplicate (plist), NULL,
+                               cpl_imagelist_duplicate (gravi_data_get_cube_x (input, j)));
+      }
+
+	  CPLCHECK_MSG ("Cannot copy extension");
+	}
+  }
+
+  return CPL_ERROR_NONE;
+}
+
+/*---------------------------------------------------------------------------*/
+/**
+ * @brief Copy extensions from one data to another.
+ *
+ * @param output:  gravi_data to insert the extension
+ * @param input:   gravi_data to read the extension
+ * @param num:    num to copy
+ * 
+ * Deep copy of the extension NAME from input to output
+ * Copy all if several extension with same EXTNAME are found.
+ * Silent if the copy cannot be done.
+ */
+
+/*---------------------------------------------------------------------------*/
+
+cpl_error_code gravi_data_copy_ext_i (gravi_data * output,
+                                      gravi_data * input,
+                                      cpl_size num)
+{
+  cpl_ensure_code (output,  CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (input,   CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (num>=0,  CPL_ERROR_ILLEGAL_INPUT);
+  cpl_ensure_code (num<input->nb_ext, CPL_ERROR_ILLEGAL_INPUT);
+
+  cpl_propertylist * plist = gravi_data_get_plist_x (input, num);
+  int type_data = gravi_pfits_get_extension_type (plist);
+	  
+  if (type_data == 2)
+  {
+    gravi_data_add_table (output, cpl_propertylist_duplicate (plist), NULL, 
+                          cpl_table_duplicate (gravi_data_get_table_x (input, num)));
+  }
+  else if (type_data == 3)
+  {
+    gravi_data_add_cube (output, cpl_propertylist_duplicate (plist), NULL,
+                         cpl_imagelist_duplicate (gravi_data_get_cube_x (input, num)));
+  }
+
+  CPLCHECK_MSG ("Cannot copy extension");
+
+  return CPL_ERROR_NONE;
+}
+
 /*---------------------------------------------------------------------------*/
 /**
  * @brief Copy extensions from one data to another.
@@ -1519,15 +1632,16 @@ inline static int _gravi_data_find (const gravi_data *self, const char *name)
  * Copy all if several extension with same EXTNAME are found.
  * Silent if the copy cannot be done.
  */
+
 /*---------------------------------------------------------------------------*/
 
 cpl_error_code gravi_data_copy_ext (gravi_data * output,
                                     gravi_data * input,
                                     const char * name)
 {
-  cpl_ensure_code (output, CPL_ERROR_NULL_INPUT);
-  cpl_ensure_code (input,  CPL_ERROR_NULL_INPUT);
-  cpl_ensure_code (name,   CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (output,  CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (input,   CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (name,    CPL_ERROR_NULL_INPUT);
 
   int n = gravi_data_get_size (input);
   for (int j = 0; j < n; j++){

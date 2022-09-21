@@ -836,6 +836,13 @@ static int gravity_vis(cpl_frameset * frameset,
             CPLCHECK_CLEAN ("Cannot average the TIME in OI_VIS");
         }
 
+        /* Copy the acquisition camera if requested. */
+        if (current_frame < 0 && gravi_param_get_bool (parlist, "gravity.test.reduce-acq-cam"))
+        {
+   	    cpl_msg_info (cpl_func, "Cppy ACQ into the VIS file");
+            gravi_data_copy_ext_insname (tmpvis_data, p2vmred_data, GRAVI_IMAGING_DATA_ACQ_EXT, INSNAME_ACQ);
+        }
+        
         /* Merge with already existing */
         if (vis_data == NULL) {
             vis_data = tmpvis_data; tmpvis_data = NULL;
@@ -847,7 +854,6 @@ static int gravity_vis(cpl_frameset * frameset,
         }
 
         }
-
         
 		/* Save the astro file, which is a lighter version of the p2vmreduced */
 		if (gravi_param_get_bool (parlist,"gravity.dfs.astro-file")) {

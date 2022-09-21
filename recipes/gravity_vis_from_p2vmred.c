@@ -184,6 +184,14 @@ static int gravity_vis_from_p2vmred_create(cpl_plugin * plugin)
     /* Parameters for gravi_compute_vis */
     gravi_parameter_add_compute_vis (recipe->parameters, isCalib);
 
+    /* Reduce ACQ_CAM */
+    p = cpl_parameter_new_value ("gravity.test.reduce-acq-cam", CPL_TYPE_BOOL,
+                                 "If TRUE, reduced ACQ_CAM images",
+                                 "gravity.test", FALSE);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "reduce-acq-cam");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (recipe->parameters, p);
+
     /* --Use existing selection */
 	p = cpl_parameter_new_value ("gravity.signal.use-existing-rejection", CPL_TYPE_BOOL,
                                  "Use existing rejection flags (ignore related options)",
@@ -411,6 +419,13 @@ static int gravity_vis_from_p2vmred(cpl_frameset * frameset,
             CPLCHECK_CLEAN ("Cannot average the TIME in OI_VIS");
         }
             
+        /* Copy the acquisition camera if requested */
+        if (current_frame < 0 && gravi_param_get_bool (parlist, "gravity.test.reduce-acq-cam"))
+        {
+   	    cpl_msg_info (cpl_func, "Copy ACQ into the VIS file");
+            gravi_data_copy_ext_insname (tmpvis_data, p2vmred_data, GRAVI_IMAGING_DATA_ACQ_EXT, INSNAME_ACQ);
+        }
+        
         /* Merge with already existing */
         if (vis_data == NULL) {
             vis_data = tmpvis_data; tmpvis_data = NULL;
