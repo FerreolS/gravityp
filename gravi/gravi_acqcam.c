@@ -864,45 +864,80 @@ cpl_error_code gravi_acqcam_clean_pupil_v2(cpl_imagelist * acqcam_imglist, cpl_i
 
     CPLCHECK_MSG("Error computing gaussian Kernel");
 
+    // zero-pad to match image and kernel size, plus extra buffer for spurious data at edges
+    cpl_size fft_nx = nx + Npref - 1;
+    cpl_size fft_ny = ny + Npref - 1;
+    cpl_size half_kernel_w = (Npref - 1) / 2;
+
+    // Copy kernel into image with zero-padding
+    cpl_matrix_resize(kernel1, 0, ny-1, 0, nx-1);
+    cpl_image *kernel_image = cpl_image_wrap_double(fft_nx, fft_ny, cpl_matrix_get_data(kernel1));
+
+    // Compute kernel FFT
+    cpl_image *kernel_fft = cpl_image_new(fft_nx, fft_ny, CPL_TYPE_DOUBLE_COMPLEX);
+    cpl_fft_image(kernel_fft, kernel_image, CPL_FFT_FORWARD);
+    
+    // Create imagelist with zero-padded copies of the source images
+    cpl_imagelist *pupilImage_padded = cpl_imagelist_new();
     for (cpl_size n = 0; n < nrow ; n++)
     {
-    cpl_image * small_img_tmp = cpl_imagelist_get (pupilImage, n);
-    cpl_image * filtered_img = cpl_image_new (nx, ny, CPL_TYPE_DOUBLE);
-    cpl_image_filter    (    filtered_img,
-                         small_img_tmp, kernel1,CPL_FILTER_LINEAR,CPL_BORDER_FILTER);
-    cpl_imagelist_set(pupilImage_filtered, filtered_img,n);
-        if (n %10 == 0 || n == (nrow-1))
-        cpl_msg_info_overwritable (cpl_func, "Convolution of pupil frame %lli over %lli frames",n, nrow);
-
+        const cpl_image *small_img_tmp = cpl_imagelist_get_const(pupilImage, n);
+        cpl_image *padded_img_tmp = cpl_image_new(fft_nx, fft_ny, CPL_TYPE_DOUBLE);
+        cpl_image_copy(padded_img_tmp, small_img_tmp, 1, 1);
+        cpl_imagelist_set(pupilImage_padded, padded_img_tmp, n);
     }
 
+    // Fourier-transform the images
+    cpl_imagelist *pupilImage_fft = cpl_imagelist_new();
+    for (cpl_size n = 0; n < nrow; n++)
+        cpl_imagelist_set(pupilImage_fft, cpl_image_new(fft_nx, fft_ny, CPL_TYPE_DOUBLE_COMPLEX), n);
+    cpl_fft_imagelist(pupilImage_fft, pupilImage_padded, CPL_FFT_FORWARD | CPL_FFT_FIND_MEASURE);
+    
+    // Convolve with kernel
+    cpl_imagelist_multiply_image(pupilImage_fft, kernel_fft);
+
+    // Reverse FFT to get filtered images
+    cpl_imagelist *pupilImage_filtered_padded = cpl_imagelist_new();
+    for (cpl_size n = 0; n < nrow; n++)
+        cpl_imagelist_set(pupilImage_filtered_padded, cpl_image_new(fft_nx, fft_ny, CPL_TYPE_DOUBLE), n);
+    cpl_fft_imagelist(pupilImage_filtered_padded, pupilImage_fft, CPL_FFT_BACKWARD | CPL_FFT_FIND_MEASURE);
+
+    // Trim the padding from the image edges
+    for (cpl_size n = 0; n < nrow; n++) {
+        const cpl_image *pad_filt_img_tmp = cpl_imagelist_get_const(pupilImage_filtered_padded, n);
+        cpl_image *trimmed_img = cpl_image_extract(pad_filt_img_tmp, half_kernel_w+1, half_kernel_w+1, fft_nx-half_kernel_w, fft_ny-half_kernel_w);
+        cpl_imagelist_set(pupilImage_filtered, trimmed_img, n);
+    }
+    
     cpl_matrix_delete(kernel1);
     cpl_matrix_delete(kernel2);
 
+    cpl_image_unwrap(kernel_image);
+    cpl_image_delete(kernel_fft);
+
     cpl_image_delete(pupilImageBackground);
     cpl_imagelist_delete(pupilImage);
-
-
-
-
+    cpl_imagelist_delete(pupilImage_fft);    
+    cpl_imagelist_delete(pupilImage_padded);
+    cpl_imagelist_delete(pupilImage_filtered_padded);
+    
     CPLCHECK_MSG("Pupil Fitting V2 does not work");
     gravi_msg_function_exit(1);
     return CPL_ERROR_NONE;
-
 }
 
 
 /*----------------------------------------------------------------------------*/
 /**
-* @brief select pupil frames with pupil beacon on. Clean pupil frames by substraction of images with pupil beacon off.
-*
-* @param pupilImage_filtered:   input imagelist with cleaned (filtered) images
+ * @brief select pupil frames with pupil beacon on. Clean pupil frames by substraction of images with pupil beacon off.
+ *
+ * @param pupilImage_filtered:   input imagelist with cleaned (filtered) images
  * @param pupilImage_onFrames:   output pupilImage with beacons on
  * @param good_frames:   array of integer. It tells which frames have beacon on or off
-* @param ury:      y limit of pupil beacon camera
-*
-* \exception CPL_ERROR_NULL_INPUT input data is missing
-*
+ * @param ury:      y limit of pupil beacon camera
+ *
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
+ *
  * Not that the output imagelist is a list of n_on images, with n_on the number of good_frames at off:
  *   n_on= sum(good_frames)
 */
