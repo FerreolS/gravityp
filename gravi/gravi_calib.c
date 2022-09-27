@@ -115,7 +115,7 @@ cpl_image * gravi_create_profile_image (cpl_image * mean_img,
  * The dark image of the SC is a saved as full image of the mean dark value
  * and mean dark standard deviation (RON). The dark for the FT is saved
  * into PIX array of the mean and dark standard deviation (RON). And the dark of
- * the metrology is save into the METOLOGY table.
+ * the metrology is save into the METROLOGY table.
  */
 /*----------------------------------------------------------------------------*/
 
@@ -163,8 +163,8 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
 		cpl_imagelist * imglist = gravi_data_get_cube (raw_data, GRAVI_IMAGING_DATA_SC_EXT);
 
 		/* Compute the median image of the imagelist */
-		cpl_image * median_img = cpl_imagelist_collapse_sigclip_create (imglist, 5, 5, 0.6, CPL_COLLAPSE_MEDIAN_MEAN, NULL);
-		CPLCHECK_NUL ("Cannot compute the median dark");
+		cpl_image * median_img  = cpl_imagelist_collapse_create (imglist);
+        CPLCHECK_NUL ("Cannot compute the median dark");
 
 		/* Compute STD. We should see if we use sigma-clipping
 		 * or not for the collapse, it may change the bad pixel detection */
@@ -172,9 +172,7 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
 		cpl_imagelist * temp_imglist = cpl_imagelist_duplicate (imglist);
 		cpl_imagelist_subtract_image (temp_imglist, median_img);
 		cpl_imagelist_power (temp_imglist, 2.0);
-		// cpl_image * stdev_img = cpl_imagelist_collapse_create (temp_imglist);
-		cpl_image * stdev_img = cpl_imagelist_collapse_sigclip_create (temp_imglist, 5, 5, 0.6,
-									       CPL_COLLAPSE_MEDIAN_MEAN, NULL);
+		cpl_image * stdev_img = cpl_imagelist_collapse_create (temp_imglist);
 		FREE (cpl_imagelist_delete, temp_imglist);
 		cpl_image_power (stdev_img, 0.5);
 		CPLCHECK_NUL ("Cannot compute the STD of the DARK");
@@ -1113,8 +1111,8 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
         gravi_remove_badpixel_sc (data_imglist, bad_img);
 
         /* Collapse the DITs of this FLAT */
-        cpl_image * collapsed_img = cpl_imagelist_collapse_sigclip_create (data_imglist, 5, 5, 0.6, CPL_COLLAPSE_MEDIAN_MEAN, NULL);
-		FREE (cpl_imagelist_delete, data_imglist);
+		cpl_image * collapsed_img = cpl_imagelist_collapse_create (data_imglist);
+        FREE (cpl_imagelist_delete, data_imglist);
 
         /* Save this FLAT in the imagelist to collapse them */
         cpl_imagelist_set (temp_imglist, collapsed_img,
@@ -1189,8 +1187,8 @@ gravi_data * gravi_compute_profile(gravi_data ** flats_data,
         gravi_remove_badpixel_sc (data_imglist, bad_img);
         
         /* Collapse the DITs of this FLAT */
-        cpl_image * collapsed_img = cpl_imagelist_collapse_sigclip_create (data_imglist, 5, 5, 0.6, CPL_COLLAPSE_MEDIAN_MEAN, NULL);
-        
+        cpl_image * collapsed_img = cpl_imagelist_collapse_create (data_imglist);
+
 		FREE (cpl_imagelist_delete, data_imglist);
 
         /* Create a filtered version of this FLAT */
@@ -2548,6 +2546,153 @@ gravi_data * gravi_compute_piezotf (gravi_data * data,
     /* Verbose */
     gravi_msg_function_exit(1);
     return piezo_tf;
+}
+
+
+/*---------------------------------------------------------------------------*/
+/**
+ * @brief Remove cosmic rays via filtering through images
+ *
+ * @param imglist_sc      input data as imglist, remove inplace
+ *
+ * IMPORTANT: Use this function AFTER bad pixel removal.
+ * Cosmic ray hits are identified as outliers when they are more than 5 
+ * times the median absolute deviation from the median computed 
+ * across the list of images. This is evaluated on a pixel-by-pixel
+ * basis. CR pixels are interpolated along the row of an image.
+ */
+/*---------------------------------------------------------------------------*/
+
+cpl_error_code gravi_remove_cosmicrays_sc (cpl_imagelist * imglist_sc)
+{
+    gravi_msg_function_start(1);
+    cpl_ensure_code (imglist_sc, CPL_ERROR_NULL_INPUT);
+        
+    cpl_image * img;
+    double clip_thresh = 5.;
+
+    const cpl_size    nrow     = cpl_imagelist_get_size(imglist_sc);
+    img      = cpl_imagelist_get (imglist_sc, 0);
+    const cpl_size    nx       = cpl_image_get_size_x(img);
+    const cpl_size    ny       = cpl_image_get_size_y(img);    
+ 
+    /* loop through all image rows of the image */
+    for (cpl_size k = 0; k < ny; k++) {
+
+        cpl_array * med_val = cpl_array_new (nx, CPL_TYPE_DOUBLE);
+        cpl_array * std_val = cpl_array_new (nx, CPL_TYPE_DOUBLE);
+                
+        /* loop through all pixels in the image row */
+        for (cpl_size i = 0; i < nx; i++) {
+            cpl_vector * val = cpl_vector_new (nrow);
+            cpl_size img_cnt = 0;
+
+            /* find pixel value across all images */
+            for (cpl_size row = 0; row < nrow; row++) {
+                int nv;
+                img = cpl_imagelist_get (imglist_sc, row);
+                cpl_vector_set (val, row, cpl_image_get (img, i+1, k+1, &nv));
+            } /* End image loop */
+
+            /* calculate pixel mean and standard deviation */
+            double median = cpl_vector_get_median (val);
+            cpl_array_set (med_val, i, median);
+            // cpl_array_set (std_val, i, cpl_vector_get_stdev (val));
+            cpl_vector_subtract_scalar (val, median);
+            cpl_vector_multiply (val,val);
+            cpl_vector_sqrt (val ); /* = abs(val) */
+            cpl_array_set (std_val, i, cpl_vector_get_median (val) * CPL_MATH_STD_MAD);
+            
+            /* clear vector */
+            cpl_vector_delete (val);
+        } /* End pixel loop */
+                
+        /* loop through the values for each image and identify the outliers */
+        /* this is done per image per row */
+
+        for (cpl_size row = 0; row < nrow; row++) {
+            cpl_size nGood = 0, nCR = 0;
+            cpl_array * pGood_x = cpl_array_new (nx, CPL_TYPE_DOUBLE);
+            cpl_array * pGood_y = cpl_array_new (nx, CPL_TYPE_DOUBLE);
+            cpl_array * pCR_x = cpl_array_new (nx, CPL_TYPE_DOUBLE);
+
+            /* load image */
+            img = cpl_imagelist_get (imglist_sc, row);
+            
+            /* Separate good pixels from those with CRs */ 
+            for (cpl_size i = 0; i < nx; i++) {
+                int nv;
+                double val = cpl_image_get (img, i+1, k+1, &nv);
+                if ( (nv==1) || (val > cpl_array_get (med_val, i, &nv) + clip_thresh * cpl_array_get (std_val, i, &nv)) ){
+                    cpl_array_set (pCR_x,nCR, i);
+                    nCR ++;
+                } else {
+                    cpl_array_set (pGood_x, nGood, i);
+                    cpl_array_set (pGood_y, nGood, val);
+                    nGood ++;
+                }
+            } /* End column loop */
+                
+            /* interpolate CR affected pixels */
+            if (nCR > 0) {
+                int nv;
+
+                /* allocate vectors */
+                cpl_vector * xref = cpl_vector_new (nGood+2);
+                cpl_vector * yref = cpl_vector_new (nGood+2);
+                cpl_vector * xout = cpl_vector_new (nCR);
+                cpl_vector * yout = cpl_vector_new (nCR);
+
+                /* fill vectors with good and CR pixels*/
+                for (cpl_size i = 0; i < nGood; i++) {
+                    cpl_vector_set (xref, i+1, cpl_array_get (pGood_x, i, &nv));
+                    cpl_vector_set (yref, i+1, cpl_array_get (pGood_y, i, &nv));
+                } /* End nGood loop */
+                
+                /* Fix the non-extrapolation inability of cpl_bivector_interpolate_linear */
+                cpl_vector_set (xref, 0, 0);
+                cpl_vector_set (xref, nGood+1, nx);
+                cpl_vector_set (yref, 0, cpl_array_get (pGood_y, 0, &nv));
+                cpl_vector_set (yref, nGood+1, cpl_array_get (pGood_y, nGood-1, &nv));
+
+
+                for (cpl_size i = 0; i < nCR; i++) {
+                    cpl_vector_set (xout, i, cpl_array_get (pCR_x, i, &nv));
+                } /* End nCR loop */
+
+                
+                /* merge into bivector */
+                cpl_bivector * fref = cpl_bivector_wrap_vectors (xref, yref);
+                cpl_bivector * fout = cpl_bivector_wrap_vectors (xout, yout);
+
+                /* interpolate CR positions */
+                cpl_bivector_interpolate_linear (fout, fref);
+                CPLCHECK_MSG ("Cannot interpolate CR pixels!");
+
+                /* replace CR pixels in image with interpolated values */
+                for (cpl_size i = 0; i < nCR; i++) {
+                    cpl_image_set (img, cpl_vector_get (xout, i) +1, k +1, cpl_vector_get (yout, i));
+                    cpl_mask   * bpm  = cpl_image_get_bpm (img);
+                    cpl_mask_set (bpm, cpl_vector_get (xout, i) +1, k +1, CPL_BINARY_1);
+                    
+                }
+                FREE (cpl_bivector_delete, fref);
+                FREE (cpl_bivector_delete, fout);
+
+            } /* End IF nCR*/
+
+                /* delete arrays */
+            FREE (cpl_array_delete, pGood_x);
+            FREE (cpl_array_delete, pGood_y);
+            FREE (cpl_array_delete, pCR_x);
+        } /* End loop through all images */
+        FREE (cpl_array_delete, med_val);
+        FREE (cpl_array_delete, std_val);
+
+    } /* End loop through all image rows */
+
+    gravi_msg_function_exit(1);
+    return CPL_ERROR_NONE;
 }
 
 /*----------------------------------------------------------------------------*/

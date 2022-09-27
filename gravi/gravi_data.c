@@ -78,6 +78,12 @@ cpl_error_code gravi_data_check_savetypes(cpl_propertylist * hdr, cpl_table * oi
 int gravi_data_get_dark_pos(cpl_table * detector_table, int reg);
 cpl_mask * gravi_data_create_bias_mask (cpl_table * detector_table, cpl_size nx, cpl_size ny);
 
+/* ----------------------------------------------------------------------------
+                           Forward declarations
+   ---------------------------------------------------------------------------- */
+
+cpl_error_code gravi_remove_cosmicrays_sc (cpl_imagelist * imglist_sc);
+
 /*-----------------------------------------------------------------------------
                              Functions code
  -----------------------------------------------------------------------------*/
@@ -1211,7 +1217,11 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
   cpl_size ny = cpl_image_get_size_y (cpl_imagelist_get (imglist, 0));
 
   CPLCHECK_MSG ("Cannot get data");
-  
+
+  /* Remove cosmic rays */
+  gravi_remove_cosmicrays_sc (imglist);
+  CPLCHECK_MSG ("Cannot remove cosmic rays");
+
   /* To save the list of bias correction */
   cpl_vector * bias_list = cpl_vector_new (nframe);
 
