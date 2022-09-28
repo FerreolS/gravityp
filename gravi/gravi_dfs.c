@@ -196,7 +196,35 @@ cpl_parameter * gravi_parameter_add_badpix (cpl_parameterlist *self)
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "bad-dark-threshold");
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
 	cpl_parameterlist_append (self, p);
+    
+    p = cpl_parameter_new_value ("gravity.calib.flag-lowflux-pixels-ft", CPL_TYPE_BOOL,
+                                "Flag as bad pixels all pixels on the FT which "
+                                 "have a non-sgnificant flux "
+                                 "(less than 33% of neighbouring pixel)"
+                                 "to increase SNR on faint targets",
+                                 "gravity.calib", FALSE);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "flag-lowflux-pixels-ft");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (self, p);
+    
+    p = cpl_parameter_new_value ("gravity.calib.bad-pixel-A-ft", CPL_TYPE_INT,
+                                 "flag a given pixel as bad on the FT detector"
+                                 "value is position of pixel (starting at 1)"
+                                 "a position of 0 means no pixel is flagged",
+                                 "gravity.calib", 0);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "bad-pixel-A-ft");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (self, p);
 
+    p = cpl_parameter_new_value ("gravity.calib.bad-pixel-B-ft", CPL_TYPE_INT,
+                                 "flag a second pixel as bad on the FT detector"
+                                 "value is position of pixel (starting at 1)"
+                                 "a position of 0 means no pixel is flagged",
+                                 "gravity.calib", 0);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "bad-pixel-B-ft");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (self, p);
+    
     return p;
 }
 

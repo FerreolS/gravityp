@@ -1817,6 +1817,9 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
     {
 	    cpl_msg_info (cpl_func,"Compute BADPIXEL of FT");
 
+        int bad_pix_number_A = gravi_param_get_int (params, "gravity.calib.bad-pixel-A-ft")-1;
+        int bad_pix_number_B = gravi_param_get_int (params, "gravity.calib.bad-pixel-B-ft")-1;
+        
         /* Copy necessary tables */
         gravi_data_copy_ext (bad_map, dark_map, GRAVI_IMAGING_DETECTOR_FT_EXT);
 	  
@@ -1872,21 +1875,90 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
 
         for (cpl_size pix = 0; pix < npix; pix++) {
             cpl_array_set (bad_array, pix, 0);
+            int pixel_removed=0;
+            /* flag designated pixels */
+            if ((pix == bad_pix_number_A)||(pix == bad_pix_number_B))
+            {
+                cpl_array_set (bad_array, pix, BADPIX_DARK);
+                pixel_removed=1;
+                cpl_msg_info(cpl_func,"Detected a bad FT pixel at position %lli based on reduction option", pix+1);
+            }
             /* flag on the mean value of the dark */
             if (cpl_array_get (dark_array, pix, NULL) > range_max) {
                 cpl_array_set (bad_array, pix, BADPIX_DARK);
-                count_bp_dark ++;
-                cpl_msg_info(cpl_func,"Detected a bad FT pixel at position %lli based on its mean flux: %f ADU", pix, cpl_array_get (dark_array, pix, NULL));
-            } else if (cpl_array_get (std_array, pix, NULL) < std_min) {
+                pixel_removed=1;
+                cpl_msg_info(cpl_func,"Detected a bad FT pixel at position %lli based on its mean flux: %f ADU", pix+1, cpl_array_get (dark_array, pix, NULL));
+            }
+            /* flag on the std value (min and max) of the dark */
+            if (cpl_array_get (std_array, pix, NULL) < std_min) {
                 cpl_array_set (bad_array, pix, BADPIX_DARK);
-                count_bp_dark ++;
+                pixel_removed=1;
+                cpl_msg_warning(cpl_func,"Detected a bad FT pixel at position %lli based on its low rms: %f ADU", pix+1, cpl_array_get (std_array, pix, NULL));
             } else if (cpl_array_get (std_array, pix, NULL) > std_max) {
                 cpl_array_set (bad_array, pix, BADPIX_DARK);
-                count_bp_dark ++;
-                cpl_msg_warning(cpl_func,"Detected a bad FT pixel at position %lli based on its rms: %f ADU", pix, cpl_array_get (std_array, pix, NULL));
+                pixel_removed=1;
+                cpl_msg_warning(cpl_func,"Detected a bad FT pixel at position %lli based on its high rms: %f ADU", pix+1, cpl_array_get (std_array, pix, NULL));
             }
-                
+            if (pixel_removed == 1) count_bp_dark ++;
         }
+        
+        /* check if low flux flag is on. If yes, set to remove low flux pixels */
+        if (!nflat && gravi_param_get_bool(params, "gravity.calib.flag-lowflux-pixels-ft")) {
+            cpl_msg_warning (cpl_func, "Option to remove low flux pixels applied, but no FLATs were provided");
+        }
+        else if (gravi_param_get_bool(params, "gravity.calib.flag-lowflux-pixels-ft")) {
+            cpl_ensure (flats_data, CPL_ERROR_NULL_INPUT, NULL);
+            cpl_msg_info (cpl_func,"FLATs used to remove low flux values on FT");
+
+            cpl_array *  flat_array_sum =  cpl_array_new (npix, CPL_TYPE_DOUBLE);
+            cpl_array_fill_window (flat_array_sum, 0, npix, 0);
+            
+            int count_bp_lowflux = 0;
+            
+            for (int f = 0; f<nflat; f++) {
+                cpl_table * flat = gravi_data_get_table (flats_data[f], GRAVI_IMAGING_DATA_FT_EXT);
+                cpl_size n_row = cpl_table_get_nrow (flat);
+                for (int row = 0; row<n_row; row++) {
+                    cpl_array * flat_array = cpl_table_get_data_array (flat, "PIX")[row];
+                    cpl_array_add (flat_array_sum, flat_array);
+                    cpl_array_subtract (flat_array_sum, dark_array);
+                }
+            }
+            for (cpl_size pix = 0; pix < npix-1; pix+=2) {
+                /* remove pixel if the flat flux is lower than 1/3 of the flux on the adjacent pixel*/
+                double pix1=cpl_array_get (flat_array_sum, pix, NULL);
+                double pix2=cpl_array_get (flat_array_sum, pix+1, NULL);
+                
+                /* make sure the pixel flux are positive, otherwise, scale then up */
+                if (pix1<0) {
+                    pix2-=pix1;
+                    pix1-=pix1;
+                }
+                if (pix2<0) {
+                    pix2-=pix2;
+                    pix1-=pix2;
+                }
+                
+                if ((cpl_array_get (bad_array, pix, NULL)==0)&&(cpl_array_get (bad_array, pix+1, NULL)==0))
+                {
+                    if (pix1 < pix2 / 3)
+                    {
+                        cpl_array_set (bad_array, pix, BADPIX_DARK);
+                        count_bp_lowflux ++;
+                    }
+                    else if (pix2 < pix1 / 3)
+                    {
+                        cpl_array_set (bad_array, pix+1, BADPIX_DARK);
+                        count_bp_lowflux ++;
+                    }
+                }
+            }
+            cpl_msg_info (cpl_func,"removed %.3f percents of FT pixels because of low flux",(100.0 * count_bp_lowflux)/ npix);
+            
+            cpl_array_delete(flat_array_sum);
+                
+            CPLCHECK_NUL ("Cannot use FT flats");
+        } /* End case FLAT provided */
 
         /* Set QC parameter */
 		cpl_propertylist_append_int (bad_header, QC_BADPIX_FT, count_bp_dark);
@@ -1962,7 +2034,7 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
         }
         else {
             cpl_ensure (flats_data, CPL_ERROR_NULL_INPUT, NULL);
-            cpl_msg_info (cpl_func,"FLATs used to detect badpix");
+            cpl_msg_info (cpl_func,"FLATs used to detect badpix on SC");
 
             /* Init co-add FLAT image */
             flat_img = cpl_image_new (nx,ny,CPL_TYPE_DOUBLE);
