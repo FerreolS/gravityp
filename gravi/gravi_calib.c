@@ -1903,10 +1903,10 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
         }
         
         /* check if low flux flag is on. If yes, set to remove low flux pixels */
-        if (!nflat && gravi_param_get_bool(params, "gravity.calib.flag-lowflux-pixels-ft")) {
+        if (!nflat && gravi_param_get_bool(params, "gravity.calib.lowflux-pixels-ft")) {
             cpl_msg_warning (cpl_func, "Option to remove low flux pixels applied, but no FLATs were provided");
         }
-        else if (gravi_param_get_bool(params, "gravity.calib.flag-lowflux-pixels-ft")) {
+        else if (gravi_param_get_bool(params, "gravity.calib.lowflux-pixels-ft")) {
             cpl_ensure (flats_data, CPL_ERROR_NULL_INPUT, NULL);
             cpl_msg_info (cpl_func,"FLATs used to remove low flux values on FT");
 
