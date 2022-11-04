@@ -782,7 +782,7 @@ gravi_data * gravi_extract_spectrum (gravi_data * raw_data,
             darkstd_img = gravi_data_get_img (sky_map, GRAVI_IMAGING_ERR_SC_EXT);
         }        
 
-        /* Build the dimension for the raw_imglist, that shall match the profile dimesion */
+        /* Build the dimension for the raw_imglist, that shall match the profile dimension */
         cpl_size startx = gravi_pfits_get_startx (profile_plist);
         CPLCHECK_NUL ("The coordinate dimensions of the new window is missing");
 

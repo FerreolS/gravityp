@@ -1249,7 +1249,7 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
   {
       bias_method = "MASKED_MEDIAN_PER_COLUMN";
       cpl_msg_info (cpl_func, "New data format found. "
-          "Using MASKED_MEDIAN_PER_COLUMNM bias method");
+          "Using MASKED_MEDIAN_PER_COLUMN bias method");
   }
   else
   {
@@ -1290,7 +1290,7 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
            the current bad-pixel map in case it exists */
         cpl_mask * thismask = cpl_mask_duplicate (mask);
         cpl_mask * bpm = cpl_image_set_bpm  (frame, thismask);
-        FREE (cpl_mask_delete, bpm);
+        /* FREE (cpl_mask_delete, bpm);*/
 
         /* Compute median along the y direction */
         cpl_image * collapse_y;
