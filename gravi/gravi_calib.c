@@ -2255,6 +2255,10 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
  *
  * FIXME: improve the way we define the threshold. Use an 'ouverture'
  * filtering maybe.
+ * 
+ * FIXME: Function used only in the gravity_biasmask recipe. Do not confuse 
+ * with gravi_data_create_bias_mask in gravi_data.c
+ * 
  */
 /*----------------------------------------------------------------------------*/
 

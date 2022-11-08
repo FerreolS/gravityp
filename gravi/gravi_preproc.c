@@ -524,26 +524,34 @@ cpl_table * gravi_imglist_sc_collapse (cpl_table * profile_table,
 		  
 		  /* Extracted flux in [e] for this frame 
 		   * rawFlux = < image * profile > */
-		  cpl_image * rawFlux_profiled = cpl_image_extract (cpl_imagelist_get (raw_imglist, row),
+		  cpl_image * data = cpl_image_extract (cpl_imagelist_get (raw_imglist, row),
                                                             xmin+startx-1, ymin, xmax+startx-1, ymax);
-		  cpl_image_multiply (rawFlux_profiled, profile_crop);
+		  cpl_image * rawFlux_profiled = cpl_image_multiply_create (data, profile_crop);
           
-		  cpl_image *rawFlux = cpl_image_collapse_create (rawFlux_profiled,0);
-		  cpl_image_delete (rawFlux_profiled);
-          CPLCHECK_NUL ("Cannot collapse flux");
           
 		  /* Extracted variance for this frame in [e] 
 		   * rawVar =  < variance * profile^2 > */
-		  cpl_image * rawVar_profiled = cpl_image_extract (cpl_imagelist_get (rawVar_imglist, row),
+		  cpl_image * variance = cpl_image_extract (cpl_imagelist_get (rawVar_imglist, row),
                                                            xmin+startx-1, ymin, xmax+startx-1, ymax);
+
+          cpl_image_divide (rawFlux_profiled,variance);
+                                            
+		  cpl_image * rawVar_profiled = cpl_image_divide_create (profile_crop, variance);
 		  cpl_image_multiply (rawVar_profiled, profile_crop);
-		  cpl_image_multiply (rawVar_profiled, profile_crop);
-          
 		  cpl_image *rawErr = cpl_image_collapse_create (rawVar_profiled,0);
-		  cpl_image_delete (rawVar_profiled);
 		  cpl_image_threshold (rawErr, 0.0, DBL_MAX, 0.0, DBL_MAX);
-		  cpl_image_power (rawErr, 0.5);
           CPLCHECK_NUL ("Cannot collapse variance");
+
+		  cpl_image *rawFlux = cpl_image_collapse_create (rawFlux_profiled,0);
+          cpl_image_divide (rawFlux,rawErr);
+          CPLCHECK_NUL ("Cannot collapse flux");
+
+		  cpl_image_power (rawErr, -0.5);
+
+          cpl_image_delete (rawFlux_profiled);
+		  cpl_image_delete (rawVar_profiled);
+
+        
 
 		  /* Fill the output table for the given region and frame : flux in [e] */
 		  tData[row] = cpl_array_wrap_double (cpl_image_get_data_double (rawFlux), nx);
@@ -552,6 +560,8 @@ cpl_table * gravi_imglist_sc_collapse (cpl_table * profile_table,
 		  tDataErr[row] = cpl_array_wrap_double (cpl_image_get_data_double (rawErr), nx);
 
 		  /* Delete tmp images */
+          cpl_image_delete (data);
+          cpl_image_delete (variance);
 		  FREE (cpl_image_unwrap, rawFlux);
 		  FREE (cpl_image_unwrap, rawErr);
 		}
