@@ -72,6 +72,11 @@ cpl_table * gravi_imglist_sc_collapse (cpl_table * profile_table,
                                        cpl_imagelist * rawVar_imglist,
                                        cpl_size startx);
 
+cpl_table * gravi_imglist_sc_collapse_robust (cpl_table * profile_table,
+                                              cpl_imagelist * raw_imglist,
+                                              cpl_imagelist * rawVar_imglist,
+                                              cpl_size startx);
+
 cpl_error_code gravi_interpolate_spectrum_table (cpl_table * spectrum_table,
                                                  cpl_table * wave_table,
                                                  cpl_table ** oiwave_tables,
@@ -578,6 +583,225 @@ cpl_table * gravi_imglist_sc_collapse (cpl_table * profile_table,
 
 /*----------------------------------------------------------------------------*/
 /**
+ * @brief Extract the SC spectrum with profile
+ *
+ * @param profile_table     Input table containing the profile images
+ * @param raw_imagelist     Input imagelist of raw data
+ * @param rawVar_imagelist  Input imagelist of variance
+ * @param startx            Input left location of profile in image
+ *
+ * Extract all the spectrum using the spectrum extraction method
+ * based on the optimal extraction algorithm (Horne, 1986). This
+ * algorithm is based on the knowledge of a spatial profile. Note
+ * the profile may not be optimal (ex: boxcard) but shall ensure 
+ * flux-conservation from its normalization.
+ *
+ * The profile table shall contains DATA# columns, each containing
+ * the image of the profile of this region. The return tables contains
+ * DATA# column with flux, and DATAERR# columns with errors
+ * (sqrt(variance)).
+ *
+ * startx is the left start column of the profile in images, in FITS
+ * convention (1 for the first pixel).
+ */
+/*----------------------------------------------------------------------------*/
+
+cpl_table * gravi_imglist_sc_collapse_robust (cpl_table * profile_table,
+                                       cpl_imagelist * raw_imglist,
+                                       cpl_imagelist * rawVar_imglist,
+                                       cpl_size startx)
+{
+    int nv;
+    gravi_msg_function_start(1);
+
+    cpl_ensure (profile_table,  CPL_ERROR_NULL_INPUT, NULL);
+    cpl_ensure (raw_imglist,    CPL_ERROR_NULL_INPUT, NULL);
+    cpl_ensure (rawVar_imglist, CPL_ERROR_NULL_INPUT, NULL);
+
+    /* Get data */
+    cpl_size n_region = gravi_spectrum_get_nregion (profile_table);
+    cpl_size n_frame = cpl_imagelist_get_size (raw_imglist);
+    cpl_ensure (n_frame > 0, CPL_ERROR_ILLEGAL_INPUT, NULL);
+    cpl_ensure (n_region==24 || n_region==48, CPL_ERROR_ILLEGAL_INPUT, NULL);
+
+    /* Ensure the input images are of type DOUBLE */
+    cpl_type type0 = cpl_image_get_type (cpl_imagelist_get (raw_imglist, 0));
+    cpl_type type1 = cpl_image_get_type (cpl_imagelist_get (rawVar_imglist, 0));
+    cpl_ensure (type0 == CPL_TYPE_DOUBLE, CPL_ERROR_ILLEGAL_INPUT, NULL);
+    cpl_ensure (type1 == CPL_TYPE_DOUBLE, CPL_ERROR_ILLEGAL_INPUT, NULL);
+    
+    /* Get output tables */
+    cpl_table * spectrum_table = cpl_table_new (n_frame);
+
+	/* Get the profile dimension */
+	cpl_size nx = cpl_table_get_column_dimension (profile_table,"DATA1",0);
+	cpl_size ny = cpl_table_get_column_dimension (profile_table,"DATA1",1);
+    CPLCHECK_NUL ("Cannot get profile dimension");
+    
+	/* Loop on regions (output of beam combiner) */
+	for (cpl_size region = 0; region < n_region; region++){
+
+	    /* Verbose every 6 regions */
+	    if ( !region || !((region+1)%6) )
+		  cpl_msg_info_overwritable(cpl_func, "Extract region of SC %lld over %lld",region+1,n_region);
+
+		/* Construction of the DATA column */
+		const char * regionNameData = GRAVI_DATA[region];
+		cpl_table_new_column_array (spectrum_table, regionNameData, CPL_TYPE_DOUBLE, nx);
+		
+		/* Construction of the DATAERR column */
+		const char * regionNameErr = GRAVI_DATAERR[region];
+		cpl_table_new_column_array (spectrum_table, regionNameErr, CPL_TYPE_DOUBLE, nx);
+
+		/* Get the profile of this region as a 2D image */
+		cpl_imagelist * profile_imglist = gravi_imagelist_wrap_column (profile_table, GRAVI_DATA[region]);
+		cpl_image * profile_img = cpl_imagelist_get (profile_imglist, 0);
+		CPLCHECK_NUL ("Cannot get data");
+
+		/* Get the bound of the profile of this region.
+		 * x = spectral, y = spatial */
+		int xmin = 1,  xmax = nx;
+		int ymin = ny, ymax = 0;
+		for (cpl_size jy = 1 ; jy <= ny ; jy++ ) {
+            for (cpl_size ix = 1 ; ix <= nx ; ix++ ) {
+                if ( !cpl_image_get (profile_img, ix, jy, &nv) ) continue;
+                if ( jy<ymin ) ymin=jy;
+                if ( jy>ymax ) ymax=jy;
+            }
+		}
+		CPLCHECK_NUL ("Cannot get profile limits");
+
+		/* Dump the found limits */
+		cpl_msg_debug (cpl_func, "Found limits: x=[%4d, %4d] y=[%4d, %4d]  (nx=%lld,ny=%lld, FITS convention)",
+                       xmin,xmax,ymin,ymax,nx,ny);
+
+		/* Extract a cropped version of the profile */
+		cpl_image * profile_crop = cpl_image_extract (profile_img, xmin, ymin, xmax, ymax);
+        cpl_image * squared_profile_crop = cpl_image_power_create (profile_crop, 2);
+
+        CPLCHECK_NUL ("Cannot extract profile");
+		
+		/* Get the pointer to frames, to avoid calling this into the loop */
+		cpl_array ** tData    = cpl_table_get_data_array (spectrum_table, regionNameData);
+		cpl_array ** tDataErr = cpl_table_get_data_array (spectrum_table, regionNameErr);
+
+        /* Loop on frame */
+		for (cpl_size frame = 0; frame < n_frame; frame ++) {
+		    /* Extracted flux in [e] for this frame 
+		     * rawFlux = < image * profile > */
+		    cpl_image * data = cpl_image_extract (cpl_imagelist_get (raw_imglist, frame),
+                                                              xmin+startx-1, ymin, xmax+startx-1, ymax);
+		    cpl_image * rawFlux_profiled = cpl_image_multiply_create (data, profile_crop);
+          
+		    /* Extracted variance for this frame in [e] 
+		     * rawVar =  < variance * profile^2 > */
+		    cpl_image * variance = cpl_image_extract (cpl_imagelist_get (rawVar_imglist, frame),
+                                                           xmin+startx-1, ymin, xmax+startx-1, ymax);
+
+            cpl_image * weighted_flux_profile = cpl_image_divide_create (rawFlux_profiled,variance);
+                                            
+		    cpl_image * rawVar_profiled = cpl_image_divide_create (squared_profile_crop, variance);
+		    cpl_image *rawErr = cpl_image_collapse_create (rawVar_profiled,0);
+		    cpl_image_threshold (rawErr, 0.0, DBL_MAX, 0.0, DBL_MAX);
+		    cpl_image_delete (rawVar_profiled);
+            CPLCHECK_NUL ("Cannot collapse variance");
+
+		    cpl_image *rawFlux = cpl_image_collapse_create (weighted_flux_profile,0);
+		    cpl_image_delete (weighted_flux_profile);
+            cpl_image_divide (rawFlux,rawErr);
+            CPLCHECK_NUL ("Cannot collapse flux");
+
+		    cpl_image_power (rawErr, -0.5);
+
+
+        
+            for (int n_it = 0; n_it<5; n_it++){
+                cpl_image * residuals = cpl_image_duplicate (data);
+                double * residuals_values = cpl_image_get_data_double(residuals);
+
+                int ncol = cpl_image_get_size_x(residuals);
+                int nrow = cpl_image_get_size_y(residuals);
+                for ( int col = 0; col < ncol; col++) {
+                    double model  = cpl_image_get ( rawFlux,col+1,1,&nv);
+                    for ( int row = 0; row < nrow; row++) {
+                        double precision = cpl_image_get ( variance, col+1, row+1, &nv);
+                        if (nv==1)
+                            precision = 0.;
+                        else
+                            precision = precision <= 0 ? 0 : 1.0 / precision;
+                        residuals_values[col + row * ncol] = (residuals_values[col + row * ncol] - model * cpl_image_get ( profile_crop, col+1, row+1, &nv))* sqrt(precision);
+                    }
+                }
+                double s;
+                double med = cpl_image_get_mad(residuals,&s);
+                s *= CPL_MATH_STD_MAD;
+                for ( int col = 0; col < ncol; col++) {
+                    for ( int row = 0; row < nrow; row++) {
+                        double precision = cpl_image_get ( variance, col+1, row+1, &nv);
+                        if (nv==1)
+                            precision = 0.;
+                        else
+                            precision = precision <= 0 ? 0 : 1.0 / precision;
+                        residuals_values[col + row * ncol] = precision  / ( 1.0 + pow( residuals_values[col + row * ncol]  / (2.985 *s) ,2.0 ) );  // weights
+                    }
+                }
+                /* Verbose every 6 regions */
+	            if ( !region || !((region+1)%12) ){
+		            cpl_msg_info(cpl_func, "Weights s %g",s);
+		            cpl_msg_info(cpl_func, "Weights mean %g",cpl_image_get_mean(residuals));
+                }
+
+                cpl_image * weighted_flux_profile = cpl_image_multiply_create (rawFlux_profiled,residuals);
+                                           
+		        cpl_image * rawVar_profiled = cpl_image_multiply_create (squared_profile_crop, residuals);
+    		    cpl_image * tmp_rawErr = cpl_image_collapse_create (rawVar_profiled,0);
+	    	    cpl_image_threshold (tmp_rawErr, 0.0, DBL_MAX, 0.0, DBL_MAX);
+		        cpl_image_delete (rawVar_profiled);
+                CPLCHECK_NUL ("Cannot collapse variance");
+
+    		    cpl_image *tmp_rawFlux = cpl_image_collapse_create (weighted_flux_profile,0);
+	    	    cpl_image_delete (weighted_flux_profile);
+                cpl_image_divide (tmp_rawFlux,tmp_rawErr);
+                CPLCHECK_NUL ("Cannot collapse flux");
+
+    		    cpl_image_power (tmp_rawErr, -0.5);
+
+                cpl_image_copy(rawFlux,tmp_rawFlux,1,1);
+                cpl_image_copy(rawErr,tmp_rawErr,1,1);
+                
+                cpl_image_delete (residuals);
+                cpl_image_delete (tmp_rawFlux);
+                cpl_image_delete (tmp_rawErr);
+            }
+
+		    /* Delete tmp images */
+            cpl_image_delete (data);
+            cpl_image_delete (variance);
+            cpl_image_delete (rawFlux_profiled);
+
+		    /* Fill the output table for the given region and frame : flux in [e] */
+		    tData[frame] = cpl_array_wrap_double (cpl_image_get_data_double (rawFlux), nx);
+
+		    /* Fill the output table for the given region and frame : error in [e] */
+		    tDataErr[frame] = cpl_array_wrap_double (cpl_image_get_data_double (rawErr), nx);
+
+		    FREE (cpl_image_unwrap, rawFlux);
+		    FREE (cpl_image_unwrap, rawErr);
+		}
+
+ 		/* Delete all arrays of the loop */
+        FREE (gravi_imagelist_unwrap_images, profile_imglist);
+		FREE (cpl_image_delete, squared_profile_crop);
+		FREE (cpl_image_delete, profile_crop);
+	}
+	/* End loop on region */
+    
+    gravi_msg_function_exit(1);
+    return spectrum_table;
+}
+
+/*----------------------------------------------------------------------------*/
+/**
  * @brief Create the SPECTRUM gravi_data with extracted spectrum per region
  * 
  * @param raw_data         Input RAW gravi_data			
@@ -824,7 +1048,7 @@ gravi_data * gravi_extract_spectrum (gravi_data * raw_data,
         /* Collapse images with spectrum and create
          * spectrum_table for SC */
         cpl_table * spectrum_table;
-        spectrum_table = gravi_imglist_sc_collapse (profile_table, raw_imglist,
+        spectrum_table = gravi_imglist_sc_collapse_robust (profile_table, raw_imglist,
                                                     rawVar_imglist, startx);
         CPLCHECK_NUL ("Cannot collapse the spectrum");
 
@@ -880,7 +1104,7 @@ gravi_data * gravi_extract_spectrum (gravi_data * raw_data,
         
         cpl_table * spectrumflat_table;
         cpl_imagelist * flat_imglist = gravi_data_get_cube (profile_map, GRAVI_IMAGING_DATA_SC_EXT);
-        spectrumflat_table = gravi_imglist_sc_collapse (profile_table, flat_imglist,
+        spectrumflat_table = gravi_imglist_sc_collapse_robust (profile_table, flat_imglist,
                                                         flat_imglist, 1);
         CPLCHECK_NUL ("Cannot collapse the flat");
 
