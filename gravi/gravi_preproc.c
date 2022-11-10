@@ -613,7 +613,7 @@ cpl_table * gravi_imglist_sc_collapse_robust (cpl_table * profile_table,
 {
     int nv;
     gravi_msg_function_start(1);
-
+    const int NB_ROBUST_ITERATION = 5;
     cpl_ensure (profile_table,  CPL_ERROR_NULL_INPUT, NULL);
     cpl_ensure (raw_imglist,    CPL_ERROR_NULL_INPUT, NULL);
     cpl_ensure (rawVar_imglist, CPL_ERROR_NULL_INPUT, NULL);
@@ -715,7 +715,8 @@ cpl_table * gravi_imglist_sc_collapse_robust (cpl_table * profile_table,
 
 
         
-            for (int n_it = 0; n_it<5; n_it++){
+            for (int n_it = 0; n_it < NB_ROBUST_ITERATION; n_it++){
+                int numbad =0;
                 cpl_image * residuals = cpl_image_duplicate (data);
                 double * residuals_values = cpl_image_get_data_double(residuals);
 
@@ -729,26 +730,16 @@ cpl_table * gravi_imglist_sc_collapse_robust (cpl_table * profile_table,
                             precision = 0.;
                         else
                             precision = precision <= 0 ? 0 : 1.0 / precision;
-                        residuals_values[col + row * ncol] = (residuals_values[col + row * ncol] - model * cpl_image_get ( profile_crop, col+1, row+1, &nv))* sqrt(precision);
-                    }
-                }
-                double s;
-                double med = cpl_image_get_mad(residuals,&s);
-                s *= CPL_MATH_STD_MAD;
-                for ( int col = 0; col < ncol; col++) {
-                    for ( int row = 0; row < nrow; row++) {
-                        double precision = cpl_image_get ( variance, col+1, row+1, &nv);
-                        if (nv==1)
-                            precision = 0.;
-                        else
-                            precision = precision <= 0 ? 0 : 1.0 / precision;
-                        residuals_values[col + row * ncol] = precision  / ( 1.0 + pow( residuals_values[col + row * ncol]  / (2.985 *s) ,2.0 ) );  // weights
+                        double r = (residuals_values[col + row * ncol] - model * cpl_image_get ( profile_crop, col+1, row+1, &nv))* sqrt(precision);
+                        if ( fabs(r) > 2.985)
+                            numbad ++;
+                        residuals_values[col + row * ncol] = precision  / ( 1.0 + pow( r  / (2.985) ,2.0 ) );  // weights
                     }
                 }
                 /* Verbose every 6 regions */
 	            if ( !region || !((region+1)%12) ){
-		            cpl_msg_info(cpl_func, "Weights s %g",s);
 		            cpl_msg_info(cpl_func, "Weights mean %g",cpl_image_get_mean(residuals));
+		            cpl_msg_info(cpl_func, "bad pixel number mean %d",numbad);
                 }
 
                 cpl_image * weighted_flux_profile = cpl_image_multiply_create (rawFlux_profiled,residuals);
