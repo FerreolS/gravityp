@@ -723,17 +723,22 @@ cpl_table * gravi_imglist_sc_collapse_robust (cpl_table * profile_table,
                 int ncol = cpl_image_get_size_x(residuals);
                 int nrow = cpl_image_get_size_y(residuals);
                 for ( int col = 0; col < ncol; col++) {
-                    double model  = cpl_image_get ( rawFlux,col+1,1,&nv);
+                    double flux  = cpl_image_get ( rawFlux,col+1,1,&nv);
                     for ( int row = 0; row < nrow; row++) {
+                        double model  = flux * cpl_image_get ( profile_crop, col+1, row+1, &nv);
                         double precision = cpl_image_get ( variance, col+1, row+1, &nv);
                         if (nv==1)
                             precision = 0.;
                         else
-                            precision = precision <= 0 ? 0 : 1.0 / precision;
-                        double r = (residuals_values[col + row * ncol] - model * cpl_image_get ( profile_crop, col+1, row+1, &nv))* sqrt(precision);
-                        if ( fabs(r) > 2.985)
+                            precision = precision <= 0 ? 0 : 1.0 / (model + precision);
+                        double r = (residuals_values[col + row * ncol] - model)* sqrt(precision);
+                        if ( fabs(r) > 2.985){
                             numbad ++;
-                        residuals_values[col + row * ncol] = precision  / ( 1.0 + pow( r  / (2.985) ,2.0 ) );  // weights
+                            residuals_values[col + row * ncol] =  0.;
+                        } else {
+                            residuals_values[col + row * ncol] = precision;
+                        }
+                        // residuals_values[col + row * ncol] = precision  / ( 1.0 + pow( r  / (2.985) ,2.0 ) );  // weights
                     }
                 }
                 /* Verbose every 6 regions */
