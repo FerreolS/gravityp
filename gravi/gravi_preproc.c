@@ -730,7 +730,7 @@ cpl_table * gravi_imglist_sc_collapse_robust (cpl_table * profile_table,
                         if (nv==1)
                             precision = 0.;
                         else
-                            precision = precision <= 0 ? 0 : 1.0 / (model + precision);
+                            precision = precision <= 0 ? 0 : 1.0 / (precision);
                         double r = (residuals_values[col + row * ncol] - model)* sqrt(precision);
                         if ( fabs(r) > 2.985){
                             numbad ++;
