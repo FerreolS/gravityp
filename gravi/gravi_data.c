@@ -1289,7 +1289,9 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
         /* Set the illuminated pixels as 'bad pixels', store 
            the current bad-pixel map in case it exists */
         cpl_mask * thismask = cpl_mask_duplicate (mask);
-        cpl_mask * bpm = cpl_image_set_bpm  (frame, thismask);
+        cpl_mask * bpm = cpl_image_get_bpm (frame);
+        cpl_mask_or(thismask, bpm);
+        bpm = cpl_image_set_bpm  (frame, thismask);
         /* FREE (cpl_mask_delete, bpm);*/
 
         /* Compute median along the y direction */
