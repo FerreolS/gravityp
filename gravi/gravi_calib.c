@@ -1966,7 +1966,8 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
 
         /* Set the badpixel map of FT in output data */
 		gravi_data_add_table (bad_map, NULL, GRAVI_IMAGING_DATA_FT_EXT, bad_table);
-    
+        
+      CPLCHECK_NUL ("Cannot get the FT bad pixel mask");       
       FREE (cpl_vector_delete, std_vector);
 	} /* End FT case */
     
