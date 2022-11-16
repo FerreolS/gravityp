@@ -1213,7 +1213,7 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
   CPLCHECK_MSG ("Cannot get data");
 
   /* Remove cosmic rays outside of a threshold of 5 std */
-  gravi_remove_cosmicrays_sc (imglist, 5.0);
+  gravi_data_remove_cosmicrays_sc (imglist, 5.0);
   CPLCHECK_MSG ("Cannot remove cosmic rays");
 
   /* To save the list of bias correction */
@@ -2627,7 +2627,7 @@ cpl_table ** gravi_data_get_oiwave_tables (gravi_data * data, int type_data, int
  */
 /*---------------------------------------------------------------------------*/
 
-cpl_error_code gravi_remove_cosmicrays_sc (cpl_imagelist * imglist_sc, double clip_thresh)
+cpl_error_code gravi_data_remove_cosmicrays_sc (cpl_imagelist * imglist_sc, double clip_thresh)
 {
     gravi_msg_function_start(1);
     cpl_ensure_code (imglist_sc, CPL_ERROR_NULL_INPUT);

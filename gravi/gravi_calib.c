@@ -163,7 +163,7 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
 		cpl_imagelist * imglist = gravi_data_get_cube (raw_data, GRAVI_IMAGING_DATA_SC_EXT);
 
 		/* Compute the average image of the imagelist taking into account bad pixels 
-        detected by gravi_remove_cosmicrays_sc(). As CR are discarded, taking the median 
+        detected by gravi_data_remove_cosmicrays_sc(). As CR are discarded, taking the median 
         instead of the mean does not add anything and even produce noisier estimates of
         the dark when the number of frame is low */
         cpl_image * mean_img  = cpl_imagelist_collapse_create (imglist);
