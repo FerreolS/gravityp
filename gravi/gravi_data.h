@@ -183,6 +183,10 @@ cpl_error_code gravi_data_move_ext (gravi_data * output,
                                     gravi_data * input,
                                     const char * name);
 
+cpl_error_code gravi_remove_cosmicrays_sc (cpl_imagelist * imglist_sc, 
+                                           double clip_thresh);
+
+
 /*
  * Work on gravi_data
  */
@@ -196,4 +200,3 @@ cpl_error_code gravi_data_dump_mode (gravi_data * data);
 
 
 #endif
-
