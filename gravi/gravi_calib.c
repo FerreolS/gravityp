@@ -162,8 +162,8 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
 		/* Load the IMAGING_DATA table or image list */
 		cpl_imagelist * imglist = gravi_data_get_cube (raw_data, GRAVI_IMAGING_DATA_SC_EXT);
 
-		/* Compute the median image of the imagelist */
-		cpl_image * median_img  = cpl_imagelist_collapse_create (imglist);
+		/* Compute the average image of the imagelist taking into account bad pixels detected by gravi_remove_cosmicrays_sc() */
+		cpl_image * median_img  = cpl_imagelist_collapse_median_create (imglist);
         CPLCHECK_NUL ("Cannot compute the median dark");
 
 		/* Compute STD. We should see if we use sigma-clipping
