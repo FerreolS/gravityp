@@ -162,15 +162,18 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
 		/* Load the IMAGING_DATA table or image list */
 		cpl_imagelist * imglist = gravi_data_get_cube (raw_data, GRAVI_IMAGING_DATA_SC_EXT);
 
-		/* Compute the average image of the imagelist taking into account bad pixels detected by gravi_remove_cosmicrays_sc() */
-		cpl_image * median_img  = cpl_imagelist_collapse_median_create (imglist);
+		/* Compute the average image of the imagelist taking into account bad pixels 
+        detected by gravi_remove_cosmicrays_sc(). As CR are discarded, taking the median 
+        instead of the mean does not add anything and even produce noisier estimates of
+        the dark when the number of frame is low */
+        cpl_image * mean_img  = cpl_imagelist_collapse_create (imglist);
         CPLCHECK_NUL ("Cannot compute the median dark");
 
 		/* Compute STD. We should see if we use sigma-clipping
 		 * or not for the collapse, it may change the bad pixel detection */
 		cpl_msg_info (cpl_func,"Compute std with imglist");
 		cpl_imagelist * temp_imglist = cpl_imagelist_duplicate (imglist);
-		cpl_imagelist_subtract_image (temp_imglist, median_img);
+		cpl_imagelist_subtract_image (temp_imglist, mean_img);
 		cpl_imagelist_power (temp_imglist, 2.0);
 		cpl_image * stdev_img = cpl_imagelist_collapse_create (temp_imglist);
 		FREE (cpl_imagelist_delete, temp_imglist);
@@ -179,7 +182,7 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
 		
 		/* Compute the QC parameters RMS and MEDIAN */
 		cpl_msg_info (cpl_func, "Compute QC parameters");
-		double mean_qc = cpl_image_get_median (median_img);
+		double mean_qc = cpl_image_get_median (mean_img);
 		double darkrms = cpl_image_get_median (stdev_img);
 		cpl_propertylist_update_double (dark_header, isSky?QC_MEANSKY_SC:QC_MEANDARK_SC, mean_qc);
 		cpl_propertylist_update_double (dark_header, isSky?QC_SKYRMS_SC:QC_DARKRMS_SC, darkrms);
@@ -191,7 +194,7 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
 		/* Put the data in the output table : dark_map */
 		cpl_propertylist * img_plist = gravi_data_get_plist (raw_data, GRAVI_IMAGING_DATA_SC_EXT);
 		img_plist = cpl_propertylist_duplicate (img_plist);
-		gravi_data_add_img (dark_map, img_plist, GRAVI_IMAGING_DATA_SC_EXT, median_img);
+		gravi_data_add_img (dark_map, img_plist, GRAVI_IMAGING_DATA_SC_EXT, mean_img);
         
 		img_plist = cpl_propertylist_duplicate (img_plist);
 		gravi_data_add_img (dark_map, img_plist, GRAVI_IMAGING_ERR_SC_EXT, stdev_img);
