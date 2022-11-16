@@ -1374,30 +1374,30 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
     }
   /* Case HIGH spectral resolution
    * and --bias-method=MEDIAN */
-    else if ( !strcmp(resolution, "HIGH") ) {
+  else if ( !strcmp(resolution, "HIGH") ) {
    /* High Resolution - the first 4 columns
     * are for bias. FIXME: make sure this is also true in
     *  in HIGH-COMBINED */
 	
-	cpl_vector * bias = cpl_vector_new (nx_bias_hr * ny);
+	  cpl_vector * bias = cpl_vector_new (nx_bias_hr * ny);
 	
-	/* Loop on frames */
-	for (cpl_size f = 0; f < nframe; f++) {
-	  cpl_image * frame = cpl_imagelist_get (imglist, f);
+	  /* Loop on frames */
+	  for (cpl_size f = 0; f < nframe; f++) {
+	    cpl_image * frame = cpl_imagelist_get (imglist, f);
 
-	  /* Get the bias pixels */
-	  for (cpl_size x = 0; x < nx_bias_hr; x++)
-		for (cpl_size y = 0; y < ny; y++) {
-		  cpl_vector_set (bias, x * ny + y, cpl_image_get (frame, x+1, y+1, &nv));
-		  CPLCHECK_MSG ("Cannot get the bias pixels");
-		}
+	    /* Get the bias pixels */
+	    for (cpl_size x = 0; x < nx_bias_hr; x++)
+		  for (cpl_size y = 0; y < ny; y++) {
+		    cpl_vector_set (bias, x * ny + y, cpl_image_get (frame, x+1, y+1, &nv));
+		    CPLCHECK_MSG ("Cannot get the bias pixels");
+		  }
 
-	  /* Remove the median of bias pixels to image */
-	  double bias_med = cpl_vector_get_median (bias);
-	  cpl_vector_set (bias_list, f, bias_med);
-	  cpl_image_subtract_scalar (frame, bias_med);
-	  CPLCHECK_MSG ("Cannot subtract bias");
-	}
+	    /* Remove the median of bias pixels to image */
+	    double bias_med = cpl_vector_get_median (bias);
+	    cpl_vector_set (bias_list, f, bias_med);
+	    cpl_image_subtract_scalar (frame, bias_med);
+	    CPLCHECK_MSG ("Cannot subtract bias");
+	  }
     FREE (cpl_vector_delete, bias);
   }
   /* Case LOW or MEDIUM spectral resolution
@@ -2634,12 +2634,12 @@ cpl_error_code gravi_data_remove_cosmicrays_sc (cpl_imagelist * imglist_sc, doub
         
     cpl_image * img;
 
-    const cpl_size    nrow     = cpl_imagelist_get_size(imglist_sc);
+    const cpl_size    nframe     = cpl_imagelist_get_size(imglist_sc);
     img      = cpl_imagelist_get (imglist_sc, 0);
     const cpl_size    nx       = cpl_image_get_size_x(img);
     const cpl_size    ny       = cpl_image_get_size_y(img);    
  
-    /* loop through all image rows of the image */
+    /* loop through all  rows of the image */
     for (cpl_size k = 0; k < ny; k++) {
 
         cpl_array * med_val = cpl_array_new (nx, CPL_TYPE_DOUBLE);
@@ -2647,14 +2647,14 @@ cpl_error_code gravi_data_remove_cosmicrays_sc (cpl_imagelist * imglist_sc, doub
                 
         /* loop through all pixels in the image row */
         for (cpl_size i = 0; i < nx; i++) {
-            cpl_vector * val = cpl_vector_new (nrow);
+            cpl_vector * val = cpl_vector_new (nframe);
             cpl_size img_cnt = 0;
 
             /* find pixel value across all images */
-            for (cpl_size row = 0; row < nrow; row++) {
+            for (cpl_size frame = 0; frame < nframe; frame++) {
                 int nv;
-                img = cpl_imagelist_get (imglist_sc, row);
-                cpl_vector_set (val, row, cpl_image_get (img, i+1, k+1, &nv));
+                img = cpl_imagelist_get (imglist_sc, frame);
+                cpl_vector_set (val, frame, cpl_image_get (img, i+1, k+1, &nv));
             } /* End image loop */
 
             /* calculate pixel mean and standard deviation */
@@ -2670,17 +2670,17 @@ cpl_error_code gravi_data_remove_cosmicrays_sc (cpl_imagelist * imglist_sc, doub
             cpl_vector_delete (val);
         } /* End pixel loop */
                 
-        /* loop through the values for each image and identify the outliers */
-        /* this is done per image per row */
+        /* loop through the pixel for each image and identify the outliers */
 
-        for (cpl_size row = 0; row < nrow; row++) {
+
+        for (cpl_size frame = 0; frame < nframe; frame++) {
             cpl_size nGood = 0, nCR = 0;
             cpl_array * pGood_x = cpl_array_new (nx, CPL_TYPE_DOUBLE);
             cpl_array * pGood_y = cpl_array_new (nx, CPL_TYPE_DOUBLE);
             cpl_array * pCR_x = cpl_array_new (nx, CPL_TYPE_DOUBLE);
 
             /* load image */
-            img = cpl_imagelist_get (imglist_sc, row);
+            img = cpl_imagelist_get (imglist_sc, frame);
             
             /* Separate good pixels from those with CRs */ 
             for (cpl_size i = 0; i < nx; i++) {
