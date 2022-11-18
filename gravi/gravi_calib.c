@@ -2045,7 +2045,10 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
     
             /* Co-add FLATs, remove a self-estimate bias value
              * (the normal bias-pixels maybe wrong because of defocus), 
-             * assuming only half of the detector is illuminated */
+             * assuming only half of the detector is illuminated 
+             * ! Is this usefull as bias removal using
+             *  gravi_data_detector_cleanup() is done before?
+             * */
             for (int f = 0; f<nflat; f++) {
                 cpl_image * img = cpl_imagelist_collapse_median_create (
                                    gravi_data_get_cube (flats_data[f],
@@ -2105,7 +2108,7 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
 
 			  /* Tag the bad pixel on its mean value ... */
               double dij = cpl_image_get (darkhf_img, i + 1, j + 1, &nv);
-			  if ( (dij > dark_max)||
+			  if ( (nv)|| (dij > dark_max)||
                    (dij < dark_min)) {
 				  flag += BADPIX_DARK;
 				  count_bp_dark ++;
@@ -2113,7 +2116,7 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
 			  }
 			  /* ... and its variance */
 			  double stdij = cpl_image_get (std_img, i + 1, j + 1, &nv);
-			  if ( (stdij > std_max) ||
+			  if (  (nv)|| (stdij > std_max) ||
                    (stdij < std_min) ) {
 				  flag += BADPIX_RMS;
 				  count_bp_rms ++;
@@ -2121,14 +2124,15 @@ gravi_data * gravi_compute_badpix (gravi_data * dark_map,
 			  }
               /* ... and the flat */
               if (flat_img) {
-              double flat = cpl_image_get (flat_img, i + 1, j + 1, &nv);
-              double med  = cpl_image_get (flatmed_img, i + 1, j + 1, &nv);
-              double mask = cpl_image_get (flatmask_img, i + 1, j + 1, &nv);
-              if ( flat < 0.5 * med && mask && i>4 && i<nx-4 ) {
+                double med  = cpl_image_get (flatmed_img, i + 1, j + 1, &nv);
+                double mask = cpl_image_get (flatmask_img, i + 1, j + 1, &nv);
+                double flat = cpl_image_get (flat_img, i + 1, j + 1, &nv);
+                if ( (nv)|| ( flat < 0.5 * med && mask && i>4 && i<nx-4 )) {
                   flag += BADPIX_FLAT;
                   count_bp_flat ++;
                   is_bad = 1;
-              } }
+                } 
+             }
 
               /* Set this tag */
 			  count_bp += is_bad;
