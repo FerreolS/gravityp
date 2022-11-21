@@ -613,7 +613,7 @@ cpl_table * gravi_imglist_sc_collapse_robust (cpl_table * profile_table,
 {
     int nv;
     gravi_msg_function_start(1);
-    const int NB_ROBUST_ITERATION = 5;
+    const int NB_ROBUST_ITERATION = 3;
     cpl_ensure (profile_table,  CPL_ERROR_NULL_INPUT, NULL);
     cpl_ensure (raw_imglist,    CPL_ERROR_NULL_INPUT, NULL);
     cpl_ensure (rawVar_imglist, CPL_ERROR_NULL_INPUT, NULL);
@@ -717,6 +717,7 @@ cpl_table * gravi_imglist_sc_collapse_robust (cpl_table * profile_table,
         
             for (int n_it = 0; n_it < NB_ROBUST_ITERATION; n_it++){
                 int numbad =0;
+                double mad = 0;
                 cpl_image * residuals = cpl_image_duplicate (data);
                 double * residuals_values = cpl_image_get_data_double(residuals);
 
@@ -731,16 +732,24 @@ cpl_table * gravi_imglist_sc_collapse_robust (cpl_table * profile_table,
                             precision = 0.;
                         else
                             precision = precision <= 0 ? 0 : 1.0 / (precision);
-                        double r = (residuals_values[col + row * ncol] - model)* sqrt(precision);
-                        if ( fabs(r) > 2.985){
-                            numbad ++;
-                            residuals_values[col + row * ncol] =  0.;
-                        } else {
-                            residuals_values[col + row * ncol] = precision;
-                        }
-                        // residuals_values[col + row * ncol] = precision  / ( 1.0 + pow( r  / (2.985) ,2.0 ) );  // weights
+                        residuals_values[col + row * ncol] = abs(residuals_values[col + row * ncol] - model);
                     }
                 }
+                double med = cpl_image_get_mad(residuals_values, &mad);
+
+                for ( int col = 0; col < ncol; col++) {
+                    for ( int row = 0; row < nrow; row++) {
+                        double precision = cpl_image_get ( variance, col+1, row+1, &nv);
+                        if (nv==1)
+                            precision = 0.;
+                        else
+                            precision = (precision <= 0 ? 0 : 1.0 / (precision));
+                        double r = residuals_values[col + row * ncol]/ (mad*CPL_MATH_STD_MAD) * sqrt(precision); 
+                        residuals_values[col + row * ncol] = precision  / ( 1.0 + pow( r  / (2.985) ,2.0 ) );  // weights
+                    }
+                }
+
+
                 /* Verbose every 6 regions */
 	            if ( !region || !((region+1)%12) ){
 		            cpl_msg_info(cpl_func, "Weights mean %g",cpl_image_get_mean(residuals));
