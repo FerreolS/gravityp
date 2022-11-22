@@ -727,7 +727,7 @@ cpl_table * gravi_imglist_sc_collapse_robust (cpl_table * profile_table,
                     double flux  = cpl_image_get ( rawFlux,col+1,1,&nv);
                     for ( int row = 0; row < nrow; row++) {
                         double model  = flux * cpl_image_get ( profile_crop, col+1, row+1, &nv);
-                        residuals_values[col + row * ncol] = residuals_values[col + row * ncol] - model;
+                        residuals_values[col + row * ncol]  -=  model;
                     }
                 }
                 double med = cpl_image_get_mad(residuals_values, &mad);
@@ -741,12 +741,11 @@ cpl_table * gravi_imglist_sc_collapse_robust (cpl_table * profile_table,
 
                 for ( int col = 0; col < ncol; col++) {
                     for ( int row = 0; row < nrow; row++) {
-                        if (!mad){
+                        if (mad==0){
+                            residuals_values[col + row * ncol] = 1;
+                        }else{
                         double r = residuals_values[col + row * ncol]/ (mad*CPL_MATH_STD_MAD) ; 
                         residuals_values[col + row * ncol] = 1.0  / ( 1.0 + pow( r  / (2.985) ,2.0 ) );  // weights
-                        }
-                        else{
-                            residuals_values[col + row * ncol] = 1;
                         }
                     }
                 }
