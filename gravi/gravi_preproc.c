@@ -741,7 +741,7 @@ cpl_table * gravi_imglist_sc_collapse_robust (cpl_table * profile_table,
 
                 for ( int col = 0; col < ncol; col++) {
                     for ( int row = 0; row < nrow; row++) {
-                        if (mad==0.){
+                        if (!mad){
                         double r = residuals_values[col + row * ncol]/ (mad*CPL_MATH_STD_MAD) ; 
                         residuals_values[col + row * ncol] = 1.0  / ( 1.0 + pow( r  / (2.985) ,2.0 ) );  // weights
                         }
