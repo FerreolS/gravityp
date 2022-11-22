@@ -732,10 +732,22 @@ cpl_table * gravi_imglist_sc_collapse_robust (cpl_table * profile_table,
                 }
                 double med = cpl_image_get_mad(residuals_values, &mad);
 
+
+                /* Verbose every 6 regions */
+	            if ( !region || !((region+1)%12) ){
+		            cpl_msg_info(cpl_func, "med %g",med);
+		            cpl_msg_info(cpl_func, "mad %g",mad*CPL_MATH_STD_MAD);
+                }
+
                 for ( int col = 0; col < ncol; col++) {
                     for ( int row = 0; row < nrow; row++) {
+                        if (mad==0.){
                         double r = residuals_values[col + row * ncol]/ (mad*CPL_MATH_STD_MAD) ; 
                         residuals_values[col + row * ncol] = 1.0  / ( 1.0 + pow( r  / (2.985) ,2.0 ) );  // weights
+                        }
+                        else{
+                            residuals_values[col + row * ncol] = 1;
+                        }
                     }
                 }
 
@@ -743,7 +755,7 @@ cpl_table * gravi_imglist_sc_collapse_robust (cpl_table * profile_table,
                 /* Verbose every 6 regions */
 	            if ( !region || !((region+1)%12) ){
 		            cpl_msg_info(cpl_func, "Weights mean %g",cpl_image_get_mean(residuals));
-		            cpl_msg_info(cpl_func, "bad pixel number mean %d",numbad);
+		            //cpl_msg_info(cpl_func, "mad %g",mad*CPL_MATH_STD_MAD);
                 }
 
                 cpl_image * weighted_flux_profile = cpl_image_multiply_create (rawFlux_profiled,residuals);
