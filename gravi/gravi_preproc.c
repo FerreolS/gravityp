@@ -730,7 +730,7 @@ cpl_table * gravi_imglist_sc_collapse_robust (cpl_table * profile_table,
                         residuals_values[col + row * ncol]  -=  model;
                     }
                 }
-                double med = cpl_image_get_mad(residuals_values, &mad);
+                double med = cpl_image_get_mad(residuals, &mad);
 
 
                 /* Verbose every 6 regions */
