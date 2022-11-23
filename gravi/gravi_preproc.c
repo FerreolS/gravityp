@@ -758,12 +758,16 @@ cpl_table * gravi_imglist_sc_collapse_robust (cpl_table * profile_table,
                 }
 
                 cpl_image * weighted_flux_profile = cpl_image_multiply_create (rawFlux_profiled,residuals);
+                CPLCHECK_NUL ("Cannot collapse variance 1");
                                            
 		        cpl_image * rawVar_profiled = cpl_image_multiply_create (squared_profile_crop, residuals);
+                CPLCHECK_NUL ("Cannot collapse variance 2");
     		    cpl_image * tmp_rawErr = cpl_image_collapse_create (rawVar_profiled,0);
+                CPLCHECK_NUL ("Cannot collapse variance 3");
 	    	    cpl_image_threshold (tmp_rawErr, 0.0, DBL_MAX, 0.0, DBL_MAX);
+                CPLCHECK_NUL ("Cannot collapse variance 4");
 		        cpl_image_delete (rawVar_profiled);
-                CPLCHECK_NUL ("Cannot collapse variance");
+                CPLCHECK_NUL ("Cannot collapse variance 5");
 
     		    cpl_image *tmp_rawFlux = cpl_image_collapse_create (weighted_flux_profile,0);
 	    	    cpl_image_delete (weighted_flux_profile);
