@@ -1,10 +1,28 @@
 ------------------------------------------
+2023/01/20 : New version 1.6.0
+------------------------------------------
+
+- Add Strehl measurement for science channel in wide field mode (PIPE-9913).
+- Enable extra smoothing of metrology for GRAVITY faint.
+- Improved manual with astrometry tutorial.
+- Corrent calculation of pupil beacon spot angle for Gravity wide.
+- Improve performance of pupil image filtering.
+- Improve verbosity to better detect and deal with 2016 data.
+- Rename parameter phaseref-sc-maxdeg to phase-ref-sc-maxdeg.
+
+------------------------------------------
+2022/03/06 : New version 1.5.4
+------------------------------------------
+
+- Fixed gravity_dark recipe failure when processing data from the
+  archive (2016) (PIPE-9448, PIPE-9585, PIPE-9594)
+
+------------------------------------------
 2021/12/22 : New version 1.5.3
 ------------------------------------------
 
 - Fixed gravity_dark recipe failure when processing data from the 
   archive (2016) (PIPE-9448, PIPE-9585, PIPE-9594)
-
 
 ------------------------------------------
 2021/12/22 : New version 1.5.1
