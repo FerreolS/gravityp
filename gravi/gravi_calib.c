@@ -2658,7 +2658,6 @@ cpl_error_code gravi_remove_cosmicrays_sc (cpl_imagelist * imglist_sc)
         /* loop through all pixels in the image row */
         for (cpl_size i = 0; i < nx; i++) {
             cpl_vector * val = cpl_vector_new (nrow);
-            cpl_size img_cnt = 0;
 
             /* find pixel value across all images */
             for (cpl_size row = 0; row < nrow; row++) {

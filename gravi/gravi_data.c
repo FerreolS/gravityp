@@ -1156,7 +1156,7 @@ cpl_mask * gravi_data_create_bias_mask (cpl_table * detector_table,
       for (cpl_size x = 0; x < nx ; x++) {
     	  cpl_size y0 = cpl_polynomial_eval_1d (fit, x, NULL);
     	  for (cpl_size y = y0-hw; y <= y0+hw; y++) {
-    		  if (y >= 0 & y <ny)
+    		  if ((y >= 0) && (y < ny))
     			  cpl_mask_set (mask, x+1, y+1, CPL_BINARY_1);
     		  CPLCHECK_NUL ("Cannot set mask");
     	  }
