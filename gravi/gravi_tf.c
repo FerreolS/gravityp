@@ -503,6 +503,7 @@ cpl_error_code gravi_apply_tf_phi( gravi_data * science,
  * @param vis_data:   The science OIFITS data to be calibrated
  * @param tf_data:    The list of OIFITS transfer function data
  * @param num_tf:     The number of transfer function data
+ * @param phi_tf_data: The transfer function data to use for separate phase calibration, or NULL
  * @param zero:       The astrometric zero-point (unused so far)
  * @param tf_science: The already allocated gravi_data in which
  *                    the interpolated TF at the time of the science 
@@ -511,12 +512,13 @@ cpl_error_code gravi_apply_tf_phi( gravi_data * science,
  *                    - gravity.viscal.delta-time-calib to interpolate the TF [s]
  *                    - gravity.viscal.force-calib to force calibration with the input calibrator
  *                    - gravity.viscal.calib-flux to calibrate the flux
+ *                    - gravity.viscal.separate-phase-calib to use a distinct calibrator for visibility phase
  * 
  * @return The calibrated OIFITS data.
  */
 /*----------------------------------------------------------------------------*/
 
-gravi_data * gravi_calibrate_vis(gravi_data * vis_data, gravi_data ** tf_data, int num_tf,
+gravi_data * gravi_calibrate_vis(gravi_data * vis_data, gravi_data ** tf_data, int num_tf, gravi_data * phi_tf_data,
 							 gravi_data * tf_science,
 							 const cpl_parameterlist * parlist)
 {
@@ -532,6 +534,9 @@ gravi_data * gravi_calibrate_vis(gravi_data * vis_data, gravi_data ** tf_data, i
 
 	/* Check the inputs */
 	cpl_ensure( (vis_data != NULL) && (tf_data != NULL), CPL_ERROR_NULL_INPUT, NULL );
+
+	if (gravi_param_get_bool (parlist, "gravity.viscal.separate-phase-calib"))
+		cpl_ensure(phi_tf_data != NULL, CPL_ERROR_NULL_INPUT, NULL);
 
 	/* 
 	 * Find out the TF files who have the same setup keywords
@@ -587,6 +592,19 @@ gravi_data * gravi_calibrate_vis(gravi_data * vis_data, gravi_data ** tf_data, i
 		return NULL;
 	}
 
+	if (gravi_param_get_bool (parlist, "gravity.viscal.separate-phase-calib")){
+		 /* Get the setup string of phical TF */
+	  	setup_tf = gravi_calib_setupstring (phi_tf_data);
+
+		/* Check if phical compatible with SCIENCE */
+		if (!force_calib && (strcmp (setup_tf, setup_science )) ) {
+			cpl_error_set_message (cpl_func, CPL_ERROR_NULL_INPUT, "Visphi calib file does not have the same keywords");
+			return NULL;
+		}
+			
+		cpl_free (setup_tf);
+	}
+
 	/* Duplicate the data to create a calibrated dataset */
 	vis_calib = gravi_data_duplicate (vis_data);
 
@@ -617,28 +635,33 @@ gravi_data * gravi_calibrate_vis(gravi_data * vis_data, gravi_data ** tf_data, i
 
 		CPLCHECK_NUL("Cannot apply tf to VISAMP");
 
-		/* Calibrate the VISPHI --> to be discussed for the astrometry */
-		gravi_apply_tf_phi (vis_calib, tf_science, used_tf_data, num_used_tf,
-							GRAVI_OI_VIS_EXT,
-							GRAVI_INSNAME(type_data, pol, npol),
-							"VISPHI", "VISPHIERR", 6, delta_t);
-		
-		CPLCHECK_NUL("Cannot apply tf to VISPHI");
-
 		/* Calibrate the T3AMP as a scalar quantity --> to be discussed */
 		gravi_apply_tf_amp (vis_calib, tf_science, used_tf_data, num_used_tf,
 							GRAVI_OI_T3_EXT,
 							GRAVI_INSNAME(type_data, pol, npol),
 							"T3AMP", "T3AMPERR", 4, delta_t);
 
-		CPLCHECK_NUL("Cannot apply tf to VISAMP");
-		
+		CPLCHECK_NUL("Cannot apply tf to T3AMP");
+
+		/* Calibrate the VISPHI --> to be discussed for the astrometry */
+		if (gravi_param_get_bool (parlist, "gravity.viscal.separate-phase-calib")) {
+			gravi_apply_tf_phi (vis_calib, tf_science, &phi_tf_data, 1,
+								GRAVI_OI_VIS_EXT,
+								GRAVI_INSNAME(type_data, pol, npol),
+								"VISPHI", "VISPHIERR", 6, delta_t);
+		} else {
+			gravi_apply_tf_phi (vis_calib, tf_science, used_tf_data, num_used_tf,
+								GRAVI_OI_VIS_EXT,
+								GRAVI_INSNAME(type_data, pol, npol),
+								"VISPHI", "VISPHIERR", 6, delta_t);
+		}
+		CPLCHECK_NUL("Cannot apply tf to VISPHI");
+
 		/* Calibrate the T3PHI as a phasor */
 		gravi_apply_tf_phi (vis_calib, tf_science, used_tf_data, num_used_tf,
 							GRAVI_OI_T3_EXT,
 							GRAVI_INSNAME(type_data, pol, npol),
 							"T3PHI", "T3PHIERR", 4, delta_t);
-		
 		CPLCHECK_NUL("Cannot apply tf to T3PHI");
 		
 		/* Calibrate the FLUX as a real quantity  --> not calibrated */

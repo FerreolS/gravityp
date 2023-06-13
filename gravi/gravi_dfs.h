@@ -110,6 +110,13 @@
 #define GRAVI_TF_DUAL_CALIB                 "DUAL_CAL_TF"
 #define GRAVI_TF_CALIB(data_mode) (data_mode==MODE_DUAL?GRAVI_TF_DUAL_CALIB:GRAVI_TF_SINGLE_CALIB)
 
+/* PRO.CATG / DO.CATG for optional separate phase calibrator */
+#define GRAVI_VISPHI_SINGLE_CALIB           "SINGLE_CAL_VISPHI"
+#define GRAVI_VISPHI_DUAL_CALIB             "DUAL_CAL_VISPHI"
+#define GRAVI_VISPHI_TF_SINGLE_CALIB        "SINGLE_CAL_TF_VISPHI"
+#define GRAVI_VISPHI_TF_DUAL_CALIB          "DUAL_CAL_TF_VISPHI"
+#define GRAVI_VISPHI_TF_CALIB(data_mode) (data_mode==MODE_DUAL?GRAVI_VISPHI_TF_DUAL_CALIB:GRAVI_VISPHI_TF_SINGLE_CALIB)
+
 /* Still unsuported data */
 #define GRAVI_ZP_CAL                        "ZP_CAL"
 #define GRAVI_MIRA_INPUT_PROCATG            "VIS_CALIBRATED"

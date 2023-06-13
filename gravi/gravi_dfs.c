@@ -97,18 +97,20 @@ cpl_error_code gravi_dfs_set_groups(cpl_frameset * set)
 				   (!strcmp(tag, GRAVI_FLAT_RAW)) ||
 				   (!strcmp(tag, GRAVI_WAVE_RAW)) ||
 				   (!strcmp(tag, GRAVI_WAVELAMP_RAW)) ||
-                   (!strcmp(tag, GRAVI_P2VM_RAW)) ||
-                   (!strcmp(tag, GRAVI_PIEZOTF_RAW)) ||
+           (!strcmp(tag, GRAVI_P2VM_RAW)) ||
+           (!strcmp(tag, GRAVI_PIEZOTF_RAW)) ||
 				   (!strcmp(tag, GRAVI_SINGLE_SCIENCE_RAW)) ||
 				   (!strcmp(tag, GRAVI_SINGLE_CALIB_RAW)) ||
 				   (!strcmp(tag, GRAVI_DUAL_SCIENCE_RAW)) ||
 				   (!strcmp(tag, GRAVI_DUAL_CALIB_RAW))||
 				   (!strcmp(tag, GRAVI_DUAL_SKY_RAW)) ||
 				   (!strcmp(tag, GRAVI_SINGLE_SKY_RAW))||
-                   (!strcmp(tag, GRAVI_VIS_SINGLE_CALIB)) ||
+           (!strcmp(tag, GRAVI_VIS_SINGLE_CALIB)) ||
+           (!strcmp(tag, GRAVI_VISPHI_SINGLE_CALIB)) ||
 				   (!strcmp(tag, GRAVI_VIS_SINGLE_SCIENCE)) ||
-                   (!strcmp(tag, GRAVI_VIS_DUAL_CALIB)) ||
-                   (!strcmp(tag, GRAVI_VIS_DUAL_SCIENCE)) ||
+           (!strcmp(tag, GRAVI_VIS_DUAL_CALIB)) ||
+           (!strcmp(tag, GRAVI_VISPHI_DUAL_CALIB)) ||
+           (!strcmp(tag, GRAVI_VIS_DUAL_SCIENCE)) ||
 				   (!strcmp(tag, GRAVI_P2VMRED_SINGLE_CALIB)) ||
 				   (!strcmp(tag, GRAVI_P2VMRED_SINGLE_SCIENCE)) ||
 				   (!strcmp(tag, GRAVI_P2VMRED_DUAL_CALIB)) ||
@@ -124,20 +126,22 @@ cpl_error_code gravi_dfs_set_groups(cpl_frameset * set)
 				  (!strcmp(tag, GRAVI_WAVE_MAP)) ||
 				  (!strcmp(tag, GRAVI_P2VM_MAP)) ||
 				  (!strcmp(tag, GRAVI_BAD_MAP)) ||
-                  (!strcmp(tag, GRAVI_BIASMASK_MAP)) ||
-                  (!strcmp(tag, GRAVI_PIEZOTF_MAP)) ||
+          (!strcmp(tag, GRAVI_BIASMASK_MAP)) ||
+          (!strcmp(tag, GRAVI_PIEZOTF_MAP)) ||
 				  (!strcmp(tag, GRAVI_PREPROC)) ||
 				  (!strcmp(tag, GRAVI_TF_SINGLE_SCIENCE)) ||
 				  (!strcmp(tag, GRAVI_TF_SINGLE_CALIB)) ||
+          (!strcmp(tag, GRAVI_VISPHI_TF_SINGLE_CALIB)) ||
 				  (!strcmp(tag, GRAVI_WAVELAMP_MAP)) ||
 				  (!strcmp(tag, GRAVI_TF_DUAL_SCIENCE))  ||
 				  (!strcmp(tag, GRAVI_TF_DUAL_CALIB)) || 
+          (!strcmp(tag, GRAVI_VISPHI_TF_DUAL_CALIB)) ||
 				  (!strcmp(tag, GRAVI_ZP_CAL)) ||
 				  (!strcmp(tag, GRAVI_DISP_VIS)) ||
 				  (!strcmp(tag, GRAVI_DIAMETER_CAT)) ||
 				  (!strcmp(tag, GRAVI_DISP_MODEL)) ||
 				  (!strcmp(tag, GRAVI_DIODE_POSITION))||
-	              (!strcmp(tag, GRAVI_KEY_PATCH))){
+	        (!strcmp(tag, GRAVI_KEY_PATCH))){
         	/* CALIB frames */
         	cpl_frame_set_group(frame, CPL_FRAME_GROUP_CALIB);
         }else if (
@@ -1118,12 +1122,14 @@ cpl_frameset * gravi_frameset_extract_wavelamp_data (cpl_frameset * frameset) {
   return gravi_frameset_extract (frameset, tags, 1);
 }
 cpl_frameset * gravi_frameset_extract_tf_calib (cpl_frameset * frameset) {
-  const char *tags[] = {GRAVI_TF_SINGLE_CALIB, GRAVI_TF_DUAL_CALIB, GRAVI_ZP_CAL};
-  return gravi_frameset_extract (frameset, tags, 3);
+  const char *tags[] = {GRAVI_TF_SINGLE_CALIB, GRAVI_TF_DUAL_CALIB,
+    GRAVI_VISPHI_TF_SINGLE_CALIB, GRAVI_VISPHI_TF_DUAL_CALIB, GRAVI_ZP_CAL};
+  return gravi_frameset_extract (frameset, tags, 5);
 }
 cpl_frameset * gravi_frameset_extract_vis_calib (cpl_frameset * frameset) {
-  const char *tags[] = {GRAVI_VIS_SINGLE_CALIB, GRAVI_VIS_DUAL_CALIB};
-  return gravi_frameset_extract (frameset, tags, 2);
+  const char *tags[] = {GRAVI_VIS_SINGLE_CALIB, GRAVI_VIS_DUAL_CALIB,
+    GRAVI_VISPHI_SINGLE_CALIB, GRAVI_VISPHI_DUAL_CALIB};
+  return gravi_frameset_extract (frameset, tags, 4);
 }
 cpl_frameset * gravi_frameset_extract_vis_science (cpl_frameset * frameset) {
   const char *tags[] = {GRAVI_VIS_SINGLE_SCIENCE, GRAVI_VIS_DUAL_SCIENCE};

@@ -234,6 +234,13 @@ static int gravity_viscal_create(cpl_plugin * plugin)
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "smoothing");
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
     cpl_parameterlist_append (recipe->parameters, p);
+
+    p = cpl_parameter_new_value ("gravity.viscal.separate-phase-calib", CPL_TYPE_BOOL,
+                                 "enable use of distinct calibrator for VISPHI/T3PHI",
+                                 "gravity.viscal", FALSE);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "separate-phase-calib");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (recipe->parameters, p);
     
     return 0;
 }
@@ -354,7 +361,7 @@ static int gravity_viscal(cpl_frameset            * frameset,
     
     cpl_errorstate errorstate;
     
-    gravi_data ** vis_calibs = NULL, *vis_calib = NULL, * zero_data = NULL, * tf_science = NULL;
+    gravi_data ** vis_calibs = NULL, * vis_calib = NULL, * visphi_calib = NULL, * zero_data = NULL, * tf_science = NULL;
     gravi_data * calibrated = NULL, * vis_data = NULL, * diamcat_data = NULL;
     
     int data_mode, nb_frame_tf = 0, nb_frame_calib = 0, nb_frame_sci, i, j, nb_calib = 0;
@@ -418,15 +425,15 @@ static int gravity_viscal(cpl_frameset            * frameset,
         vis_data = gravi_data_load_frame (frame, NULL);
         vis_calib = gravi_compute_tf (vis_data, diamcat_data);
 
-	/* EKW 27/11/2019 - we may decide to skip smoothing */
-	int smoothing = gravi_param_get_bool (parlist, "gravity.viscal.smoothing");
+        /* EKW 27/11/2019 - we may decide to skip smoothing */
+        int smoothing = gravi_param_get_bool (parlist, "gravity.viscal.smoothing");
 	
         /* Smooth the TF if required */
         if ( !strcmp (gravi_data_get_spec_res (vis_calib), "LOW")) {
             cpl_msg_info (cpl_func,"LOW spectral resolution -> don't smooth the TF");
-	} else if (!smoothing) {
-	    cpl_msg_info (cpl_func,"smoothing parameter == FALSE -> don't smooth the TF");
-	} else {
+        } else if (!smoothing) {
+            cpl_msg_info (cpl_func,"smoothing parameter == FALSE -> don't smooth the TF");
+        } else {
             cpl_size smooth_vis_sc = gravi_param_get_int (parlist, "gravity.viscal.nsmooth-tfvis-sc");
             cpl_size smooth_flx_sc = gravi_param_get_int (parlist, "gravity.viscal.nsmooth-tfflux-sc");
             cpl_size maxdeg_sc = gravi_param_get_int (parlist, "gravity.viscal.maxdeg-tfvis-sc");
@@ -444,22 +451,40 @@ static int gravity_viscal(cpl_frameset            * frameset,
         /* Save the TF file */
         data_mode = gravi_data_frame_get_mode (frame);
         
-        gravi_data_save_new (vis_calib, frameset, NULL, NULL, parlist,
+        /* Store this successfull TF */
+        if (!strcmp(cpl_frame_get_tag(frame), GRAVI_VISPHI_SINGLE_CALIB) ||
+            !strcmp(cpl_frame_get_tag(frame), GRAVI_VISPHI_DUAL_CALIB)) {
+            if (!gravi_param_get_bool (parlist, "gravity.viscal.separate-phase-calib")) {
+                cpl_msg_warning (cpl_func, "visphi calib provided but --separate-phase-calib not set, will be ignored");
+            } else if (visphi_calib) {
+                cpl_msg_warning (cpl_func, "multiple visphi calib provided, will be ignored");
+            } else {
+                cpl_msg_info (cpl_func, "*** TF %i over %i to be used for visphi ***", j+1, nb_frame_calib);
+
+                gravi_data_save_new (vis_calib, frameset, NULL, NULL, parlist,
+                             NULL, frame, "gravity_vis",
+                             NULL, GRAVI_VISPHI_TF_CALIB(data_mode));
+                CPLCHECK_GOTO ("Cannot save the TF", cleanup_rawtf);
+
+                visphi_calib = vis_calib;
+                vis_calib = NULL;
+            }
+        } else {
+            gravi_data_save_new (vis_calib, frameset, NULL, NULL, parlist,
                              NULL, frame, "gravity_vis",
                              NULL, GRAVI_TF_CALIB(data_mode));
-        
-        CPLCHECK_GOTO ("Cannot save the TF", cleanup_rawtf);
-        
-        /* Store this successfull TF */
-        vis_calibs[nb_calib] = vis_calib;
-        vis_calib = NULL;
-        nb_calib++;
+            CPLCHECK_GOTO ("Cannot save the TF", cleanup_rawtf);
+
+            vis_calibs[nb_calib] = vis_calib;
+            vis_calib = NULL;
+            nb_calib++;
+        }
         
         /* Update the used_frameset -- now used as calibration */
         frame = cpl_frame_duplicate (frame);
-        cpl_frame_set_group    (frame, CPL_FRAME_GROUP_CALIB);
+        cpl_frame_set_group (frame, CPL_FRAME_GROUP_CALIB);
         cpl_frameset_insert (used_frameset, frame);
-        
+
         /* Clean memory of the loop */
     cleanup_rawtf:
         FREE (gravi_data_delete, vis_data);
@@ -480,11 +505,24 @@ static int gravity_viscal(cpl_frameset            * frameset,
         vis_calib = gravi_data_load_frame (frame, used_frameset);
         
         CPLCHECK_GOTO("Cannot load the TF", cleanup_caltf);
-        
+
         /* Store this successfull TF */
-        vis_calibs[nb_calib] = vis_calib;
-        vis_calib = NULL;
-        nb_calib++;
+        if (!strcmp(cpl_frame_get_tag(frame), GRAVI_VISPHI_TF_SINGLE_CALIB) ||
+            !strcmp(cpl_frame_get_tag(frame), GRAVI_VISPHI_TF_DUAL_CALIB)) {
+            if (!gravi_param_get_bool (parlist, "gravity.viscal.separate-phase-calib")) {
+                cpl_msg_warning (cpl_func, "visphi calib provided but --separate-phase-calib not set, will be ignored");
+            } else if (visphi_calib) {
+                cpl_msg_warning (cpl_func, "multiple visphi calib provided, will be ignored");
+            } else {
+                cpl_msg_info (cpl_func, "*** TF %i over %i to be used for visphi ***", j+1, nb_frame_tf);
+                visphi_calib = vis_calib;
+                vis_calib = NULL;
+            }
+        } else {
+            vis_calibs[nb_calib] = vis_calib;
+            vis_calib = NULL;
+            nb_calib++;
+        }
     
     cleanup_caltf:
         FREE (gravi_data_delete,vis_calib);
@@ -495,7 +533,7 @@ static int gravity_viscal(cpl_frameset            * frameset,
     cpl_msg_info (cpl_func,"*** All TF computed or loaded ***");
     
     cpl_msg_info (cpl_func, "Load or create successfully %i TF over %i input CAL files", nb_calib, nb_frame_calib + nb_frame_tf);
-    
+
     /* 
      * Compute the zero of the metrology if several TF are availables
      */
@@ -533,10 +571,9 @@ static int gravity_viscal(cpl_frameset            * frameset,
         
         frame = cpl_frameset_get_position (vis_sci_frameset, i);
         vis_data = gravi_data_load_frame (frame, current_frameset);
-        
         tf_science = gravi_data_duplicate (vis_data);
-        calibrated = gravi_calibrate_vis (vis_data, vis_calibs, nb_calib, tf_science, parlist);
-        
+
+        calibrated = gravi_calibrate_vis (vis_data, vis_calibs, nb_calib, visphi_calib, tf_science, parlist);        
         CPLCHECK_GOTO("Cannot calibrate the visibility", cleanup_calib);
         
         /* Save calibrated visibilities */
@@ -582,6 +619,7 @@ cleanup:
     FREE (cpl_frameset_delete,diamcat_frameset);
     FREE (cpl_frameset_delete,current_frameset);
     FREE (cpl_frameset_delete,used_frameset);
+    FREE (gravi_data_delete, visphi_calib);
     FREELOOP (gravi_data_delete,vis_calibs,nb_frame_calib+nb_frame_tf);
     
     gravi_msg_function_exit(1);
