@@ -2642,13 +2642,23 @@ cpl_error_code gravi_remove_cosmicrays_sc (cpl_imagelist * imglist_sc)
     cpl_ensure_code (imglist_sc, CPL_ERROR_NULL_INPUT);
         
     cpl_image * img;
-    double clip_thresh = 5.;
 
     const cpl_size    nrow     = cpl_imagelist_get_size(imglist_sc);
     img      = cpl_imagelist_get (imglist_sc, 0);
     const cpl_size    nx       = cpl_image_get_size_x(img);
-    const cpl_size    ny       = cpl_image_get_size_y(img);    
- 
+    const cpl_size    ny       = cpl_image_get_size_y(img);
+    
+    /* default clip is 5 sigma, but to be increased in case of smaal number of images */
+    double clip_thresh = 5.;
+    
+    if (nrow < 16) clip_thresh = 6;
+    if (nrow < 12) clip_thresh = 8;
+    if (nrow < 6)  clip_thresh = 15;
+    if (nrow < 4)  clip_thresh = 20;
+    
+    cpl_vector * cCR_vector = cpl_vector_new (nrow);
+    cpl_vector_fill (cCR_vector, 0.0);
+    
     /* loop through all image rows of the image */
     for (cpl_size k = 0; k < ny; k++) {
 
@@ -2705,6 +2715,11 @@ cpl_error_code gravi_remove_cosmicrays_sc (cpl_imagelist * imglist_sc)
                 }
             } /* End column loop */
                 
+            /* add counter of CR to vector */
+            cpl_vector_set(cCR_vector, row, cpl_vector_get(cCR_vector, row) + nCR);
+            //cpl_msg_warning (cpl_func,"TT Cosmic rays detected: %lli", nCR);
+            
+            
             /* interpolate CR affected pixels */
             if (nCR > 0) {
                 int nv;
@@ -2746,7 +2761,7 @@ cpl_error_code gravi_remove_cosmicrays_sc (cpl_imagelist * imglist_sc)
                     cpl_image_set (img, cpl_vector_get (xout, i) +1, k +1, cpl_vector_get (yout, i));
                     cpl_mask   * bpm  = cpl_image_get_bpm (img);
                     cpl_mask_set (bpm, cpl_vector_get (xout, i) +1, k +1, CPL_BINARY_1);
-                    
+                    // TODO: store bad pixel mask to debiassedsubtracted file
                 }
                 FREE (cpl_bivector_delete, fref);
                 FREE (cpl_bivector_delete, fout);
@@ -2758,11 +2773,25 @@ cpl_error_code gravi_remove_cosmicrays_sc (cpl_imagelist * imglist_sc)
             FREE (cpl_array_delete, pGood_y);
             FREE (cpl_array_delete, pCR_x);
         } /* End loop through all images */
+        
         FREE (cpl_array_delete, med_val);
         FREE (cpl_array_delete, std_val);
 
     } /* End loop through all image rows */
-
+    
+    /* print the number of flagged pixels to the log */
+    double percentage_CR_perpixel = cpl_vector_get_mean (cCR_vector) * 100 / (nx * ny);
+    if (percentage_CR_perpixel > 1)
+        cpl_msg_warning (cpl_func,"Cosmic rays flagged on %g percents of the pixels", percentage_CR_perpixel);
+    else
+        cpl_msg_info (cpl_func,"Cosmic rays flagged on %g percent of the pixels", percentage_CR_perpixel);
+    for (cpl_size row = 0; row < nrow; row++)
+        if (cpl_vector_get (cCR_vector, row) > (nx*ny)/1000)
+            cpl_msg_warning (cpl_func,"Cosmic rays detected on image %lli: %g", row+1, cpl_vector_get (cCR_vector, row));
+        
+    
+    FREE (cpl_vector_delete, cCR_vector);
+    
     gravi_msg_function_exit(1);
     return CPL_ERROR_NONE;
 }

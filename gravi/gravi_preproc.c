@@ -146,25 +146,36 @@ cpl_error_code gravi_remove_badpixel_sc (cpl_imagelist * imglist_sc, cpl_image *
 	cpl_size nbad = 0;
 	for (cpl_size k = 0; k < ny; k++)
 	  for (cpl_size i = 0; i < nx; i++)
-	    if (cpl_image_get (bad_img, i+1, k+1, &nv) != 0) nbad++;
+	    if (cpl_image_get (bad_img, i+1, k+1, &nv) != 0)
+        {
+            /* flag bad pixel in the image mask */
+            for (cpl_size row = 0; row < nrow; row ++) {
+                img = cpl_imagelist_get (imglist_sc, row);
+                cpl_mask   * bpm  = cpl_image_get_bpm (img);
+                cpl_mask_set (bpm, i + 1, k + 1, CPL_BINARY_1);
+            }
+            nbad++;
+        }
 
 	/* Check the fraction of badpixels */
 	if (nbad > 0.25 * nx*ny) {
 	  return cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
 					"Too many bad pixels (more than 25 percent)");
 	}
-
+    
+  /* Loop on the images of the RAW imagelist */
+  for (cpl_size row = 0; row < nrow; row ++){
+      
+      img = cpl_imagelist_get (imglist_sc, row);
+      cpl_mask   * bpm  = cpl_image_get_bpm (img);
+      
 	/* Loop on the pixels of the image */
 	for (cpl_size k = 0; k < ny; k++){
 	  for (cpl_size i = 0; i < nx; i++){
-		
-		/* This is a bad pixel */
-		if (cpl_image_get (bad_img, i+1, k+1, &nv) != 0) {
+          
+        /* This is a bad pixel */
+        if (cpl_mask_get (bpm, i+1, k+1) != CPL_BINARY_0) {
 		  
-		  /* Loop on the images of the RAW imagelist */
-		  for (cpl_size row = 0; row < nrow; row ++){
-			
-			img = cpl_imagelist_get (imglist_sc, row);
 			x = cpl_vector_new (size-1);
 			
 			if ((i - middel) < 0 ){
@@ -172,7 +183,7 @@ cpl_error_code gravi_remove_badpixel_sc (cpl_imagelist * imglist_sc, cpl_image *
 			  badpix_comp = 1;
 			  for (cpl_size j = 0; j < size; j++){
 				if (j != i) {
-				  while (cpl_image_get (bad_img, i + badpix_comp, k + 1, &nv) != 0){
+				  while (cpl_mask_get (bpm, i + badpix_comp, k + 1) != CPL_BINARY_0){
 					badpix_comp ++;
 				  }
 				  cpl_vector_set(x, comp, cpl_image_get (img, i + badpix_comp, k + 1, &nv));
@@ -186,7 +197,7 @@ cpl_error_code gravi_remove_badpixel_sc (cpl_imagelist * imglist_sc, cpl_image *
 			  badpix_comp = 1;
 			  for (cpl_size j = 0; (j < size); j++){
 				if (j != (nx - i)){
-				  while (cpl_image_get (bad_img, nx - (j + 1) + badpix_comp, k + 1, &nv) != 0){
+				  while (cpl_mask_get (bpm, nx - (j + 1) + badpix_comp, k + 1) != CPL_BINARY_0){
 					
 					badpix_comp --;
 				  }
@@ -203,13 +214,13 @@ cpl_error_code gravi_remove_badpixel_sc (cpl_imagelist * imglist_sc, cpl_image *
 			  for (cpl_size j = 0; j < size; j++){
 				if (j != middel){
 				  if (i + j - middel + badpix_comp <= 1){
-					while (cpl_image_get (bad_img, i + j - middel + badpix_comp, k+1, &nv) != 0){
+					while (cpl_mask_get (bpm, i + j - middel + badpix_comp, k+1) != CPL_BINARY_0){
 					  badpix_comp ++;
 					  test1 = 1;
 					}
 				  }
 				  else if (i + j - middel + badpix_comp >= nx){
-					while (cpl_image_get (bad_img, i + j - middel + badpix_comp, k+1, &nv) != 0){
+					while (cpl_mask_get (bpm, i + j - middel + badpix_comp, k+1) != CPL_BINARY_0){
 					  badpix_comp --;
 					  test2 = 1;
 					}
@@ -238,11 +249,13 @@ cpl_error_code gravi_remove_badpixel_sc (cpl_imagelist * imglist_sc, cpl_image *
 			cpl_image_set (img, i + 1, k + 1, mean);
 			
 			CPLCHECK_MSG("Fail 4");
-			
-		  } /* End loop on row */
-		} /* End case this is a bad pixel */
-	  } /* End loop k */
-	} /* End loop k */
+                
+              } /* End case this is a bad pixel */
+          /* remove mask for further computations (bad pixels are now considered cleaned) */
+          cpl_mask_set (bpm, i + 1, k + 1, CPL_BINARY_0);
+          } /* End loop k */
+        } /* End loop k */
+    } /* End loop on row */
 
 	gravi_msg_function_exit(1);
 	return CPL_ERROR_NONE;
@@ -790,10 +803,71 @@ gravi_data * gravi_extract_spectrum (gravi_data * raw_data,
         cpl_msg_info (cpl_func,"Compute flux image");
         cpl_imagelist * raw_imglist;
         raw_imglist = cpl_imagelist_duplicate (imaging_data);
+        
+        /*
+        int pis_rejected =0;
+        double pixel_value = 0.0;
+        for (int pol = 0; pol < 4; pol++) {
+            cpl_image * totoe = cpl_imagelist_get (imaging_data, pol);
+            pixel_value = cpl_image_get (totoe, 89, 5, &pis_rejected);
+            cpl_msg_info (cpl_func,"---> dit=%i, VAlue of pixel  %g",pol, pixel_value);
+            cpl_mask * maks_to = cpl_image_get_bpm    (   totoe    );
+            cpl_binary tptpb = cpl_mask_get (maks_to, 89, 5);
+            cpl_msg_info (cpl_func,"---> dit=%i, VAlue of pixel  %hhu",pol, tptpb);
+        }
+        for (int pol = 0; pol < 4; pol++) {
+            cpl_image * totoe = cpl_imagelist_get (imaging_data, pol);
+            pixel_value = cpl_image_get (totoe, 89, 6, &pis_rejected);
+            cpl_msg_info (cpl_func,"---> dit=%i, VAlue of pixel  %g",pol, pixel_value);
+            cpl_mask * maks_to = cpl_image_get_bpm    (   totoe    );
+            cpl_binary tptpb = cpl_mask_get (maks_to, 89, 6);
+            cpl_msg_info (cpl_func,"---> dit=%i, VAlue of pixel  %hhu",pol, tptpb);
+        }
+        
+        for (int pol = 0; pol < 4; pol++) {
+            cpl_image * totoe = cpl_imagelist_get (imaging_data, pol);
+            pixel_value = cpl_image_get (totoe, 89, 7, &pis_rejected);
+            cpl_msg_info (cpl_func,"---> dit=%i, VAlue of pixel  %g",pol, pixel_value);
+            cpl_mask * maks_to = cpl_image_get_bpm    (   totoe    );
+            cpl_binary tptpb = cpl_mask_get (maks_to, 89, 7);
+            cpl_msg_info (cpl_func,"---> dit=%i, VAlue of pixel  %hhu",pol, tptpb);
+        }*/
+
+
         cpl_imagelist_subtract_image (raw_imglist, skyavg_img);
+        
         cpl_imagelist_divide_scalar (raw_imglist, gain_sc);
+        
         gravi_remove_badpixel_sc (raw_imglist, badpix_img);
         CPLCHECK_NUL ("Cannot extract the data");
+        
+        /*
+        for (int pol = 0; pol < 4; pol++) {
+            cpl_image * totoe = cpl_imagelist_get (raw_imglist, pol);
+            pixel_value = cpl_image_get (totoe, 89, 5, &pis_rejected);
+            cpl_msg_info (cpl_func,"---> dit=%i, VAlue of pixel  %g",pol, pixel_value);
+            cpl_mask * maks_to = cpl_image_get_bpm    (   totoe    );
+            cpl_binary tptpb = cpl_mask_get (maks_to, 89, 5);
+            cpl_msg_info (cpl_func,"---> dit=%i, VAlue of pixel  %hhu",pol, tptpb);
+        }
+        for (int pol = 0; pol < 4; pol++) {
+            cpl_image * totoe = cpl_imagelist_get (raw_imglist, pol);
+            pixel_value = cpl_image_get (totoe, 89, 6, &pis_rejected);
+            cpl_msg_info (cpl_func,"---> dit=%i, VAlue of pixel  %g",pol, pixel_value);
+            cpl_mask * maks_to = cpl_image_get_bpm    (   totoe    );
+            cpl_binary tptpb = cpl_mask_get (maks_to, 89, 6);
+            cpl_msg_info (cpl_func,"---> dit=%i, VAlue of pixel  %hhu",pol, tptpb);
+        }
+        
+        for (int pol = 0; pol < 4; pol++) {
+            cpl_image * totoe = cpl_imagelist_get (raw_imglist, pol);
+            pixel_value = cpl_image_get (totoe, 89, 7, &pis_rejected);
+            cpl_msg_info (cpl_func,"---> dit=%i, VAlue of pixel  %g",pol, pixel_value);
+            cpl_mask * maks_to = cpl_image_get_bpm    (   totoe    );
+            cpl_binary tptpb = cpl_mask_get (maks_to, 89, 7);
+            cpl_msg_info (cpl_func,"---> dit=%i, VAlue of pixel  %hhu",pol, tptpb);
+        }*/
+        
         
         /* rawVar = (DATA - DARK) / gain    [e^2] */
         cpl_msg_info (cpl_func,"Compute variance image");
