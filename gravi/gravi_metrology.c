@@ -2044,10 +2044,10 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
     /*
      * Perform smoothing of the voltage values
      * First the Fiber coupler metrology
-     * By 3 DITs (6ms)
+     * By 7 DITs (14ms)
      */
 
-    int DIT_smooth=1;
+    int DIT_smooth=3;
     
     cpl_msg_info (cpl_func,"Smoothing volts of the FC diodes by %d metrology DITS",DIT_smooth*2+1);
     
