@@ -2648,13 +2648,15 @@ cpl_error_code gravi_remove_cosmicrays_sc (cpl_imagelist * imglist_sc)
     const cpl_size    nx       = cpl_image_get_size_x(img);
     const cpl_size    ny       = cpl_image_get_size_y(img);
     
-    /* default clip is 5 sigma, but to be increased in case of smaal number of images */
-    double clip_thresh = 5.;
+    /* default clip is 10 sigma, but to be increased in case of small number of images */
+    double clip_thresh = 5;
     
-    if (nrow < 16) clip_thresh = 6;
-    if (nrow < 12) clip_thresh = 8;
-    if (nrow < 6)  clip_thresh = 15;
-    if (nrow < 4)  clip_thresh = 20;
+    if (nrow <= 32) clip_thresh = 10;
+    if (nrow <= 16) clip_thresh = 15;
+    if (nrow <= 12) clip_thresh = 20;
+    if (nrow <= 8)  clip_thresh = 30;
+    if (nrow <= 4)  clip_thresh = 40;
+    if (nrow < 4)   clip_thresh = 50;
     
     cpl_vector * cCR_vector = cpl_vector_new (nrow);
     cpl_vector_fill (cCR_vector, 0.0);
