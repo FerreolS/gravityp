@@ -2805,19 +2805,17 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
 
     /* Compute mean image */
     cpl_image * mean_img = cpl_imagelist_collapse_create (acqcam_imglist);
-    cpl_image * sky_img = gravi_data_get_img(sky_data, GRAVI_IMAGING_DATA_ACQ_EXT);
-    cpl_image * dark_img = gravi_data_get_img(dark_data, GRAVI_IMAGING_DATA_ACQ_EXT);
     cpl_image * mean_subtracted_img = NULL;
 
-    if (sky_img) {
-        cpl_image_subtract(sky_img, mean_img);
-        cpl_image_multiply_scalar(sky_img, -1.0);
-        mean_subtracted_img = sky_img;
-    } else if (dark_img) {
+    if (sky_data) {
+        mean_subtracted_img = gravi_data_get_img(sky_data, GRAVI_IMAGING_DATA_ACQ_EXT);
+        cpl_image_subtract(mean_subtracted_img, mean_img);
+        cpl_image_multiply_scalar(mean_subtracted_img, -1.0);
+    } else if (dark_data) {
+        mean_subtracted_img = gravi_data_get_img(dark_data, GRAVI_IMAGING_DATA_ACQ_EXT);
         cpl_msg_warning(cpl_func, "No SKY, using DARK for acquisition field subtraction");
-        cpl_image_subtract(dark_img, mean_img);
-        cpl_image_multiply_scalar(dark_img, -1.0);
-        mean_subtracted_img = dark_img;
+        cpl_image_subtract(mean_subtracted_img, mean_img);
+        cpl_image_multiply_scalar(mean_subtracted_img, -1.0);
     } else {
         cpl_msg_warning(cpl_func, "No SKY or DARK, skipping acquisition field subtraction");
         mean_subtracted_img = mean_img;
