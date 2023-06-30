@@ -440,11 +440,15 @@ static int gravity_wavelamp(cpl_frameset            * frameset,
     /* START EKW 07/12/2018 read wave parameter from calibration file - Load the WAVE_PARAM Parameter */
     cpl_frame *frame2;
     if (!cpl_frameset_is_empty (wave_param_frameset)) {
-	  frame2 = cpl_frameset_get_position (wave_param_frameset, 0);
-	  wave_param = gravi_data_load_frame (frame2, used_frameset);
-	}
-	else
-	  cpl_msg_error (cpl_func, "There is no WAVE_PARAM in the frameset");
+        frame2 = cpl_frameset_get_position (wave_param_frameset, 0);
+        wave_param = gravi_data_load_frame (frame2, used_frameset);
+    }
+    else
+    {
+        cpl_error_set_message (cpl_func,  CPL_ERROR_ILLEGAL_INPUT,
+                               "Missing  is no WAVE_PARAM in the frameset") ;
+        goto cleanup;
+    }
 
     /* END EKW 07/12/2018 read wave parameter from calibration file - Load the WAVE_PARAM Parameter */
 
