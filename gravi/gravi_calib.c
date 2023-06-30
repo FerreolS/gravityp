@@ -122,30 +122,30 @@ cpl_image * gravi_create_profile_image (cpl_image * mean_img,
 gravi_data * gravi_compute_dark (gravi_data * raw_data)
 {
     gravi_msg_function_start(1);
-	cpl_ensure (raw_data, CPL_ERROR_NULL_INPUT, NULL);
-	
-	/* Create the output DARK or SKY map */
-	gravi_data * dark_map = gravi_data_new (0);
+    cpl_ensure (raw_data, CPL_ERROR_NULL_INPUT, NULL);
+
+    /* Create the output DARK or SKY map */
+    gravi_data * dark_map = gravi_data_new (0);
 
     /* Dump full header of RAW data */
-	cpl_propertylist * dark_header = gravi_data_get_header (dark_map);
-	cpl_propertylist * raw_header  = gravi_data_get_header (raw_data);
+    cpl_propertylist * dark_header = gravi_data_get_header (dark_map);
+    cpl_propertylist * raw_header  = gravi_data_get_header (raw_data);
     cpl_propertylist_append (dark_header, raw_header);
 
-	/* Check if this is a SKY or a DARK */
+    /* Check if this is a SKY or a DARK */
     const char * dpr_type = gravi_pfits_get_dpr_type (raw_header);
     int isSky = strstr (dpr_type, "SKY")?1:0;
 
-	/* The dark file must contains all the shutter close */
-	if ( isSky==0 && !gravi_data_check_shutter_closed (raw_data) ) {
+    /* The dark file must contains all the shutter close */
+    if ( isSky==0 && !gravi_data_check_shutter_closed (raw_data) ) {
         gravi_pfits_add_check (dark_header, "DARK has some shutter OPEN !!");
-	}
+    }
 
-	/* The sky file must contains all the shutter open */
-	if ( isSky==1 && !gravi_data_check_shutter_open (raw_data) ) {
+    /* The sky file must contains all the shutter open */
+    if ( isSky==1 && !gravi_data_check_shutter_open (raw_data) ) {
         gravi_pfits_add_check (dark_header, "SKY has some shutter CLOSED !!");
-	}
-	
+    }
+
     /*
      * Compute the SC DARK
      */
@@ -154,48 +154,56 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
     }
     else
     {
-	    cpl_msg_info (cpl_func, "Computing the %s of SC",isSky?"SKY":"DARK");
+        cpl_msg_info (cpl_func, "Computing the %s of SC",isSky?"SKY":"DARK");
         
         /* Copy IMAGING_DETECTOR into product */
         gravi_data_copy_ext (dark_map, raw_data, GRAVI_IMAGING_DETECTOR_SC_EXT);
 
-		/* Load the IMAGING_DATA table or image list */
-		cpl_imagelist * imglist = gravi_data_get_cube (raw_data, GRAVI_IMAGING_DATA_SC_EXT);
+        /* Load the IMAGING_DATA table or image list */
+        cpl_imagelist * imglist = gravi_data_get_cube (raw_data, GRAVI_IMAGING_DATA_SC_EXT);
 
-		/* Compute the median image of the imagelist */
-		cpl_image * median_img  = cpl_imagelist_collapse_create (imglist);
+        /* Compute the median image of the imagelist */
+        cpl_image * median_img  = cpl_imagelist_collapse_create (imglist);
         CPLCHECK_NUL ("Cannot compute the median dark");
 
-		/* Compute STD. We should see if we use sigma-clipping
-		 * or not for the collapse, it may change the bad pixel detection */
-		cpl_msg_info (cpl_func,"Compute std with imglist");
-		cpl_imagelist * temp_imglist = cpl_imagelist_duplicate (imglist);
-		cpl_imagelist_subtract_image (temp_imglist, median_img);
-		cpl_imagelist_power (temp_imglist, 2.0);
-		cpl_image * stdev_img = cpl_imagelist_collapse_create (temp_imglist);
-		FREE (cpl_imagelist_delete, temp_imglist);
-		cpl_image_power (stdev_img, 0.5);
-		CPLCHECK_NUL ("Cannot compute the STD of the DARK");
-		
-		/* Compute the QC parameters RMS and MEDIAN */
-		cpl_msg_info (cpl_func, "Compute QC parameters");
-		double mean_qc = cpl_image_get_median (median_img);
-		double darkrms = cpl_image_get_median (stdev_img);
-		cpl_propertylist_update_double (dark_header, isSky?QC_MEANSKY_SC:QC_MEANDARK_SC, mean_qc);
-		cpl_propertylist_update_double (dark_header, isSky?QC_SKYRMS_SC:QC_DARKRMS_SC, darkrms);
+        /* Compute STD. We should see if we use sigma-clipping
+         * or not for the collapse, it may change the bad pixel detection */
+        cpl_msg_info (cpl_func,"Compute std with imglist");
+        cpl_imagelist * temp_imglist = cpl_imagelist_duplicate (imglist);
+        cpl_imagelist_subtract_image (temp_imglist, median_img);
+        cpl_imagelist_power (temp_imglist, 2.0);
+        cpl_image * stdev_img = cpl_imagelist_collapse_create (temp_imglist);
+        FREE (cpl_imagelist_delete, temp_imglist);
+        cpl_image_power (stdev_img, 0.5);
+        CPLCHECK_NUL ("Cannot compute the STD of the DARK");
 
-		/* Verbose */
-	    cpl_msg_info (cpl_func, "QC_MEDIAN%s_SC = %e",isSky?"SKY":"DARK", mean_qc);
-	    cpl_msg_info (cpl_func, "QC_%sRMS_SC = %e",isSky?"SKY":"DARK", darkrms);
+        /* Compute the QC parameters RMS, MEDIAN, ZERO.NB */
+        cpl_msg_info (cpl_func, "Compute QC parameters");
+        double mean_qc = cpl_image_get_median (median_img);
+        double darkrms = cpl_image_get_median (stdev_img);
+        cpl_propertylist_update_double (dark_header, isSky?QC_MEANSKY_SC:QC_MEANDARK_SC, mean_qc);
+        cpl_propertylist_update_double (dark_header, isSky?QC_SKYRMS_SC:QC_DARKRMS_SC, darkrms);
+        cpl_imagelist * acq_imglist = gravi_data_get_cube (raw_data, GRAVI_IMAGING_DATA_ACQ_EXT);
+        size_t acq_dark_zero_count = 0;
+        for(int i=0; i < cpl_imagelist_get_size(acq_imglist); i++)
+        {
+            cpl_mask * acq_zero_mask = cpl_mask_threshold_image_create(cpl_imagelist_get(acq_imglist, i), -FLT_MIN,  FLT_MIN);
+            acq_dark_zero_count+= cpl_mask_count(acq_zero_mask);
+        }
+        cpl_propertylist_update_double (dark_header, QC_ACQ_ZERO_NB, acq_dark_zero_count);
 
-		/* Put the data in the output table : dark_map */
-		cpl_propertylist * img_plist = gravi_data_get_plist (raw_data, GRAVI_IMAGING_DATA_SC_EXT);
-		img_plist = cpl_propertylist_duplicate (img_plist);
-		gravi_data_add_img (dark_map, img_plist, GRAVI_IMAGING_DATA_SC_EXT, median_img);
+        /* Verbose */
+        cpl_msg_info (cpl_func, "QC_MEDIAN%s_SC = %e",isSky?"SKY":"DARK", mean_qc);
+        cpl_msg_info (cpl_func, "QC_%sRMS_SC = %e",isSky?"SKY":"DARK", darkrms);
+
+        /* Put the data in the output table : dark_map */
+        cpl_propertylist * img_plist = gravi_data_get_plist (raw_data, GRAVI_IMAGING_DATA_SC_EXT);
+        img_plist = cpl_propertylist_duplicate (img_plist);
+        gravi_data_add_img (dark_map, img_plist, GRAVI_IMAGING_DATA_SC_EXT, median_img);
         
-		img_plist = cpl_propertylist_duplicate (img_plist);
-		gravi_data_add_img (dark_map, img_plist, GRAVI_IMAGING_ERR_SC_EXT, stdev_img);
-		CPLCHECK_NUL ("Cannot set the SC data");
+        img_plist = cpl_propertylist_duplicate (img_plist);
+        gravi_data_add_img (dark_map, img_plist, GRAVI_IMAGING_ERR_SC_EXT, stdev_img);
+        CPLCHECK_NUL ("Cannot set the SC data");
         
     } /* End SC case */
 
@@ -207,30 +215,30 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
     }
     else
     {            
-	    cpl_msg_info(cpl_func, "Computing the %s of FT",isSky?"SKY":"DARK");
+        cpl_msg_info(cpl_func, "Computing the %s of FT",isSky?"SKY":"DARK");
 
         /* Copy IMAGING_DETECTOR into product */
         gravi_data_copy_ext (dark_map, raw_data, GRAVI_IMAGING_DETECTOR_FT_EXT);
         
-		/* Load the IMAGING_DATA table as DOUBLE */
+        /* Load the IMAGING_DATA table as DOUBLE */
         cpl_msg_info (cpl_func,"Load data");
-		cpl_table * table_ft = gravi_data_get_table (raw_data, GRAVI_IMAGING_DATA_FT_EXT);
+        cpl_table * table_ft = gravi_data_get_table (raw_data, GRAVI_IMAGING_DATA_FT_EXT);
         cpl_table_cast_column (table_ft, "PIX", "PIX", CPL_TYPE_DOUBLE);
-		cpl_imagelist * imglist = gravi_imagelist_wrap_column (table_ft, "PIX");
-		CPLCHECK_NUL ("Cannot load the FT data");
+        cpl_imagelist * imglist = gravi_imagelist_wrap_column (table_ft, "PIX");
+        CPLCHECK_NUL ("Cannot load the FT data");
 
-		/* Compute the median image of the imagelist */
+        /* Compute the median image of the imagelist */
         cpl_msg_info (cpl_func,"Compute mean and median");
-		cpl_image * median_img = cpl_imagelist_collapse_median_create (imglist);
-		cpl_image * mean_img   = cpl_imagelist_collapse_create (imglist);
-		CPLCHECK_NUL ("Cannot compute the MEAN dark");
+        cpl_image * median_img = cpl_imagelist_collapse_median_create (imglist);
+        cpl_image * mean_img   = cpl_imagelist_collapse_create (imglist);
+        CPLCHECK_NUL ("Cannot compute the MEAN dark");
         
-		/* Compute the std of each pixels */
+        /* Compute the std of each pixels */
         cpl_msg_info (cpl_func,"Compute std");
         cpl_imagelist_subtract_image (imglist, mean_img);
         cpl_imagelist_power (imglist, 2.0);
-		cpl_image * stdev_img = cpl_imagelist_collapse_create (imglist);
-		cpl_image_power (stdev_img, 0.5);
+        cpl_image * stdev_img = cpl_imagelist_collapse_create (imglist);
+        cpl_image_power (stdev_img, 0.5);
 
         /* We power back the data, because we are working in-place */
         cpl_imagelist_power (imglist, 0.5);
@@ -239,44 +247,44 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
         /* Delete data */
         cpl_msg_info (cpl_func,"Delete data");
         FREE (gravi_imagelist_unwrap_images, imglist);
-		FREE (cpl_image_delete, mean_img);
-		CPLCHECK_NUL ("Cannot compute the STD of the DARK");
+        FREE (cpl_image_delete, mean_img);
+        CPLCHECK_NUL ("Cannot compute the STD of the DARK");
 
-		/* Compute the QC parameters RMS and MEDIAN */
-		cpl_msg_info (cpl_func, "Compute QC parameters");
-		double mean_qc = cpl_image_get_mean (median_img);
-		double darkrms = cpl_image_get_mean (stdev_img);
-		cpl_propertylist_update_double (dark_header, isSky?QC_MEANSKY_FT:QC_MEANDARK_FT, mean_qc);
-		cpl_propertylist_update_double (dark_header, isSky?QC_SKYRMS_FT:QC_DARKRMS_FT, darkrms);
-		CPLCHECK_NUL ("Cannot compute the QC");
+        /* Compute the QC parameters RMS and MEDIAN */
+        cpl_msg_info (cpl_func, "Compute QC parameters");
+        double mean_qc = cpl_image_get_mean (median_img);
+        double darkrms = cpl_image_get_mean (stdev_img);
+        cpl_propertylist_update_double (dark_header, isSky?QC_MEANSKY_FT:QC_MEANDARK_FT, mean_qc);
+        cpl_propertylist_update_double (dark_header, isSky?QC_SKYRMS_FT:QC_DARKRMS_FT, darkrms);
+        CPLCHECK_NUL ("Cannot compute the QC");
 
-		/* Verbose */
-	    cpl_msg_info (cpl_func, "QC_MEDIAN%s_FT = %e",isSky?"SKY":"DARK", mean_qc);
-	    cpl_msg_info (cpl_func, "QC_%sRMS_FT = %e",isSky?"SKY":"DARK", darkrms);
+        /* Verbose */
+        cpl_msg_info (cpl_func, "QC_MEDIAN%s_FT = %e",isSky?"SKY":"DARK", mean_qc);
+        cpl_msg_info (cpl_func, "QC_%sRMS_FT = %e",isSky?"SKY":"DARK", darkrms);
 
         /* Create the output DARK table, with a single row */
-		cpl_table * median_table = cpl_table_extract (table_ft, 0, 1);
+        cpl_table * median_table = cpl_table_extract (table_ft, 0, 1);
         cpl_array * median_array = gravi_array_wrap_image (median_img);
         cpl_table_set_array (median_table, "PIX", 0, median_array);
         FREE (cpl_array_unwrap, median_array);
         FREE (cpl_image_delete, median_img);
-		CPLCHECK_NUL("Cannot set median in table");
+        CPLCHECK_NUL("Cannot set median in table");
 
-		/* Put median dark in the output gravi_data */
-		gravi_data_add_table (dark_map, NULL, GRAVI_IMAGING_DATA_FT_EXT, median_table);
-		CPLCHECK_NUL("Cannot save median in gravi_data");
+        /* Put median dark in the output gravi_data */
+        gravi_data_add_table (dark_map, NULL, GRAVI_IMAGING_DATA_FT_EXT, median_table);
+        CPLCHECK_NUL("Cannot save median in gravi_data");
         
         /* Create the output DARK RMS table, with a single row */
-		cpl_table * stdev_table = cpl_table_extract (table_ft, 0, 1);
+        cpl_table * stdev_table = cpl_table_extract (table_ft, 0, 1);
         cpl_array * stdev_array = gravi_array_wrap_image (stdev_img);
         cpl_table_set_array (stdev_table, "PIX", 0, stdev_array);
         FREE (cpl_array_unwrap, stdev_array);
         FREE (cpl_image_delete, stdev_img);
-		CPLCHECK_NUL("Cannot set rms in table");
+        CPLCHECK_NUL("Cannot set rms in table");
 
-		/* Put median dark in the output gravi_data */
-		gravi_data_add_table (dark_map, NULL, GRAVI_IMAGING_ERR_FT_EXT, stdev_table);
-		CPLCHECK_NUL("Cannot save median in gravi_data");
+        /* Put median dark in the output gravi_data */
+        gravi_data_add_table (dark_map, NULL, GRAVI_IMAGING_ERR_FT_EXT, stdev_table);
+        CPLCHECK_NUL("Cannot save median in gravi_data");
         
     } /* End case FT */
     
@@ -395,29 +403,29 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
     }
     else
     {
-	    cpl_msg_info (cpl_func, "Computing the %s of ACQ",isSky?"SKY":"DARK");
+        cpl_msg_info (cpl_func, "Computing the %s of ACQ",isSky?"SKY":"DARK");
         
-		/* Load the IMAGING_DATA table or image list */
-		cpl_imagelist * imglist = gravi_data_get_cube (raw_data, GRAVI_IMAGING_DATA_ACQ_EXT);
+        /* Load the IMAGING_DATA table or image list */
+        cpl_imagelist * imglist = gravi_data_get_cube (raw_data, GRAVI_IMAGING_DATA_ACQ_EXT);
 
-		/* Compute the median image of the imagelist */
-		cpl_image * median_img = cpl_imagelist_collapse_median_create (imglist);
-		CPLCHECK_NUL ("Cannot compute the median dark");
+        /* Compute the median image of the imagelist */
+        cpl_image * median_img = cpl_imagelist_collapse_median_create (imglist);
+        CPLCHECK_NUL ("Cannot compute the median dark");
 
-		/* Compute the QC parameters RMS and MEDIAN */
-		cpl_msg_info (cpl_func, "Compute QC parameters");
-		double mean_qc = cpl_image_get_median (median_img);
+        /* Compute the QC parameters RMS and MEDIAN */
+        cpl_msg_info (cpl_func, "Compute QC parameters");
+        double mean_qc = cpl_image_get_median (median_img);
         
-		/* Verbose */
-	    cpl_msg_info (cpl_func, "QC_MEDIAN%s_ACQ = %e",isSky?"SKY":"DARK", mean_qc);
-		cpl_propertylist_update_double (dark_header, isSky?"ESO QC MEDIANSKY ACQ":"ESO QC MEDIANDARK ACQ",
+        /* Verbose */
+        cpl_msg_info (cpl_func, "QC_MEDIAN%s_ACQ = %e",isSky?"SKY":"DARK", mean_qc);
+        cpl_propertylist_update_double (dark_header, isSky?"ESO QC MEDIANSKY ACQ":"ESO QC MEDIANDARK ACQ",
                                         mean_qc);
 
-		/* Put the data in the output table : dark_map */
-		cpl_propertylist * img_plist = gravi_data_get_plist (raw_data, GRAVI_IMAGING_DATA_ACQ_EXT);
-		img_plist = cpl_propertylist_duplicate (img_plist);
-		gravi_data_add_img (dark_map, img_plist, GRAVI_IMAGING_DATA_ACQ_EXT, median_img);
-		CPLCHECK_NUL("Cannot save median in gravi_data");
+        /* Put the data in the output table : dark_map */
+        cpl_propertylist * img_plist = gravi_data_get_plist (raw_data, GRAVI_IMAGING_DATA_ACQ_EXT);
+        img_plist = cpl_propertylist_duplicate (img_plist);
+        gravi_data_add_img (dark_map, img_plist, GRAVI_IMAGING_DATA_ACQ_EXT, median_img);
+        CPLCHECK_NUL("Cannot save median in gravi_data");
     } 
 
     gravi_msg_function_exit(1);
