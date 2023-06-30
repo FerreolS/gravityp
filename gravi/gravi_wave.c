@@ -1912,119 +1912,119 @@ cpl_imagelist * gravi_wave_test_image (cpl_table * wavedata_table,
 
 cpl_error_code gravi_wave_qc (gravi_data * wave_map, gravi_data * profile_map)
 {
-	gravi_msg_function_start(1);
-	cpl_ensure_code (wave_map, CPL_ERROR_NULL_INPUT);
+    gravi_msg_function_start(1);
+    cpl_ensure_code (wave_map, CPL_ERROR_NULL_INPUT);
 
-	char name[100];
+    char name[100];
 
-	cpl_propertylist * wave_header = gravi_data_get_header (wave_map);
-	
-	/* Loop on extensions (thus SC/FT) */
-	for (int type_data = 0; type_data < 2; type_data ++ ) {
+    cpl_propertylist * wave_header = gravi_data_get_header (wave_map);
 
-	  /* Get WAVE_FIBRE and IMAGING_DETECTOR tables */
-	  cpl_table * detector_table = gravi_data_get_imaging_detector (wave_map, type_data);
-	  cpl_table * wave_data = gravi_data_get_wave_data (wave_map, type_data);
-	  cpl_size n_region = cpl_table_get_nrow (detector_table);
+    /* Loop on extensions (thus SC/FT) */
+    for (int type_data = 0; type_data < 2; type_data ++ ) {
 
-	  /* Get the full STARTX */
-	  cpl_propertylist * plist = gravi_data_get_wave_data_plist (wave_map, type_data);
-	  int fullstartx = gravi_pfits_get_fullstartx (plist);
+        /* Get WAVE_FIBRE and IMAGING_DETECTOR tables */
+        cpl_table * detector_table = gravi_data_get_imaging_detector (wave_map, type_data);
+        cpl_table * wave_data = gravi_data_get_wave_data (wave_map, type_data);
+        cpl_size n_region = cpl_table_get_nrow (detector_table);
 
-	  CPLCHECK_MSG ("Cannot get data");
+        /* Get the full STARTX */
+        cpl_propertylist * plist = gravi_data_get_wave_data_plist (wave_map, type_data);
+        int fullstartx = gravi_pfits_get_fullstartx (plist);
 
-	  /* 
-	   * Compute the min and max wave over all regions
-	   */
-	  double minwave = -1e10;
-	  double maxwave =  1e10;
-	  
-	  for (int region = 0; region < n_region; region++) {
-          const cpl_array * wavelength = cpl_table_get_array (wave_data, GRAVI_DATA[region], 0);
+        CPLCHECK_MSG ("Cannot get data");
+
+        /* 
+         * Compute the min and max wave over all regions
+         */
+        double minwave = -1e10;
+        double maxwave =  1e10;
+  
+        for (int region = 0; region < n_region; region++) {
+            const cpl_array * wavelength = cpl_table_get_array (wave_data, GRAVI_DATA[region], 0);
           
-		minwave = CPL_MAX (minwave, cpl_array_get_min (wavelength));
-		maxwave = CPL_MIN (maxwave, cpl_array_get_max (wavelength));
-	  } /* End loop on regions */
+            minwave = CPL_MAX (minwave, cpl_array_get_min (wavelength));
+            maxwave = CPL_MIN (maxwave, cpl_array_get_max (wavelength));
+        } /* End loop on regions */
 
-      cpl_msg_info (cpl_func,"%s = %g [m]", QC_MINWAVE(type_data), minwave);
-      cpl_msg_info (cpl_func,"%s = %g [m]", QC_MAXWAVE(type_data), maxwave);
-	  cpl_propertylist_update_double (wave_header, QC_MINWAVE(type_data), minwave);
-	  cpl_propertylist_update_double (wave_header, QC_MAXWAVE(type_data), maxwave);
-	  
-	  CPLCHECK_MSG ("Cannot compute minwave or maxwave");
+        cpl_msg_info (cpl_func,"%s = %g [m]", QC_MINWAVE(type_data), minwave);
+        cpl_msg_info (cpl_func,"%s = %g [m]", QC_MAXWAVE(type_data), maxwave);
+        cpl_propertylist_update_double (wave_header, QC_MINWAVE(type_data), minwave);
+        cpl_propertylist_update_double (wave_header, QC_MAXWAVE(type_data), maxwave);
+        cpl_propertylist_update_double (wave_header, QC_MINWAVE_UM(type_data), minwave * 1e6);
+        cpl_propertylist_update_double (wave_header, QC_MAXWAVE_UM(type_data), maxwave * 1e6);
+  
+        CPLCHECK_MSG ("Cannot compute minwave or maxwave");
 
-	  
-	  /* 
-	   * Compute the pixel position of QC specified argon wavelength.
-	   * Having two lines allow to check the position and dispersion 
-	   */
-	  int qc_reg[3] = {0,23,47};
-	  double qc_wave[2] = {2.099184e-6, 2.313952e-6};
+  
+        /* 
+         * Compute the pixel position of QC specified argon wavelength.
+         * Having two lines allow to check the position and dispersion 
+         */
+        int qc_reg[3] = {0,23,47};
+        double qc_wave[2] = {2.099184e-6, 2.313952e-6};
 
-	  /* Loop on regions */
-	  for (int reg = 0; reg < (n_region > 24 ? 3 : 2); reg++) {
-		cpl_size region = qc_reg[reg];
+        /* Loop on regions */
+        for (int reg = 0; reg < (n_region > 24 ? 3 : 2); reg++) {
+            cpl_size region = qc_reg[reg];
 
-		const cpl_array * wavelength = cpl_table_get_array (wave_data, GRAVI_DATA[region], 0);
-		cpl_size nwave = cpl_array_get_size (wavelength);
-		const double * wave_tab = cpl_array_get_data_double_const (wavelength);
-		CPLCHECK_MSG ("Cannot get wavelength data");
+            const cpl_array * wavelength = cpl_table_get_array (wave_data, GRAVI_DATA[region], 0);
+            cpl_size nwave = cpl_array_get_size (wavelength);
+            const double * wave_tab = cpl_array_get_data_double_const (wavelength);
+            CPLCHECK_MSG ("Cannot get wavelength data");
 
-		/* Loop on the two argon lines */
-		for (int iqc = 0 ; iqc < 2 ; iqc++) {
-		  cpl_size l2 = 0;
-		  if ( wave_tab[0] < wave_tab[nwave-1]) {while (wave_tab[l2] < qc_wave[iqc]) l2 ++;}
-		  else                          {while (wave_tab[l2] > qc_wave[iqc]) l2 ++;}
+            /* Loop on the two argon lines */
+            for (int iqc = 0 ; iqc < 2 ; iqc++) {
+                cpl_size l2 = 0;
+                if ( wave_tab[0] < wave_tab[nwave-1]) {while (wave_tab[l2] < qc_wave[iqc]) l2 ++;}
+                else                          {while (wave_tab[l2] > qc_wave[iqc]) l2 ++;}
 
-		  if (l2-1 < 0 || l2 > nwave-1) {
-			cpl_msg_error (cpl_func, "Cannot find the QC position for lbd=%g", qc_wave[iqc]);
-			continue;
-		  }
-		  
-		  /* Position on full detector */
-		  double qc_pos = 0.0;
-		  qc_pos = fullstartx + (l2-1) + (qc_wave[iqc] - wave_tab[l2-1]) / (wave_tab[l2] - wave_tab[l2-1]);
-		  
-		  sprintf (name, "ESO QC REFWAVE%i", iqc+1);
-		  cpl_propertylist_update_double (wave_header, name, qc_wave[iqc]);
-		  cpl_propertylist_set_comment (wave_header, name, "[m] value of ref wave");
-		  
-		  sprintf (name, "ESO QC REFPOS%i %s%lli", iqc+1, GRAVI_TYPE(type_data),region+1);
-		  cpl_propertylist_update_double (wave_header, name, qc_pos);
-		  cpl_propertylist_set_comment (wave_header, name, "[pix] position of ref wave");
-		  
-		  cpl_msg_info (cpl_func, "%s = %f [pix] for %e [m]", name, qc_pos, qc_wave[iqc]);
-		  
-		  CPLCHECK_MSG ("Cannot set QC");
-		}
-		/* End loop on the 2 argon lines */
-	  } /* End loop on 2 or 3 regions */
-	  
-	} /* End loop on SC / FT */
+                if (l2-1 < 0 || l2 > nwave-1) {
+                    cpl_msg_error (cpl_func, "Cannot find the QC position for lbd=%g", qc_wave[iqc]);
+                    continue;
+                }
+  
+                /* Position on full detector */
+                double qc_pos = 0.0;
+                qc_pos = fullstartx + (l2-1) + (qc_wave[iqc] - wave_tab[l2-1]) / (wave_tab[l2] - wave_tab[l2-1]);
+  
+                sprintf (name, "ESO QC REFWAVE%i", iqc+1);
+                cpl_propertylist_update_double (wave_header, name, qc_wave[iqc]);
+                cpl_propertylist_set_comment (wave_header, name, "[m] value of ref wave");
+  
+                sprintf (name, "ESO QC REFPOS%i %s%lli", iqc+1, GRAVI_TYPE(type_data),region+1);
+                cpl_propertylist_update_double (wave_header, name, qc_pos);
+                cpl_propertylist_set_comment (wave_header, name, "[pix] position of ref wave");
+  
+                cpl_msg_info (cpl_func, "%s = %f [pix] for %e [m]", name, qc_pos, qc_wave[iqc]);
+  
+                CPLCHECK_MSG ("Cannot set QC");
+            } /* End loop on the 2 argon lines */
+        } /* End loop on 2 or 3 regions */
+    } /* End loop on SC / FT */
 
     
     /* 
      * Create the test image for SC (only used for debug)
      */
-	cpl_table * wavedata_table = gravi_data_get_wave_data (wave_map, GRAVI_SC);
-	cpl_table * wavefibre_table = gravi_data_get_wave_fibre (wave_map, GRAVI_SC);
-	cpl_table * profile_table = gravi_data_get_table (profile_map, GRAVI_PROFILE_DATA_EXT);
-	cpl_table * detector_table = gravi_data_get_imaging_detector (wave_map, GRAVI_SC);
+    cpl_table * wavedata_table = gravi_data_get_wave_data (wave_map, GRAVI_SC);
+    cpl_table * wavefibre_table = gravi_data_get_wave_fibre (wave_map, GRAVI_SC);
+    cpl_table * profile_table = gravi_data_get_table (profile_map, GRAVI_PROFILE_DATA_EXT);
+    cpl_table * detector_table = gravi_data_get_imaging_detector (wave_map, GRAVI_SC);
 
     cpl_imagelist * testwave_imglist;
     testwave_imglist = gravi_wave_test_image (wavedata_table, wavefibre_table,
                                               profile_table, detector_table);
-	CPLCHECK_MSG ("Cannot compute TEST_WAVE");
+    CPLCHECK_MSG ("Cannot compute TEST_WAVE");
 
-	/* Set TEST_WAVE in output */
-	cpl_propertylist * plist = gravi_data_get_plist (profile_map, GRAVI_PROFILE_DATA_EXT);
-	gravi_data_add_cube (wave_map, cpl_propertylist_duplicate (plist),
+    /* Set TEST_WAVE in output */
+    cpl_propertylist * plist = gravi_data_get_plist (profile_map, GRAVI_PROFILE_DATA_EXT);
+    gravi_data_add_cube (wave_map, cpl_propertylist_duplicate (plist),
                          "TEST_WAVE", testwave_imglist);
     
-	CPLCHECK_MSG ("Cannot set data");
-	
-	gravi_msg_function_exit(1);
-	return CPL_ERROR_NONE;
+    CPLCHECK_MSG ("Cannot set data");
+
+    gravi_msg_function_exit(1);
+    return CPL_ERROR_NONE;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -2062,14 +2062,14 @@ cpl_error_code  gravi_compute_wave (gravi_data * wave_map,
                                     int type_data, const cpl_parameterlist * parlist,
                                     gravi_data * wave_param)
 {
-	gravi_msg_function_start(1);
-	cpl_ensure_code (wave_map,      CPL_ERROR_NULL_INPUT);
-	cpl_ensure_code (spectrum_data, CPL_ERROR_NULL_INPUT);
+    gravi_msg_function_start(1);
+    cpl_ensure_code (wave_map,      CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (spectrum_data, CPL_ERROR_NULL_INPUT);
     cpl_ensure_code (type_data == GRAVI_SC || type_data == GRAVI_FT,
                      CPL_ERROR_ILLEGAL_INPUT);
 
     /* Get headers */
-	cpl_propertylist * raw_header = gravi_data_get_header (spectrum_data);
+    cpl_propertylist * raw_header = gravi_data_get_header (spectrum_data);
     cpl_propertylist * wave_header = gravi_data_get_header (wave_map);
 
     /* Dump full header of wave data */
@@ -2100,15 +2100,15 @@ cpl_error_code  gravi_compute_wave (gravi_data * wave_map,
      */
     cpl_msg_info (cpl_func, "Correct dispersion in WAVE_FIBRE of %s", GRAVI_TYPE(type_data));
 
-	/* Hardcoded values to correct for the fiber dispersion */
-	double n0 = 1.0, n1 = -0.0165448, n2 = 0.00256002;
-	cpl_msg_info (cpl_func,"Rescale wavelengths with dispersion (%g,%g,%g)",n0,n1,n2);
-	
-	cpl_propertylist_update_string (wave_header, "ESO QC WAVE_CORR", "lbd*(N0+N1*(lbd-lbd0)/lbd0+N2*(lbd-lbd0)^2/lbd0^2)");
-	cpl_propertylist_update_double (wave_header, "ESO QC WAVE_CORR N0", n0);
-	cpl_propertylist_update_double (wave_header, "ESO QC WAVE_CORR N1", n1);
-	cpl_propertylist_update_double (wave_header, "ESO QC WAVE_CORR N2", n2);
-	CPLCHECK_MSG ("Cannot set Keywords");
+    /* Hardcoded values to correct for the fiber dispersion */
+    double n0 = 1.0, n1 = -0.0165448, n2 = 0.00256002;
+    cpl_msg_info (cpl_func,"Rescale wavelengths with dispersion (%g,%g,%g)",n0,n1,n2);
+
+    cpl_propertylist_update_string (wave_header, "ESO QC WAVE_CORR", "lbd*(N0+N1*(lbd-lbd0)/lbd0+N2*(lbd-lbd0)^2/lbd0^2)");
+    cpl_propertylist_update_double (wave_header, "ESO QC WAVE_CORR N0", n0);
+    cpl_propertylist_update_double (wave_header, "ESO QC WAVE_CORR N1", n1);
+    cpl_propertylist_update_double (wave_header, "ESO QC WAVE_CORR N2", n2);
+    CPLCHECK_MSG ("Cannot set Keywords");
         
     gravi_wave_correct_dispersion (wavefibre_table, n0, n1, n2);
     CPLCHECK_MSG ("Cannot correct dispersion in wave");
@@ -2128,20 +2128,21 @@ cpl_error_code  gravi_compute_wave (gravi_data * wave_map,
     int spectral_order=3; // default spectral order
     double rms_residuals;
     if (type_data == GRAVI_FT && gravi_param_get_bool(parlist, "gravity.calib.force-wave-ft-equal")) {
-    	spatial_order = 0;
-    	cpl_msg_info (cpl_func, "Option force-waveFT-equal applied");
+        spatial_order = 0;
+        cpl_msg_info (cpl_func, "Option force-waveFT-equal applied");
     }
-// Keep default value
-//    if (type_data == GRAVI_SC) {
-//        spectral_order = gravi_param_get_int(parlist, "gravity.calib.wave-spectral-order");
-//        cpl_msg_info (cpl_func, "Option set_spectral order to %d", spectral_order);
-//    }
+    // Keep default value
+    //    if (type_data == GRAVI_SC) {
+    //        spectral_order = gravi_param_get_int(parlist, "gravity.calib.wave-spectral-order");
+    //        cpl_msg_info (cpl_func, "Option set_spectral order to %d", spectral_order);
+    //    }
 
     wavedata_table = gravi_wave_fit_2d (wavefibre_table,
                                         detector_table,
                                         wave_param,
                                         fullstartx, spatial_order, spectral_order,  &rms_residuals);
-	cpl_propertylist_update_double (wave_header, QC_RMS_RESIDUALS(type_data), rms_residuals);
+    cpl_propertylist_update_double (wave_header, QC_RMS_RESIDUALS(type_data), rms_residuals);
+    cpl_propertylist_update_double (wave_header, QC_RMS_RESIDUALS_UM(type_data), rms_residuals * 1e6);
     
     
     double rms_fit=cpl_propertylist_get_double (raw_header, QC_PHASECHI2);
@@ -2194,15 +2195,15 @@ cpl_error_code  gravi_compute_wave (gravi_data * wave_map,
         gravi_data_add_table (wave_map, cpl_propertylist_duplicate (spectrum_plist),
                               GRAVI_WAVE_DATA_EXT(type_data), wavedata_table);
 
-        }
+    }
 
 
 
     
     CPLCHECK_MSG ("Cannot set data");
     
-	gravi_msg_function_exit(1);
-	return CPL_ERROR_NONE;
+    gravi_msg_function_exit(1);
+    return CPL_ERROR_NONE;
 }
 
 
