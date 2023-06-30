@@ -452,23 +452,48 @@ static int gravity_wavelamp(cpl_frameset            * frameset,
 
     /* END EKW 07/12/2018 read wave parameter from calibration file - Load the WAVE_PARAM Parameter */
 
-	/* Compute position */
-	gravi_compute_argon_pos (preproc_data, wave_param);
+    /* Compute position */
+    gravi_compute_argon_pos (preproc_data, wave_param);
 
-	CPLCHECK_CLEAN ("Cannot compute the positions");
+    CPLCHECK_CLEAN ("Cannot compute the positions");
 
-	/* Save the output data file */
-	gravi_data_save_new (preproc_data, frameset, NULL, NULL, parlist,
-						 used_frameset, frame, "gravity_wavelamp",
+    /* Compute QC params */
+    cpl_table * pos_argon = gravi_data_get_table (preproc_data, "POS_ARGON");
+    cpl_propertylist * product_header = gravi_data_get_header (preproc_data);
+    cpl_vector * wave_diff_all = cpl_vector_new(cpl_table_get_nrow(pos_argon));
+    for(size_t row = 0 ; row < cpl_table_get_nrow(pos_argon) ; ++row)
+    {
+       char keyname[20];
+       int null;
+
+       snprintf(keyname, 19, "ESO QC WAVE%d", row+1);
+       cpl_propertylist_update_double (product_header, keyname,
+           1e6 * cpl_table_get_double(pos_argon, "WAVE", row, &null));
+
+       snprintf(keyname, 19, "ESO QC WAVE TH%d", row+1);
+       cpl_propertylist_update_double (product_header, keyname, 
+           1e6 * cpl_table_get_double(pos_argon, "WAVE_TH", row, &null));
+
+       snprintf(keyname, 19, "ESO QC WAVE DIFF%d", row+1);
+       double wave_diff = 1e6 * cpl_table_get_double(pos_argon, "DIFF", row, &null);
+       cpl_vector_set(wave_diff_all, row, wave_diff);
+       cpl_propertylist_update_double (product_header, keyname, wave_diff);
+    }
+    cpl_propertylist_update_double (product_header, 
+        "ESO QC WAVE DIFF RMS", cpl_vector_get_stdev(wave_diff_all));
+
+    /* Save the output data file */
+    gravi_data_save_new (preproc_data, frameset, NULL, NULL, parlist,
+                         used_frameset, frame, "gravity_wavelamp",
                          NULL, GRAVI_WAVELAMP_MAP);
-	
-	CPLCHECK_CLEAN("Could not save the WAVELAMP");
+
+    CPLCHECK_CLEAN("Could not save the WAVELAMP");
 
     /* Deallocation of all variables */
-	goto cleanup;
+    goto cleanup;
 
 cleanup :
-	cpl_msg_info(cpl_func,"Memory cleanup");
+    cpl_msg_info(cpl_func,"Memory cleanup");
     FREE (cpl_frameset_delete, wavelamp_frameset);
     FREE (cpl_frameset_delete, wavecalib_frameset);
     FREE (cpl_frameset_delete, badcalib_frameset);
