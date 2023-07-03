@@ -2410,8 +2410,13 @@ cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data)
 
         } /* end loop on pol */
     } /* End SC */
+
+
+    cpl_propertylist_update_string (plist, "ESO QC FIELD MODE", 
+        gravi_pfits_get_mode_name(plist));
+    cpl_propertylist_set_comment (plist, "ESO QC FIELD MODE", "Field mode");
     
-	gravi_msg_function_exit(1);
+    gravi_msg_function_exit(1);
     return CPL_ERROR_NONE;
 }
 
