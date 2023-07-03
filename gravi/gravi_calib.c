@@ -2567,16 +2567,23 @@ gravi_data * gravi_compute_piezotf (gravi_data * data,
     
     sprintf (name, "ESO FT RATE");
     double sampling = cpl_propertylist_get_double (piezotf_header, name);
+    char ft_name[100];
     
     for (cpl_size tel = 0 ; tel < ntel; tel ++)
     {
         for (cpl_size resp = 0 ; resp < nresp; resp ++)
             {
-            sprintf (qc_name, "ESO QC FT KAL P%lld_RESP%lld", tel+1, resp+1);
-            cpl_propertylist_update_double (piezotf_header, qc_name, cpl_matrix_get( piezo_resp, resp*ntel+ tel,0 ) );
-            cpl_propertylist_set_comment (piezotf_header, qc_name, "Kalman piezo response");
+                sprintf (qc_name, "ESO QC FT KAL P%lld_RESP%lld", tel+1, resp+1);
+                cpl_propertylist_update_double (piezotf_header, qc_name, cpl_matrix_get( piezo_resp, resp*ntel+ tel,0 ) );
+                cpl_propertylist_set_comment (piezotf_header, qc_name, "Kalman piezo response");
             
-            cpl_msg_info (cpl_func, "QC FT KAL P%lld_RESP%lld = %5.5g [rad/Volts]", tel+1, resp+1, cpl_matrix_get( piezo_resp, resp*ntel+ tel,0 ));
+                cpl_msg_info (cpl_func, "QC FT KAL P%lld_RESP%lld = %5.5g [rad/Volts]", tel+1, resp+1, cpl_matrix_get( piezo_resp, resp*ntel+ tel,0 ));
+
+                sprintf (qc_name, "ESO QC FT KAL P%lld_RESP%lld DIFF", tel+1, resp+1);
+                sprintf (ft_name, "ESO FT KAL P%lld_RESP%lld", tel+1, resp+1);
+                double ft_kal_diff = cpl_matrix_get( piezo_resp, resp*ntel+ tel,0 ) -
+                    cpl_propertylist_get_double (data_header, ft_name);
+                cpl_propertylist_update_double (piezotf_header, qc_name, ft_kal_diff);
             
             }
         
