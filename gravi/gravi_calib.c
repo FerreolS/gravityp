@@ -189,6 +189,7 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
         {
             cpl_mask * acq_zero_mask = cpl_mask_threshold_image_create(cpl_imagelist_get(acq_imglist, i), -FLT_MIN,  FLT_MIN);
             acq_dark_zero_count+= cpl_mask_count(acq_zero_mask);
+            cpl_mask_delete(acq_zero_mask);
         }
         cpl_propertylist_update_double (dark_header, QC_ACQ_ZERO_NB, acq_dark_zero_count);
 

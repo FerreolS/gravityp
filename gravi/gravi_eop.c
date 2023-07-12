@@ -129,6 +129,7 @@ cpl_error_code gravi_eop_interpolate (cpl_size n, double *mjd,
     cpl_vector_unwrap (vpmx);
     cpl_vector_unwrap (vpmy);
     cpl_vector_unwrap (vdut);
+    gravi_msg_function_exit(1);
     return CPL_ERROR_NONE;
   }
 
