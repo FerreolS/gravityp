@@ -221,11 +221,10 @@ int gravi_pfits_get_axis (const cpl_propertylist * plist)
 
     if (cpl_propertylist_has (plist, "ESO INS ROOF POS")) {
         type = cpl_propertylist_get_string (plist,"ESO INS ROOF POS");
-	cpl_msg_info (cpl_func,"FE: using ESO INS ROOF POS");
     } else {
       if (cpl_propertylist_has (plist, "ESO INS OPTI11 ID")) {
-	type = cpl_propertylist_get_string (plist,"ESO INS OPTI11 ID");
-	cpl_msg_info (cpl_func,"FE: using ESO INS OPTI11 ID");
+	    type = cpl_propertylist_get_string (plist,"ESO INS OPTI11 ID");
+	    cpl_msg_warning (cpl_func,"Using ESO INS OPTI11 ID (making use of historic method)");
       } else return -1;
     }
 
@@ -362,10 +361,10 @@ int gravi_pfits_get_met_mode (const cpl_propertylist * plist)
     const char * value = gravi_pfits_get_string_default (plist, "ESO INS MET MODE","ON");
 
     if ( !strcmp(value, "FAINT") ) {
-        return MET_FAINT;
+        return MET_FAINT_HEADER;
     }
     else{
-        return MET_BRIGHT;
+        return MET_NORMAL_HEADER;
     }
 
 }

@@ -544,7 +544,7 @@ cpl_parameter * gravi_parameter_add_metrology (cpl_parameterlist *self)
 	p = cpl_parameter_new_value ("gravity.metrology.preswitch-delay", CPL_TYPE_INT,
                                  "Delay where metrology values are ignored before\n"
                    	   	   	   	 "laser brightness is switched in faint mode, ms.",
-                                 "gravity.metrology", 10);
+                                 "gravity.metrology", 60);
 	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "preswitch-delay");
 	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
 	cpl_parameterlist_append (self, p);
@@ -552,7 +552,7 @@ cpl_parameter * gravi_parameter_add_metrology (cpl_parameterlist *self)
 	p = cpl_parameter_new_value ("gravity.metrology.postswitch-delay", CPL_TYPE_INT,
                                  "Delay where metrology values are ignored after\n"
                    	   	   	   	 "laser brightness is switched in faint mode, ms.",
-                                 "gravity.metrology", 300);
+                                 "gravity.metrology", 320);
 	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "postswitch-delay");
 	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
 	cpl_parameterlist_append (self, p);

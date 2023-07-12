@@ -180,8 +180,11 @@ enum gravi_detector_type
 #define SINGLE_STS 1
 #define DUAL_STS 2
 
-#define MET_BRIGHT 1
-#define MET_FAINT 2
+#define MET_NORMAL_HEADER 0
+#define MET_FAINT_HEADER 1
+#define MET_NORMAL_FLAG 0
+#define MET_FAINT_FLAG 1
+#define MET_BRIGHT_FLAG 2
 
 /* INSNAME_SC or INSNAME_FT. Deal with polar */
 #define INSNAME_FT_P1 "GRAVITY_FT_P1"
