@@ -379,18 +379,18 @@ int gravi_pfits_get_met_mode (const cpl_propertylist * plist)
 
 cpl_vector * gravi_pfits_get_met_faint_params (const cpl_propertylist * plist)
 {
-    char * faint_keys[]={"ESO INS ANLO3 RATE1",\
-                        "ESO INS ANLO3 REPEAT1",\
-                        "ESO INS ANLO3 TIMER1",\
-                        "ESO INS ANLO3 RATE2",\
-                        "ESO INS ANLO3 REPEAT2",\
-                        "ESO INS ANLO3 TIMER2"};
+    const char * faint_keys[]={"ESO INS ANLO3 RATE1",\
+                               "ESO INS ANLO3 REPEAT1",\
+                               "ESO INS ANLO3 TIMER1",\
+                               "ESO INS ANLO3 RATE2",\
+                               "ESO INS ANLO3 REPEAT2",\
+                               "ESO INS ANLO3 TIMER2"};
 
     cpl_vector * faint_params = cpl_vector_new(sizeof(faint_keys)/sizeof(faint_keys[0]));
 
     cpl_vector_fill(faint_params, 0.0);
 
-    for(int i=0;i<sizeof(faint_keys)/sizeof(faint_keys[0]);i++)
+    for(size_t i=0;i<sizeof(faint_keys)/sizeof(faint_keys[0]);i++)
     {
         cpl_errorstate prestate = cpl_errorstate_get();
         cpl_type par_type = cpl_propertylist_get_type(plist, faint_keys[i]);
