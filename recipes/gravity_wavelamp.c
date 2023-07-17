@@ -461,20 +461,20 @@ static int gravity_wavelamp(cpl_frameset            * frameset,
     cpl_table * pos_argon = gravi_data_get_table (preproc_data, "POS_ARGON");
     cpl_propertylist * product_header = gravi_data_get_header (preproc_data);
     cpl_vector * wave_diff_all = cpl_vector_new(cpl_table_get_nrow(pos_argon));
-    for(size_t row = 0 ; row < cpl_table_get_nrow(pos_argon) ; ++row)
+    for(size_t row = 0 ; row < (size_t)cpl_table_get_nrow(pos_argon) ; ++row)
     {
        char keyname[20];
        int null;
 
-       snprintf(keyname, 19, "ESO QC WAVE%d", row+1);
+       snprintf(keyname, 19, "ESO QC WAVE%zu", row+1);
        cpl_propertylist_update_double (product_header, keyname,
            1e6 * cpl_table_get_double(pos_argon, "WAVE", row, &null));
 
-       snprintf(keyname, 19, "ESO QC WAVE TH%d", row+1);
+       snprintf(keyname, 19, "ESO QC WAVE TH%zu", row+1);
        cpl_propertylist_update_double (product_header, keyname, 
            1e6 * cpl_table_get_double(pos_argon, "WAVE_TH", row, &null));
 
-       snprintf(keyname, 19, "ESO QC WAVE DIFF%d", row+1);
+       snprintf(keyname, 19, "ESO QC WAVE DIFF%zu", row+1);
        double wave_diff = 1e6 * cpl_table_get_double(pos_argon, "DIFF", row, &null);
        cpl_vector_set(wave_diff_all, row, wave_diff);
        cpl_propertylist_update_double (product_header, keyname, wave_diff);
