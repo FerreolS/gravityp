@@ -718,10 +718,15 @@ double gravi_pfits_get_time_sc (const cpl_propertylist * header, cpl_size row)
     double window_time = gravi_pfits_get_fddlwindow (header);
     double period    = gravi_pfits_get_period_sc (header);
 
+    double extra_time_faint = 0.0; 
+    if (gravi_pfits_get_met_mode(header)==MET_FAINT_HEADER) {
+        extra_time_faint = 1.0;
+    }
+
     double time = 86400 * 1e6 *
         (gravi_convert_to_mjd (gravi_pfits_get_start_sc (header)) -
          gravi_convert_to_mjd (gravi_pfits_get_start_prcacq (header)) ) +
-        (period-window_time)/2. * 1e6 +
+        (period-window_time-extra_time_faint)/2. * 1e6 +
         row * period * 1e6;
 
     /* Return 0 if error */
