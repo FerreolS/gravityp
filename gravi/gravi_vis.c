@@ -1535,16 +1535,16 @@ cpl_error_code gravi_average_self_visphi(cpl_table * oi_vis_avg,
         /* Please have a look to the F. Millour thesis
            (http://tel.archives-ouvertes.fr/tel-00134268),
            pp.91-92 (eq. 4.55 to 4.58) */
-        pEW1[w] = (creal(pEVis[w]) * pow(creal(pCRef[w]), 2) +
-            creal(pECRef[w]) * pow(creal(pVis[w]), 2) +
-            cimag(pVis[w]) * pow(cimag(pCRef[w]), 2) +
-            cimag(pECRef[w]) + pow(cimag(pVis[w]), 2)) +
+        pEW1[w] = (creal(pEVis[w]) * gravi_pow2(creal(pCRef[w])) +
+            creal(pECRef[w]) * gravi_pow2(creal(pVis[w])) +
+            cimag(pVis[w]) * gravi_pow2(cimag(pCRef[w])) +
+            cimag(pECRef[w]) + gravi_pow2(cimag(pVis[w]))) +
 
             I * (
-            cimag(pVis[w]) * pow(creal(pCRef[w]), 2) +
-            cimag(pECRef[w]) * pow(creal(pVis[w]), 2) +
-            creal(pVis[w]) * pow(cimag(pCRef[w]), 2) +
-            creal(pECRef[w]) + pow(cimag(pVis[w]), 2)
+            cimag(pVis[w]) * gravi_pow2(creal(pCRef[w])) +
+            cimag(pECRef[w]) * gravi_pow2(creal(pVis[w])) +
+            creal(pVis[w]) * gravi_pow2(cimag(pCRef[w])) +
+            creal(pECRef[w]) + gravi_pow2(cimag(pVis[w]))
             );
       }
     }

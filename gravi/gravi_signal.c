@@ -1339,19 +1339,19 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET,
 {
   gravi_msg_function_start(1);
   cpl_ensure_code (vis_SC,  CPL_ERROR_NULL_INPUT);
-    cpl_ensure_code (vis_MET, CPL_ERROR_NULL_INPUT);
-    cpl_ensure_code (wave_table, CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (vis_MET, CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (wave_table, CPL_ERROR_NULL_INPUT);
 
   cpl_size nbase = 6, ndiode = 4, ntel = 4;
   cpl_size nrow_sc  = cpl_table_get_nrow (vis_SC) / nbase;
 
-   /* get wavenummer from wave table */
+  /* get wavenummer from wave table */
     
-    cpl_size nwave_sc = cpl_table_get_column_depth (vis_SC, "VISDATA");
-    double * twopi_wavenumber_sc  = cpl_malloc (nwave_sc * sizeof(double));
-    for (cpl_size wave = 0; wave < nwave_sc ; wave ++) {
-        twopi_wavenumber_sc[wave] = CPL_MATH_2PI / cpl_table_get (wave_table, "EFF_WAVE", wave, NULL);
-    }
+  cpl_size nwave_sc = cpl_table_get_column_depth (vis_SC, "VISDATA");
+  double * twopi_wavenumber_sc  = cpl_malloc (nwave_sc * sizeof(double));
+  for (cpl_size wave = 0; wave < nwave_sc ; wave ++) {
+    twopi_wavenumber_sc[wave] = CPL_MATH_2PI / cpl_table_get (wave_table, "EFF_WAVE", wave, NULL);
+  }
     
   /* Get SC data */
   int * first_met = cpl_table_get_data_int (vis_SC, "FIRST_MET");
@@ -1360,8 +1360,8 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET,
   CPLCHECK_MSG("Cannot get data");
 
   /* Get MET data */
-  double * opd_met_fc           = cpl_table_get_data_double (vis_MET, "OPD_FC");
-  cpl_array ** opd_met_tel      = cpl_table_get_data_array (vis_MET, "OPD_TEL");
+  double * opd_met_fc             = cpl_table_get_data_double (vis_MET, "OPD_FC");
+  cpl_array ** opd_met_tel        = cpl_table_get_data_array (vis_MET, "OPD_TEL");
 
   double * opd_met_fc_corr        = cpl_table_get_data_double (vis_MET, "OPD_FC_CORR");
   double * opd_met_telfc_mcorr    = cpl_table_get_data_double (vis_MET, "OPD_TELFC_MCORR");
@@ -1392,69 +1392,66 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET,
 
   /* Loop on base and rows */
   for (cpl_size base = 0; base < nbase; base++) {
-	for (cpl_size row_sc = 0; row_sc < nrow_sc; row_sc ++) {
-	  cpl_size nsc = row_sc * nbase + base;
+	  for (cpl_size row_sc = 0; row_sc < nrow_sc; row_sc ++) {
+	    cpl_size nsc = row_sc * nbase + base;
         
       /* init cpl arrays */
-	  opd_metdit_tel[nsc]      = gravi_array_init_double (ndiode, 0.0);
+	    opd_metdit_tel[nsc] = gravi_array_init_double (ndiode, 0.0);
       opd_metdit_telfc_corr[nsc] = gravi_array_init_double (ndiode, 0.0);
       cpl_array * phasor_metdit_telfc = gravi_array_init_double_complex (nwave_sc, 0.0+I*0.0);
+      _Complex double * phasor_metdit_telfc_ptr = cpl_array_get_data_double_complex(phasor_metdit_telfc);
         
-	  /* Sum over synch MET frames */
-	  for (cpl_size row_met = first_met[nsc] ; row_met < last_met[nsc]; row_met++) {
-	    cpl_size nmet0 = row_met * ntel + GRAVI_BASE_TEL[base][0];
-	    cpl_size nmet1 = row_met * ntel + GRAVI_BASE_TEL[base][1];
+	    /* Sum over synch MET frames */
+	    for (cpl_size row_met = first_met[nsc] ; row_met < last_met[nsc]; row_met++) {
+	      cpl_size nmet0 = row_met * ntel + GRAVI_BASE_TEL[base][0];
+	      cpl_size nmet1 = row_met * ntel + GRAVI_BASE_TEL[base][1];
           
         /* compute phasor of astrometric quantity */
-          double opd_astro = opd_met_fc_corr[nmet0] - opd_met_fc_corr[nmet1] + opd_met_telfc_mcorr[nmet0] - opd_met_telfc_mcorr[nmet1];
-          for (cpl_size wave = 0; wave < nwave_sc ; wave ++) {
-              cpl_array_set_complex(phasor_metdit_telfc,wave,
-                                    cpl_array_get_complex(phasor_metdit_telfc,wave,NULL)+
-                                      cexp(opd_astro*I*twopi_wavenumber_sc[wave]));
-                                                          };
+        double opd_astro = opd_met_fc_corr[nmet0] - opd_met_fc_corr[nmet1] + opd_met_telfc_mcorr[nmet0] - opd_met_telfc_mcorr[nmet1];
+
+        for (cpl_size wave = 0; wave < nwave_sc ; wave ++) {
+          phasor_metdit_telfc_ptr[wave] = phasor_metdit_telfc_ptr[wave] + cexp(opd_astro * I * twopi_wavenumber_sc[wave]);
+        };
           
-	    /* Mean OPD_FC_CORR and OPD_TELFC_MCORR for each BASELINE */
-	    opd_metdit_fc_corr[nsc] += opd_met_fc_corr[nmet0] - opd_met_fc_corr[nmet1];
-	    opd_metdit_telfc_mcorr[nsc] += opd_met_telfc_mcorr[nmet0] - opd_met_telfc_mcorr[nmet1];
+        /* Mean OPD_FC_CORR and OPD_TELFC_MCORR for each BASELINE */
+        opd_metdit_fc_corr[nsc] += opd_met_fc_corr[nmet0] - opd_met_fc_corr[nmet1];
+        opd_metdit_telfc_mcorr[nsc] += opd_met_telfc_mcorr[nmet0] - opd_met_telfc_mcorr[nmet1];
 
-	    /* Mean OPD_TELFC_CORR for each BASELINE and diode */
-	    cpl_array_add (opd_metdit_telfc_corr[nsc], opd_met_telfc_corr[nmet0]);
-	    cpl_array_subtract (opd_metdit_telfc_corr[nsc], opd_met_telfc_corr[nmet1]);
+        /* Mean OPD_TELFC_CORR for each BASELINE and diode */
+        cpl_array_add (opd_metdit_telfc_corr[nsc], opd_met_telfc_corr[nmet0]);
+        cpl_array_subtract (opd_metdit_telfc_corr[nsc], opd_met_telfc_corr[nmet1]);
 
-	    /* Mean OPD_MET at Telescope (each diode) */
-	    cpl_array_add (opd_metdit_tel[nsc], opd_met_tel[nmet0]);
-	    cpl_array_subtract (opd_metdit_tel[nsc], opd_met_tel[nmet1]);
+        /* Mean OPD_MET at Telescope (each diode) */
+        cpl_array_add (opd_metdit_tel[nsc], opd_met_tel[nmet0]);
+        cpl_array_subtract (opd_metdit_tel[nsc], opd_met_tel[nmet1]);
 	    
-	    /* Mean OPD_MET_FC at Beam Combiner */
-	    opd_metdit_fc[nsc] += opd_met_fc[nmet0] - opd_met_fc[nmet1];
+        /* Mean OPD_MET_FC at Beam Combiner */
+        opd_metdit_fc[nsc] += opd_met_fc[nmet0] - opd_met_fc[nmet1];
 
-	    CPLCHECK_MSG ("Fail to integrate the metrology");
-	  }
+        CPLCHECK_MSG ("Fail to integrate the metrology");
+      }
 	  
-	  /* Normalize the means  (if nframe == 0, values are zero) */
-	  cpl_size nframe = last_met[nsc] - first_met[nsc];
-	  if (nframe != 0 ){
-                
-	    opd_metdit_fc_corr[nsc] /= nframe;
-	    opd_metdit_telfc_mcorr[nsc] /= nframe;
-	    cpl_array_divide_scalar (opd_metdit_telfc_corr[nsc], (double)nframe);
-	    cpl_array_divide_scalar (opd_metdit_tel[nsc], (double)nframe);
-	    opd_metdit_fc[nsc]  /= nframe;
+      /* Normalize the means  (if nframe == 0, values are zero) */
+      cpl_size nframe = last_met[nsc] - first_met[nsc];
+      if (nframe != 0) {
+        opd_metdit_fc_corr[nsc] /= nframe;
+        opd_metdit_telfc_mcorr[nsc] /= nframe;
+        cpl_array_divide_scalar (opd_metdit_telfc_corr[nsc], (double)nframe);
+        cpl_array_divide_scalar (opd_metdit_tel[nsc], (double)nframe);
+        opd_metdit_fc[nsc] /= nframe;
           
         /* get the astro phase by taking the argument of astro phasor */
         cpl_array_arg (phasor_metdit_telfc);
-        phase_metdit_telfc[nsc]=cpl_array_cast(phasor_metdit_telfc, CPL_TYPE_DOUBLE);
-	  }
+        phase_metdit_telfc[nsc] = cpl_array_cast(phasor_metdit_telfc, CPL_TYPE_DOUBLE);
+	    }
       cpl_array_delete(phasor_metdit_telfc);
-	  CPLCHECK_MSG ("Fail to compute metrology per base from metrology per tel");
-	  
-	} /* End loop on SC frames */
-  }/* End loop on bases */
+	    CPLCHECK_MSG ("Fail to compute metrology per base from metrology per tel");
+  	} /* End loop on SC frames */
+  } /* End loop on bases */
 
   /* Compute the information comming from VIS_ACQ
    * camera... through the VIS_MET */
   if (cpl_table_has_column (vis_MET,"FIELD_FIBER_DX")) {
-      
       double * fdx_met = cpl_table_get_data_double (vis_MET, "FIELD_FIBER_DX");
       double * fdy_met = cpl_table_get_data_double (vis_MET, "FIELD_FIBER_DY");
 
@@ -1466,51 +1463,49 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET,
 
       /* Loop on base and rows */
       for (cpl_size base = 0; base < nbase; base++) {
-          for (cpl_size row_sc = 0; row_sc < nrow_sc; row_sc ++) {
-              cpl_size nsc = row_sc * nbase + base;
-              
-              /* Sum over synch MET frames */
-              for (cpl_size row_met = first_met[nsc] ; row_met < last_met[nsc]; row_met++) {
-                  cpl_size nmet0 = row_met * ntel + GRAVI_BASE_TEL[base][0];
-                  cpl_size nmet1 = row_met * ntel + GRAVI_BASE_TEL[base][1];
-                  
-                  /* Mean FIELD_FIBER */
-                  fdx_metdit[nsc] += fdx_met[nmet0] - fdx_met[nmet1];
-                  fdy_metdit[nsc] += fdy_met[nmet0] - fdy_met[nmet1];
-              }
-              CPLCHECK_MSG ("Fail to compute metrology per base from metrology per tel");
+        for (cpl_size row_sc = 0; row_sc < nrow_sc; row_sc ++) {
+          cpl_size nsc = row_sc * nbase + base;
+          
+          /* Sum over synch MET frames */
+          for (cpl_size row_met = first_met[nsc] ; row_met < last_met[nsc]; row_met++) {
+            cpl_size nmet0 = row_met * ntel + GRAVI_BASE_TEL[base][0];
+            cpl_size nmet1 = row_met * ntel + GRAVI_BASE_TEL[base][1];
+            
+            /* Mean FIELD_FIBER */
+            fdx_metdit[nsc] += fdx_met[nmet0] - fdx_met[nmet1];
+            fdy_metdit[nsc] += fdy_met[nmet0] - fdy_met[nmet1];
+          }
+          CPLCHECK_MSG ("Fail to compute metrology per base from metrology per tel");
 
-              /* Normalize the means  (if nframe == 0, values are zero) */
-              cpl_size nframe = last_met[nsc] - first_met[nsc];
-              if (nframe != 0 ){
-                  fdx_metdit[nsc]  /= nframe;
-                  fdy_metdit[nsc]  /= nframe;
-              }
-              
-          } /* End loop on SC frames */
-      }/* End loop on bases */
+          /* Normalize the means  (if nframe == 0, values are zero) */
+          cpl_size nframe = last_met[nsc] - first_met[nsc];
+          if (nframe != 0 ){
+              fdx_metdit[nsc]  /= nframe;
+              fdy_metdit[nsc]  /= nframe;
+          }
+        } /* End loop on SC frames */
+    } /* End loop on bases */
   }
 
   /* Compute mean OPD_MET_PUPIL, OPD_MET_PUPIL_STDDEV and OPD_MET_TTPUP 
   only if OPD_PUPIL exists (ACQ option)*/
   if (cpl_table_has_column (vis_MET,"OPD_PUPIL") && cpl_table_has_column (vis_MET,"OPD_TTPUP")) {
+  double * opd_met_pupil = cpl_table_get_data_double (vis_MET, "OPD_PUPIL");
+  double * opd_met_ttpup = cpl_table_get_data_double (vis_MET, "OPD_TTPUP");
 
-	  double * opd_met_pupil = cpl_table_get_data_double (vis_MET, "OPD_PUPIL");
-	  double * opd_met_ttpup          = cpl_table_get_data_double (vis_MET, "OPD_TTPUP");
+  gravi_table_new_column (vis_SC, "OPD_MET_PUPIL", "m", CPL_TYPE_DOUBLE);
+  double * opd_metdit_pupil = cpl_table_get_data_double (vis_SC, "OPD_MET_PUPIL");
 
-	  gravi_table_new_column (vis_SC, "OPD_MET_PUPIL", "m", CPL_TYPE_DOUBLE);
-	  double * opd_metdit_pupil = cpl_table_get_data_double (vis_SC, "OPD_MET_PUPIL");
+  gravi_table_new_column (vis_SC, "OPD_MET_PUPIL_STDDEV", "m", CPL_TYPE_DOUBLE);
+  double * opd_metdit_pupil_stddev = cpl_table_get_data_double (vis_SC, "OPD_MET_PUPIL_STDDEV");
 
-	  gravi_table_new_column (vis_SC, "OPD_MET_PUPIL_STDDEV", "m", CPL_TYPE_DOUBLE);
-	  double * opd_metdit_pupil_stddev = cpl_table_get_data_double (vis_SC, "OPD_MET_PUPIL_STDDEV");
+  gravi_table_new_column (vis_SC, "OPD_MET_TTPUP", "m", CPL_TYPE_DOUBLE);
+  double * opd_metdit_ttpup = cpl_table_get_data_double (vis_SC, "OPD_MET_TTPUP");
 
-	  gravi_table_new_column (vis_SC, "OPD_MET_TTPUP", "m", CPL_TYPE_DOUBLE);
-	  double * opd_metdit_ttpup = cpl_table_get_data_double (vis_SC, "OPD_MET_TTPUP");
+  CPLCHECK_MSG("Cannot create columns");
 
-	  CPLCHECK_MSG("Cannot create columns");
-
-	  /* Loop on base and rows */
-	  for (cpl_size base = 0; base < nbase; base++) {
+  /* Loop on base and rows */
+  for (cpl_size base = 0; base < nbase; base++) {
 		for (cpl_size row_sc = 0; row_sc < nrow_sc; row_sc ++) {
 		  cpl_size nsc = row_sc * nbase + base;
 
@@ -1530,7 +1525,7 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET,
 
 		  /* Normalize the means  (if nframe == 0, values are zero) */
 		  cpl_size nframe = last_met[nsc] - first_met[nsc];
-		  if (nframe != 0 ){
+		  if (nframe != 0) {
 		    opd_metdit_pupil[nsc]  /= nframe;
 		    opd_metdit_ttpup[nsc]  /= nframe;
 		  }
@@ -1548,19 +1543,14 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET,
 		  }
 
 		  /* Normalize the STDDEV  (if nframe <= 1, values are zero) */
-		  if (nframe > 1 ){
-		    opd_metdit_pupil_stddev[nsc]  = sqrt (opd_metdit_pupil_stddev[nsc]  / (nframe-1));
+		  if (nframe > 1) {
+		    opd_metdit_pupil_stddev[nsc]  = sqrt(opd_metdit_pupil_stddev[nsc]  / (nframe-1));
 		  }
 
-		  
-
-          CPLCHECK_MSG ("Fail to compute metrology per base from metrology per tel");
-
-		} /* End loop on SC frames */
+      CPLCHECK_MSG ("Fail to compute metrology per base from metrology per tel");
+  		} /* End loop on SC frames */
 	  } /* End loop on bases */
-
   }
-
 
   FREE (cpl_free, twopi_wavenumber_sc);
   gravi_msg_function_exit(1);
@@ -2142,7 +2132,7 @@ cpl_error_code gravi_vis_create_vfactor_sc (cpl_table * vis_SC,
   double meanwave_ft = cpl_table_get_column_mean (wave_table_ft, "EFF_WAVE");
   double * wavenumber_sc  = cpl_malloc (nwave_sc * sizeof(double));
   for (cpl_size wave = 0; wave < nwave_sc ; wave ++) {
-	wavenumber_sc[wave] = 1. / cpl_table_get (wave_table_sc, "EFF_WAVE", wave, NULL);
+	  wavenumber_sc[wave] = 1. / cpl_table_get (wave_table_sc, "EFF_WAVE", wave, NULL);
   }
 
   CPLCHECK_MSG ("Cannot get data");
@@ -2170,91 +2160,92 @@ cpl_error_code gravi_vis_create_vfactor_sc (cpl_table * vis_SC,
 
   /* Loop on base and row SC */
   for (cpl_size base = 0; base < nbase; base++) {
-	for (cpl_size row_sc = 0; row_sc < nrow_sc; row_sc++) {
-	  int nsc = row_sc * nbase + base;
+    for (cpl_size row_sc = 0; row_sc < nrow_sc; row_sc++) {
+      int nsc = row_sc * nbase + base;
 
-	  /* Init integration of FT quantities during the SC frame */
-	  visData_ftdit[nsc]  = gravi_array_init_double_complex (nwave_ft, 0.0 + I*0.0);
-	  visVar_ftdit[nsc]   = gravi_array_init_double (nwave_ft, 0.0);
-	  visPower_ftdit[nsc] = gravi_array_init_double (nwave_ft, 0.0);
-	  
-	  double vFactor_incoh = 0.0;
-	  double complex vFactor_coh = 0.0 + I * 0.0;
-	  double vFactor_var = 0.0;
+      /* Init integration of FT quantities during the SC frame */
+      visData_ftdit[nsc]  = gravi_array_init_double_complex (nwave_ft, 0.0 + I * 0.0);
+      visVar_ftdit[nsc]   = gravi_array_init_double (nwave_ft, 0.0);
+      visPower_ftdit[nsc] = gravi_array_init_double (nwave_ft, 0.0);
+      
+      double vFactor_incoh = 0.0;
+      double complex vFactor_coh = 0.0 + I * 0.0;
+      double vFactor_var = 0.0;
 
-	  /* Integrate quantities during the SC frame */
-	  cpl_size nframe = last_ft[nsc] - first_ft[nsc];
-	  for (cpl_size row_ft = first_ft[nsc] ; row_ft < last_ft[nsc]; row_ft++) {
-		cpl_array * tmp_data;
+      /* Integrate quantities during the SC frame */
+      cpl_size nframe = last_ft[nsc] - first_ft[nsc];
+      for (cpl_size row_ft = first_ft[nsc] ; row_ft < last_ft[nsc]; row_ft++) {
+        cpl_array * tmp_data;
 
-		/* Integrate visVar_ftdit = < |visDataErr|^2 > over the current SC frame [e^2] */
-		tmp_data = visErr_ft[row_ft * nbase + base];
-		for (cpl_size wave = 0; wave < nwave_ft; wave ++){
-		  cpl_array_set (visVar_ftdit[nsc], wave,
-						 cpl_array_get (visVar_ftdit[nsc], wave, NULL) +
-						 pow (cabs( cpl_array_get_complex (tmp_data, wave, NULL) ), 2));
-		}
+        /* Integrate visVar_ftdit = < |visDataErr|^2 > over the current SC frame [e^2] */
+        tmp_data = visErr_ft[row_ft * nbase + base];
+        double *visVar_ftdit_ptr = cpl_array_get_data_double(visVar_ftdit[nsc]);
+        _Complex double *tmp_data_ptr = cpl_array_get_data_double_complex(tmp_data);
+        for (cpl_size wave = 0; wave < nwave_ft; wave ++){
+          visVar_ftdit_ptr[wave] = visVar_ftdit_ptr[wave] + gravi_pow2(cabs(tmp_data_ptr[wave]));
+        }
 
-		/* Integrate visData_ftdit[nsc] = < visData > over the current SC frame [e] */
-		tmp_data = visData_ft[row_ft * nbase + base];
-		for (cpl_size wave = 0; wave < nwave_ft; wave ++){
-			cpl_array_set_complex (visData_ftdit[nsc], wave,
-								   cpl_array_get_complex (visData_ftdit[nsc], wave, NULL) +
-								   cpl_array_get_complex (tmp_data, wave, NULL));
-		}
+        /* Integrate visData_ftdit[nsc] = < visData > over the current SC frame [e] */
+        tmp_data = visData_ft[row_ft * nbase + base];
+        _Complex double *visData_ftdit_ptr = cpl_array_get_data_double_complex(visData_ftdit[nsc]);
+        tmp_data_ptr = cpl_array_get_data_double_complex(tmp_data);
 
-		/* Integrate visPower_ftdit = < |visData|^2 > over the current SC frame [e^2] */
-		for (cpl_size wave = 0; wave < nwave_ft; wave ++){
-			cpl_array_set (visPower_ftdit[nsc], wave,
-						   cpl_array_get (visPower_ftdit[nsc], wave, NULL) +
-						   pow (cabs( cpl_array_get_complex (tmp_data, wave, NULL)), 2));
-		}
+        for (cpl_size wave = 0; wave < nwave_ft; wave ++){
+          visData_ftdit_ptr[wave] = visData_ftdit_ptr[wave] + tmp_data_ptr[wave];
+        }
 
-		/* Integrate the same quantities for the white light vFactor 
-		 * This is first doing a coherent integration over the wavelengths */
-		vFactor_incoh += pow (cabs (cpl_array_get_mean_complex (visData_ft[row_ft * nbase + base])) * nwave_ft, 2);
-		vFactor_coh += cpl_array_get_mean_complex (visData_ft[row_ft * 6 + base]) * nwave_ft;
-		for (cpl_size wave = 0; wave < nwave_ft; wave ++) {
-			vFactor_var += pow (cabs (cpl_array_get_complex (visErr_ft[row_ft * nbase + base], wave, NULL)), 2);
-		}
-		
-		CPLCHECK_MSG("Issue in the loop to build average FT quantities");
-	  } /* End loop on FT frame within this SC frame */
+        /* Integrate visPower_ftdit = < |visData|^2 > over the current SC frame [e^2] */
+        double *visPower_ftdit_ptr = cpl_array_get_data_double(visPower_ftdit[nsc]);
+        for (cpl_size wave = 0; wave < nwave_ft; wave ++){
+          visPower_ftdit_ptr[wave] = visPower_ftdit_ptr[wave] + gravi_pow2(cabs(tmp_data_ptr[wave]));
+        }
 
-	  /* Compute the vFactor as the contrast attenuation within the SC DIT
-	   *  (|<visData>|^2 - <|visErr|^2>) / (<|visData|^2> - <|visErr|^2>) / nframe */
-	  vFactor_ftdit[nsc] = cpl_array_new (nwave_ft, CPL_TYPE_DOUBLE);
-	  if (nframe != 0) {
-		  for (cpl_size wave = 0; wave < nwave_ft; wave ++) {
-			cpl_array_set (vFactor_ftdit[nsc], wave,
-						   (pow (cabs (cpl_array_get_complex (visData_ftdit[nsc], wave, NULL)),2) -
-							cpl_array_get (visVar_ftdit[nsc], wave, NULL)) /
-						   (cpl_array_get (visPower_ftdit[nsc], wave, NULL) -
-							cpl_array_get (visVar_ftdit[nsc], wave, NULL)) / (double)nframe);
-		  }
+        /* Integrate the same quantities for the white light vFactor 
+        * This is first doing a coherent integration over the wavelengths */
+        vFactor_incoh += gravi_pow2(cabs (cpl_array_get_mean_complex (visData_ft[row_ft * nbase + base])) * nwave_ft);
+        vFactor_coh += cpl_array_get_mean_complex (visData_ft[row_ft * 6 + base]) * nwave_ft;
+        _Complex double *visErr_ft_ptr = cpl_array_get_data_double_complex(visErr_ft[row_ft * nbase + base]);
+        for (cpl_size wave = 0; wave < nwave_ft; wave ++) {
+          vFactor_var += gravi_pow2(cabs (visErr_ft_ptr[ wave]));
+        }
+      
+        CPLCHECK_MSG("Issue in the loop to build average FT quantities");
+      } /* End loop on FT frame within this SC frame */
 
-		  /* Compute the white light vFactor, that is fist performing a coherent
-		   * integration of the spectral channels. To lower the bias */
-		  vFactor_wl[nsc] = (cabs(vFactor_coh)*cabs(vFactor_coh) - vFactor_var) /
-							(vFactor_incoh - vFactor_var) / (double)nframe;
-	  }
-	  /* if nframe == 0  set the vFactor to 0 */
-	  else {
-		  for (cpl_size wave = 0; wave < nwave_ft; wave ++) {
-			cpl_array_set (vFactor_ftdit[nsc], wave,0);
-		  }
-		  vFactor_wl[nsc] = 0;
-	  }
-	  
-	  /* Compute the mean vFactor of the FT, and fit with a function exp(-a2/lbd2) to 
-	   * project on the SC wavelength. This has only one free parameter */
-	  vFactor[nsc] = cpl_array_new (nwave_sc, CPL_TYPE_DOUBLE);
-	  double a2 = log (CPL_MAX(CPL_MIN (vFactor_wl[nsc], 1.0),1e-10)) * meanwave_ft*meanwave_ft;
-	  for (cpl_size wave = 0; wave < nwave_sc; wave ++) {
-		cpl_array_set (vFactor[nsc], wave, exp ( a2 * pow (wavenumber_sc[wave], 2)));
-	  }
-	  
-	}
+      /* Compute the vFactor as the contrast attenuation within the SC DIT
+      *  (|<visData>|^2 - <|visErr|^2>) / (<|visData|^2> - <|visErr|^2>) / nframe */
+      vFactor_ftdit[nsc] = cpl_array_new (nwave_ft, CPL_TYPE_DOUBLE);
+      _Complex double *visData_ftdit_ptr = cpl_array_get_data_double_complex(visData_ftdit[nsc]);
+      if (nframe != 0) {
+        for (cpl_size wave = 0; wave < nwave_ft; wave ++) {
+          cpl_array_set (vFactor_ftdit[nsc], wave,
+                (gravi_pow2(cabs (visData_ftdit_ptr[ wave])) -
+                cpl_array_get (visVar_ftdit[nsc], wave, NULL)) /
+                (cpl_array_get (visPower_ftdit[nsc], wave, NULL) -
+                cpl_array_get (visVar_ftdit[nsc], wave, NULL)) / (double)nframe);
+        }
+
+        /* Compute the white light vFactor, that is fist performing a coherent
+        * integration of the spectral channels. To lower the bias */
+        vFactor_wl[nsc] = (cabs(vFactor_coh)*cabs(vFactor_coh) - vFactor_var) /
+                (vFactor_incoh - vFactor_var) / (double)nframe;
+      }
+      /* if nframe == 0  set the vFactor to 0 */
+      else {
+        for (cpl_size wave = 0; wave < nwave_ft; wave ++) {
+          cpl_array_set (vFactor_ftdit[nsc], wave,0);
+        }
+        vFactor_wl[nsc] = 0;
+      }
+      
+      /* Compute the mean vFactor of the FT, and fit with a function exp(-a2/lbd2) to 
+      * project on the SC wavelength. This has only one free parameter */
+      vFactor[nsc] = cpl_array_new (nwave_sc, CPL_TYPE_DOUBLE);
+      double a2 = log (CPL_MAX(CPL_MIN (vFactor_wl[nsc], 1.0),1e-10)) * meanwave_ft*meanwave_ft;
+      for (cpl_size wave = 0; wave < nwave_sc; wave ++) {
+        cpl_array_set (vFactor[nsc], wave, exp ( a2 * gravi_pow2(wavenumber_sc[wave])));
+      }
+    }
   }
   /* End loop on SC frames and base */
 
