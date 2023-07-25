@@ -122,30 +122,30 @@ cpl_image * gravi_create_profile_image (cpl_image * mean_img,
 gravi_data * gravi_compute_dark (gravi_data * raw_data)
 {
     gravi_msg_function_start(1);
-    cpl_ensure (raw_data, CPL_ERROR_NULL_INPUT, NULL);
-
-    /* Create the output DARK or SKY map */
-    gravi_data * dark_map = gravi_data_new (0);
+	cpl_ensure (raw_data, CPL_ERROR_NULL_INPUT, NULL);
+	
+	/* Create the output DARK or SKY map */
+	gravi_data * dark_map = gravi_data_new (0);
 
     /* Dump full header of RAW data */
-    cpl_propertylist * dark_header = gravi_data_get_header (dark_map);
-    cpl_propertylist * raw_header  = gravi_data_get_header (raw_data);
+	cpl_propertylist * dark_header = gravi_data_get_header (dark_map);
+	cpl_propertylist * raw_header  = gravi_data_get_header (raw_data);
     cpl_propertylist_append (dark_header, raw_header);
 
-    /* Check if this is a SKY or a DARK */
+	/* Check if this is a SKY or a DARK */
     const char * dpr_type = gravi_pfits_get_dpr_type (raw_header);
     int isSky = strstr (dpr_type, "SKY")?1:0;
 
-    /* The dark file must contains all the shutter close */
-    if ( isSky==0 && !gravi_data_check_shutter_closed (raw_data) ) {
+	/* The dark file must contains all the shutter close */
+	if ( isSky==0 && !gravi_data_check_shutter_closed (raw_data) ) {
         gravi_pfits_add_check (dark_header, "DARK has some shutter OPEN !!");
-    }
+	}
 
-    /* The sky file must contains all the shutter open */
-    if ( isSky==1 && !gravi_data_check_shutter_open (raw_data) ) {
+	/* The sky file must contains all the shutter open */
+	if ( isSky==1 && !gravi_data_check_shutter_open (raw_data) ) {
         gravi_pfits_add_check (dark_header, "SKY has some shutter CLOSED !!");
-    }
-
+	}
+	
     /*
      * Compute the SC DARK
      */
@@ -154,60 +154,48 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
     }
     else
     {
-        cpl_msg_info (cpl_func, "Computing the %s of SC",isSky?"SKY":"DARK");
+	    cpl_msg_info (cpl_func, "Computing the %s of SC",isSky?"SKY":"DARK");
         
         /* Copy IMAGING_DETECTOR into product */
         gravi_data_copy_ext (dark_map, raw_data, GRAVI_IMAGING_DETECTOR_SC_EXT);
 
-        /* Load the IMAGING_DATA table or image list */
-        cpl_imagelist * imglist = gravi_data_get_cube (raw_data, GRAVI_IMAGING_DATA_SC_EXT);
+		/* Load the IMAGING_DATA table or image list */
+		cpl_imagelist * imglist = gravi_data_get_cube (raw_data, GRAVI_IMAGING_DATA_SC_EXT);
 
-        /* Compute the median image of the imagelist */
-        cpl_image * median_img  = cpl_imagelist_collapse_create (imglist);
+		/* Compute the median image of the imagelist */
+		cpl_image * median_img  = cpl_imagelist_collapse_create (imglist);
         CPLCHECK_NUL ("Cannot compute the median dark");
 
-        /* Compute STD. We should see if we use sigma-clipping
-         * or not for the collapse, it may change the bad pixel detection */
-        cpl_msg_info (cpl_func,"Compute std with imglist");
-        cpl_imagelist * temp_imglist = cpl_imagelist_duplicate (imglist);
-        cpl_imagelist_subtract_image (temp_imglist, median_img);
-        cpl_imagelist_power (temp_imglist, 2.0);
-        cpl_image * stdev_img = cpl_imagelist_collapse_create (temp_imglist);
-        FREE (cpl_imagelist_delete, temp_imglist);
-        cpl_image_power (stdev_img, 0.5);
-        CPLCHECK_NUL ("Cannot compute the STD of the DARK");
+		/* Compute STD. We should see if we use sigma-clipping
+		 * or not for the collapse, it may change the bad pixel detection */
+		cpl_msg_info (cpl_func,"Compute std with imglist");
+		cpl_imagelist * temp_imglist = cpl_imagelist_duplicate (imglist);
+		cpl_imagelist_subtract_image (temp_imglist, median_img);
+		cpl_imagelist_power (temp_imglist, 2.0);
+		cpl_image * stdev_img = cpl_imagelist_collapse_create (temp_imglist);
+		FREE (cpl_imagelist_delete, temp_imglist);
+		cpl_image_power (stdev_img, 0.5);
+		CPLCHECK_NUL ("Cannot compute the STD of the DARK");
+		
+		/* Compute the QC parameters RMS and MEDIAN */
+		cpl_msg_info (cpl_func, "Compute QC parameters");
+		double mean_qc = cpl_image_get_median (median_img);
+		double darkrms = cpl_image_get_median (stdev_img);
+		cpl_propertylist_update_double (dark_header, isSky?QC_MEANSKY_SC:QC_MEANDARK_SC, mean_qc);
+		cpl_propertylist_update_double (dark_header, isSky?QC_SKYRMS_SC:QC_DARKRMS_SC, darkrms);
 
-        /* Compute the QC parameters RMS, MEDIAN, ZERO.NB */
-        cpl_msg_info (cpl_func, "Compute QC parameters");
-        double mean_qc = cpl_image_get_median (median_img);
-        double darkrms = cpl_image_get_median (stdev_img);
-        cpl_propertylist_update_double (dark_header, isSky?QC_MEANSKY_SC:QC_MEANDARK_SC, mean_qc);
-        cpl_propertylist_update_double (dark_header, isSky?QC_SKYRMS_SC:QC_DARKRMS_SC, darkrms);
-        if (gravi_data_has_extension(raw_data, GRAVI_IMAGING_DATA_ACQ_EXT))
-        {
-            cpl_imagelist * acq_imglist = gravi_data_get_cube (raw_data, GRAVI_IMAGING_DATA_ACQ_EXT);
-      
-            size_t acq_dark_zero_count = 0;
-            for(int i=0; i < cpl_imagelist_get_size(acq_imglist); i++)
-            {
-                cpl_mask * acq_zero_mask = cpl_mask_threshold_image_create(cpl_imagelist_get(acq_imglist, i), -FLT_MIN,  FLT_MIN);
-                acq_dark_zero_count+= cpl_mask_count(acq_zero_mask);
-                cpl_mask_delete(acq_zero_mask);
-            }
-            cpl_propertylist_update_double (dark_header, QC_ACQ_ZERO_NB, acq_dark_zero_count);
-        }
-        /* Verbose */
-        cpl_msg_info (cpl_func, "QC_MEDIAN%s_SC = %e",isSky?"SKY":"DARK", mean_qc);
-        cpl_msg_info (cpl_func, "QC_%sRMS_SC = %e",isSky?"SKY":"DARK", darkrms);
+		/* Verbose */
+	    cpl_msg_info (cpl_func, "QC_MEDIAN%s_SC = %e",isSky?"SKY":"DARK", mean_qc);
+	    cpl_msg_info (cpl_func, "QC_%sRMS_SC = %e",isSky?"SKY":"DARK", darkrms);
 
-        /* Put the data in the output table : dark_map */
-        cpl_propertylist * img_plist = gravi_data_get_plist (raw_data, GRAVI_IMAGING_DATA_SC_EXT);
-        img_plist = cpl_propertylist_duplicate (img_plist);
-        gravi_data_add_img (dark_map, img_plist, GRAVI_IMAGING_DATA_SC_EXT, median_img);
+		/* Put the data in the output table : dark_map */
+		cpl_propertylist * img_plist = gravi_data_get_plist (raw_data, GRAVI_IMAGING_DATA_SC_EXT);
+		img_plist = cpl_propertylist_duplicate (img_plist);
+		gravi_data_add_img (dark_map, img_plist, GRAVI_IMAGING_DATA_SC_EXT, median_img);
         
-        img_plist = cpl_propertylist_duplicate (img_plist);
-        gravi_data_add_img (dark_map, img_plist, GRAVI_IMAGING_ERR_SC_EXT, stdev_img);
-        CPLCHECK_NUL ("Cannot set the SC data");
+		img_plist = cpl_propertylist_duplicate (img_plist);
+		gravi_data_add_img (dark_map, img_plist, GRAVI_IMAGING_ERR_SC_EXT, stdev_img);
+		CPLCHECK_NUL ("Cannot set the SC data");
         
     } /* End SC case */
 
@@ -219,30 +207,30 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
     }
     else
     {            
-        cpl_msg_info(cpl_func, "Computing the %s of FT",isSky?"SKY":"DARK");
+	    cpl_msg_info(cpl_func, "Computing the %s of FT",isSky?"SKY":"DARK");
 
         /* Copy IMAGING_DETECTOR into product */
         gravi_data_copy_ext (dark_map, raw_data, GRAVI_IMAGING_DETECTOR_FT_EXT);
         
-        /* Load the IMAGING_DATA table as DOUBLE */
+		/* Load the IMAGING_DATA table as DOUBLE */
         cpl_msg_info (cpl_func,"Load data");
-        cpl_table * table_ft = gravi_data_get_table (raw_data, GRAVI_IMAGING_DATA_FT_EXT);
+		cpl_table * table_ft = gravi_data_get_table (raw_data, GRAVI_IMAGING_DATA_FT_EXT);
         cpl_table_cast_column (table_ft, "PIX", "PIX", CPL_TYPE_DOUBLE);
-        cpl_imagelist * imglist = gravi_imagelist_wrap_column (table_ft, "PIX");
-        CPLCHECK_NUL ("Cannot load the FT data");
+		cpl_imagelist * imglist = gravi_imagelist_wrap_column (table_ft, "PIX");
+		CPLCHECK_NUL ("Cannot load the FT data");
 
-        /* Compute the median image of the imagelist */
+		/* Compute the median image of the imagelist */
         cpl_msg_info (cpl_func,"Compute mean and median");
-        cpl_image * median_img = cpl_imagelist_collapse_median_create (imglist);
-        cpl_image * mean_img   = cpl_imagelist_collapse_create (imglist);
-        CPLCHECK_NUL ("Cannot compute the MEAN dark");
+		cpl_image * median_img = cpl_imagelist_collapse_median_create (imglist);
+		cpl_image * mean_img   = cpl_imagelist_collapse_create (imglist);
+		CPLCHECK_NUL ("Cannot compute the MEAN dark");
         
-        /* Compute the std of each pixels */
+		/* Compute the std of each pixels */
         cpl_msg_info (cpl_func,"Compute std");
         cpl_imagelist_subtract_image (imglist, mean_img);
         cpl_imagelist_power (imglist, 2.0);
-        cpl_image * stdev_img = cpl_imagelist_collapse_create (imglist);
-        cpl_image_power (stdev_img, 0.5);
+		cpl_image * stdev_img = cpl_imagelist_collapse_create (imglist);
+		cpl_image_power (stdev_img, 0.5);
 
         /* We power back the data, because we are working in-place */
         cpl_imagelist_power (imglist, 0.5);
@@ -251,44 +239,44 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
         /* Delete data */
         cpl_msg_info (cpl_func,"Delete data");
         FREE (gravi_imagelist_unwrap_images, imglist);
-        FREE (cpl_image_delete, mean_img);
-        CPLCHECK_NUL ("Cannot compute the STD of the DARK");
+		FREE (cpl_image_delete, mean_img);
+		CPLCHECK_NUL ("Cannot compute the STD of the DARK");
 
-        /* Compute the QC parameters RMS and MEDIAN */
-        cpl_msg_info (cpl_func, "Compute QC parameters");
-        double mean_qc = cpl_image_get_mean (median_img);
-        double darkrms = cpl_image_get_mean (stdev_img);
-        cpl_propertylist_update_double (dark_header, isSky?QC_MEANSKY_FT:QC_MEANDARK_FT, mean_qc);
-        cpl_propertylist_update_double (dark_header, isSky?QC_SKYRMS_FT:QC_DARKRMS_FT, darkrms);
-        CPLCHECK_NUL ("Cannot compute the QC");
+		/* Compute the QC parameters RMS and MEDIAN */
+		cpl_msg_info (cpl_func, "Compute QC parameters");
+		double mean_qc = cpl_image_get_mean (median_img);
+		double darkrms = cpl_image_get_mean (stdev_img);
+		cpl_propertylist_update_double (dark_header, isSky?QC_MEANSKY_FT:QC_MEANDARK_FT, mean_qc);
+		cpl_propertylist_update_double (dark_header, isSky?QC_SKYRMS_FT:QC_DARKRMS_FT, darkrms);
+		CPLCHECK_NUL ("Cannot compute the QC");
 
-        /* Verbose */
-        cpl_msg_info (cpl_func, "QC_MEDIAN%s_FT = %e",isSky?"SKY":"DARK", mean_qc);
-        cpl_msg_info (cpl_func, "QC_%sRMS_FT = %e",isSky?"SKY":"DARK", darkrms);
+		/* Verbose */
+	    cpl_msg_info (cpl_func, "QC_MEDIAN%s_FT = %e",isSky?"SKY":"DARK", mean_qc);
+	    cpl_msg_info (cpl_func, "QC_%sRMS_FT = %e",isSky?"SKY":"DARK", darkrms);
 
         /* Create the output DARK table, with a single row */
-        cpl_table * median_table = cpl_table_extract (table_ft, 0, 1);
+		cpl_table * median_table = cpl_table_extract (table_ft, 0, 1);
         cpl_array * median_array = gravi_array_wrap_image (median_img);
         cpl_table_set_array (median_table, "PIX", 0, median_array);
         FREE (cpl_array_unwrap, median_array);
         FREE (cpl_image_delete, median_img);
-        CPLCHECK_NUL("Cannot set median in table");
+		CPLCHECK_NUL("Cannot set median in table");
 
-        /* Put median dark in the output gravi_data */
-        gravi_data_add_table (dark_map, NULL, GRAVI_IMAGING_DATA_FT_EXT, median_table);
-        CPLCHECK_NUL("Cannot save median in gravi_data");
+		/* Put median dark in the output gravi_data */
+		gravi_data_add_table (dark_map, NULL, GRAVI_IMAGING_DATA_FT_EXT, median_table);
+		CPLCHECK_NUL("Cannot save median in gravi_data");
         
         /* Create the output DARK RMS table, with a single row */
-        cpl_table * stdev_table = cpl_table_extract (table_ft, 0, 1);
+		cpl_table * stdev_table = cpl_table_extract (table_ft, 0, 1);
         cpl_array * stdev_array = gravi_array_wrap_image (stdev_img);
         cpl_table_set_array (stdev_table, "PIX", 0, stdev_array);
         FREE (cpl_array_unwrap, stdev_array);
         FREE (cpl_image_delete, stdev_img);
-        CPLCHECK_NUL("Cannot set rms in table");
+		CPLCHECK_NUL("Cannot set rms in table");
 
-        /* Put median dark in the output gravi_data */
-        gravi_data_add_table (dark_map, NULL, GRAVI_IMAGING_ERR_FT_EXT, stdev_table);
-        CPLCHECK_NUL("Cannot save median in gravi_data");
+		/* Put median dark in the output gravi_data */
+		gravi_data_add_table (dark_map, NULL, GRAVI_IMAGING_ERR_FT_EXT, stdev_table);
+		CPLCHECK_NUL("Cannot save median in gravi_data");
         
     } /* End case FT */
     
@@ -407,29 +395,29 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
     }
     else
     {
-        cpl_msg_info (cpl_func, "Computing the %s of ACQ",isSky?"SKY":"DARK");
+	    cpl_msg_info (cpl_func, "Computing the %s of ACQ",isSky?"SKY":"DARK");
         
-        /* Load the IMAGING_DATA table or image list */
-        cpl_imagelist * imglist = gravi_data_get_cube (raw_data, GRAVI_IMAGING_DATA_ACQ_EXT);
+		/* Load the IMAGING_DATA table or image list */
+		cpl_imagelist * imglist = gravi_data_get_cube (raw_data, GRAVI_IMAGING_DATA_ACQ_EXT);
 
-        /* Compute the median image of the imagelist */
-        cpl_image * median_img = cpl_imagelist_collapse_median_create (imglist);
-        CPLCHECK_NUL ("Cannot compute the median dark");
+		/* Compute the median image of the imagelist */
+		cpl_image * median_img = cpl_imagelist_collapse_median_create (imglist);
+		CPLCHECK_NUL ("Cannot compute the median dark");
 
-        /* Compute the QC parameters RMS and MEDIAN */
-        cpl_msg_info (cpl_func, "Compute QC parameters");
-        double mean_qc = cpl_image_get_median (median_img);
+		/* Compute the QC parameters RMS and MEDIAN */
+		cpl_msg_info (cpl_func, "Compute QC parameters");
+		double mean_qc = cpl_image_get_median (median_img);
         
-        /* Verbose */
-        cpl_msg_info (cpl_func, "QC_MEDIAN%s_ACQ = %e",isSky?"SKY":"DARK", mean_qc);
-        cpl_propertylist_update_double (dark_header, isSky?"ESO QC MEDIANSKY ACQ":"ESO QC MEDIANDARK ACQ",
+		/* Verbose */
+	    cpl_msg_info (cpl_func, "QC_MEDIAN%s_ACQ = %e",isSky?"SKY":"DARK", mean_qc);
+		cpl_propertylist_update_double (dark_header, isSky?"ESO QC MEDIANSKY ACQ":"ESO QC MEDIANDARK ACQ",
                                         mean_qc);
 
-        /* Put the data in the output table : dark_map */
-        cpl_propertylist * img_plist = gravi_data_get_plist (raw_data, GRAVI_IMAGING_DATA_ACQ_EXT);
-        img_plist = cpl_propertylist_duplicate (img_plist);
-        gravi_data_add_img (dark_map, img_plist, GRAVI_IMAGING_DATA_ACQ_EXT, median_img);
-        CPLCHECK_NUL("Cannot save median in gravi_data");
+		/* Put the data in the output table : dark_map */
+		cpl_propertylist * img_plist = gravi_data_get_plist (raw_data, GRAVI_IMAGING_DATA_ACQ_EXT);
+		img_plist = cpl_propertylist_duplicate (img_plist);
+		gravi_data_add_img (dark_map, img_plist, GRAVI_IMAGING_DATA_ACQ_EXT, median_img);
+		CPLCHECK_NUL("Cannot save median in gravi_data");
     } 
 
     gravi_msg_function_exit(1);
@@ -2571,23 +2559,16 @@ gravi_data * gravi_compute_piezotf (gravi_data * data,
     
     sprintf (name, "ESO FT RATE");
     double sampling = cpl_propertylist_get_double (piezotf_header, name);
-    char ft_name[100];
     
     for (cpl_size tel = 0 ; tel < ntel; tel ++)
     {
         for (cpl_size resp = 0 ; resp < nresp; resp ++)
             {
-                sprintf (qc_name, "ESO QC FT KAL P%lld_RESP%lld", tel+1, resp+1);
-                cpl_propertylist_update_double (piezotf_header, qc_name, cpl_matrix_get( piezo_resp, resp*ntel+ tel,0 ) );
-                cpl_propertylist_set_comment (piezotf_header, qc_name, "Kalman piezo response");
+            sprintf (qc_name, "ESO QC FT KAL P%lld_RESP%lld", tel+1, resp+1);
+            cpl_propertylist_update_double (piezotf_header, qc_name, cpl_matrix_get( piezo_resp, resp*ntel+ tel,0 ) );
+            cpl_propertylist_set_comment (piezotf_header, qc_name, "Kalman piezo response");
             
-                cpl_msg_info (cpl_func, "QC FT KAL P%lld_RESP%lld = %5.5g [rad/Volts]", tel+1, resp+1, cpl_matrix_get( piezo_resp, resp*ntel+ tel,0 ));
-
-                sprintf (qc_name, "ESO QC FT KAL P%lld_RESP%lld DIFF", tel+1, resp+1);
-                sprintf (ft_name, "ESO FT KAL P%lld_RESP%lld", tel+1, resp+1);
-                double ft_kal_diff = cpl_matrix_get( piezo_resp, resp*ntel+ tel,0 ) -
-                    cpl_propertylist_get_double (data_header, ft_name);
-                cpl_propertylist_update_double (piezotf_header, qc_name, ft_kal_diff);
+            cpl_msg_info (cpl_func, "QC FT KAL P%lld_RESP%lld = %5.5g [rad/Volts]", tel+1, resp+1, cpl_matrix_get( piezo_resp, resp*ntel+ tel,0 ));
             
             }
         
@@ -2657,57 +2638,91 @@ gravi_data * gravi_compute_piezotf (gravi_data * data,
 
 cpl_error_code gravi_remove_cosmicrays_sc (cpl_imagelist * imglist_sc)
 {
-    gravi_msg_function_start(1);
+    gravi_msg_function_start (1);
     cpl_ensure_code (imglist_sc, CPL_ERROR_NULL_INPUT);
-        
-    cpl_image * img;
 
-    const cpl_size    nrow     = cpl_imagelist_get_size(imglist_sc);
-    img      = cpl_imagelist_get (imglist_sc, 0);
-    const cpl_size    nx       = cpl_image_get_size_x(img);
-    const cpl_size    ny       = cpl_image_get_size_y(img);
+    cpl_image * img;
+    double * img_ptr;
+    cpl_binary * bpm_ptr;
     
+    const cpl_size nrow = cpl_imagelist_get_size (imglist_sc);
+    img                 = cpl_imagelist_get (imglist_sc, 0);
+    const cpl_size nx   = cpl_image_get_size_x (img);
+    const cpl_size ny   = cpl_image_get_size_y (img);
+
     /* default clip is 10 sigma, but to be increased in case of small number of images */
-    double clip_thresh = 5;
-    
+    double clip_thresh = 5.;
+
     if (nrow <= 32) clip_thresh = 10;
     if (nrow <= 16) clip_thresh = 15;
     if (nrow <= 12) clip_thresh = 20;
     if (nrow <= 8)  clip_thresh = 30;
     if (nrow <= 4)  clip_thresh = 40;
     if (nrow < 4)   clip_thresh = 50;
-    
+
+    cpl_msg_info (cpl_func, "Number of images is %d => cosmic ray detection threshold set to %f sigma", nrow, clip_thresh);
+
+    /* Declare arrays and get pointers for speed */
+
+    /* Median and SD across images */
+    cpl_array * med_val  = cpl_array_new (nx, CPL_TYPE_DOUBLE);
+    double * med_val_ptr = cpl_array_get_data_double (med_val);
+    cpl_array * std_val  = cpl_array_new (nx, CPL_TYPE_DOUBLE);
+    double * std_val_ptr = cpl_array_get_data_double (std_val);
+
+    /* Pixel values at fixed (x,y) for each frame */
+    cpl_vector * row_val = cpl_vector_new (nrow);
+    double * row_ptr = cpl_vector_get_data (row_val);
+
+    /* Indices of valid and CR pixels */
+    cpl_array * good_x = cpl_array_new (nx, CPL_TYPE_DOUBLE);
+    double * good_x_ptr = cpl_array_get_data_double (good_x);
+    cpl_array * good_y = cpl_array_new (nx, CPL_TYPE_DOUBLE);
+    double * good_y_ptr = cpl_array_get_data_double (good_y);
+    cpl_array * CR_x = cpl_array_new (nx, CPL_TYPE_DOUBLE);
+    double * CR_x_ptr = cpl_array_get_data_double (CR_x);
+
+    /* Work arrays for interpolation of CR pixels */
+    /* Allocated to maximum possible length, actual number of valid values will vary */
+    cpl_vector * xref = cpl_vector_new(nx + 2);
+    double * xref_ptr = cpl_vector_get_data(xref);
+    cpl_vector * yref = cpl_vector_new(nx + 2);
+    double * yref_ptr = cpl_vector_get_data(yref);
+    cpl_vector * xout = cpl_vector_new(nx);
+    double * xout_ptr = cpl_vector_get_data(xout);
+    cpl_vector * yout = cpl_vector_new(nx);
+    double * yout_ptr = cpl_vector_get_data(yout);
+
+    /* Merged work arrays for bivector interpolation */
+    cpl_bivector * fref = cpl_bivector_wrap_vectors (xref, yref);
+    cpl_bivector * fout = cpl_bivector_wrap_vectors (xout, yout);
+
+    /* count number of CR pixels for log message */
     cpl_vector * cCR_vector = cpl_vector_new (nrow);
     cpl_vector_fill (cCR_vector, 0.0);
-    
+    double *cCR_vector_ptr = cpl_vector_get_data(cCR_vector);
+
+    /* macro for indexing 2d array */
+    #define IMAGE_IDX(_nx, _x, _y) (_x + _nx * _y)
+
     /* loop through all image rows of the image */
     for (cpl_size k = 0; k < ny; k++) {
-
-        cpl_array * med_val = cpl_array_new (nx, CPL_TYPE_DOUBLE);
-        cpl_array * std_val = cpl_array_new (nx, CPL_TYPE_DOUBLE);
-                
         /* loop through all pixels in the image row */
         for (cpl_size i = 0; i < nx; i++) {
-            cpl_vector * val = cpl_vector_new (nrow);
-
             /* find pixel value across all images */
             for (cpl_size row = 0; row < nrow; row++) {
-                int nv;
-                img = cpl_imagelist_get (imglist_sc, row);
-                cpl_vector_set (val, row, cpl_image_get (img, i+1, k+1, &nv));
+                img_ptr = cpl_image_get_data (cpl_imagelist_get (imglist_sc, row));
+                cpl_size idx = IMAGE_IDX (nx, i, k);
+                row_ptr[row] = img_ptr[idx];
             } /* End image loop */
 
             /* calculate pixel mean and standard deviation */
-            double median = cpl_vector_get_median (val);
-            cpl_array_set (med_val, i, median);
-            // cpl_array_set (std_val, i, cpl_vector_get_stdev (val));
-            cpl_vector_subtract_scalar (val, median);
-            cpl_vector_multiply (val,val);
-            cpl_vector_sqrt (val ); /* = abs(val) */
-            cpl_array_set (std_val, i, cpl_vector_get_median (val) * CPL_MATH_STD_MAD);
-            
-            /* clear vector */
-            cpl_vector_delete (val);
+            double median = cpl_vector_get_median (row_val);
+            med_val_ptr[i] = median;
+            cpl_vector_subtract_scalar (row_val, median);
+            cpl_vector_multiply (row_val, row_val);
+            cpl_vector_sqrt (row_val); /* = abs (val) */
+            std_val_ptr[i] = cpl_vector_get_median (row_val) * CPL_MATH_STD_MAD;
         } /* End pixel loop */
                 
         /* loop through the values for each image and identify the outliers */
@@ -2715,63 +2730,52 @@ cpl_error_code gravi_remove_cosmicrays_sc (cpl_imagelist * imglist_sc)
 
         for (cpl_size row = 0; row < nrow; row++) {
             cpl_size nGood = 0, nCR = 0;
-            cpl_array * pGood_x = cpl_array_new (nx, CPL_TYPE_DOUBLE);
-            cpl_array * pGood_y = cpl_array_new (nx, CPL_TYPE_DOUBLE);
-            cpl_array * pCR_x = cpl_array_new (nx, CPL_TYPE_DOUBLE);
-
+            
             /* load image */
             img = cpl_imagelist_get (imglist_sc, row);
+            img_ptr = cpl_image_get_data_double (img);
+            bpm_ptr = cpl_mask_get_data (cpl_image_get_bpm (img));
             
             /* Separate good pixels from those with CRs */ 
             for (cpl_size i = 0; i < nx; i++) {
-                int nv;
-                double val = cpl_image_get (img, i+1, k+1, &nv);
-                if ( (nv==1) || (val > cpl_array_get (med_val, i, &nv) + clip_thresh * cpl_array_get (std_val, i, &nv)) ){
-                    cpl_array_set (pCR_x,nCR, i);
-                    nCR ++;
+                cpl_size idx = IMAGE_IDX (nx, i, k);
+                cpl_binary nv = bpm_ptr[idx];
+                double val = img_ptr[idx];
+                if ((nv == 1) || (val > med_val_ptr[i] + clip_thresh * std_val_ptr[i])) {
+                    CR_x_ptr[nCR++] = i;
                 } else {
-                    cpl_array_set (pGood_x, nGood, i);
-                    cpl_array_set (pGood_y, nGood, val);
-                    nGood ++;
+                    good_x_ptr[nGood] = i;
+                    good_y_ptr[nGood++] = val;
                 }
             } /* End column loop */
-                
+
             /* add counter of CR to vector */
-            cpl_vector_set(cCR_vector, row, cpl_vector_get(cCR_vector, row) + nCR);
+            cCR_vector_ptr[row] += nCR;
             //cpl_msg_warning (cpl_func,"TT Cosmic rays detected: %lli", nCR);
-            
-            
+                
             /* interpolate CR affected pixels */
             if (nCR > 0) {
-                int nv;
-
-                /* allocate vectors */
-                cpl_vector * xref = cpl_vector_new (nGood+2);
-                cpl_vector * yref = cpl_vector_new (nGood+2);
-                cpl_vector * xout = cpl_vector_new (nCR);
-                cpl_vector * yout = cpl_vector_new (nCR);
+                /* clear vectors */
+                cpl_vector_fill(xref, 0.0);
+                cpl_vector_fill(yref, 0.0);
+                cpl_vector_fill(xout, 0.0);
+                cpl_vector_fill(yout, 0.0);
 
                 /* fill vectors with good and CR pixels*/
                 for (cpl_size i = 0; i < nGood; i++) {
-                    cpl_vector_set (xref, i+1, cpl_array_get (pGood_x, i, &nv));
-                    cpl_vector_set (yref, i+1, cpl_array_get (pGood_y, i, &nv));
+                    xref_ptr[i+1] = good_x_ptr[i];
+                    yref_ptr[i+1] = good_y_ptr[i];
                 } /* End nGood loop */
                 
                 /* Fix the non-extrapolation inability of cpl_bivector_interpolate_linear */
-                cpl_vector_set (xref, 0, 0);
-                cpl_vector_set (xref, nGood+1, nx);
-                cpl_vector_set (yref, 0, cpl_array_get (pGood_y, 0, &nv));
-                cpl_vector_set (yref, nGood+1, cpl_array_get (pGood_y, nGood-1, &nv));
-
+                xref_ptr[0] = 0;
+                xref_ptr[nGood+1] = nx;
+                yref_ptr[0] = good_y_ptr[0];
+                yref_ptr[nGood+1] = good_y_ptr[nGood-1];
 
                 for (cpl_size i = 0; i < nCR; i++) {
-                    cpl_vector_set (xout, i, cpl_array_get (pCR_x, i, &nv));
+                    xout_ptr[i] = CR_x_ptr[i];
                 } /* End nCR loop */
-
-                
-                /* merge into bivector */
-                cpl_bivector * fref = cpl_bivector_wrap_vectors (xref, yref);
-                cpl_bivector * fout = cpl_bivector_wrap_vectors (xout, yout);
 
                 /* interpolate CR positions */
                 cpl_bivector_interpolate_linear (fout, fref);
@@ -2779,27 +2783,15 @@ cpl_error_code gravi_remove_cosmicrays_sc (cpl_imagelist * imglist_sc)
 
                 /* replace CR pixels in image with interpolated values */
                 for (cpl_size i = 0; i < nCR; i++) {
-                    cpl_image_set (img, cpl_vector_get (xout, i) +1, k +1, cpl_vector_get (yout, i));
-                    cpl_mask   * bpm  = cpl_image_get_bpm (img);
-                    cpl_mask_set (bpm, cpl_vector_get (xout, i) +1, k +1, CPL_BINARY_1);
-                    // TODO: store bad pixel mask to debiassedsubtracted file
+                    cpl_size idx = IMAGE_IDX (nx, xout_ptr[i], k);
+                    img_ptr[idx] = yout_ptr[i];
+                    bpm_ptr[idx] = CPL_BINARY_1;
                 }
-                FREE (cpl_bivector_delete, fref);
-                FREE (cpl_bivector_delete, fout);
-
             } /* End IF nCR*/
-
-                /* delete arrays */
-            FREE (cpl_array_delete, pGood_x);
-            FREE (cpl_array_delete, pGood_y);
-            FREE (cpl_array_delete, pCR_x);
         } /* End loop through all images */
-        
-        FREE (cpl_array_delete, med_val);
-        FREE (cpl_array_delete, std_val);
 
     } /* End loop through all image rows */
-    
+
     /* print the number of flagged pixels to the log */
     double percentage_CR_perpixel = cpl_vector_get_mean (cCR_vector) * 100 / (nx * ny);
     if (percentage_CR_perpixel > 1)
@@ -2807,14 +2799,30 @@ cpl_error_code gravi_remove_cosmicrays_sc (cpl_imagelist * imglist_sc)
     else
         cpl_msg_info (cpl_func,"Cosmic rays flagged on %g percent of the pixels", percentage_CR_perpixel);
     for (cpl_size row = 0; row < nrow; row++)
-        if (cpl_vector_get (cCR_vector, row) > (nx*ny)/1000)
+        if (cpl_vector_get (cCR_vector, row) > (nx * ny) / 1000)
             cpl_msg_warning (cpl_func,"Cosmic rays detected on image %lli: %g", row+1, cpl_vector_get (cCR_vector, row));
-        
-    
+
+    /* Delete temporary arrays */
+    FREE (cpl_array_delete, med_val);
+    FREE (cpl_array_delete, std_val);
+    FREE (cpl_vector_delete, row_val);
+
+    FREE (cpl_array_delete, good_x);
+    FREE (cpl_array_delete, good_y);
+    FREE (cpl_array_delete, CR_x);
     FREE (cpl_vector_delete, cCR_vector);
-    
-    gravi_msg_function_exit(1);
+
+    FREE(cpl_vector_delete, xref);
+    FREE(cpl_vector_delete, yref);
+    FREE(cpl_vector_delete, xout);
+    FREE(cpl_vector_delete, yout);
+
+    FREE (cpl_bivector_unwrap_vectors, fref);
+    FREE (cpl_bivector_unwrap_vectors, fout);
+
+    gravi_msg_function_exit (1);
     return CPL_ERROR_NONE;
+#undef IMAGE_IDX
 }
 
 /*----------------------------------------------------------------------------*/
