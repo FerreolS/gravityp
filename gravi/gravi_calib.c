@@ -2660,7 +2660,7 @@ cpl_error_code gravi_remove_cosmicrays_sc (cpl_imagelist * imglist_sc)
     if (nrow <= 4)  clip_thresh = 40;
     if (nrow < 4)   clip_thresh = 50;
 
-    cpl_msg_info (cpl_func, "Number of images is %d => cosmic ray detection threshold set to %f sigma", nrow, clip_thresh);
+    cpl_msg_info (cpl_func, "Number of images is %lld => cosmic ray detection threshold set to %f sigma", nrow, clip_thresh);
 
     /* Declare arrays and get pointers for speed */
 
