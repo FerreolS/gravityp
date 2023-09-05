@@ -498,7 +498,14 @@ cpl_parameter * gravi_parameter_add_biasmethod (cpl_parameterlist *self)
                                 "MASKED_MEDIAN_PER_COLUMN");
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "bias-method");
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
-	cpl_parameterlist_append (self, p);
+    cpl_parameterlist_append (self, p);
+
+    p = cpl_parameter_new_value ("gravity.preproc.remove-cosmicrays", CPL_TYPE_BOOL,
+                             "Remove the cosmicrays with the statiscal method",
+                             "gravity.preproc", TRUE);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "remove-cosmicrays");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (self, p);
 
     return p;
 }
