@@ -1390,12 +1390,14 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET,
     
   CPLCHECK_MSG("Cannot create columns");
 
-  /* Loop on base and rows */
+  /* Loop on base and rows */ 
+  cpl_msg_info (cpl_func, "Compute OPD_MET_TEL, OPD_MET_FC_CORR, OPD_MET_TELFC_MCORR...");
+ 
   for (cpl_size base = 0; base < nbase; base++) {
 	  for (cpl_size row_sc = 0; row_sc < nrow_sc; row_sc ++) {
 	    cpl_size nsc = row_sc * nbase + base;
         
-      /* init cpl arrays */
+      /* init cpl arrays -- may be can be faster */
 	    opd_metdit_tel[nsc] = gravi_array_init_double (ndiode, 0.0);
       opd_metdit_telfc_corr[nsc] = gravi_array_init_double (ndiode, 0.0);
       cpl_array * phasor_metdit_telfc = gravi_array_init_double_complex (nwave_sc, 0.0+I*0.0);
@@ -1452,6 +1454,9 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET,
   /* Compute the information comming from VIS_ACQ
    * camera... through the VIS_MET */
   if (cpl_table_has_column (vis_MET,"FIELD_FIBER_DX")) {
+    
+      cpl_msg_info (cpl_func, "Compute the information coming from VIS_ACQ");
+    
       double * fdx_met = cpl_table_get_data_double (vis_MET, "FIELD_FIBER_DX");
       double * fdy_met = cpl_table_get_data_double (vis_MET, "FIELD_FIBER_DY");
 
@@ -1490,6 +1495,9 @@ cpl_error_code gravi_vis_create_met_sc (cpl_table * vis_SC, cpl_table * vis_MET,
   /* Compute mean OPD_MET_PUPIL, OPD_MET_PUPIL_STDDEV and OPD_MET_TTPUP 
   only if OPD_PUPIL exists (ACQ option)*/
   if (cpl_table_has_column (vis_MET,"OPD_PUPIL") && cpl_table_has_column (vis_MET,"OPD_TTPUP")) {
+
+    cpl_msg_info (cpl_func, "Compute mean OPD_MET_PUPIL, OPD_MET_PUPIL_STDDEV and OPD_MET_TTPUP...");
+
   double * opd_met_pupil = cpl_table_get_data_double (vis_MET, "OPD_PUPIL");
   double * opd_met_ttpup = cpl_table_get_data_double (vis_MET, "OPD_TTPUP");
 
