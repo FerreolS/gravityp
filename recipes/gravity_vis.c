@@ -211,6 +211,9 @@ static int gravity_vis_create(cpl_plugin * plugin)
     gravi_parameter_add_p2vmred_file (recipe->parameters);
     gravi_parameter_add_astro_file (recipe->parameters);
 
+    /* PCA visphi flattening */
+    gravi_parameter_add_pca (recipe->parameters);
+
     /* Averaging */
     gravi_parameter_add_average_vis (recipe->parameters);
 
@@ -381,7 +384,7 @@ static int gravity_vis(cpl_frameset * frameset,
 	  * darkcalib_frameset=NULL, * sky_frameset=NULL, * flatcalib_frameset=NULL, * p2vmcalib_frameset=NULL,
 	  * badcalib_frameset=NULL, *used_frameset=NULL, * current_frameset=NULL, * dispcalib_frameset=NULL,
 	  * metpos_frameset=NULL, * diamcat_frameset = NULL, *eop_frameset = NULL, *patch_frameset = NULL,
-	  * static_param_frameset=NULL;
+	  * static_param_frameset=NULL, * pcacalib_frameset = NULL;
 	
 	cpl_frame * frame=NULL;
 	
@@ -390,7 +393,8 @@ static int gravity_vis(cpl_frameset * frameset,
 	
 	gravi_data * p2vm_map=NULL, * data=NULL, * wave_map=NULL, * dark_map=NULL,
         * profile_map=NULL, * badpix_map=NULL, * preproc_data=NULL, * p2vmred_data=NULL, * tmpvis_data=NULL,
-        * vis_data=NULL, * disp_map=NULL, * diodepos_data=NULL, * diamcat_data=NULL, *eop_map=NULL, *static_param_data=NULL;
+        * vis_data=NULL, * disp_map=NULL, * diodepos_data=NULL, * diamcat_data=NULL, *eop_map=NULL,
+        * static_param_data=NULL, * pca_calib_data=NULL;
 	gravi_data ** sky_maps = NULL;
 	
 	int nb_frame, nb_sky;
@@ -412,6 +416,7 @@ static int gravity_vis(cpl_frameset * frameset,
     flatcalib_frameset = gravi_frameset_extract_flat_map (frameset);
     badcalib_frameset = gravi_frameset_extract_bad_map (frameset);
 	dispcalib_frameset = gravi_frameset_extract_disp_map (frameset);
+    pcacalib_frameset = gravi_frameset_extract_pca_calib (frameset);
 	metpos_frameset = gravi_frameset_extract_met_pos (frameset);
 	diamcat_frameset = gravi_frameset_extract_diamcat_map (frameset);
 	eop_frameset = gravi_frameset_extract_eop_map (frameset);
@@ -436,6 +441,22 @@ static int gravity_vis(cpl_frameset * frameset,
 	  cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
 							 "See online help:  esorex --man gravity_vis");
 	  goto cleanup;
+    }
+
+    /* Force some options if phase flattening is to be performed */
+    if (gravi_param_get_bool (parlist, "gravity.vis.flatten-visphi")) {
+        cpl_parameter *phase_ref = cpl_parameterlist_find (parlist, "gravity.vis.phase-ref-sc");
+        cpl_parameter *output_phase = cpl_parameterlist_find (parlist, "gravity.vis.output-phase-sc");
+
+        if (strcmp (cpl_parameter_get_string(phase_ref), "SELF_REF") != 0) {
+            cpl_msg_warning (cpl_func, "VISPHI flattening requires phase-ref-sc=SELF_REF, forcing");
+            cpl_parameter_set_string (phase_ref, "SELF_REF");
+        }
+
+        if (strcmp (cpl_parameter_get_string(output_phase), "SELF_VISPHI") != 0) {
+            cpl_msg_warning (cpl_func, "VISPHI flattening requires output-phase-sc=SELF_VISPHI, forcing");
+            cpl_parameter_set_string (output_phase, "SELF_VISPHI");
+        }
     }
 
 	/* Insert calibration frame into the used frameset */
@@ -534,6 +555,11 @@ static int gravity_vis(cpl_frameset * frameset,
 	else
 	  cpl_msg_info (cpl_func, "There is no DIAMETER_CAT in the frameset");
 
+    if ( !cpl_frameset_is_empty (pcacalib_frameset)) {
+        frame = cpl_frameset_get_position (pcacalib_frameset, 0);
+        pca_calib_data = gravi_data_load_frame (frame, used_frameset);
+    } else
+      cpl_msg_info (cpl_func, "There is no PHASE_PCA in the frameset");
 	
 	CPLCHECK_CLEAN ("Error while loading the calibration maps");
 
@@ -793,9 +819,9 @@ static int gravity_vis(cpl_frameset * frameset,
         gravi_compute_qc_ft_opd_estimator (p2vmred_data);
         CPLCHECK_CLEAN ("Cannot compute QC for FT OPD estimator");
 
-	/* Find outliers */
-	gravi_compute_outliers (p2vmred_data, parlist);
-	CPLCHECK_MSG ("Cannot compute outliers");
+        /* Find outliers */
+        gravi_compute_outliers (p2vmred_data, parlist);
+        CPLCHECK_MSG ("Cannot compute outliers");
 	    
 		/* Compute the SNR_BOOT and GDELAY_BOOT */
 		gravi_compute_snr (p2vmred_data, parlist);
@@ -823,36 +849,34 @@ static int gravity_vis(cpl_frameset * frameset,
         cpl_size current_frame = 0;
         while (current_frame >= 0)
         {
+            /* Visibility and flux are averaged and the followings
+            * are saved in tables VIS, VIS2 and T3 */
+            tmpvis_data = gravi_compute_vis (p2vmred_data, parlist, &current_frame);
+            CPLCHECK_CLEAN ("Cannot average the P2VMRED frames into VIS");
+
+            /* Set the mean TIME and mean MJD if required */
+            if (gravi_param_get_bool (parlist, "gravity.vis.force-same-time") ) {
+                cpl_msg_info (cpl_func,"Force same time for all quantities/baselines");
+                gravi_vis_force_time (tmpvis_data);
+                CPLCHECK_CLEAN ("Cannot average the TIME in OI_VIS");
+            }
+
+            /* Copy the acquisition camera if requested. */
+            if (current_frame < 0 && gravi_param_get_bool (parlist, "gravity.test.reduce-acq-cam"))
+            {
+            cpl_msg_info (cpl_func, "Cppy ACQ into the VIS file");
+                gravi_data_copy_ext_insname (tmpvis_data, p2vmred_data, GRAVI_IMAGING_DATA_ACQ_EXT, INSNAME_ACQ);
+            }
             
-		/* Visibility and flux are averaged and the followings
-		 * are saved in tables VIS, VIS2 and T3 */
-		tmpvis_data = gravi_compute_vis (p2vmred_data, parlist, &current_frame);
-		CPLCHECK_CLEAN ("Cannot average the P2VMRED frames into VIS");
-
-        /* Set the mean TIME and mean MJD if required */
-        if (gravi_param_get_bool (parlist, "gravity.vis.force-same-time") ) {
-            cpl_msg_info (cpl_func,"Force same time for all quantities/baselines");
-            gravi_vis_force_time (tmpvis_data);
-            CPLCHECK_CLEAN ("Cannot average the TIME in OI_VIS");
-        }
-
-        /* Copy the acquisition camera if requested. */
-        if (current_frame < 0 && gravi_param_get_bool (parlist, "gravity.test.reduce-acq-cam"))
-        {
-   	    cpl_msg_info (cpl_func, "Cppy ACQ into the VIS file");
-            gravi_data_copy_ext_insname (tmpvis_data, p2vmred_data, GRAVI_IMAGING_DATA_ACQ_EXT, INSNAME_ACQ);
-        }
-        
-        /* Merge with already existing */
-        if (vis_data == NULL) {
-            vis_data = tmpvis_data; tmpvis_data = NULL;
-        }
-        else {
-            cpl_msg_info (cpl_func,"Merge with previous OI_VIS");
-            gravi_data_append (vis_data, tmpvis_data, 1);
-            FREE (gravi_data_delete, tmpvis_data);
-        }
-
+            /* Merge with already existing */
+            if (vis_data == NULL) {
+                vis_data = tmpvis_data; tmpvis_data = NULL;
+            }
+            else {
+                cpl_msg_info (cpl_func,"Merge with previous OI_VIS");
+                gravi_data_append (vis_data, tmpvis_data, 1);
+                FREE (gravi_data_delete, tmpvis_data);
+            }
         }
         
 		/* Save the astro file, which is a lighter version of the p2vmreduced */
@@ -872,6 +896,13 @@ static int gravity_vis(cpl_frameset * frameset,
         
     }
     /* End loop on the input files to reduce */
+
+    /* Use the PCA calibration to flatten the VISPHI */
+    if (gravi_param_get_bool (parlist, "gravity.vis.flatten-visphi")) {
+        cpl_msg_info (cpl_func, "Flatten VISPHI using PCA");
+        gravi_flatten_vis(vis_data, pca_calib_data);
+        CPLCHECK_CLEAN ("Cannot apply the VISPHI flattening");
+    }
 
     /* Compute QC parameters */
     gravi_compute_vis_qc (vis_data);
@@ -954,6 +985,7 @@ cleanup:
 	FREE (gravi_data_delete,diamcat_data);
 	FREE (gravi_data_delete,static_param_data);
 	FREE (gravi_data_delete,diodepos_data);
+	FREE (gravi_data_delete,pca_calib_data);
 	FREE (gravi_data_delete,eop_map);
 	FREE (cpl_frameset_delete,darkcalib_frameset);
 	FREE (cpl_frameset_delete,wavecalib_frameset);
@@ -965,6 +997,7 @@ cleanup:
 	FREE (cpl_frameset_delete,diamcat_frameset);
 	FREE (cpl_frameset_delete,sky_frameset);
 	FREE (cpl_frameset_delete,dispcalib_frameset);
+	FREE (cpl_frameset_delete,pcacalib_frameset);
     FREE (cpl_frameset_delete,eop_frameset);
     FREE (cpl_frameset_delete,patch_frameset);
     FREE (cpl_frameset_delete,static_param_frameset);

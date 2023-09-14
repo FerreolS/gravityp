@@ -53,7 +53,8 @@ noinst_HEADERS =    gravi_calib.h \
                     gravi_signal.h \
                     gravi_strehl.h \
                     gravi_disp.h \
-                    gravi_eop.h
+                    gravi_eop.h \
+                    gravi_pca.h
 
 pkginclude_HEADERS =
 
@@ -78,7 +79,8 @@ libgravi_la_SOURCES =    gravi_calib.c \
                          gravi_signal.c \
                          gravi_strehl.c \
                          gravi_disp.c \
-                         gravi_eop.c
+                         gravi_eop.c \
+                         gravi_pca.c
 
 libgravi_la_LDFLAGS = $(HDRL_LDFLAGS) $(CPL_LDFLAGS) $(GSL_LDFLAGS) -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE) 
 libgravi_la_LIBADD = $(HDRL_LIBS) $(LIBIRPLIB) $(LIBCPLDFS) $(LIBCPLUI) $(LIBCPLDRS) $(LIBCPLCORE) $(GSL_LIBS) $(ERFA_LIBS) 

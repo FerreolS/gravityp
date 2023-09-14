@@ -30,6 +30,7 @@
  * @c gravi_fit_profile(), @c gravi_create_profile_image()
  * - computation of the gain : @c gravi_compute_gain()
  * - computation of the bad pixels : @c gravi_compute_badpix()
+ * - PCA decomposition of phase residuals: @c gravi_compute_pca()
  */
 /**@{*/
 
@@ -68,6 +69,8 @@
 
 #include "gravi_preproc.h"
 #include "gravi_calib.h"
+
+#include "gravi_pca.h"
 
 /*-----------------------------------------------------------------------------
               ekw 11/01/2019 : Global parameter from gravi_calib.h
@@ -2827,5 +2830,608 @@ cpl_error_code gravi_remove_cosmicrays_sc (cpl_imagelist * imglist_sc)
 
 /*----------------------------------------------------------------------------*/
 
+/**
+ * @brief Apply median filter on 1-D array.
+ * 
+ * @param arr Array to filter.
+ * @param size Window size for filter.
+ * 
+ * @return Filtered array, which must be deallocated with cpl_array_delete.
+ **/
+cpl_array *gravi_filter_array_median(const cpl_array *arr, int size)
+{
+    cpl_size n = cpl_array_get_size(arr);
+    cpl_array *result_arr = cpl_array_new(n, CPL_TYPE_DOUBLE);
+    cpl_array *window_arr = cpl_array_new(size, CPL_TYPE_DOUBLE);
+    const double *source_data = cpl_array_get_data_double_const(arr); 
+    
+    for (int i = 0; i < n; i++) { // over wl
+        // Use reflecting boundary conditions
+        // d c b a | a b c d | d c b a
+        for (int w = 0; w < size; w++) { // over wl, with bcs
+            int v = i + w - size / 2;
+            v = (v < 0) ? -(v + 1) : ((v > n - 1) ? 2 * n - 1 - v : v);
+            cpl_array_set_double(window_arr, w, source_data[v]);
+        }
+        cpl_array_set_double(result_arr, i, cpl_array_get_median(window_arr));
+    }
+    cpl_array_delete(window_arr);
+    return result_arr;
+}
+
+/**
+ * @brief Perform sigma-clipping on input array and return std of clipped array.
+ * 
+ * @param arr Array to operate on.
+ * @param nstd Number of standard deviations to clip beyond.
+ * 
+ * @return Standard deviation of clipped array.
+ **/ 
+double gravi_calc_sigmaclipped_stddev(const cpl_array *arr, double nstd)
+{
+    cpl_ensure(arr, CPL_ERROR_NULL_INPUT, 0.0);
+    cpl_ensure(nstd > 0.0, CPL_ERROR_ILLEGAL_INPUT, 0.0);
+
+    int n = cpl_array_get_size(arr);
+    cpl_array *work_arr = cpl_array_duplicate(arr);
+
+    int n_changed = 0, iterations = 0;
+    const int maxiters = 5;
+    do {
+        n_changed = 0;
+        double centre = cpl_array_get_median(work_arr);
+        double std = cpl_array_get_stdev(work_arr);
+
+        double lower_bound = centre - nstd * std;
+        double upper_bound = centre + nstd * std;
+
+        for (int i = 0; i < n; i++) {
+            int invalid;
+            double v = cpl_array_get_double(work_arr, i, &invalid);
+            if (!invalid && (v < lower_bound || v > upper_bound)) {
+                n_changed++;
+                cpl_array_set_invalid(work_arr, i);
+            }
+        }
+        if (++iterations > maxiters) break;
+    } while(n_changed > 0);
+    double std = cpl_array_get_stdev(work_arr);
+    cpl_array_delete(work_arr);
+    return std;
+}
+
+/**
+ * @brief Fit model for visphi flattening using PCA
+ *
+ * @param data      The input data to generate calibration from
+ * @param naccept   Length of data (number of accepted frames)
+ * @param params    Input parameter list with :
+ *                      - pca-clean-size : Window size to use for outlier cleaning
+ *                      - pca-clean-nstd : Sigma-clip n_std for outlier cleaning
+ *                      - pca-components : Number of PCA components to compute
+ *                      - pca-fit-type : Method to use for fitting PCA components
+ *                      - pca-fit-degree : Polynomial fit degree, or number of spline components,
+ *                        depending on value of pca-fit-type.
+ *                      - pca-save-residuals : Also save the residuals from the PCA fitting for inspection.
+ *
+ * @return Table of computed PCA calibrations.
+ *
+ * \exception CPL_ERROR_NULL_INPUT input data or parameters are missing
+ * \exception CPL_ERROR_DATA_NOT_FOUND no valid input data provided
+ *
+ */
+/*----------------------------------------------------------------------------*/
+gravi_data * gravi_compute_pca (gravi_data ** data,
+                                int naccept,
+                                const cpl_parameterlist * params)
+{
+    /* Verbose */
+    gravi_msg_function_start(1);
+    cpl_ensure(data, CPL_ERROR_NULL_INPUT, NULL);
+    cpl_ensure(naccept, CPL_ERROR_DATA_NOT_FOUND, NULL);
+    cpl_ensure(params, CPL_ERROR_NULL_INPUT, NULL);
+    
+    const int nbase = 6;
+    int npol, nwave = 0;
+
+    int num_components = cpl_parameter_get_int(
+        cpl_parameterlist_find_const(params, "gravity.calib.pca-components"));
+    
+    int median_filter_size = cpl_parameter_get_int(
+        cpl_parameterlist_find_const(params, "gravity.calib.pca-clean-size"));
+    
+    double median_filter_nstd = cpl_parameter_get_double(
+        cpl_parameterlist_find_const(params, "gravity.calib.pca-clean-nstd"));
+    
+    const char *fit_type = cpl_parameter_get_string(
+        cpl_parameterlist_find_const(params, "gravity.calib.pca-fit-type"));
+    
+    int fit_degree = cpl_parameter_get_int(
+        cpl_parameterlist_find_const(params, "gravity.calib.pca-fit-degree"));
+
+    cpl_boolean save_residuals = cpl_parameter_get_bool(
+        cpl_parameterlist_find_const(params, "gravity.calib.pca-save-residuals"));
+
+    cpl_propertylist *hdr = NULL, *wave_plist = NULL;
+    cpl_table *wave_table = NULL, *vis_table = NULL, *pca_table = NULL;
+
+    const char *telescope = NULL, *pola_mode = NULL, *spec_res = NULL;
+    char colname_vis[100], colname_pca[100], colname_pca_fit[100], colname_mean[100], colname_residual[100];
+
+    /* Get header data */
+    hdr = gravi_data_get_header(data[0]);
+    telescope = cpl_propertylist_get_string(hdr, "TELESCOP");
+    pola_mode = gravi_pfits_get_pola_mode(hdr, GRAVI_SC);
+    npol = gravi_pfits_get_pola_num(hdr, GRAVI_SC);
+    spec_res = gravi_pfits_get_spec_res(hdr);
+
+    /* Get size of wavelength axis */
+    wave_plist = gravi_data_get_oi_wave_plist(data[0], GRAVI_SC, 0, npol);
+    nwave = cpl_propertylist_get_int(wave_plist, "NWAVE");
+
+    /* Get wavelength and cast to double */
+    wave_table = gravi_data_get_oi_wave(data[0], GRAVI_SC, 0, npol);
+    cpl_table_cast_column(wave_table, "EFF_WAVE", "EFF_WAVE", CPL_TYPE_DOUBLE);
+    cpl_table_multiply_scalar(wave_table, "EFF_WAVE", 1.0e6);
+    cpl_array *wave_arr = cpl_array_wrap_double(cpl_table_get_data_double(wave_table, "EFF_WAVE"), nwave);
+
+    /* Prepare table for collated visphi */
+    vis_table = cpl_table_new(naccept); // One row per result - contains data which is different for every input frame
+    for(int i = 0; i < nbase; i++) {
+        for(int j = 0; j < npol; j++) {
+            sprintf(colname_vis, "PCA_VISPHI_BASE%d_POL%d", i, j);
+            cpl_table_new_column_array(vis_table, colname_vis, CPL_TYPE_DOUBLE, nwave);
+        }
+    }
+
+    /* Collate visphi and apply median smoothing */
+    for (int n = 0; n < naccept; n++) {
+        hdr = gravi_data_get_header(data[n]);
+       
+        for (int j = 0; j < npol; j++) {
+            cpl_table *vis_tmp = gravi_data_get_oi_vis(data[n], GRAVI_SC, j, npol);
+            for (int i = 0; i < nbase; i++) {
+                /* Copy the visphi data */
+                cpl_array *vis_arr = cpl_array_duplicate(cpl_table_get_array(vis_tmp, "VISPHI", i));
+
+                /* Calculate median-smoothed visphi */
+                cpl_array *vis_filt = gravi_filter_array_median(vis_arr, median_filter_size);
+                
+                /* Calculate standard deviation using sigma-clipping */
+                cpl_array *vis_centred = cpl_array_duplicate(vis_arr);
+                cpl_array_subtract(vis_centred, vis_filt); // vis_centred = arr - med_filt
+                double std = gravi_calc_sigmaclipped_stddev(vis_centred, 3.0);
+
+                /* Replace outlier data with the filtered median */
+                for (int k = 0; k < nwave; k++) {
+                    if (fabs(cpl_array_get(vis_centred, k, NULL)) > median_filter_nstd * std) {
+                        cpl_array_set(vis_arr, k, cpl_array_get(vis_filt, k, NULL));
+                    }
+                }
+                
+                /* Store data with outliers removed */
+                sprintf(colname_vis, "PCA_VISPHI_BASE%d_POL%d", i, j);
+                cpl_table_set_array(vis_table, colname_vis, n, vis_arr);
+                
+                cpl_array_delete(vis_filt);
+                cpl_array_delete(vis_centred);
+                cpl_array_delete(vis_arr);
+            }
+        }
+    }
+
+    /* Calculate PCA decomposition */
+    pca_table = cpl_table_new(nwave); // One row per wavelength - contains aggregate data
+    gravi_pca_result **pca_decomps = cpl_malloc(nbase * npol * sizeof(gravi_pca_result *));
+
+    for (int i = 0; i < nbase; i++) {
+        for (int j = 0; j < npol; j++) {
+            sprintf(colname_vis, "PCA_VISPHI_BASE%d_POL%d", i, j);
+            
+            /* Copy data into matrix of size (naccept, nwave) */
+            cpl_matrix *vis_tmp = cpl_matrix_new(naccept, nwave);
+            for (int n = 0; n < naccept; n++) {
+                const cpl_array *vis_arr_tmp = cpl_table_get_array(vis_table, colname_vis, n);
+                for (int w = 0; w < nwave; w++)
+                    cpl_matrix_set(vis_tmp, n, w, cpl_array_get(vis_arr_tmp, w, NULL));
+            }
+
+            /* Perform decomposition */
+            gravi_pca_result *decomp = gravi_pca_create_result(vis_tmp, /* mask */ NULL);
+            gravi_pca_decomp_matrix_svd(decomp);
+            gravi_pca_set_component_signs(decomp, wave_arr, num_components);
+            pca_decomps[i + nbase * j] = decomp;
+
+            /* Extract mean values */
+            cpl_vector *mean = gravi_pca_get_component(pca_decomps[i + nbase * j], 0);
+            sprintf(colname_mean, "PCA_MEAN_BASE%d_POL%d", i, j);
+            cpl_table_new_column(pca_table, colname_mean, CPL_TYPE_DOUBLE);
+            cpl_table_copy_data_double(pca_table, colname_mean, cpl_vector_get_data_const(mean));
+            
+            /* Extract components */
+            for (int c = 0; c < num_components; c++) {
+                sprintf(colname_pca, "PCA_C%d_BASE%d_POL%d", c+1, i, j);
+                cpl_vector *cv = gravi_pca_get_component(decomp, c+1);
+                cpl_table_new_column(pca_table, colname_pca, CPL_TYPE_DOUBLE);
+                cpl_table_copy_data_double(pca_table, colname_pca, cpl_vector_get_data_const(cv));
+                cpl_vector_delete(cv);
+            }
+
+            cpl_vector_delete(mean);
+            cpl_matrix_delete(vis_tmp);
+        }
+    }
+
+    /* Calculate median-averaged PCA components */
+    gravi_pca_model *pca_model = gravi_pca_create_model(
+        (const gravi_pca_result**)pca_decomps, nbase * npol, num_components);
+    CPLCHECK_NUL("Failed to compute median averaged PCA components");
+
+    /* Store median component values */
+    for (int c = 0; c < num_components; c++) {
+        sprintf(colname_pca, "PCA_C%d_MEDIAN", c+1);
+        cpl_vector *cmed = gravi_pca_get_component_median(pca_model, c+1);
+        cpl_table_new_column(pca_table, colname_pca, CPL_TYPE_DOUBLE);
+        cpl_table_copy_data_double(pca_table, colname_pca, cpl_vector_get_data(cmed));
+        cpl_vector_delete(cmed);
+    }
+
+    /* Compute fit to median-averaged components (either polynomial or B-spline) */
+    cpl_error_code err;
+    if (strcmp(fit_type, "POLYNOMIAL") == 0) {
+        err = gravi_pca_fit_components_polynomial(pca_model, wave_arr, fit_degree, num_components);
+        if (err) cpl_error_set(cpl_func, err);
+    } else {
+        err = gravi_pca_fit_components_bspline(pca_model, wave_arr, fit_degree, num_components);
+        if (err) cpl_error_set(cpl_func, err);
+    }
+    CPLCHECK_NUL("Failed to fit median PCA components");
+
+    /* Store fit values */
+    for (int c = 0; c < num_components; c++) {
+        cpl_vector *fit_vals = gravi_pca_get_component_fit(pca_model, c+1);
+        sprintf(colname_pca_fit, "PCA_C%d_FIT", c+1);
+        cpl_table_new_column(pca_table, colname_pca_fit, CPL_TYPE_DOUBLE);
+        cpl_table_copy_data_double(pca_table, colname_pca_fit, cpl_vector_get_data_const(fit_vals));
+        cpl_vector_delete(fit_vals);
+    }
+
+    /* Construct noise-free model from linear combination of components and fit to data */
+    for (int i = 0; i < nbase; i++) {
+        for (int j = 0; j < npol; j++) {
+            err = gravi_pca_fit_model(pca_decomps[i + nbase * j], pca_model,
+                /* fit_mean_subtracted */ CPL_FALSE, /* verbose */ CPL_FALSE);
+            if (err) cpl_error_set(cpl_func, err);
+            CPLCHECK_NUL("Failed to fit noise-free model to data");
+
+            /* Store residual */
+            sprintf(colname_residual, "PCA_RESID_BASE%d_POL%d", i, j);
+            cpl_table_new_column_array(vis_table, colname_residual, CPL_TYPE_DOUBLE, nwave);
+            cpl_matrix *resid = gravi_pca_get_data_residual(pca_decomps[i + nbase * j]);
+            for (int n = 0; n < naccept; n++) {
+                cpl_matrix *resid_row = cpl_matrix_extract_row(resid, n);
+                cpl_array *resid_row_arr = cpl_array_wrap_double(cpl_matrix_get_data(resid_row), nwave);
+                cpl_table_set_array(vis_table, colname_residual, n, resid_row_arr);
+                cpl_array_unwrap(resid_row_arr);
+                cpl_matrix_delete(resid_row);
+            }
+            cpl_matrix_delete(resid);
+        }
+    }
+
+    /* "Refine" the mean i.e. adjust it to be the residuals */
+    for (int i = 0; i < nbase; i++) {
+        for (int j = 0; j < npol; j++) {
+            /* Copy residual into matrix of size (naccept, nwave) */
+            sprintf(colname_residual, "PCA_RESID_BASE%d_POL%d", i, j);
+            cpl_matrix *mat_tmp = cpl_matrix_new(naccept, nwave);
+            for (int n = 0; n < naccept; n++) {
+                const cpl_array *residual_arr = cpl_table_get_array(vis_table, colname_residual, n);
+                for (int w = 0; w < nwave; w++) {
+                    cpl_matrix_set(mat_tmp, n, w, cpl_array_get(residual_arr, w, NULL));
+                }
+            }
+
+            /* Refine mean and re-centre data accordingly */
+            gravi_pca_refine_mean(pca_decomps[i + nbase * j], mat_tmp);
+
+            /* Store refined mean values */
+            cpl_vector *mean = gravi_pca_get_component(pca_decomps[i + nbase * j], 0);
+            sprintf(colname_mean, "PCA_FLAT_MEAN_BASE%d_POL%d", i, j);
+            cpl_table_new_column(pca_table, colname_mean, CPL_TYPE_DOUBLE);
+            cpl_table_copy_data_double(pca_table, colname_mean, cpl_vector_get_data_const(mean));
+
+            cpl_matrix_delete(mat_tmp);
+        }
+    }
+    
+    /* Now fit again using the mean-subtracted data */
+    for (int i = 0; i < nbase; i++) {
+        for (int j = 0; j < npol; j++) {
+            err = gravi_pca_fit_model(pca_decomps[i + nbase * j], pca_model,
+                /* fit_mean_subtracted */ CPL_TRUE, /* verbose */ CPL_FALSE);
+            if (err) cpl_error_set(cpl_func, err);
+            CPLCHECK_NUL("Failed to fit noise-free model to data");
+
+            /* Store residual */
+            sprintf(colname_residual, "PCA_FLAT_RESID_BASE%d_POL%d", i, j);
+            cpl_table_new_column_array(vis_table, colname_residual, CPL_TYPE_DOUBLE, nwave);
+            cpl_matrix *resid = gravi_pca_get_data_residual(pca_decomps[i + nbase * j]);
+            for (int n = 0; n < naccept; n++) {
+                cpl_matrix *resid_row = cpl_matrix_extract_row(resid, n);
+                cpl_array *resid_row_arr = cpl_array_wrap_double(cpl_matrix_get_data(resid_row), nwave);
+                cpl_table_set_array(vis_table, colname_residual, n, resid_row_arr);
+                cpl_array_unwrap(resid_row_arr);
+                cpl_matrix_delete(resid_row);
+            }
+            cpl_matrix_delete(resid);
+        }
+    }
+
+    /* Freeing the initial decompositions */
+    for (int i = 0; i < nbase * npol; i++)
+        FREE(gravi_pca_result_delete, pca_decomps[i]);
+    FREE(gravi_pca_model_delete, pca_model);
+
+    /* Create the output table */
+    cpl_propertylist *header = cpl_propertylist_new();
+    cpl_propertylist_append_string(header, "TELESCOP", telescope);
+    cpl_propertylist_append_string(header, "ESO INS POLA MODE", pola_mode);
+    cpl_propertylist_append_string(header, "ESO INS SPEC RES", spec_res);
+    cpl_propertylist_append_int(header, "NWAVE", nwave);
+    cpl_propertylist_append_int(header, "PCA NCOMP", num_components);
+
+    cpl_table *pca_result = cpl_table_new(nwave);
+    cpl_table_duplicate_column(pca_result, "EFF_WAVE", wave_table, "EFF_WAVE");
+    cpl_table_multiply_scalar(pca_result, "EFF_WAVE", 1.0e-6);
+    cpl_table_set_column_unit(pca_result, "EFF_WAVE", "m");
+
+    for (int i = 0; i < nbase; i++) {
+        for (int j = 0; j < npol; j++) {
+            sprintf(colname_mean, "PCA_MEAN_BASE%d_POL%d", i, j);
+            cpl_table_duplicate_column(pca_result, colname_mean, pca_table, colname_mean);
+
+            // sprintf(colname_mean, "PCA_FLAT_MEAN_BASE%d_POL%d", i, j);
+            // cpl_table_duplicate_column(pca_result, colname_mean, pca_table, colname_mean);
+
+            for (int c = 0; c < num_components; c++) {
+                sprintf(colname_pca, "PCA_C%d_BASE%d_POL%d", c+1, i, j);
+                cpl_table_duplicate_column(pca_result, colname_pca, pca_table, colname_pca);
+            }
+        }
+    }
+
+    for (int c = 0; c < num_components; c++) {
+        // sprintf(colname_pca, "PCA_C%d_MEDIAN", c+1);
+        // cpl_table_duplicate_column(pca_result, colname_pca, pca_table, colname_pca);
+
+        sprintf(colname_pca, "PCA_C%d_FIT", c+1);
+        cpl_table_duplicate_column(pca_result, colname_pca, pca_table, colname_pca);
+    }
+
+    gravi_data *pca = gravi_data_new(0);
+    gravi_data_add_table(pca, header, GRAVI_PCA_EXT, pca_result);
+
+    if (save_residuals) {
+        /* Create optional extra table with filtered visphi and residuals */
+        cpl_table *pca_resid = cpl_table_new(naccept);
+        cpl_propertylist *header_resid = cpl_propertylist_duplicate(header);
+
+        for (int i = 0; i < nbase; i++) {
+            for (int j = 0; j < npol; j++) {
+                sprintf(colname_vis, "PCA_VISPHI_BASE%d_POL%d", i, j);
+                cpl_table_duplicate_column(pca_resid, colname_vis, vis_table, colname_vis);
+
+                sprintf(colname_residual, "PCA_RESID_BASE%d_POL%d", i, j);
+                cpl_table_duplicate_column(pca_resid, colname_residual, vis_table, colname_residual);
+
+                sprintf(colname_residual, "PCA_FLAT_RESID_BASE%d_POL%d", i, j);
+                cpl_table_duplicate_column(pca_resid, colname_residual, vis_table, colname_residual);
+            }
+        }
+        gravi_data_add_table(pca, header_resid, GRAVI_PCA_RESID_EXT, pca_resid);
+    }
+
+    cpl_array_unwrap(wave_arr);
+    FREE(cpl_table_delete, pca_table);
+    FREE(cpl_table_delete, vis_table);
+
+    /* Verbose */
+    gravi_msg_function_exit(1);
+    return pca;
+}
+
+/*----------------------------------------------------------------------------*/
+
+/**
+ * @brief Use PCA model to flatten observed visphi. The flattened data are added
+ *        to the existing VIS table.
+ *
+ * @param data      The visphi data to flatten
+ * @param pca_calib The PCA calibration to use
+ *
+ *
+ * \exception CPL_ERROR_NULL_INPUT input data or parameters are missing
+ * \exception CPL_ERROR_DATA_NOT_FOUND no valid input data provided
+ *
+ */
+/*----------------------------------------------------------------------------*/
+cpl_error_code gravi_flatten_vis (gravi_data * vis_data,
+                                gravi_data * calib_data)
+{
+    /* Verbose */
+    gravi_msg_function_start(1);
+    cpl_ensure_code(vis_data, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code(calib_data, CPL_ERROR_NULL_INPUT);
+
+    int ncomp, nwave, nwave_obs, npol;
+    const int nbase = 6;
+
+    cpl_propertylist *calib_header = NULL, *vis_header = NULL, *obs_wave_plist = NULL;
+    cpl_table *calib_table = NULL;
+    const char *telescope = NULL, *pola_mode = NULL, *spec_res = NULL;
+    char colname_calib[100], colname_vis[100], colname_mask[100], colname_vis_fit[100], colname_vis_resid[100];
+    double vis_mjd;
+
+    vis_header = gravi_data_get_header(vis_data);
+    telescope = cpl_propertylist_get_string(vis_header, "TELESCOP");
+    pola_mode = gravi_pfits_get_pola_mode(vis_header, GRAVI_SC);
+    npol = gravi_pfits_get_pola_num(vis_header, GRAVI_SC);
+    spec_res = gravi_pfits_get_spec_res(vis_header);
+    vis_mjd = cpl_propertylist_get_double(vis_header, "MJD-OBS");
+    
+    /* Check calibrator for mode and epoch compatibility */
+    calib_table = gravi_data_get_table(calib_data, GRAVI_PCA_EXT);
+    if (!calib_table)
+        return cpl_error_set_message(cpl_func, CPL_ERROR_DATA_NOT_FOUND, "No VISPHI flattening calibration");
+
+    calib_header = gravi_data_get_plist(calib_data, GRAVI_PCA_EXT);
+     if (vis_mjd < cpl_propertylist_get_double(calib_header, "PCA EPOCH BEGIN"))
+        return cpl_error_set_message(cpl_func, CPL_ERROR_DATA_NOT_FOUND, "VISPHI flattening calibration is too new for data");
+    else if (vis_mjd > cpl_propertylist_get_double(calib_header, "PCA EPOCH END"))
+        return cpl_error_set_message(cpl_func, CPL_ERROR_DATA_NOT_FOUND, "VISPHI flattening calibration is too old for data");
+    
+    if (strcmp(gravi_pfits_get_spec_res(calib_header), spec_res))
+        return cpl_error_set_message(cpl_func, CPL_ERROR_DATA_NOT_FOUND, "Calibration resolution does not match data");
+    if (strcmp(gravi_pfits_get_pola_mode(calib_header, GRAVI_SC), pola_mode))
+        return cpl_error_set_message(cpl_func, CPL_ERROR_DATA_NOT_FOUND, "Calibration polarisation mode does not match data");
+    if (strcmp(cpl_propertylist_get_string(calib_header, "TELESCOP"), telescope))
+        return cpl_error_set_message(cpl_func, CPL_ERROR_DATA_NOT_FOUND, "Calibration telescope does not match data");
+
+    ncomp = cpl_propertylist_get_int(calib_header, "PCA NCOMP");
+    nwave = cpl_propertylist_get_int(calib_header, "NWAVE");
+
+    /* Copy calibration data into model */
+    cpl_matrix *tmp_matrix = cpl_matrix_new(ncomp, nwave);
+    for (int c = 0; c < ncomp; c++) {
+        sprintf(colname_calib, "PCA_C%d_FIT", c + 1);
+        for (int w = 0; w < nwave; w++) {
+            double val = cpl_table_get(calib_table, colname_calib, w, NULL);
+            cpl_matrix_set(tmp_matrix, c, w, val);
+        }
+    }
+    gravi_pca_model *calib_model = gravi_pca_load_model(tmp_matrix);
+    cpl_matrix_delete(tmp_matrix);
+
+    /* Check the observations for compatibility */
+    obs_wave_plist = gravi_data_get_oi_wave_plist(vis_data, GRAVI_SC, 0, npol);
+    nwave_obs = cpl_propertylist_get_int(obs_wave_plist, "NWAVE");
+    if (nwave != nwave_obs) {
+        return cpl_error_set_message(cpl_func, CPL_ERROR_ILLEGAL_INPUT,
+            "Input file wavelength axis does not match the calibrator");
+    }
+
+    /* Prepare table for collated visphi */
+    cpl_table *vis_table = cpl_table_new(nwave);
+    for(int i = 0; i < nbase; i++) {
+        for(int j = 0; j < npol; j++) {
+            sprintf(colname_vis, "PCA_VISPHI_BASE%d_POL%d", i, j);
+            cpl_table_new_column(vis_table, colname_vis, CPL_TYPE_DOUBLE);
+            sprintf(colname_mask, "PCA_MASK_BASE%d_POL%d", i, j);
+            cpl_table_new_column(vis_table, colname_mask, CPL_TYPE_INT);
+        }
+    }
+
+    /* Collate visphi */
+    for (int j = 0; j < npol; j++) {
+        cpl_table *vis_tmp = gravi_data_get_oi_vis(vis_data, GRAVI_SC, j, npol);
+        for (int i = 0; i < nbase; i++) {
+            /* Copy the visphi data */
+            const cpl_array *arr_tmp = cpl_table_get_array(vis_tmp, "VISPHI", i);
+            sprintf(colname_vis, "PCA_VISPHI_BASE%d_POL%d", i, j);
+            cpl_table_copy_data_double(vis_table, colname_vis, cpl_array_get_data_double_const(arr_tmp));
+
+            /* Copy the flag data */
+            arr_tmp = cpl_table_get_array(vis_tmp, "FLAG", i);
+            sprintf(colname_mask, "PCA_MASK_BASE%d_POL%d", i, j);
+            cpl_table_copy_data_int(vis_table, colname_mask, cpl_array_get_data_int_const(arr_tmp));
+            cpl_table_cast_column(vis_table, colname_mask, colname_mask, CPL_TYPE_DOUBLE);
+        }
+    }
+
+    /* Construct the PCA object */
+    /** @note We're reusing the same @c gravi_pca_result object that is used when generating the calibration.
+     *        This is just so that the fitting routine can also be reused: no further decomposition is done here.
+     */ 
+    gravi_pca_result **results = cpl_malloc(nbase * npol * sizeof(gravi_pca_result *));
+    for(int i = 0; i < nbase; i++) {
+        for(int j = 0; j < npol; j++) {
+            sprintf(colname_vis, "PCA_VISPHI_BASE%d_POL%d", i, j);
+            sprintf(colname_mask, "PCA_MASK_BASE%d_POL%d", i, j);
+            sprintf(colname_calib, "PCA_MEAN_BASE%d_POL%d", i, j);
+            
+            /* Copy data into matrix of size (n, nwave) */
+            cpl_matrix *vis_tmp = cpl_matrix_wrap(1, nwave, cpl_table_get_data_double(vis_table, colname_vis));
+            cpl_matrix *vis_mean = cpl_matrix_wrap(1, nwave, cpl_table_get_data_double(calib_table, colname_calib));
+            cpl_matrix_subtract(vis_tmp, vis_mean);
+            cpl_matrix *mask_tmp = cpl_matrix_wrap(1, nwave, cpl_table_get_data_double(vis_table, colname_mask));
+            results[i + nbase * j] = gravi_pca_create_result(vis_tmp, mask_tmp);
+            cpl_matrix_unwrap(vis_tmp);
+            cpl_matrix_unwrap(mask_tmp);
+            cpl_matrix_unwrap(vis_mean);
+        }
+    }
+
+    /* Fit the calibrated PCA components to the data */
+    for(int i = 0; i < nbase; i++) {
+        for(int j = 0; j < npol; j++) {
+            cpl_error_code err = gravi_pca_fit_model(results[i + nbase * j], calib_model,
+                /* fit_mean_subtracted */ CPL_FALSE, /* verbose */ CPL_FALSE);
+            if (err) cpl_error_set(cpl_func, err);
+            CPLCHECK_MSG("Failed to fit PCA model to data");
+
+            /* Store model */
+            sprintf(colname_vis_fit, "PCA_VISPHI_MODEL_BASE%d_POL%d", i, j);
+            cpl_table_new_column(vis_table, colname_vis_fit, CPL_TYPE_DOUBLE);
+            cpl_matrix *model_eval = gravi_pca_get_data_fit(results[i + nbase * j]);
+
+            sprintf(colname_calib, "PCA_MEAN_BASE%d_POL%d", i, j);
+            cpl_matrix *vis_mean = cpl_matrix_wrap(1, nwave, cpl_table_get_data_double(calib_table, colname_calib));
+            cpl_matrix_add(model_eval, vis_mean);
+            cpl_table_copy_data_double(vis_table, colname_vis_fit, cpl_matrix_get_data_const(model_eval));
+
+            cpl_matrix_delete(model_eval);
+            cpl_matrix_unwrap(vis_mean);
+
+            /* Store residual */
+            sprintf(colname_vis_resid, "PCA_VISPHI_RESID_BASE%d_POL%d", i, j);
+            cpl_table_new_column(vis_table, colname_vis_resid, CPL_TYPE_DOUBLE);
+            cpl_matrix *resid = gravi_pca_get_data_residual(results[i + nbase * j]);
+            cpl_table_copy_data_double(vis_table, colname_vis_resid, cpl_matrix_get_data_const(resid));
+            cpl_matrix_delete(resid);
+        }
+    }
+
+    /* Generate the output table */
+    for (int j = 0; j < npol; j++) {
+        cpl_table *vis_tmp = gravi_data_get_oi_vis(vis_data, GRAVI_SC, j, npol);
+        cpl_table_new_column_array(vis_tmp, "VISPHI_MODEL", CPL_TYPE_DOUBLE, nwave);
+        cpl_table_new_column_array(vis_tmp, "VISPHI_FLAT", CPL_TYPE_DOUBLE, nwave);
+        for (int i = 0; i < nbase; i++) {
+            /* Copy the PCA model */
+            sprintf(colname_vis_fit, "PCA_VISPHI_MODEL_BASE%d_POL%d", i, j);
+            cpl_array *arr_tmp = cpl_array_wrap_double(
+                cpl_table_get_data_double(vis_table, colname_vis_fit), nwave);
+            cpl_table_set_array(vis_tmp, "VISPHI_MODEL", i, arr_tmp);
+            cpl_array_unwrap(arr_tmp);
+
+            /* Copy the flattened visphi data */
+            sprintf(colname_vis_resid, "PCA_VISPHI_RESID_BASE%d_POL%d", i, j);
+            arr_tmp = cpl_array_wrap_double(
+                cpl_table_get_data_double(vis_table, colname_vis_resid), nwave);
+            cpl_table_set_array(vis_tmp, "VISPHI_FLAT", i, arr_tmp);
+            cpl_array_unwrap(arr_tmp);
+        }
+    }
+    CPLCHECK_MSG("Failed to add calibrated VISPHI to table");
+
+    FREE(gravi_pca_model_delete, calib_model);
+    FREE(cpl_table_delete, vis_table);
+    FREELOOP(gravi_pca_result_delete, results, nbase * npol);
+
+    /* Verbose */
+    gravi_msg_function_exit(1);
+    return CPL_ERROR_NONE;
+}
 
 /**@}*/

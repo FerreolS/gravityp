@@ -84,6 +84,7 @@
 #define GRAVI_BIASMASK_MAP                  "BIASMASK"
 #define GRAVI_WAVELAMP_MAP                  "WAVELAMP"
 #define GRAVI_PIEZOTF_MAP                   "PIEZOTF"
+#define GRAVI_PHASE_PCA                     "PHASE_PCA"
 
 #define GRAVI_SINGLE_SKY_MAP                "SINGLE_SKY"
 #define GRAVI_DUAL_SKY_MAP                  "DUAL_SKY"
@@ -133,6 +134,8 @@ cpl_error_code gravi_dfs_set_groups(cpl_frameset *);
 cpl_error_code gravi_parameter_disable (cpl_parameter * p);
 
 cpl_parameter * gravi_parameter_add_badpix (cpl_parameterlist *self);
+cpl_parameter * gravi_parameter_add_pcacalib (cpl_parameterlist *self);
+cpl_parameter * gravi_parameter_add_pca (cpl_parameterlist *self);
 cpl_parameter * gravi_parameter_add_profile (cpl_parameterlist *self);
 cpl_parameter * gravi_parameter_add_preproc (cpl_parameterlist *self);
 cpl_parameter * gravi_parameter_add_wave (cpl_parameterlist *self);
@@ -190,6 +193,7 @@ cpl_frameset * gravi_frameset_extract_eop_map (cpl_frameset * frameset);
 cpl_frameset * gravi_frameset_extract_patch (cpl_frameset * frameset);
 cpl_frameset * gravi_frameset_extract_static_param (cpl_frameset * frameset);
 cpl_frameset * gravi_frameset_extract_wave_param (cpl_frameset * frameset);
+cpl_frameset * gravi_frameset_extract_pca_calib (cpl_frameset * frameset);
 
 const char * gravi_param_get_string (const cpl_parameterlist * parlist, const char * name);
 double gravi_param_get_double (const cpl_parameterlist *, const char *);

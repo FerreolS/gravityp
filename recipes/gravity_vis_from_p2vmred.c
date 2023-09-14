@@ -47,7 +47,6 @@
 #include "gravi_tf.h"
 
 #include "gravi_preproc.h"
-// #include "gravi_p2vm.h"
 
 /*-----------------------------------------------------------------------------
                             Private function prototypes
@@ -56,7 +55,7 @@
 static int gravity_vis_from_p2vmred_create(cpl_plugin *);
 static int gravity_vis_from_p2vmred_exec(cpl_plugin *);
 static int gravity_vis_from_p2vmred_destroy(cpl_plugin *);
-static int gravity_vis_from_p2vmred(cpl_frameset *, const cpl_parameterlist *);
+static int gravity_vis_from_p2vmred(cpl_frameset *, cpl_parameterlist *);
 
 /*-----------------------------------------------------------------------------
                             Static variables
@@ -171,6 +170,9 @@ static int gravity_vis_from_p2vmred_create(cpl_plugin * plugin)
 
     /* Use static names (output_procatg.fits) */
     gravi_parameter_add_static_name (recipe->parameters);
+
+    /* PCA visphi flattening */
+    gravi_parameter_add_pca (recipe->parameters);
 
     /* Averaging */
     gravi_parameter_add_average_vis (recipe->parameters);
@@ -309,16 +311,16 @@ static int gravity_vis_from_p2vmred_destroy(cpl_plugin * plugin)
  */
 /*----------------------------------------------------------------------------*/
 static int gravity_vis_from_p2vmred(cpl_frameset * frameset,
-					  const cpl_parameterlist * parlist)
+					                cpl_parameterlist * parlist)
 {
-    cpl_frameset * recipe_frameset=NULL, *used_frameset=NULL;
+    cpl_frameset * recipe_frameset=NULL, *pcacalib_frameset=NULL, *used_frameset=NULL;
 	
 	cpl_frame * frame=NULL;
 	
 	const char * frame_tag=NULL;
 	char * proCatg = NULL, * mode=NULL;
 	
-	gravi_data * p2vmred_data=NULL, * vis_data=NULL, * tmpvis_data=NULL;
+	gravi_data * p2vmred_data=NULL, * vis_data=NULL, * tmpvis_data=NULL, * pca_calib_data=NULL;
 	
 	int nb_frame;
 
@@ -333,6 +335,7 @@ static int gravity_vis_from_p2vmred(cpl_frameset * frameset,
 
     /* Dispatch the frameset */
     recipe_frameset = gravi_frameset_extract_p2vmred_data (frameset);
+    pcacalib_frameset = gravi_frameset_extract_pca_calib (frameset);
 
 	/* To use this recipe the frameset must contain a P2VMREDUCED file. */
     if ( cpl_frameset_get_size (recipe_frameset) < 1 ) {
@@ -341,8 +344,30 @@ static int gravity_vis_from_p2vmred(cpl_frameset * frameset,
 	  goto cleanup;
     }
 
+    /* Force some options if phase flattening is to be performed */
+    if (gravi_param_get_bool (parlist, "gravity.vis.flatten-visphi")) {
+        cpl_parameter *phase_ref = cpl_parameterlist_find (parlist, "gravity.vis.phase-ref-sc");
+        cpl_parameter *output_phase = cpl_parameterlist_find (parlist, "gravity.vis.output-phase-sc");
+
+        if (strcmp (cpl_parameter_get_string(phase_ref), "SELF_REF") != 0) {
+            cpl_msg_warning (cpl_func, "VISPHI flattening requires phase-ref-sc=SELF_REF, forcing");
+            cpl_parameter_set_string (phase_ref, "SELF_REF");
+        }
+
+        if (strcmp (cpl_parameter_get_string(output_phase), "SELF_VISPHI") != 0) {
+            cpl_msg_warning (cpl_func, "VISPHI flattening requires output-phase-sc=SELF_VISPHI, forcing");
+            cpl_parameter_set_string (output_phase, "SELF_VISPHI");
+        }
+    }
+
 	/* Insert calibration frame into the used frameset */
 	used_frameset = cpl_frameset_new();
+
+    if ( !cpl_frameset_is_empty (pcacalib_frameset)) {
+        frame = cpl_frameset_get_position (pcacalib_frameset, 0);
+        pca_calib_data = gravi_data_load_frame (frame, used_frameset);
+    } else
+      cpl_msg_info (cpl_func, "There is no PHASE_PCA in the frameset");
 
 	/* 
 	 * Select the PRO CATG (based on first frame) 
@@ -444,6 +469,13 @@ static int gravity_vis_from_p2vmred(cpl_frameset * frameset,
     }
 	/* End loop on the input files to reduce */
 
+    /* Use the PCA calibration to flatten the VISPHI */
+    if (gravi_param_get_bool (parlist, "gravity.vis.flatten-visphi")) {
+        cpl_msg_info (cpl_func, "Flatten VISPHI using PCA");
+        gravi_flatten_vis(vis_data, pca_calib_data);
+        CPLCHECK_CLEAN ("Cannot apply the VISPHI flattening");
+    }
+
     /* Compute QC parameters */
     gravi_compute_vis_qc (vis_data);
     
@@ -489,9 +521,11 @@ cleanup:
 	cpl_msg_info(cpl_func,"Memory cleanup");
 	
 	FREE (gravi_data_delete,p2vmred_data);
+    FREE (gravi_data_delete, pca_calib_data);
 	FREE (gravi_data_delete,vis_data);
 	FREE (gravi_data_delete,tmpvis_data);
 	FREE (cpl_frameset_delete,recipe_frameset);
+	FREE (cpl_frameset_delete,pcacalib_frameset);
 	FREE (cpl_frameset_delete,used_frameset);
     FREE (cpl_free,proCatg);
     FREE (cpl_free,mode);

@@ -234,6 +234,105 @@ cpl_parameter * gravi_parameter_add_badpix (cpl_parameterlist *self)
 
 /*----------------------------------------------------------------------------*/
 /**
+ * @brief    Add pca calibration parameters to the input parameter list
+ * @param    self     parameter list
+ * @return   last parameter allocated
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
+ */
+/*----------------------------------------------------------------------------*/
+
+cpl_parameter * gravi_parameter_add_pcacalib (cpl_parameterlist *self)
+{
+    cpl_ensure (self, CPL_ERROR_NULL_INPUT, NULL);
+    
+    cpl_parameter *p;
+    
+    /* Number of PCA components */
+    p = cpl_parameter_new_value("gravity.calib.pca-components", CPL_TYPE_INT,
+                                "The number of PCA components to compute.",
+                                "gravity.calib", 1);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "pca-components");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	  cpl_parameterlist_append (self, p);
+
+    /* Tracking ratio threshold */
+    p = cpl_parameter_new_value("gravity.calib.pca-tracking-ratio", CPL_TYPE_INT,
+                                "The minimum tracking ratio to accept calibration frames for.",
+                                "gravity.calib", 90);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "pca-tracking-ratio");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	  cpl_parameterlist_append (self, p);
+
+    /* Outlier cleaning window size */
+    p = cpl_parameter_new_value("gravity.calib.pca-clean-size", CPL_TYPE_INT,
+                                "The window size to use for outlier cleaning.",
+                                "gravity.calib", 20);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "pca-clean-size");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	  cpl_parameterlist_append (self, p);
+
+    /* Tracking ratio threshold */
+    p = cpl_parameter_new_value("gravity.calib.pca-clean-nstd", CPL_TYPE_DOUBLE,
+                                "The sigma-clip n_std for outlier cleaning.",
+                                "gravity.calib", 5.0);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "pca-clean-nstd");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	  cpl_parameterlist_append (self, p);
+
+    /* method for fitting PCA components */
+    const char *PCA_FIT_TYPES[2] = {"POLYNOMIAL", "SPLINE"};
+    p = cpl_parameter_new_enum("gravity.calib.pca-fit-type", CPL_TYPE_STRING,
+                               "The method to use for fitting the PCA components.",
+                               "gravity.calib",
+                               PCA_FIT_TYPES[1], 2, PCA_FIT_TYPES[0], PCA_FIT_TYPES[1]
+    );
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "pca-fit-type");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	  cpl_parameterlist_append (self, p);
+
+    /* degree of model for fitting PCA components */
+    p = cpl_parameter_new_value("gravity.calib.pca-fit-degree", CPL_TYPE_INT,
+                                "The polynomial fit degree, or number of spline coefficients.",
+                                "gravity.calib", 20);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "pca-fit-degree");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	  cpl_parameterlist_append (self, p);
+
+    /* whether to output the phase residuals for inspection */
+    p = cpl_parameter_new_value("gravity.calib.pca-save-residuals", CPL_TYPE_BOOL,
+                                "Also save the residuals from the PCA fitting for inspection.",
+                                "gravity.calib", CPL_FALSE);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "pca-save-residuals");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	  cpl_parameterlist_append (self, p);
+
+    return p;
+}
+
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief    Add pca parameters to the input parameter list
+ * @param    self     parameter list
+ * @return   last parameter allocated
+ * \exception CPL_ERROR_NULL_INPUT input data is missing
+ */
+/*----------------------------------------------------------------------------*/
+
+cpl_parameter * gravi_parameter_add_pca (cpl_parameterlist *self)
+{
+  /* Whether to use PCA method to remove VISPHI systematics */
+  cpl_parameter *p = cpl_parameter_new_value ("gravity.vis.flatten-visphi", CPL_TYPE_BOOL,
+                               "Use the PCA calibrator to flatten the VISPHI.",
+                               "gravity.vis", CPL_FALSE);
+  cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "flatten-visphi");
+  cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+  cpl_parameterlist_append (self, p);
+
+  return p;
+}
+
+/*----------------------------------------------------------------------------*/
+/**
  * @brief    Add profile parameters to the input parameter list
  * @param    self     parameter list
  * @return   last parameter allocated
@@ -913,7 +1012,7 @@ cpl_error_code gravi_parameter_add_compute_vis (cpl_parameterlist *self, int isC
     
     /* string in the form [124,232] giving channel subset in case SELF_VISPHI */
 	  p = cpl_parameter_new_value ("gravity.vis.output-phase-channels", CPL_TYPE_STRING,
-                                 "range (string in the form [min,max]) of channels\n"
+                                 "range (string in the form [min,max]) of channels\n "
                                  "to use a SELF_VISPHI phase reference.\n",
                                  "gravity.vis", "[0,0]");
 	  cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "output-phase-channels");
@@ -930,7 +1029,7 @@ cpl_error_code gravi_parameter_add_compute_vis (cpl_parameterlist *self, int isC
 	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
 	cpl_parameterlist_append (self, p);
 
-    return CPL_ERROR_NONE;
+  return CPL_ERROR_NONE;
 }
 
 cpl_error_code gravi_parameter_add_image (cpl_parameterlist *self)
@@ -1174,14 +1273,16 @@ cpl_frameset * gravi_frameset_extract_patch (cpl_frameset * frameset) {
   const char *tags[] = {GRAVI_KEY_PATCH};
   return gravi_frameset_extract (frameset, tags, 1);
 }
-
 cpl_frameset * gravi_frameset_extract_static_param (cpl_frameset * frameset) {
   const char *tags[] = {GRAVI_STATIC_PARAM};
   return gravi_frameset_extract (frameset, tags, 1);
 }
-
 cpl_frameset * gravi_frameset_extract_wave_param (cpl_frameset * frameset) {
   const char *tags[] = {GRAVI_WAVE_PARAM};
+  return gravi_frameset_extract (frameset, tags, 1);
+}
+cpl_frameset * gravi_frameset_extract_pca_calib (cpl_frameset * frameset) {
+  const char *tags[] = {GRAVI_PHASE_PCA};
   return gravi_frameset_extract (frameset, tags, 1);
 }
 

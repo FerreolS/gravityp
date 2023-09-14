@@ -43,6 +43,7 @@ plugin_LTLIBRARIES = gravity_dark.la \
 						gravity_piezo.la \
 						gravity_vis_from_p2vmred.la \
 						gravity_badpix.la \
+						gravity_pcacal.la \
 						gravity_biasmask.la \
 						gravity_wavelamp.la
 
@@ -95,6 +96,11 @@ gravity_badpix_la_SOURCES = gravity_badpix.c
 gravity_badpix_la_LIBADD = $(LIBGRAVI) $(HDRL_LIBS)
 gravity_badpix_la_LDFLAGS = -module -avoid-version $(HDRL_LDFLAGS)
 gravity_badpix_la_DEPENDENCIES = $(LIBGRAVI) $(LIBHDRL)
+
+gravity_pcacal_la_SOURCES = gravity_pcacal.c
+gravity_pcacal_la_LIBADD = $(LIBGRAVI) $(HDRL_LIBS)
+gravity_pcacal_la_LDFLAGS = -module -avoid-version $(HDRL_LDFLAGS)
+gravity_pcacal_la_DEPENDENCIES = $(LIBGRAVI) $(LIBHDRL)
 
 gravity_biasmask_la_SOURCES = gravity_biasmask.c
 gravity_biasmask_la_LIBADD = $(LIBGRAVI) $(HDRL_LIBS)

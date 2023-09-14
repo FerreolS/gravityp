@@ -950,7 +950,7 @@ cpl_error_code gravi_data_save_new (gravi_data 		  * self,
 	}
 	if ( cpl_propertylist_has (hdr, "DATE-OBS") ) {
 	  cpl_propertylist_copy_property (applist, hdr, "DATE-OBS");
-      CPLCHECK_MSG ("Cannot DATE-OBS");
+      CPLCHECK_MSG ("Cannot set DATE-OBS");
 	}
 
     /* Create keywords for OIFITS comliancy if VIS product */
