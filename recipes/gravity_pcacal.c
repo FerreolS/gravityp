@@ -40,16 +40,37 @@
                             Private function prototypes
  -----------------------------------------------------------------------------*/
 
-static int gravity_pca_create(cpl_plugin *);
-static int gravity_pca_exec(cpl_plugin *);
-static int gravity_pca_destroy(cpl_plugin *);
-static int gravity_pca(cpl_frameset *, const cpl_parameterlist *);
+static int gravity_pcacal_create(cpl_plugin *);
+static int gravity_pcacal_exec(cpl_plugin *);
+static int gravity_pcacal_destroy(cpl_plugin *);
+static int gravity_pcacal(cpl_frameset *, const cpl_parameterlist *);
 
 /*-----------------------------------------------------------------------------
                             Static variables
  -----------------------------------------------------------------------------*/
-static char gravity_pca_short[] = "Calibrate the phase accuracy with the PCA method.";
-static char gravity_pca_description[] = "TODO\n";
+static char gravity_pcacal_short[] = "Generate static calibration files for flattening phase visibility data using the PCA method.";
+static char gravity_pcacal_description[] =
+"This recipe produces a PCA calibration file from a set of calibration frames to be used for flattening phase visibility data.\n"
+    GRAVI_RECIPE_FLOW"\n"
+    "* Select good input frames using tracking ratio criterion.\n"
+    "* Compute PCA decomposition for each baseline and polarisation channel\n"
+    "* Fit component model and write calibration product\n"
+    GRAVI_RECIPE_INPUT"\n"
+    GRAVI_VIS_SINGLE_CALIB"  ≥20  : input frames\n"
+    GRAVI_RECIPE_OUTPUT"\n"
+    GRAVI_PHASE_PCA"      : PCA calibration\n"
+    "";
+
+/* Detector "epochs" corresponding to thermal cycles: calibration valid within interval from one date to next. */
+#define N_EPOCH 3
+static double TIME_MJD_EPOCH_START[N_EPOCH] = {
+    57754.000000, // 2017-01-01
+    58758.000000, // 2019-10-02
+    59178.000000, // 2020-11-25
+};
+
+/* Minimum number of valid calibration frames to accept */
+static cpl_size MIN_CALIB_FRAMES = 20;
 
 /*-----------------------------------------------------------------------------
                                 Function code
@@ -75,15 +96,15 @@ int cpl_plugin_get_info(cpl_pluginlist *list)
         CPL_PLUGIN_API,
         GRAVI_BINARY_VERSION,
         CPL_PLUGIN_TYPE_RECIPE,
-        "gravity_phase_pca",
-        gravity_pca_short,
-        gravity_pca_description,
+        "gravity_pcacal",
+        gravity_pcacal_short,
+        gravity_pcacal_description,
         "Calvin Sykes, Shangguan Jinyi, Sebastian Hoenig",
         PACKAGE_BUGREPORT,
         gravi_get_license(),
-        gravity_pca_create,
-        gravity_pca_exec,
-        gravity_pca_destroy
+        gravity_pcacal_create,
+        gravity_pcacal_exec,
+        gravity_pcacal_destroy
     )) {
         cpl_msg_error(cpl_func, "Plugin initialization failed");
         (void)cpl_error_set_where(cpl_func);
@@ -108,7 +129,7 @@ int cpl_plugin_get_info(cpl_pluginlist *list)
   Defining the command-line/configuration parameters for the recipe.
  */
 /*----------------------------------------------------------------------------*/
-static int gravity_pca_create(cpl_plugin *plugin)
+static int gravity_pcacal_create(cpl_plugin *plugin)
 {
     cpl_recipe *recipe;
 
@@ -146,7 +167,7 @@ static int gravity_pca_create(cpl_plugin *plugin)
     gravi_parameter_add_static_name(recipe->parameters);
 
     /* PCA parameters */
-    gravi_parameter_add_pca(recipe->parameters);
+    gravi_parameter_add_pcacalib(recipe->parameters);
 
     return 0;
 }
@@ -158,7 +179,7 @@ static int gravity_pca_create(cpl_plugin *plugin)
   @return   0 if everything is ok
  */
 /*----------------------------------------------------------------------------*/
-static int gravity_pca_exec(cpl_plugin * plugin)
+static int gravity_pcacal_exec(cpl_plugin * plugin)
 {
 
     cpl_recipe *recipe;
@@ -197,7 +218,7 @@ static int gravity_pca_exec(cpl_plugin * plugin)
     }
 
     /* Invoke the recipe */
-    recipe_status = gravity_pca(recipe->frames, recipe->parameters);
+    recipe_status = gravity_pcacal(recipe->frames, recipe->parameters);
 
     /* Ensure DFS-compliance of the products */
     if (cpl_dfs_update_product_header(recipe->frames)) {
@@ -220,7 +241,7 @@ static int gravity_pca_exec(cpl_plugin * plugin)
   @return   0 if everything is ok
  */
 /*----------------------------------------------------------------------------*/
-static int gravity_pca_destroy(cpl_plugin * plugin)
+static int gravity_pcacal_destroy(cpl_plugin * plugin)
 {
     cpl_recipe * recipe;
 
@@ -243,59 +264,58 @@ static int gravity_pca_destroy(cpl_plugin * plugin)
     return 0;
 }
 
+/*----------------------------------------------------------------------------*/
 /**
  * @brief Test whether tracking ratio for all baselines exceeds a limit.
  * 
  * @param hdr Header to extract ratios from.
  * @param min_ratio The threshold tracking ratio for acceptance.
  * 
- * @return Nonzero if accepted.
+ * @return CPL_TRUE if accepted.
  **/
-static int gravi_test_tracking_ratio(const cpl_propertylist *hdr, int min_ratio)
+/*----------------------------------------------------------------------------*/
+static cpl_boolean gravi_test_tracking_ratio(const cpl_propertylist *hdr, int min_ratio)
 {
-    const char *baselines[6] = {"12", "13", "14", "23", "24", "34"};
-    const int nbase = 6;
-    
+    const int nbase = 6;    
     char tr_param_name[32];
 
     for (int i = 0; i < nbase; i++) {
-        sprintf(tr_param_name, "ESO QC TRACKING_RATIO_FT%s", baselines[i]);
+        sprintf(tr_param_name, "ESO QC TRACKING_RATIO_FT%s", GRAVI_BASE_NAME[i]);
         const cpl_property *tr_prop = cpl_propertylist_get_property_const(hdr, tr_param_name);
 
-        double tracking_ratio;
-        if (cpl_property_get_type(tr_prop) == CPL_TYPE_DOUBLE)
-            tracking_ratio = cpl_property_get_double(tr_prop);
-        else if (cpl_property_get_type(tr_prop) == CPL_TYPE_INT)
-            tracking_ratio = (double) cpl_property_get_int(tr_prop);
+        int tracking_ratio;
+        if (cpl_property_get_type(tr_prop) == CPL_TYPE_INT)
+            tracking_ratio = cpl_property_get_int(tr_prop);
+        else if (cpl_property_get_type(tr_prop) == CPL_TYPE_DOUBLE)
+            tracking_ratio = (int) cpl_property_get_double(tr_prop);
  
         if (tracking_ratio < min_ratio)
-            return 0;
+            return CPL_FALSE;
     }
-    return 1;
+    return CPL_TRUE;
 }
 
 /*----------------------------------------------------------------------------*/
 /**
-  @brief    TODO.
-  @param    frameset   the frames list
-  @param    parlist    the parameters list
-  @return   0 if everything is ok
+ * @brief    Compute the PCA model from the provided calibration data.
+ * @param    frameset   the frames list
+ * @param    parlist    the parameters list
+ * @return   0 if everything is ok
  */
 /*----------------------------------------------------------------------------*/
-static int gravity_pca(cpl_frameset            * frameset,
-		               const cpl_parameterlist * parlist)
+static int gravity_pcacal(cpl_frameset            * frameset,
+		                  const cpl_parameterlist * parlist)
 {
-    cpl_frameset *vis_sci_frameset = NULL;
+    cpl_frameset *vis_cal_frameset = NULL;
     cpl_frameset *used_frameset = cpl_frameset_new();
     cpl_frame *frame = NULL;
-    
-    gravi_data *data_tmp, **data_accepted = NULL;
-    cpl_propertylist *hdr = NULL, *hdr0 = NULL, *wave_plist = NULL, *wv_plisti = NULL;
+
+    gravi_data *data_tmp = NULL, **data_accepted = NULL, *pca_data = NULL;
+    cpl_propertylist *hdr = NULL, *header_first = NULL, *wave_plist = NULL, *wv_plisti = NULL;
     const char *telescope = NULL, *pola_mode = NULL, *spec_res = NULL;
     int nframes, nwave, nwavei, npol, naccept;
     const int nbase = 6;
-
-    char product_filename[128];
+    char product_filename[100];
 
 	/* Message */
 	gravity_print_banner ();
@@ -310,24 +330,37 @@ static int gravity_pca(cpl_frameset            * frameset,
 	cpl_ensure_code(gravi_dfs_set_groups(frameset) == CPL_ERROR_NONE,
                     cpl_error_get_code());
 
-    vis_sci_frameset = gravi_frameset_extract_vis_science(frameset);
-    if (cpl_frameset_is_empty(vis_sci_frameset)) {
+    vis_cal_frameset = gravi_frameset_extract_vis_calib(frameset);
+    if (cpl_frameset_is_empty(vis_cal_frameset)) {
         cpl_error_set_message(cpl_func, CPL_ERROR_ILLEGAL_INPUT,
-                              "No VIS_SCI on the frameset");
+                              "No VIS_CAL on the frameset");
         goto cleanup;
     }
 
     /* Get header data from first frame */
-    frame = cpl_frameset_get_position(vis_sci_frameset, 0);
+    frame = cpl_frameset_get_position(vis_cal_frameset, 0);
     data_tmp = gravi_data_load_frame(frame, NULL);
-    hdr0 = cpl_propertylist_duplicate(gravi_data_get_header(data_tmp));
+    header_first = cpl_propertylist_duplicate(gravi_data_get_header(data_tmp));
     
-    telescope = cpl_propertylist_get_string(hdr0, "TELESCOP");
-    pola_mode = gravi_pfits_get_pola_mode(hdr0, GRAVI_SC);
-    npol = gravi_pfits_get_pola_num(hdr0, GRAVI_SC);
-    spec_res = gravi_pfits_get_spec_res(hdr0);
+    telescope = cpl_propertylist_get_string(header_first, "TELESCOP");
+    pola_mode = gravi_pfits_get_pola_mode(header_first, GRAVI_SC);
+    npol = gravi_pfits_get_pola_num(header_first, GRAVI_SC);
+    spec_res = gravi_pfits_get_spec_res(header_first);
+
+    /* Check on time */
+    double time_mjd_obs = cpl_propertylist_get_double(header_first, "MJD-OBS");
+    int epoch = -1;
+    if (time_mjd_obs < TIME_MJD_EPOCH_START[0]) {
+        cpl_error_set_message(cpl_func, CPL_ERROR_ILLEGAL_INPUT,
+            "First frame is too old\n");
+    }
+    for (int i = 0; i < N_EPOCH; i++) {
+        /* Select latest epoch date that precedes observation date */
+        if (TIME_MJD_EPOCH_START[i] <= time_mjd_obs)
+            epoch = i;
+    }
     
-    /* Get length of wavelegth axis */
+    /* Get length of wavelength axis */
     wave_plist = gravi_data_get_oi_wave_plist(data_tmp, GRAVI_SC, 0, npol);
     nwave = cpl_propertylist_get_int(wave_plist, "NWAVE");
 
@@ -338,32 +371,48 @@ static int gravity_pca(cpl_frameset            * frameset,
 
     /* Check all frames for compatibility and reject if below tracking ratio */
     naccept = 0;
-    nframes = cpl_frameset_get_size(vis_sci_frameset);
+    nframes = cpl_frameset_get_size(vis_cal_frameset);
     data_accepted = cpl_malloc(nframes * sizeof(gravi_data *));
-    //memset(data_accepted, 0, nframes * sizeof(gravi_data *));
     for (int n = 0; n < nframes; n++) {
-        frame = cpl_frameset_get_position(vis_sci_frameset, n);
+        frame = cpl_frameset_get_position(vis_cal_frameset, n);
         data_tmp = gravi_data_load_frame(frame, NULL);
-
         CPLCHECK_CLEAN("Could not load input frame");
 
+        /* Check for uniform wavelength axis */
         hdr = gravi_data_get_header(data_tmp);        
         wv_plisti = gravi_data_get_oi_wave_plist(data_tmp, GRAVI_SC, 0, npol);
         nwavei = cpl_propertylist_get_int(wv_plisti, "NWAVE");
         if (nwave != nwavei)
             cpl_error_set_message(cpl_func, CPL_ERROR_ILLEGAL_INPUT,
                                   "Input files have inconsistent wavelength axes");
+        
+        /* Check for matching telescope */
+        if (strcmp(telescope, cpl_propertylist_get_string(hdr, "TELESCOP"))) {
+            cpl_error_set_message(cpl_func, CPL_ERROR_ILLEGAL_INPUT,
+                                  "Input files have multiple TELESCOP");
+        }
+
+        /* Check for matching polarisation mode */
         if (strcmp(pola_mode, gravi_pfits_get_pola_mode(hdr, GRAVI_SC))) {
             cpl_error_set_message(cpl_func, CPL_ERROR_ILLEGAL_INPUT,
                                   "Input files have multiple INS.POLA.MODE");
-            printf("%s\n", pola_mode);
-            printf("%s\n", gravi_pfits_get_pola_mode(hdr, GRAVI_SC));
         }
-        if (strcmp(spec_res, gravi_pfits_get_spec_res(hdr)))
+
+        /* Check for matching resolution */
+        if (strcmp(spec_res, gravi_pfits_get_spec_res(hdr))) {
             cpl_error_set_message(cpl_func, CPL_ERROR_ILLEGAL_INPUT,
                                   "Input files have multiple INS.SPEC.RES");
+        }
+
+        /* Check for matching epoch */
+        time_mjd_obs = cpl_propertylist_get_double(hdr, "MJD-OBS");
+        if (time_mjd_obs < TIME_MJD_EPOCH_START[epoch] ||
+            (epoch < N_EPOCH-1 && time_mjd_obs > TIME_MJD_EPOCH_START[epoch+1])) {
+            cpl_error_set_message(cpl_func, CPL_ERROR_ILLEGAL_INPUT,
+                                  "Input files span multiple epochs");
+        }
         
-        /* Check if visibilities are all zeroes (TODO bad data?) */
+        /* Check if visibilities are all zeroes (bad data?) */
         cpl_boolean skip = CPL_FALSE;
         cpl_table *vis_tmp = gravi_data_get_oi_vis(data_tmp, GRAVI_SC, n, npol);
         for (int i = 0; i < nbase; i++) {
@@ -392,12 +441,19 @@ static int gravity_pca(cpl_frameset            * frameset,
     if (naccept == 0)
         cpl_error_set_message(cpl_func, CPL_ERROR_ILLEGAL_INPUT,
             "None of the input files satisfy the minimum tracking ratio criterion");
+    
+    if (naccept < MIN_CALIB_FRAMES)
+        cpl_msg_warning(cpl_func, "Fewer than %lld valid frames provided, calibration may be inaccurate", MIN_CALIB_FRAMES);
 
     if (cpl_error_get_code())    
         goto cleanup;
 
-    gravi_data *pca_data = gravi_compute_pca(data_accepted, naccept, parlist);
+    pca_data = gravi_compute_pca(data_accepted, naccept, parlist);
     CPLCHECK_CLEAN("Could not compute PCA decomposition");
+
+    cpl_propertylist *product_header = gravi_data_get_plist(pca_data, GRAVI_PCA_EXT);
+    cpl_propertylist_append_double(product_header, "PCA EPOCH BEGIN", TIME_MJD_EPOCH_START[epoch]);
+    cpl_propertylist_append_double(product_header, "PCA EPOCH END", epoch < N_EPOCH-1 ? TIME_MJD_EPOCH_START[epoch+1] : 99999);
 
     /* Add filenames for accepted files to output */
     cpl_errorstate e_state = cpl_errorstate_get();
@@ -413,15 +469,22 @@ static int gravity_pca(cpl_frameset            * frameset,
         cpl_errorstate_set(e_state);
     }
 
-    sprintf(product_filename, "GRAVI_PhaseCalib_%s_%s_%s", spec_res, pola_mode, telescope);
+    char* mjd_str = gravi_convert_to_timestamp(TIME_MJD_EPOCH_START[epoch]);
+    sprintf(product_filename, "GRAVI.%s.%s_%s_%s.", mjd_str, spec_res, pola_mode, telescope);
     gravi_data_save_new(pca_data, frameset, product_filename, NULL, parlist,
                         used_frameset, NULL, "gravity_phase_pca",
                         NULL, GRAVI_PHASE_PCA);
+    // frame = cpl_frameset_get_position(vis_cal_frameset, 0);
+    // gravi_data_save_new(pca_data, frameset, NULL, NULL, parlist,
+    //                     used_frameset, frame, "gravity_phase_pca",
+    //                     product_header, GRAVI_PHASE_PCA);
 
 cleanup:
-    FREE(cpl_propertylist_delete, hdr0);
-    FREE(cpl_frameset_delete, vis_sci_frameset);
+    FREE(cpl_propertylist_delete, header_first);
+    FREE(cpl_frameset_delete, vis_cal_frameset);
     FREELOOP(gravi_data_delete, data_accepted, naccept);
+    FREE(gravi_data_delete, pca_data);
 
+    gravi_msg_function_exit(1);
     return (int)cpl_error_get_code();
 }

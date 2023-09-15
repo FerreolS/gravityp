@@ -614,10 +614,10 @@ cpl_error_code gravi_pca_fit_components_polynomial(gravi_pca_model *self, const 
         /* construct fit matrix X */
         gsl_matrix *X = gsl_matrix_alloc(n_wave, n_coeffs);
         for (int i = 0; i < n_wave; i++) {
-            double wvi = cpl_array_get(wave, i, NULL);
+            wvi = cpl_array_get(wave, i, NULL);
 
             for (int j = 0; j < n_coeffs; j++) {
-                double Xij = pow(wvi, j);
+                Xij = pow(wvi, j);
                 gsl_matrix_set(X, i, j, Xij);
             }
         }
