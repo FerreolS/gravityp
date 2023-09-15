@@ -42,7 +42,7 @@
  * this function copied from GSL 2.7
  * if pipeline dependency is updated, it will need to be removed from here
  */ 
-static double gsl_vector_sum(const gsl_vector *a)
+static double _gsl_vector_sum(const gsl_vector *a)
 {
     const size_t N = a->size;
     const size_t stride = a->stride;
@@ -55,7 +55,7 @@ static double gsl_vector_sum(const gsl_vector *a)
 }
 
 /**
- * @brief Type to hold results of a PCA decomposition. This is an opaque type.
+ * @brief Type to hold results of a PCA decomposition.
  * @note  The PCA functions use GSL types internally so this type should only
  *        be accessed via the public interface which handles the conversions to
  *        the corresponding CPL types.
@@ -79,7 +79,6 @@ struct _gravi_pca_result_
 /**
  * @brief Type to hold average (median) components obtained from a set of PCA
  *        decompositions and/or best-fit model to average components.
- *        This is an opaque type.
  * @note  The PCA functions use GSL types internally so this type should only
  *        be accessed via the public interface which handles the conversions to
  *        the corresponding CPL types.
@@ -171,7 +170,7 @@ static int svd_wrapper(gsl_matrix **A, gsl_matrix **V, gsl_vector **S)
  * @param V the V matrix.
  * 
  * @note See: https://github.com/scikit-learn/scikit-learn/blob/main/sklearn/utils/extmath.py#L766
- *          but note that their V is actually Vt, unlike here.
+ *          but note that their V is actually Vt, which is not the case here.
  */
 static void svd_flip(gsl_matrix *U, gsl_matrix *V)
 {
@@ -245,7 +244,7 @@ gravi_pca_result *gravi_pca_create_result(const cpl_matrix *data, const cpl_matr
     gsl_vector* column_mean = gsl_vector_alloc(n_wave);
     for(int j = 0; j < n_wave; j++) {
         gsl_vector_const_view col = gsl_matrix_const_column(&data_gsl_view.matrix, j);
-        double mu = (1.0 / n_obs) * gsl_vector_sum(&col.vector);
+        double mu = (1.0 / n_obs) * _gsl_vector_sum(&col.vector);
         gsl_vector_set(column_mean, j, mu);
     }
 
@@ -667,7 +666,7 @@ cpl_error_code gravi_pca_refine_mean(gravi_pca_result *self, const cpl_matrix *r
     gsl_vector* refined_mean = gsl_vector_alloc(n_wave);
     for(int j = 0; j < n_wave; j++) {
         gsl_vector_const_view col = gsl_matrix_const_column(&resid_gsl_view.matrix, j);
-        double mu = (1.0 / n_obs) * gsl_vector_sum(&col.vector);
+        double mu = (1.0 / n_obs) * _gsl_vector_sum(&col.vector);
         gsl_vector_set(refined_mean, j, mu);
     }
 
