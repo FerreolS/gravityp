@@ -40,7 +40,7 @@
 
 /* 
  * this function copied from GSL 2.7
- * if pipeline dependency is updated, it will need to be removed from here
+ * if pipeline dependency is updated, it can be removed from here
  */ 
 static double _gsl_vector_sum(const gsl_vector *a)
 {
@@ -177,12 +177,11 @@ static void svd_flip(gsl_matrix *U, gsl_matrix *V)
     /* sign of max value in each column of U */
     gsl_vector *signs = gsl_vector_alloc(U->size2);
 
-    for (int j = 0; j < U->size2; j++) {
+    for (size_t j = 0; j < U->size2; j++) {
         gsl_vector_const_view Ucol = gsl_matrix_const_column(U, j);
-
         double max_abs_val = -INFINITY;
-        int max_abs_ind = -1;
-        for(int j = 0; j < U->size2; j++) {
+        size_t max_abs_ind = -1;
+        for(size_t j = 0; j < U->size2; j++) {
             double abs_val = fabs(gsl_vector_get(&Ucol.vector, j));
             if (abs_val > max_abs_val) max_abs_ind = j;
         }
@@ -192,13 +191,13 @@ static void svd_flip(gsl_matrix *U, gsl_matrix *V)
     }
     
     /* adjust U */
-    for (int i = 0; i < U->size1; i++) {
+    for (size_t i = 0; i < U->size1; i++) {
         gsl_vector_view Urow = gsl_matrix_row(U, i);
         gsl_vector_mul(&Urow.vector, signs);
     }
 
     /* adjust V */
-    for (int i = 0; i < V->size1; i++) {
+    for (size_t i = 0; i < V->size1; i++) {
         gsl_vector_view Vrow = gsl_matrix_row(V, i);
         gsl_vector_mul(&Vrow.vector, signs);
     }
@@ -221,9 +220,9 @@ gravi_pca_result *gravi_pca_create_result(const cpl_matrix *data, const cpl_matr
 {
     cpl_ensure(data != NULL, CPL_ERROR_NULL_INPUT, NULL);
 
-    unsigned int n_obs = cpl_matrix_get_nrow(data);
-    unsigned int n_wave = cpl_matrix_get_ncol(data);
-    unsigned int nvalid = CPL_MIN(n_obs, n_wave);
+    cpl_size n_obs = cpl_matrix_get_nrow(data);
+    cpl_size n_wave = cpl_matrix_get_ncol(data);
+    cpl_size nvalid = CPL_MIN(n_obs, n_wave);
 
     /* Copy from cpl_matrix to gsl_matrix */
     gsl_matrix_const_view data_gsl_view = gsl_matrix_const_view_array(
@@ -231,8 +230,8 @@ gravi_pca_result *gravi_pca_create_result(const cpl_matrix *data, const cpl_matr
 
     gsl_matrix_int *use_mask = gsl_matrix_int_alloc(n_obs, n_wave);
     if (mask) {
-        for(int i = 0; i < n_obs; i++) {
-            for (int j = 0; j < n_wave; j++)
+        for(cpl_size i = 0; i < n_obs; i++) {
+            for (cpl_size j = 0; j < n_wave; j++)
                 gsl_matrix_int_set(use_mask, i, j, 
                     cpl_matrix_get(mask, i, j) > 0 ? 0 : 1);
         }
@@ -251,7 +250,7 @@ gravi_pca_result *gravi_pca_create_result(const cpl_matrix *data, const cpl_matr
     /* Centre data by subtracting mean */
     gsl_matrix* mean_subtracted_data = gsl_matrix_alloc(n_obs, n_wave);
     gsl_matrix_memcpy(mean_subtracted_data, &data_gsl_view.matrix);
-    for(int i = 0; i < n_obs; i++) {
+    for(cpl_size i = 0; i < n_obs; i++) {
         gsl_vector_view mean_subtracted_row_view = gsl_matrix_row(mean_subtracted_data, i);
         gsl_vector_sub(&mean_subtracted_row_view.vector, column_mean);
     }

@@ -1973,7 +1973,7 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
     double repeat1=0;
     double repeat2=0;
     
-    int smooth_faint = gravi_param_get_int(parlist, "gravity.metrology.smooth-faint");
+    //int smooth_faint = gravi_param_get_int(parlist, "gravity.metrology.smooth-faint");
 
     double preswitch_delay = gravi_param_get_int(parlist, "gravity.metrology.preswitch-delay");
     double postswitch_delay = gravi_param_get_int(parlist, "gravity.metrology.postswitch-delay");
@@ -2087,8 +2087,8 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
     
         for (cpl_size row = 0; row < nbrow_met-1; row ++)
         {
-            if ((cpl_array_get(bright_array,row, NULL) > 0.1)&&(cpl_array_get(bright_array,row+1, NULL) < 0.1)||
-                (cpl_array_get(bright_array,row, NULL) < 0.1)&&(cpl_array_get(bright_array,row+1, NULL) > 0.1))
+            if (((cpl_array_get(bright_array,row, NULL) > 0.1)&&(cpl_array_get(bright_array,row+1, NULL) < 0.1))||
+                ((cpl_array_get(bright_array,row, NULL) < 0.1)&&(cpl_array_get(bright_array,row+1, NULL) > 0.1)))
                 {
                     if (row-Nbefore <0)
                     cpl_array_fill_window (good_met_array, 0, row+Nafter, 0);
