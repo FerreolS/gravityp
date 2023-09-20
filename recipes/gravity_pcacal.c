@@ -277,7 +277,7 @@ static int gravity_pcacal_destroy(cpl_plugin * plugin)
 static cpl_boolean gravi_test_tracking_ratio(const cpl_propertylist *hdr, int min_ratio)
 {
     const int nbase = 6;    
-    char tr_param_name[32];
+    char tr_param_name[100];
 
     for (int i = 0; i < nbase; i++) {
         sprintf(tr_param_name, "ESO QC TRACKING_RATIO_FT%s", GRAVI_BASE_NAME[i]);
