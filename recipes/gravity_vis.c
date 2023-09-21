@@ -269,6 +269,16 @@ static int gravity_vis_create(cpl_plugin * plugin)
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
     cpl_parameterlist_append (recipe->parameters, p);
     
+    /* OIFITS format */
+    p = cpl_parameter_new_value ("gravity.vis.oifits2", CPL_TYPE_BOOL,
+                                 "If TRUE, the output products will be fully OIFITS2 compliant. "
+                                 "Note that TRUE will be the default and eventually the "
+                                 "parameter will be removed in the future",
+                                 "gravity.vis", FALSE);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "oifits2");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (recipe->parameters, p);
+    
 	return 0;
 }
 
@@ -905,11 +915,12 @@ static int gravity_vis(cpl_frameset * frameset,
     }
 
     /* Compute QC parameters */
-    gravi_compute_vis_qc (vis_data);
+    cpl_msg_info (cpl_func, "Computing QC parameters for visibilities");
+    gravi_compute_vis_qc (vis_data, frameset);
 
-	/* Compute the QC parameters of the TF 
-	 * FIXME: compute QC TF only for CALIB star */
-	gravi_compute_tf_qc (vis_data, diamcat_data);
+    /* Compute the QC parameters of the TF 
+     * FIXME: compute QC TF only for CALIB star */
+    gravi_compute_tf_qc (vis_data, diamcat_data);
 
     /* Eventually flatten the OI_FLUX */
     if (gravi_param_get_bool (parlist, "gravity.vis.flat-flux")) {
@@ -958,6 +969,9 @@ static int gravity_vis(cpl_frameset * frameset,
 	cpl_frameset_join (used_frameset, recipe_frameset);
 	frame = cpl_frameset_get_position (recipe_frameset, 0);
 	
+        if(gravi_param_get_bool (parlist, "gravity.vis.oifits2") ) {
+            gravi_vis_copy_fluxdata(vis_data, 1);
+        }
 	gravi_data_save_new (vis_data, frameset, NULL, NULL, parlist,
 			     used_frameset, frame, "gravity_vis", NULL, proCatg);
 

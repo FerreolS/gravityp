@@ -1,4 +1,4 @@
-/* $Id: gravi_dfs.c,v 1.6 2011/04/31 06:10:40 llundin Exp $
+* $Id: gravi_dfs.c,v 1.6 2011/04/31 06:10:40 llundin Exp $
  *
  * This file is part of the GRAVI Pipeline
  * Copyright (C) 2002,2003 European Southern Observatory
@@ -1239,6 +1239,10 @@ cpl_frameset * gravi_frameset_extract_vis_calib (cpl_frameset * frameset) {
 }
 cpl_frameset * gravi_frameset_extract_vis_science (cpl_frameset * frameset) {
   const char *tags[] = {GRAVI_VIS_SINGLE_SCIENCE, GRAVI_VIS_DUAL_SCIENCE};
+  return gravi_frameset_extract (frameset, tags, 2);
+}
+cpl_frameset * gravi_frameset_extract_science_data (cpl_frameset * frameset) {
+  const char *tags[] = {GRAVI_DUAL_SCIENCE_RAW, GRAVI_SINGLE_SCIENCE_RAW};
   return gravi_frameset_extract (frameset, tags, 2);
 }
 cpl_frameset * gravi_frameset_extract_p2vm_map (cpl_frameset * frameset) {

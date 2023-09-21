@@ -54,6 +54,7 @@ noinst_HEADERS =    gravi_calib.h \
                     gravi_strehl.h \
                     gravi_disp.h \
                     gravi_eop.h \
+                    gravi_idp.h \
                     gravi_pca.h
 
 pkginclude_HEADERS =
@@ -61,7 +62,7 @@ pkginclude_HEADERS =
 privatelib_LTLIBRARIES = libgravi.la
 
 libgravi_la_SOURCES =    gravi_calib.c \
-	                     gravi_wave.c \
+                         gravi_wave.c \
                          gravi_utils.c \
                          gravi_ellipse.c \
                          gravi_pfits.c \
@@ -80,6 +81,7 @@ libgravi_la_SOURCES =    gravi_calib.c \
                          gravi_strehl.c \
                          gravi_disp.c \
                          gravi_eop.c \
+                         gravi_idp.c \
                          gravi_pca.c
 
 libgravi_la_LDFLAGS = $(HDRL_LDFLAGS) $(CPL_LDFLAGS) $(GSL_LDFLAGS) -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE) 

@@ -40,6 +40,7 @@ double complex ** gravi_table_get_data_array_double_complex (cpl_table * table, 
 int ** gravi_table_get_data_array_int (cpl_table * table, const char * name);
 
 double gravi_table_get_column_mean (cpl_table * table, const char * name, int base, int nbase);
+double gravi_table_get_column_flagged_mean (cpl_table * table, const char * name);
 double gravi_table_get_column_std (cpl_table * table, const char * name, int base, int nbase);
 cpl_array * gravi_table_get_column_sum_array (cpl_table * table, const char * name, int base, int nbase);
 cpl_array * gravi_table_get_column_mean_array (cpl_table * table, const char * name, int base, int nbase);

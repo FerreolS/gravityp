@@ -42,7 +42,8 @@ gravi_data * gravi_compute_vis (gravi_data *p2vmred_data,
                                 const cpl_parameterlist *,
                                 cpl_size * current_frame);
 
-cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data);
+cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data, 
+                                     cpl_frameset * frameset);
 
 cpl_error_code gravi_vis_mjd_to_time (gravi_data * vis_data);
 
@@ -62,9 +63,12 @@ cpl_error_code gravi_vis_flag_lower (cpl_table * oi_table, const char * data, co
 cpl_error_code gravi_force_uncertainties (gravi_data * oi_data,
                                           const cpl_parameterlist * parlist);
 
-cpl_error_code gravi_vis_copy_fluxdata (gravi_data * oi_data);
+cpl_error_code gravi_vis_copy_fluxdata (gravi_data * oi_data, int delete_flux);
 
 cpl_error_code gravi_vis_erase_obs (cpl_table * oi_table, cpl_array *flag_array, cpl_size ntel);
 cpl_error_code gravi_vis_force_time (gravi_data * oi_data);
+cpl_error_code gravi_data_get_minmax_uvcoord(const cpl_table *oi_vis2,
+                                             double * min_uvcoord,
+                                             double * max_uvcoord);
 
 #endif /* GRAVI_VIS_H_ */

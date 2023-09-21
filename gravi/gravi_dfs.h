@@ -179,6 +179,7 @@ cpl_frameset * gravi_frameset_extract_p2vm_map(cpl_frameset * );
 cpl_frameset * gravi_frameset_extract_tf_calib (cpl_frameset * );
 cpl_frameset * gravi_frameset_extract_vis_calib (cpl_frameset * );
 cpl_frameset * gravi_frameset_extract_vis_science (cpl_frameset * );
+cpl_frameset * gravi_frameset_extract_science_data (cpl_frameset * );
 cpl_frameset * gravi_frameset_extract_sky_data(cpl_frameset * );
 cpl_frameset * gravi_frameset_extract_wavelamp_data(cpl_frameset * );
 cpl_frameset * gravi_frameset_extract_dispvis_data(cpl_frameset * );

@@ -53,6 +53,7 @@
 #include <time.h>
 #include <complex.h>
 #include <string.h>
+#include <float.h>
 
 #include "gravi_data.h"
 #include "gravi_dfs.h"
@@ -64,6 +65,7 @@
 #include "gravi_vis.h"
 #include "gravi_eop.h"
 #include "gravi_tf.h"
+#include "gravi_idp.h"
 
 /*-----------------------------------------------------------------------------
                               Private prototypes
@@ -2168,20 +2170,20 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
  */
 /*----------------------------------------------------------------------------*/
 
-cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data)
+cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data, cpl_frameset* frameset)
 {
-	gravi_msg_function_start(1);
-	cpl_ensure_code (vis_data, CPL_ERROR_NULL_INPUT);
-	
-	int nv, nbase = 6, ntel=4, nclo=4;
-	char qc_name[100];
+  gravi_msg_function_start(1);
+  cpl_ensure_code (vis_data, CPL_ERROR_NULL_INPUT);
 
-	/* 
-	 * Prepare the output 
-	 */
-	
-    cpl_propertylist * vis_header = gravi_data_get_header (vis_data);
-    cpl_propertylist * plist = gravi_data_get_header (vis_data);
+  int nv, nbase = 6, ntel=4, nclo=4;
+  char qc_name[100];
+
+  /* 
+   * Prepare the output 
+   */
+
+  cpl_propertylist * vis_header = gravi_data_get_header (vis_data);
+  cpl_propertylist * plist = gravi_data_get_extra_primary_header (vis_data);
 
     
     /* 
@@ -2292,6 +2294,7 @@ cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data)
         
         /* Loop on polarisations */
         int npol_sc = gravi_pfits_get_pola_num (vis_header, GRAVI_SC);
+
         for (int pol = 0; pol < npol_sc; pol++) {
 
             /* 
@@ -2407,8 +2410,15 @@ cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data)
                 CPLCHECK_MSG("Cannot set QC parameter for OI_FLUX for SC");
             } /* End loop on beams */
 
-
         } /* end loop on pol */
+
+        cpl_msg_info (cpl_func, "Compute IDP parameters");
+
+        /* Compute additional idp parameters */
+        cpl_propertylist * idp_hdr = gravi_idp_compute(vis_data, vis_header, frameset);
+        cpl_propertylist_append(plist, idp_hdr);
+        cpl_propertylist_delete(idp_hdr);
+
     } /* End SC */
 
 
@@ -2416,9 +2426,68 @@ cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data)
         gravi_pfits_get_mode_name(plist));
     cpl_propertylist_set_comment (plist, "ESO QC FIELD MODE", "Field mode");
     
+    CPLCHECK_MSG("Cannot create QC parameters");
+
     gravi_msg_function_exit(1);
     return CPL_ERROR_NONE;
 }
+
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Compute the minimum and maximum values of sqrt(ucoord**2 + vcoord**2)
+ * 
+
+ * @param vis2_data: table with vis2 data
+ * @param min_uvcoord: returns the minimum of sqrt(ucoord**2 + vcoord**2)
+ * @param max_uvcoord: returns the maximum of sqrt(ucoord**2 + vcoord**2)
+
+   Note tha this function ignores rows which takes into account rows 
+*/
+
+
+cpl_error_code gravi_data_get_minmax_uvcoord(const cpl_table *oi_vis2,
+                                             double * min_uvcoord, 
+                                             double * max_uvcoord)
+{
+  cpl_ensure (oi_vis2, CPL_ERROR_NULL_INPUT, 0.0);
+
+  *min_uvcoord = DBL_MAX;
+  *max_uvcoord = DBL_MIN;
+
+  int valid;
+  cpl_size nrow = cpl_table_get_nrow (oi_vis2);
+
+  const double * ucoord = cpl_table_get_data_double_const(oi_vis2, "UCOORD");
+  const double * vcoord = cpl_table_get_data_double_const(oi_vis2, "VCOORD");
+
+  const cpl_array ** flags = cpl_table_get_data_array_const (oi_vis2, "FLAG");
+
+  double uvcoord = 0;
+  cpl_size flag_array_size = cpl_array_get_size(flags[0]);
+  for (cpl_size r=0; r<nrow;r++)
+  {
+    int flagged = 0;
+    for(cpl_size el=0; el<flag_array_size; el++)
+    {
+      if (cpl_array_get_int(flags[r], el, &valid))
+      {
+        flagged = 1;
+        break;
+      }
+    }
+    if(!flagged)
+    {
+      uvcoord = sqrt(ucoord[r]*ucoord[r]+vcoord[r]*vcoord[r]);
+      if(uvcoord > *max_uvcoord)
+        *max_uvcoord = uvcoord;
+      if(uvcoord < *min_uvcoord)
+        *min_uvcoord = uvcoord;
+    }
+  }
+  return CPL_ERROR_NONE;
+}
+
+
 
 /*----------------------------------------------------------------------------*/
 /**
@@ -3496,12 +3565,13 @@ cpl_error_code gravi_vis_resamp (gravi_data * oi_data, cpl_size nsamp)
 /**
  * @brief Duplicate the column FLUX into FLUXDATA, for OIFITS2 compliance
  * 
- * @param oi_data    VIS data to process, in-place
+ * @param oi_data     VIS data to process, in-place
+ * @param delete_flux If 1 then also delete the original flux column
  * 
  */
 /*----------------------------------------------------------------------------*/
 
-cpl_error_code gravi_vis_copy_fluxdata (gravi_data * oi_data)
+cpl_error_code gravi_vis_copy_fluxdata (gravi_data * oi_data, int delete_flux)
 {
   gravi_msg_function_start(1);
   cpl_ensure_code (oi_data, CPL_ERROR_NULL_INPUT);
@@ -3530,7 +3600,10 @@ cpl_error_code gravi_vis_copy_fluxdata (gravi_data * oi_data)
 
       /* Duplicate FLUX into FLUXDATA */
       cpl_table_duplicate_column (oi_flux, "FLUXDATA", oi_flux, "FLUX");
-	  
+
+      /* Delete original FLUX column if so requested */
+      if(delete_flux)
+          cpl_table_erase_column(oi_flux, "FLUX");
     } /* End loop on polarisation */
 
   } /* End loop on SC/FT */

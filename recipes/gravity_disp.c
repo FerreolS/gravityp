@@ -546,7 +546,7 @@ static int gravity_disp(cpl_frameset            * frameset,
 			CPLCHECK_CLEAN ("Cannot average the visibilities");
 
             /* Compute QC parameters */
-            gravi_compute_vis_qc (tmpvis_data);
+            gravi_compute_vis_qc (vis_data, 0);
 
 			/* Save the VIS */
 			if (gravi_param_get_bool (parlist,"gravity.dfs.vis-file")) {

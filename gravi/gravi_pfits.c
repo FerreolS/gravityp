@@ -1047,7 +1047,6 @@ cpl_propertylist * gravi_plist_get_oifits_keywords (cpl_propertylist * header)
     return o_plist;
 }
 
-
 /*-----------------------------------------------------------------------------*/
 /**
  * @brief Extract parameters from a product header

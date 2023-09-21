@@ -49,6 +49,7 @@
 #include "gravi_p2vmred.h"
 #include "gravi_vis.h"
 #include "gravi_tf.h"
+#include "gravi_idp.h"
 
 /*-----------------------------------------------------------------------------
                             Private function prototypes
@@ -489,7 +490,6 @@ static int gravity_viscal(cpl_frameset            * frameset,
     cleanup_rawtf:
         FREE (gravi_data_delete, vis_data);
         FREE (gravi_data_delete, vis_calib);
-        cpl_errorstate_set (errorstate);
     }
     /* End loop on the TF to compute */
     
@@ -526,7 +526,6 @@ static int gravity_viscal(cpl_frameset            * frameset,
     
     cleanup_caltf:
         FREE (gravi_data_delete,vis_calib);
-        cpl_errorstate_set (errorstate);
     }
     /* End loop on TF to load */
     
@@ -554,7 +553,6 @@ static int gravity_viscal(cpl_frameset            * frameset,
       
     cleanup_zp:
       FREE (gravi_data_delete,zero_data);
-      cpl_errorstate_set (errorstate);
     }
     
         
@@ -579,6 +577,14 @@ static int gravity_viscal(cpl_frameset            * frameset,
         /* Save calibrated visibilities */
         data_mode = gravi_data_frame_get_mode (frame);
         
+        /* Compute QC parameters */
+        cpl_msg_info (cpl_func, "Computing QC parameters for calibrated visibilities");
+        cpl_propertylist * idp_hdr = gravi_idp_compute(calibrated,  gravi_data_get_header (calibrated),
+                    current_frameset);
+        cpl_propertylist * extra_header = gravi_data_get_extra_primary_header (calibrated);
+        cpl_propertylist_append(extra_header, idp_hdr);
+        cpl_propertylist_delete(idp_hdr);
+
         gravi_data_save_new (calibrated, frameset, NULL, NULL, parlist,
                              current_frameset, frame, "gravity_vis",
                              NULL, GRAVI_VIS_CALIBRATED(data_mode));
@@ -600,7 +606,6 @@ static int gravity_viscal(cpl_frameset            * frameset,
         FREE (gravi_data_delete,calibrated);
         FREE (cpl_propertylist_delete,applist);
         FREE (cpl_frameset_delete,current_frameset);
-        cpl_errorstate_set (errorstate);
     }
     /* End loop on VIS_*_SCI files to calibrate */
     

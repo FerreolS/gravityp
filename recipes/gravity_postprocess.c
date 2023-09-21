@@ -446,7 +446,7 @@ static int gravity_postprocess(cpl_frameset * frameset,
         /* Add the FLUXDATA column for OIFITS2 standard */
     if (gravi_param_get_bool (parlist, "gravity.postprocess.copy-fluxdata"))
     {
-      gravi_vis_copy_fluxdata (data_merged);
+      gravi_vis_copy_fluxdata (data_merged, 0);
     }
 
 	/* Recompute the TIME column from the MJD column

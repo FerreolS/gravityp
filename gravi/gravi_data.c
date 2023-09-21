@@ -67,6 +67,7 @@ struct _gravi_data_{
 	cpl_propertylist ** exts_hdrs;
 	cpl_imagelist ** exts_imgl;
 	cpl_table ** exts_tbs;
+	cpl_propertylist * extra_primary_hdr;
 };
 
 /* ----------------------------------------------------------------------------
@@ -113,6 +114,7 @@ gravi_data * gravi_data_new (int nb_ext)
 	
     gravi_data *self = cpl_malloc (sizeof (gravi_data));
     self->primary_hdr = cpl_propertylist_new ();
+    self->extra_primary_hdr = cpl_propertylist_new ();
     self->nb_ext = 0;
 
     self->exts_hdrs = cpl_malloc (GRAVI_DATA_SIZE * sizeof(cpl_propertylist*));
@@ -144,18 +146,21 @@ gravi_data * gravi_data_new (int nb_ext)
 void gravi_data_delete (gravi_data *self)
 {
     gravi_msg_function_start(0);
-	
+
     if (self) {
-	  /* Delete main header */
-	  FREE (cpl_propertylist_delete, self->primary_hdr);
-	  /* Delete data */
-	  FREELOOP (cpl_propertylist_delete, self->exts_hdrs, GRAVI_DATA_SIZE);
-	  FREELOOP (cpl_table_delete, self->exts_tbs, GRAVI_DATA_SIZE);
-	  FREELOOP (cpl_imagelist_delete, self->exts_imgl, GRAVI_DATA_SIZE);
-	  /* Delete structure */
-	  FREE (cpl_free, self);
-	}
-	
+        /* Delete main header */
+        FREE (cpl_propertylist_delete, self->primary_hdr);
+        /* Delete data */
+        FREELOOP (cpl_propertylist_delete, self->exts_hdrs, GRAVI_DATA_SIZE);
+        FREELOOP (cpl_table_delete, self->exts_tbs, GRAVI_DATA_SIZE);
+        FREELOOP (cpl_imagelist_delete, self->exts_imgl, GRAVI_DATA_SIZE);
+        /* Delete computed header */
+        if(self->extra_primary_hdr != NULL)
+            FREE (cpl_propertylist_delete, self->extra_primary_hdr);
+        /* Delete structure */
+        FREE (cpl_free, self);
+    }
+
     gravi_msg_function_exit(0);
     return;
 }
@@ -272,6 +277,10 @@ gravi_data * gravi_data_duplicate (const gravi_data *self)
         CPLCHECK_NUL ("Cannot duplicate extension");
     }
 
+    if (self->extra_primary_hdr) {
+        cpl_propertylist_delete (copy->extra_primary_hdr);
+        copy->extra_primary_hdr = cpl_propertylist_duplicate(self->extra_primary_hdr);
+    }
     gravi_msg_function_exit(1);
     return copy;
 }
@@ -845,47 +854,50 @@ int gravi_data_get_size(const gravi_data *self)
 /*----------------------------------------------------------------------------*/
 
 cpl_error_code gravi_data_save_data(gravi_data * self,
-		                            const char * filename,
-		                            unsigned mode)
+                                    const char * filename,
+                                    unsigned mode)
 {
     cpl_ensure_code (self,     CPL_ERROR_NULL_INPUT);
     cpl_ensure_code (filename, CPL_ERROR_NULL_INPUT);
 
-	/* Create the file and save the first property list and table field with
-	 * primary header entries. */
-	if (self->exts_tbs[0] != NULL)
-		cpl_table_save(self->exts_tbs[0], self->primary_hdr,
-					   self->exts_hdrs[0], filename, mode);
-	else if (self->exts_imgl[0] != NULL){
-		cpl_propertylist_save (self->primary_hdr, filename, mode);
-		cpl_imagelist_save (self->exts_imgl[0], filename,
-				   CPL_TYPE_DOUBLE, self->exts_hdrs[0], CPL_IO_EXTEND);
-	}
-	else {
-		cpl_error_set_message(cpl_func, CPL_ERROR_NULL_INPUT,
-				                       "one of the inputs at least is NULL");
-		return CPL_ERROR_NULL_INPUT;
-	}
+    cpl_propertylist *prim_hdr = cpl_propertylist_duplicate(self->primary_hdr);
+    if(self->extra_primary_hdr != NULL)
+        cpl_propertylist_append(prim_hdr, self->extra_primary_hdr);
+    /* Create the file and save the first property list and table field with
+     * primary header entries. */
+    if (self->exts_tbs[0] != NULL)
+        cpl_table_save(self->exts_tbs[0], prim_hdr,
+                       self->exts_hdrs[0], filename, mode);
+    else if (self->exts_imgl[0] != NULL){
+        cpl_propertylist_save (prim_hdr, filename, mode);
+        cpl_imagelist_save (self->exts_imgl[0], filename,
+                            CPL_TYPE_DOUBLE, self->exts_hdrs[0], CPL_IO_EXTEND);
+    }
+    else {
+        cpl_error_set_message(cpl_func, CPL_ERROR_NULL_INPUT,
+                              "one of the inputs at least is NULL");
+        return CPL_ERROR_NULL_INPUT;
+    }
 
 
-	/* Save the remainging extension */
-	for (int i = 1; i < self->nb_ext; i++){
+    /* Save the remainging extension */
+    for (int i = 1; i < self->nb_ext; i++){
         
-		if (gravi_pfits_get_extension_type (self->exts_hdrs[i]) == 2)
-			cpl_table_save(self->exts_tbs[i], NULL,
-		                      self->exts_hdrs[i], filename, CPL_IO_EXTEND);
-		else if (gravi_pfits_get_extension_type (self->exts_hdrs[i]) == 3)
-			cpl_imagelist_save (self->exts_imgl[i], filename,
-					   CPL_TYPE_DOUBLE, self->exts_hdrs[i], CPL_IO_EXTEND);
-		else {
-			cpl_error_set_message(cpl_func, CPL_ERROR_ILLEGAL_INPUT,
-					                "The dimension of the extension is wrong");
-			gravi_data_delete(self);
-			return CPL_ERROR_ILLEGAL_INPUT;
-		}
-	}
+        if (gravi_pfits_get_extension_type (self->exts_hdrs[i]) == 2)
+            cpl_table_save(self->exts_tbs[i], NULL,
+                           self->exts_hdrs[i], filename, CPL_IO_EXTEND);
+        else if (gravi_pfits_get_extension_type (self->exts_hdrs[i]) == 3)
+            cpl_imagelist_save (self->exts_imgl[i], filename,
+                                CPL_TYPE_DOUBLE, self->exts_hdrs[i], CPL_IO_EXTEND);
+        else {
+            cpl_error_set_message(cpl_func, CPL_ERROR_ILLEGAL_INPUT,
+                                  "The dimension of the extension is wrong");
+            gravi_data_delete(self);
+            return CPL_ERROR_ILLEGAL_INPUT;
+        }
+    }
 
-	return CPL_ERROR_NONE;
+    return CPL_ERROR_NONE;
 }
 
 /*----------------------------------------------------------------------------*/
@@ -921,20 +933,25 @@ cpl_error_code gravi_data_save_new (gravi_data 		  * self,
 									cpl_propertylist  * applist,
 									const char        * proCatg)
 {
-	gravi_msg_function_start(0);
-	cpl_ensure_code (filename || frame, CPL_ERROR_NULL_INPUT);
-	cpl_ensure_code (self,              CPL_ERROR_NULL_INPUT);
-	cpl_ensure_code (proCatg,           CPL_ERROR_NULL_INPUT);
-	
-	cpl_frameset * frameset;
-	int ext, i = 0, j = 0;
+    gravi_msg_function_start(0);
+    cpl_ensure_code (filename || frame, CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (self,              CPL_ERROR_NULL_INPUT);
+    cpl_ensure_code (proCatg,           CPL_ERROR_NULL_INPUT);
+
+    cpl_frameset * frameset;
+    int ext, i = 0, j = 0;
     
-	/* If the optional propertylist is not given, we simply
-	 * extract the QC parameters from the saved product. */
-	if (applist == NULL) {
+    /* If the optional propertylist is not given, we simply
+     * extract the QC parameters from the saved product. */
+    if (applist == NULL) {
+        /* FIXME: Computed keywords might be either QC params in
+           the main header or keywords in extra_primary_hdr. In the future
+           only the later should be used */
         applist = gravi_data_get_qc (self);
+        if(self->extra_primary_hdr != NULL)
+            cpl_propertylist_append(applist, self->extra_primary_hdr);
         CPLCHECK_MSG ("Cannot get QC parameters");
-	} else {
+    } else {
         applist = cpl_propertylist_duplicate (applist);
     }
 
@@ -953,7 +970,7 @@ cpl_error_code gravi_data_save_new (gravi_data 		  * self,
       CPLCHECK_MSG ("Cannot set DATE-OBS");
 	}
 
-    /* Create keywords for OIFITS comliancy if VIS product */
+    /* Create keywords for OIFITS compliance if VIS product */
     if (strstr (proCatg,"VIS") || strstr (proCatg,"TF")) {
         cpl_propertylist * tmp = gravi_plist_get_oifits_keywords (hdr);
         cpl_propertylist_append (applist, tmp);
@@ -1774,15 +1791,15 @@ int gravi_data_has_extension (gravi_data * raw_calib, const char * ext_name)
 {
     cpl_ensure (raw_calib, CPL_ERROR_NULL_INPUT, 0);
     cpl_ensure (ext_name,  CPL_ERROR_NULL_INPUT, 0);
-	
-	int test = 1;
-	int ext = _gravi_data_find (raw_calib, ext_name);
 
-	if (ext == raw_calib->nb_ext) {
-		test = 0;
-	}
+    int test = 1;
+    int ext = _gravi_data_find (raw_calib, ext_name);
 
-	return test;
+    if (ext == raw_calib->nb_ext) {
+        test = 0;
+    }
+
+    return test;
 }
 
 /*---------------------------------------------------------------------------*/
@@ -1805,7 +1822,7 @@ int gravi_data_has_type (gravi_data * self, const char * type)
 
     /* Loop on extension */
     for (int ext = 0; ext < gravi_data_get_size (self) ; ext ++) {
-	
+
         cpl_propertylist * plist = gravi_data_get_plist_x (self, ext);
 
         /* Check if EXTNAME or INSNAME contains the 'type' 
@@ -2025,6 +2042,21 @@ cpl_propertylist * gravi_data_get_plist (gravi_data * self,
 	cpl_ensure (pos<self->nb_ext, CPL_ERROR_ILLEGAL_INPUT, NULL);
 	
     return self->exts_hdrs[pos];
+}
+
+/*---------------------------------------------------------------------------*/
+/**
+ * @brief Get the propertylist for additional keywords to the primary header
+ *
+ * @param self      The gravi data to search in.
+ * 
+ * @return The requested propertylist, or @c NULL on error.
+ *
+ */
+cpl_propertylist * gravi_data_get_extra_primary_header(gravi_data * self)
+{
+    cpl_ensure (self,    CPL_ERROR_NULL_INPUT, NULL);
+    return self->extra_primary_hdr;
 }
 
 /*---------------------------------------------------------------------------*/

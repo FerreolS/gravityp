@@ -105,20 +105,20 @@ gravi_data * gravi_data_load_rawframe_ext (cpl_frame * frame,
                                            cpl_frameset * used_frameset,
                                            const char * extensions_regexp);
 
-cpl_error_code gravi_data_save_new (gravi_data 		  * self,
-									cpl_frameset 	  * allframes,
-									const char 		  * filename,
+cpl_error_code gravi_data_save_new (gravi_data        * self,
+                                    cpl_frameset      * allframes,
+                                    const char        * filename,
                                     const char        * suffix,
-									const cpl_parameterlist * parlist,
-									cpl_frameset	  * usedframes,
-									cpl_frame * frame,
-									const char 		  * recipe,
-									cpl_propertylist  * applist,
-									const char        * proCatg);
+                                    const cpl_parameterlist * parlist,
+                                    cpl_frameset      * usedframes,
+                                    cpl_frame         * frame,
+                                    const char        * recipe,
+                                    cpl_propertylist  * applist,
+                                    const char        * proCatg);
 
 cpl_error_code gravi_data_save_data(gravi_data * ,
-		                            const char * ,
-		                            unsigned );
+                                    const char * ,
+                                    unsigned );
 
 /*
  * Element access
@@ -127,7 +127,6 @@ cpl_error_code gravi_data_save_data(gravi_data * ,
 int gravi_data_has_extension (gravi_data * , const char * );
 int gravi_data_has_type (gravi_data * self, const char * type);
 int gravi_data_get_size (const gravi_data *);
-int gravi_data_get_size_table (const gravi_data *);
 
 cpl_propertylist * gravi_data_get_plist(gravi_data *, const char *);
 cpl_propertylist * gravi_data_get_plist_x(gravi_data* , int );
@@ -138,11 +137,11 @@ cpl_imagelist * gravi_data_get_cube_x(gravi_data* , int );
 cpl_table * gravi_data_get_table(gravi_data*, const char *);
 cpl_imagelist * gravi_data_get_cube(gravi_data* , const char * );
 cpl_propertylist * gravi_data_get_oi_plist(gravi_data * ,
-		                     const char * , const char * );
+                                           const char * , const char * );
 cpl_table * gravi_data_get_oi_table(gravi_data * ,
-		                     const char * , const char * );
+                                    const char * , const char * );
 cpl_table ** gravi_data_get_oiwave_tables (gravi_data * data, int type_data, int npol);
-
+cpl_propertylist * gravi_data_get_extra_primary_header(gravi_data *); 
 /*
  * Inserting and removing elements
  */

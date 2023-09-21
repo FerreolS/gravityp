@@ -477,7 +477,7 @@ static int gravity_vis_from_p2vmred(cpl_frameset * frameset,
     }
 
     /* Compute QC parameters */
-    gravi_compute_vis_qc (vis_data);
+    gravi_compute_vis_qc (vis_data, 0);
     
 	/* Perform the normalisation of the SC vis2 and visamp
 	 * to match those of the FT */
