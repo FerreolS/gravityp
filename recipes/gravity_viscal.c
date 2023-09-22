@@ -360,8 +360,6 @@ static int gravity_viscal(cpl_frameset            * frameset,
     
     cpl_propertylist * applist = NULL;
     
-    cpl_errorstate errorstate;
-    
     gravi_data ** vis_calibs = NULL, * vis_calib = NULL, * visphi_calib = NULL, * zero_data = NULL, * tf_science = NULL;
     gravi_data * calibrated = NULL, * vis_data = NULL, * diamcat_data = NULL;
     
@@ -417,8 +415,6 @@ static int gravity_viscal(cpl_frameset            * frameset,
     
     /* Loop on the TF to compute */
     for (j = 0; j < nb_frame_calib; j++) {
-        errorstate = cpl_errorstate_get();
-        
         cpl_msg_info (cpl_func, "*** Compute TF %i over %i ***", j+1, nb_frame_calib);
         
         /* Load the VIS data and compute TF */
@@ -497,8 +493,6 @@ static int gravity_viscal(cpl_frameset            * frameset,
     
     /* Loop on the TF to load */
     for (j = 0; j < nb_frame_tf; j++) {
-        errorstate = cpl_errorstate_get();
-        
         cpl_msg_info (cpl_func," %i over %i", j+1, nb_frame_tf);
         
         frame = cpl_frameset_get_position (tf_calib_frameset, j);
@@ -538,8 +532,6 @@ static int gravity_viscal(cpl_frameset            * frameset,
      */
     
     if ( nb_calib > 1 ) { 
-      errorstate = cpl_errorstate_get();
-      
       cpl_msg_info (cpl_func, "*** Compute the zero of the metrology -- FIXME: to be done ***");
       zero_data = gravi_compute_zp (vis_calibs, nb_calib);
       
@@ -562,7 +554,6 @@ static int gravity_viscal(cpl_frameset            * frameset,
     
     /* Loop on the SCI files to calibrate */
     for (i = 0; i < nb_frame_sci; i++){
-        errorstate = cpl_errorstate_get();
         current_frameset = cpl_frameset_duplicate (used_frameset);
         
         cpl_msg_info (cpl_func, "*** Calibration of file %i over %i ***", i+1, nb_frame_sci);
