@@ -221,7 +221,7 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
     while ((frame = cpl_frameset_iterator_get(it)) != NULL) {
         if (cpl_frame_get_group(frame) == CPL_FRAME_GROUP_RAW)
         {
-            snprintf(prov_keyword, 7, "PROV%d",i_prov);
+            snprintf(prov_keyword, 7, "PROV%zu",i_prov);
             cpl_propertylist_update_string(idp_plist, prov_keyword, cpl_frame_get_filename(frame));
             i_prov++;
         }
