@@ -180,16 +180,24 @@ gravi_data * gravi_compute_dark (gravi_data * raw_data)
 		cpl_image_power (stdev_img, 0.5);
 		CPLCHECK_NUL ("Cannot compute the STD of the DARK");
 		
-		/* Compute the QC parameters RMS and MEDIAN */
-		cpl_msg_info (cpl_func, "Compute QC parameters");
-		double mean_qc = cpl_image_get_median (median_img);
-		double darkrms = cpl_image_get_median (stdev_img);
-		cpl_propertylist_update_double (dark_header, isSky?QC_MEANSKY_SC:QC_MEANDARK_SC, mean_qc);
-		cpl_propertylist_update_double (dark_header, isSky?QC_SKYRMS_SC:QC_DARKRMS_SC, darkrms);
+        /* Compute the QC parameters RMS, MEDIAN, ZERO.NB */
+        cpl_msg_info (cpl_func, "Compute QC parameters");
+        double mean_qc = cpl_image_get_median (median_img);
+        double darkrms = cpl_image_get_median (stdev_img);
+        cpl_propertylist_update_double (dark_header, isSky?QC_MEANSKY_SC:QC_MEANDARK_SC, mean_qc);
+        cpl_propertylist_update_double (dark_header, isSky?QC_SKYRMS_SC:QC_DARKRMS_SC, darkrms);
+        cpl_imagelist * acq_imglist = gravi_data_get_cube (raw_data, GRAVI_IMAGING_DATA_ACQ_EXT);
+        size_t acq_dark_zero_count = 0;
+        for(int i=0; i < cpl_imagelist_get_size(acq_imglist); i++)
+        {
+            cpl_mask * acq_zero_mask = cpl_mask_threshold_image_create(cpl_imagelist_get(acq_imglist, i), -FLT_MIN,  FLT_MIN);
+            acq_dark_zero_count+= cpl_mask_count(acq_zero_mask);
+        }
+        cpl_propertylist_update_double (dark_header, QC_ACQ_ZERO_NB, acq_dark_zero_count);
 
-		/* Verbose */
-	    cpl_msg_info (cpl_func, "QC_MEDIAN%s_SC = %e",isSky?"SKY":"DARK", mean_qc);
-	    cpl_msg_info (cpl_func, "QC_%sRMS_SC = %e",isSky?"SKY":"DARK", darkrms);
+        /* Verbose */
+        cpl_msg_info (cpl_func, "QC_MEDIAN%s_SC = %e",isSky?"SKY":"DARK", mean_qc);
+        cpl_msg_info (cpl_func, "QC_%sRMS_SC = %e",isSky?"SKY":"DARK", darkrms);
 
 		/* Put the data in the output table : dark_map */
 		cpl_propertylist * img_plist = gravi_data_get_plist (raw_data, GRAVI_IMAGING_DATA_SC_EXT);
