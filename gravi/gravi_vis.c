@@ -2423,7 +2423,7 @@ cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data, cpl_frameset* frames
 
 
     cpl_propertylist_update_string (plist, "ESO QC FIELD MODE", 
-        gravi_pfits_get_mode_name(plist));
+        gravi_pfits_get_mode_name(vis_header));
     cpl_propertylist_set_comment (plist, "ESO QC FIELD MODE", "Field mode");
     
     CPLCHECK_MSG("Cannot create QC parameters");
