@@ -237,7 +237,7 @@ static int gravity_viscal_create(cpl_plugin * plugin)
     cpl_parameterlist_append (recipe->parameters, p);
 
     p = cpl_parameter_new_value ("gravity.viscal.separate-phase-calib", CPL_TYPE_BOOL,
-                                 "enable use of distinct calibrator for VISPHI/T3PHI",
+                                 "enable use of distinct calibrator for VISPHI",
                                  "gravity.viscal", FALSE);
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "separate-phase-calib");
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
