@@ -377,7 +377,13 @@ static int gravity_p2vm(cpl_frameset            * frameset,
     /* Extract DARK frameset */
     dark_frameset = gravi_frameset_extract_dark_data (frameset);
     darkcalib_frameset = gravi_frameset_extract_dark_map (frameset);
-    
+    if ( cpl_frameset_get_size (dark_frameset) + 
+         cpl_frameset_get_size (darkcalib_frameset) !=1) {
+        cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
+            "Either a single DARK or DARK_RAW needs to be in the frameset");
+        goto cleanup;
+    }
+
     /* Extract BAD frameset */
     badcalib_frameset = gravi_frameset_extract_bad_map (frameset);
     if ( cpl_frameset_is_empty (badcalib_frameset) && cpl_frameset_is_empty (dark_frameset) &&
