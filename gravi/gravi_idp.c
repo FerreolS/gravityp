@@ -58,9 +58,9 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
     cpl_table * oi_wave_SC_allpol = cpl_table_duplicate(gravi_data_get_oi_wave (vis_data, GRAVI_SC, 0, npol_sc));
 
     for (int pol = 1; pol < npol_sc; pol++) {
-        cpl_table_insert(oi_vis2_SC_allpol,cpl_table_duplicate(gravi_data_get_oi_vis2 (vis_data, GRAVI_SC, pol, npol_sc)), cpl_table_get_nrow(oi_vis2_SC_allpol));
-        cpl_table_insert(oi_T3_SC_allpol,cpl_table_duplicate(gravi_data_get_oi_t3 (vis_data, GRAVI_SC, pol, npol_sc)), cpl_table_get_nrow(oi_T3_SC_allpol));
-        cpl_table_insert(oi_wave_SC_allpol,cpl_table_duplicate(gravi_data_get_oi_wave (vis_data, GRAVI_SC, pol, npol_sc)), cpl_table_get_nrow(oi_wave_SC_allpol));
+        cpl_table_insert(oi_vis2_SC_allpol, gravi_data_get_oi_vis2 (vis_data, GRAVI_SC, pol, npol_sc), cpl_table_get_nrow(oi_vis2_SC_allpol));
+        cpl_table_insert(oi_T3_SC_allpol, gravi_data_get_oi_t3 (vis_data, GRAVI_SC, pol, npol_sc), cpl_table_get_nrow(oi_T3_SC_allpol));
+        cpl_table_insert(oi_wave_SC_allpol, gravi_data_get_oi_wave (vis_data, GRAVI_SC, pol, npol_sc), cpl_table_get_nrow(oi_wave_SC_allpol));
     }
 
     /* Compute QC values that aggregate on polarizations */
@@ -153,7 +153,9 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
     cpl_propertylist_set_comment (idp_plist, "OBID1", "Obseration Block ID");
 
     /* NCOMBINE */
-    cpl_size nscience = cpl_frameset_get_size(gravi_frameset_extract_science_data(frameset));
+    cpl_frameset * science_frames = gravi_frameset_extract_science_data(frameset);
+    cpl_size nscience = cpl_frameset_get_size(science_frames);
+    cpl_frameset_delete(science_frames);
     if(!cpl_propertylist_has(header, "NCOMBINE"))
     {
         if (nscience != 0)
@@ -227,6 +229,7 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
         }
         cpl_frameset_iterator_advance(it, 1);
     }
+    cpl_frameset_iterator_delete(it);
 
     /* Delete scratch tables */
     cpl_table_delete(oi_vis2_SC_allpol);
