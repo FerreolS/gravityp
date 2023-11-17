@@ -639,11 +639,11 @@ cpl_parameter * gravi_parameter_add_metrology (cpl_parameterlist *self)
 	cpl_parameterlist_append (self, p);
     
     
-	p = cpl_parameter_new_value ("gravity.metrology.smooth-faint", CPL_TYPE_INT,
-                                 "Adds an additional factor to the smoothing of \n"
-                   	   	   	   	 "the metrology voltages in faint mode.",
-                                 "gravity.metrology", 25);
-	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "smooth-faint");
+	p = cpl_parameter_new_value ("gravity.metrology.use-faint-met", CPL_TYPE_BOOL,
+                                 "In FAINT also the faint parts of the metrology \n"
+                   	   	   	   	 "are used, not only the bright periods.",
+                                 "gravity.metrology", TRUE);
+	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "use-faint-met");
 	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
 	cpl_parameterlist_append (self, p);
 

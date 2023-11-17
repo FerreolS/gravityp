@@ -1973,8 +1973,6 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
     double repeat1=0;
     double repeat2=0;
     
-    //int smooth_faint = gravi_param_get_int(parlist, "gravity.metrology.smooth-faint");
-
     double preswitch_delay = gravi_param_get_int(parlist, "gravity.metrology.preswitch-delay");
     double postswitch_delay = gravi_param_get_int(parlist, "gravity.metrology.postswitch-delay");
 
@@ -2366,8 +2364,6 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
                       gravi_array_phase_unwrap (phase_array);
                       
                       cpl_array_abs(abs_array);
-                      cpl_array_multiply (abs_array, bright_array);
-
 
                       /* get the phase at correct time to compare with reference phase */
                       double phase_reference = cpl_array_get_double(phase_array, met_date_row, NULL);
@@ -2708,6 +2704,7 @@ cpl_error_code gravi_metrology_tac (cpl_table * metrology_table,
  * @param vismet_table     The input/output OI_VIS_MET table
  * @param header           The corresponding HEADER
  * @param use_fiber_dxy    Use the fiber position in OPD_TEL_CORR
+ * @param use_faint_met    Use the faint periods of metrology
  *
  * FE start
  * "tel" referes to "GV" all through this function
@@ -2728,6 +2725,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     char qc_name[100];
     
     /* get the options */
+    int use_faint_met = gravi_param_get_bool (parlist, "gravity.metrology.use-faint-met");
     int use_fiber_dxy = gravi_param_get_bool (parlist, "gravity.metrology.use-fiber-dxy");
     int use_met_rtc = gravi_param_get_bool (parlist, "gravity.metrology.use-met-rtc");
 
@@ -2740,6 +2738,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
 	double * phase_fc_2;
 	double ** phase_tel;
 	double ** amplitude_tel;
+	int * met_flag;
 
 	if (use_met_rtc == 0) {
         cpl_msg_info (cpl_func,"Using DRS metrology algorithm");
@@ -2768,6 +2767,18 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
 
     amplitude_tel = gravi_table_get_data_array_double (vismet_table, "AMPLITUDE_TEL");
     CPLCHECK_MSG ("Cannot get AMPLITUDE_TEL from vismet_table");
+
+    cpl_msg_info (cpl_func,"G-FAINT: create flagged amplitude");
+    met_flag = cpl_table_get_data_int (vismet_table, "FLAG_DRS");
+    CPLCHECK_MSG ("Cannot get FLAG_DRS from vismet_table");
+    
+    gravi_table_init_column_array (vismet_table, "AMPLITUDE_TEL_FLAG", "V", CPL_TYPE_DOUBLE, ndiode);
+    double ** amplitude_tel_flagged = gravi_table_get_data_array_double (vismet_table, "AMPLITUDE_TEL_FLAG");
+    for (cpl_size row = 0; row < nrow_met*ntel; row++) {
+        for (int diode = 0; diode < ndiode; diode++)
+            amplitude_tel_flagged[row][diode]= amplitude_tel[row][diode] * met_flag[row];
+        }
+    CPLCHECK_MSG ("Cannot create flagged amplitude");
     
     /* get the laser wavelength data */
     double lambda_met_mean =  gravi_pfits_get_met_wavelength_mean(header, metrology_table);
@@ -3217,20 +3228,24 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         double dit_sc = gravi_pfits_get_dit_sc (header);
         Nsmooth_astig = (int) 250 * 4 * (dit_sc +1.0);
         Nsmooth_sep = (int) 250 * 2 * (dit_sc + 1.0);
-        Nsmooth_tel = (int) 250 * 2* (dit_sc + 1.0);
+        if ( use_faint_met == 1) {
+          Nsmooth_tel = 400;
+        } else {
+          Nsmooth_tel = (int) 250 * 2* (dit_sc + 1.0);
+        }
     }
         
     for (int tel = 0; tel < ntel; tel++)
     {
+        cpl_msg_info (cpl_func,"G-FAINT: Use flagged amplitude for astigmatism");
         cpl_msg_info (cpl_func,"Smoothing astigmatism by %d metrology DITS (tel=%i)",Nsmooth_astig*2+1,tel);
-        
         cpl_array * phasor_array = cpl_array_new(nrow_met,CPL_TYPE_DOUBLE_COMPLEX);
         for (cpl_size row = 0; row < nrow_met; row++)
         {
-            double amplitude_ast = amplitude_tel[row*ntel+tel][3] *
-            amplitude_tel[row*ntel+tel][2] *
-            amplitude_tel[row*ntel+tel][1] *
-            amplitude_tel[row*ntel+tel][0];
+            double amplitude_ast = amplitude_tel_flagged[row*ntel+tel][3] *
+            amplitude_tel_flagged[row*ntel+tel][2] *
+            amplitude_tel_flagged[row*ntel+tel][1] *
+            amplitude_tel_flagged[row*ntel+tel][0];
             double phase_ast = phase_telfc_corr[row*ntel+tel][3] -
             phase_telfc_corr[row*ntel+tel][2] +
             phase_telfc_corr[row*ntel+tel][1] -
@@ -3258,14 +3273,16 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
         cpl_array * phasor_array_Y = cpl_array_new(nrow_met,CPL_TYPE_DOUBLE_COMPLEX);
         
         /* get smoothed value of X separation angle */
+        cpl_msg_info (cpl_func,"G-FAINT: Use flagged amplitude for sep. angle");
+        cpl_msg_info (cpl_func,"Smoothing X and Y sep by %d metrology DITS (tel=%i)",Nsmooth_sep*2+1,tel);
         for (cpl_size row = 0; row < nrow_met; row++)
         {
             double phase_ast_2=cpl_array_get_double(phase_astig_corr_array,row,NULL)/2.;
             
-            double amplitude_sep = amplitude_tel[row*ntel+tel][3] *
-            amplitude_tel[row*ntel+tel][2] *
-            amplitude_tel[row*ntel+tel][1] *
-            amplitude_tel[row*ntel+tel][0];
+            double amplitude_sep = amplitude_tel_flagged[row*ntel+tel][3] *
+            amplitude_tel_flagged[row*ntel+tel][2] *
+            amplitude_tel_flagged[row*ntel+tel][1] *
+            amplitude_tel_flagged[row*ntel+tel][0];
 
             double phase_sepX1 = phase_telfc_corr[row*ntel+tel][3] -
             phase_telfc_corr[row*ntel+tel][2] - phase_ast_2;
@@ -3286,8 +3303,6 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
             cpl_array_set_double_complex(phasor_array_Y,row,phase_sepY);
             
         }
-
-        cpl_msg_info (cpl_func,"Smoothing X and Y sep by %d metrology DITS (tel=%i)",Nsmooth_sep*2+1,tel);
 
         double complex mean_phasor_X = cpl_array_get_mean_complex (phasor_array_X);
         cpl_array_multiply_scalar_complex (phasor_array_X, conj(mean_phasor_X));
@@ -3319,13 +3334,25 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
             phasor_telfc_corr_array[diode] = cpl_array_new(nrow_met,CPL_TYPE_DOUBLE_COMPLEX);
 
         cpl_msg_info(cpl_func,"Computing the PHASE_TELFC_CORR_XY column");
+        if ( use_faint_met == 1) {
+            cpl_msg_info(cpl_func,"G-FAINT: Use faint amplitude for PHASE_TELFC_CORR_XY");
+        } else {
+            cpl_msg_info(cpl_func,"G-FAINT: Use flagged amplitude for PHASE_TELFC_CORR_XY");
+        }
         for (cpl_size row = 0; row < nrow_met; row++)
         {
-            
-            double amplitude_diodes = amplitude_tel[row*ntel+tel][3] +
-            amplitude_tel[row*ntel+tel][2] +
-            amplitude_tel[row*ntel+tel][1] +
-            amplitude_tel[row*ntel+tel][0];
+            double amplitude_diodes; 
+            if ( use_faint_met == 1) {
+              amplitude_diodes = amplitude_tel[row*ntel+tel][3] +
+              amplitude_tel[row*ntel+tel][2] +
+              amplitude_tel[row*ntel+tel][1] +
+              amplitude_tel[row*ntel+tel][0];
+            } else {
+              amplitude_diodes = amplitude_tel_flagged[row*ntel+tel][3] +
+              amplitude_tel_flagged[row*ntel+tel][2] +
+              amplitude_tel_flagged[row*ntel+tel][1] +
+              amplitude_tel_flagged[row*ntel+tel][0];
+            }
             phase_telfc_corr_xy[row*ntel+tel][0]=
             -cpl_array_get_double(phase_astig_corr_array,row,NULL)/4
             +cpl_array_get_double(phase_sepX_corr_array,row,NULL)/2
@@ -3743,6 +3770,7 @@ cpl_error_code gravi_metrology_telfc (cpl_table * metrology_table,
     cpl_array_delete(northangle_array);
     FREE (cpl_free, phase_tel);
     FREE (cpl_free, amplitude_tel);
+    FREE (cpl_free, amplitude_tel_flagged);
     FREE (cpl_free, opd_tel);
     FREE (cpl_free, opd_tel_corr);
     FREE (cpl_free, opd_telfc_corr);
