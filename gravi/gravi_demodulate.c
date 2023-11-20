@@ -17,10 +17,16 @@
  * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
  */
 
-/**
+ /**
  * @defgroup gravi_demodulate  Demodulation of metrology data
  *
- * TODO description 
+ * This file contains code to remove the modulation signal from the metrology data.
+ * The main function @c gravi_metrology_demodulate is called by the gravity_vis recipe
+ * before proceeding with the standard metrology reduction.
+ * The demodulation is accomplished by splitting the exposure into chunks of no more
+ * than 100s duration (over which the change in modulation parameters due to sky motion
+ * can be safely neglected), fitting a model for the modulation to each chunk, and
+ * removing the modelled component.
  */
 
 /*-----------------------------------------------------------------------------
