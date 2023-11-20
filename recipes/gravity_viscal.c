@@ -230,7 +230,7 @@ static int gravity_viscal_create(cpl_plugin * plugin)
     /* EKW 27/11/2019 smoothing for e.g. IMAGING_PHASE/MEDIUM */
     p = cpl_parameter_new_value ("gravity.viscal.smoothing", CPL_TYPE_BOOL,
                                  "control smoothing of transfer function (TF)"
-				 "TRUE : do smoothing -  FALSE : Skip smoothing",
+				 "TRUE do smoothing -  FALSE Skip smoothing",
                                  "gravity.viscal", TRUE);
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "smoothing");
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
