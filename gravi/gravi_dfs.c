@@ -663,7 +663,21 @@ cpl_parameter * gravi_parameter_add_metrology (cpl_parameterlist *self)
 	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
 	cpl_parameterlist_append (self, p);
 
-    return p;
+  p = cpl_parameter_new_value ("gravity.metrology.demodulate-metrology", CPL_TYPE_BOOL,
+                                 "Perform demodulation on the raw metrology data.",
+                                 "gravity.metrology", CPL_TRUE);
+	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "demodulate-metrology");
+	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	cpl_parameterlist_append (self, p);
+
+  p = cpl_parameter_new_value ("gravity.metrology.use-dark-offsets", CPL_TYPE_BOOL,
+                                 "Use diode zeros measured from the DARK when demodulating metrology.",
+                                 "gravity.metrology", CPL_TRUE);
+	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "use-dark-offsets");
+	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	cpl_parameterlist_append (self, p);
+
+  return p;
 }
     
 cpl_parameter * gravi_parameter_add_extract (cpl_parameterlist *self)

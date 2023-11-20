@@ -57,6 +57,7 @@
 #include "gravi_acqcam.h"
 #include "gravi_eop.h"
 #include "gravi_metrology.h"
+#include "gravi_demodulate.h"
 
 #include "gravi_signal.h"
 #include "gravi_vis.h"
@@ -435,7 +436,7 @@ static int gravity_vis(cpl_frameset * frameset,
 
     recipe_frameset = gravi_frameset_extract_fringe_data (frameset);
     sky_frameset = gravi_frameset_extract_sky_data (frameset);
-    
+
 	/* To use this recipe the frameset must contain the p2vm, wave and
 	 * gain calibration file. */
     if ( cpl_frameset_get_size (p2vmcalib_frameset) !=1 ||
@@ -772,11 +773,20 @@ static int gravity_vis(cpl_frameset * frameset,
 			                     "gravity_vis", NULL, GRAVI_PREPROC);
 			CPLCHECK_CLEAN ("Cannot save the PREPROC product");
 		}
-        
+
         /* Copy metrology and subtract background to preproc */
         gravi_data_move_ext (preproc_data, data, GRAVI_METROLOGY_EXT);
-        if (dark_map != NULL)
+        cpl_boolean subtract_met_dark = dark_map != NULL && cpl_parameter_get_bool(
+            cpl_parameterlist_find_const(parlist, "gravity.metrology.use-dark-offsets"));
+        
+        if (subtract_met_dark)
             gravi_subtract_met_dark (preproc_data, dark_map);
+
+        /* Demodulate the metrology if requested */
+        if (gravi_param_get_bool (parlist, "gravity.metrology.demodulate-metrology")) {
+            gravi_metrology_demodulate(preproc_data, subtract_met_dark);
+            CPLCHECK_CLEAN ("Cannot demodulate metrology");
+        }
         
         /* Move extensions from raw_data and delete it */
         gravi_data_move_ext (preproc_data, data, GRAVI_ARRAY_GEOMETRY_EXT);
