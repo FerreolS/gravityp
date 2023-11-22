@@ -242,8 +242,8 @@ double gravi_table_get_column_flagged_mean (cpl_table * table, const char * name
           sum += cpl_array_get_double(arrays[r], el, &valid);
           valid_elem++;
         } 
-
-    mean = sum / valid_elem;
+    if(valid_elem)
+      mean = sum / valid_elem;
   }
   else if (depth == 0 && type == CPL_TYPE_DOUBLE) {
     double * data = cpl_table_get_data_double (table, name);
