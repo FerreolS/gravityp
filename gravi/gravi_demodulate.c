@@ -164,8 +164,13 @@ cpl_error_code gravi_metrology_demodulate (gravi_data *met_data, cpl_boolean zer
     gravi_msg_function_start(1);
     cpl_ensure_code(met_data, CPL_ERROR_NULL_INPUT);
 
-    cpl_boolean modulation_active = cpl_propertylist_get_bool(gravi_data_get_header(met_data), "ESO INS PMC1 MODULATE");
-    CPLCHECK_INT("Cannot determine the metrology modulation status");
+    cpl_boolean modulation_active;
+    if (cpl_propertylist_has(gravi_data_get_header(met_data), "ESO INS PMC1 MODULATE")) {
+	   modulation_active = cpl_propertylist_get_bool(gravi_data_get_header(met_data), "ESO INS PMC1 MODULATE");
+    } else {
+	    modulation_active = 0;
+	    cpl_msg_warning (cpl_func, "Can't find modulation keyword, use false");
+    }
 
     cpl_table *met_data_table = gravi_data_get_table(met_data, GRAVI_METROLOGY_EXT);
 
