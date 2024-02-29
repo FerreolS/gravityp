@@ -43,9 +43,6 @@
 #include <string.h>
 #include <stdio.h>
 #include <time.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netdb.h>
 #include <unistd.h>
 
 #include <erfa.h>
@@ -60,27 +57,17 @@
                              Private prototypes and define
  -----------------------------------------------------------------------------*/
 
-#define LINE_SIZE 188
-#define BUFFER_LENGTH 32768
-
-char * gravity_eop_get_ftp_file (int socketfd, int * data_length);
-int gravity_get_socket_connection (const char * host, const char * port);
-int gravity_eop_send_ftpcmd (int sockfd, const char *cmd);
-int gravity_eop_send_pasv (int sockfd, const char *cmd);
-int gravity_eop_ftp_reply (int sockfd, char ** message);
-int gravity_eop_verify_ftp_code (char * msg, int length);
 
 cpl_error_code gravi_eop_interpolate (cpl_size n, double *mjd,
-									  double *pmx, double *pmy,
-									  double *dut,
-                                      cpl_table * eop_table,
+                                      double *pmx, double *pmy,
+                                      double *dut, cpl_table * eop_table,
                                       cpl_propertylist * header);
 
 void eraAtboq (double rc, double dc, eraASTROM *astrom, double enuob[3]);
 void eraAtcoq (double rc, double dc, double pmr, double pmd, double px,
-			   double rv, eraASTROM *astrom, double enuob[3]);
+               double rv, eraASTROM *astrom, double enuob[3]);
 void dtp2s (double xi, double eta, double raz,
-			double decz, double *ra, double *dec);
+            double decz, double *ra, double *dec);
 void rotate_vector (double in[3], double angle, double axis[3], double out[3]);
 void difference (double x[3], double y[3], double z[3]);
 void multiply (double xyz[3], double factor);
@@ -122,9 +109,9 @@ cpl_error_code gravi_eop_interpolate (cpl_size n, double *mjd,
       cpl_vector_get_max (vmjd) > cpl_table_get_column_max (eop_table, "MJD"))
   {
     cpl_msg_warning (cpl_func, "Some MJD are outside the EOP_PARAM range (MJD=%.2f, %.2f..%.2f). Use EOP and DUT=0.0s",
-					 cpl_vector_get_mean (vmjd),
-					 cpl_table_get_column_min (eop_table, "MJD"),
-					 cpl_table_get_column_max (eop_table, "MJD"));
+                     cpl_vector_get_mean (vmjd),
+                     cpl_table_get_column_min (eop_table, "MJD"),
+                     cpl_table_get_column_max (eop_table, "MJD"));
     cpl_vector_unwrap (vmjd);
     cpl_vector_unwrap (vpmx);
     cpl_vector_unwrap (vpmy);
@@ -167,8 +154,8 @@ cpl_error_code gravi_eop_interpolate (cpl_size n, double *mjd,
   
   /* Print diagnostics */
   cpl_msg_info(cpl_func, "EOP averages: MJD=%.2f DUT1=%.3f PMX=%.3farcsec PMY=%.3farcsec",
-			   cpl_vector_get_mean (vmjd), cpl_vector_get_mean (vdut),
-			   cpl_vector_get_mean (vpmx), cpl_vector_get_mean (vpmy));
+               cpl_vector_get_mean (vmjd), cpl_vector_get_mean (vdut),
+               cpl_vector_get_mean (vpmx), cpl_vector_get_mean (vpmy));
 
   /* Unwrap vectors */
   cpl_vector_unwrap (vmjd);
@@ -202,16 +189,16 @@ void eraAtboq (double rc, double dc, eraASTROM *astrom, double enuob[3])
     eraAtioq (ri, di, astrom, &aob, &zob, &hob, &dob, &rob);
 
     /* Convert from equatorial to cartesian */
-	eraS2c(CPL_MATH_PI/2.0-aob, CPL_MATH_PI/2.0-zob, enuob);
+    eraS2c(CPL_MATH_PI/2.0-aob, CPL_MATH_PI/2.0-zob, enuob);
 }
 
 void rotate_vector (double in[3], double angle, double axis[3], double out[3])
 {
-	double rv[3];
-	double rm[3][3];
-	eraSxp(angle, axis, rv);
-	eraRv2m(rv, rm);
-	eraRxp(rm, in, out);
+    double rv[3];
+    double rm[3][3];
+    eraSxp(angle, axis, rv);
+    eraRv2m(rv, rm);
+    eraRxp(rm, in, out);
 }
 
 /*----------------------------------------------------------------------------*/
@@ -533,456 +520,6 @@ cpl_error_code gravi_compute_pointing_uv (gravi_data * p2vmred_data, gravi_data 
 
   gravi_msg_function_exit(1);
   return CPL_ERROR_NONE;
-}
-
-/*----------------------------------------------------------------------------*/
-/**
- * @brief    Retrieve the Earth Orientation Parameters computed by IERS
- * 
- * @param    eop_host     The FTP host to retrieve the data from
- * @param    eop_urlpath  The full path to the data file
- * @param    data_length  The total size of the data buffer returned (returned)
- * @return   A string buffer with the full contents of the data
- * 
- * This function will connect to a given FTP host specified in eop_host
- * and the given eop_urlpath and retrieve the ascii file with the EOP data.
- * 
- * Possible #_cpl_error_code_ set in this function:
- * - CPL_ERROR_NULL_INPUT if eop_host, data_length or eop_urlpath are NULL
- * - CPL_ERROR_DATA_NOT_FOUND if the connection to the host cannot be 
- *   successfully established.
- * - CPL_ERROR_DATA_NOT_FOUND if the FTP transaction cannot be fullfilled.
- */
-/*----------------------------------------------------------------------------*/
-
-char * gravity_eop_download_finals2000A (const char * eop_host,
-                                         const char * eop_urlpath,
-                                         int * data_length)
-{
-    gravi_msg_function_start(1);
-	
-    const char ftp_port[] = "21";
-    int cmd_socket, data_socket;
-
-    /* Check and dump the input */
-    cpl_ensure (eop_host,    CPL_ERROR_NULL_INPUT, NULL);
-    cpl_ensure (eop_urlpath, CPL_ERROR_NULL_INPUT, NULL);
-    cpl_ensure (data_length, CPL_ERROR_NULL_INPUT, NULL);
-    cpl_msg_debug (cpl_func, "Using URL ftp://%s%s", eop_host, eop_urlpath);
-
-    /* Getting the communication socket. */
-    cmd_socket = gravity_get_socket_connection(eop_host, ftp_port);
-    if (cmd_socket == 0) 
-    {
-        char * msg = cpl_malloc(strlen(eop_host) + 31);
-        snprintf(msg, strlen(eop_host) + 30, 
-                 "Couldn't connect to the host %s", eop_host);
-        cpl_error_set_message(cpl_func, CPL_ERROR_DATA_NOT_FOUND, "%s", msg);
-        cpl_free(msg);
-        return NULL;
-    }
-
-    if(!gravity_eop_ftp_reply(cmd_socket, NULL))
-    {
-        cpl_error_set_message(cpl_func, CPL_ERROR_DATA_NOT_FOUND,
-            "FTP server didn't reply");
-        close(cmd_socket);
-        return NULL;
-    }
-    cpl_msg_debug(cpl_func, "SEND");
-    if(!gravity_eop_send_ftpcmd(cmd_socket, "USER anonymous\n"))
-    {
-        cpl_error_set_message(cpl_func, CPL_ERROR_DATA_NOT_FOUND,
-            "Failed to send anonymous user");
-        close(cmd_socket);
-        return NULL;
-    }
-    if(!gravity_eop_send_ftpcmd(cmd_socket, "PASS ftp@eso.org\n"))
-    {
-        cpl_error_set_message(cpl_func, CPL_ERROR_DATA_NOT_FOUND,
-            "Failed to send pasword");
-        close(cmd_socket);
-        return NULL;
-    }
-    int data_port = gravity_eop_send_pasv(cmd_socket, "PASV\n");
-    if(!data_port)
-    {
-        cpl_error_set_message(cpl_func, CPL_ERROR_DATA_NOT_FOUND,
-            "Failed to get data port");
-        close(cmd_socket);
-        return NULL;
-    }
-
-    /* Getting the data socket in passive mode */
-    char data_port_s[256];
-    snprintf(data_port_s, 255, "%d", data_port);
-    data_socket = gravity_get_socket_connection(eop_host, data_port_s);
-    if (data_socket == 0) 
-    {
-        cpl_error_set_message(cpl_func, CPL_ERROR_DATA_NOT_FOUND,
-            "Couldn't open ftp data connection");
-        return NULL;
-    }
-    
-    /* Retrieving the file */
-    if(!gravity_eop_send_ftpcmd(cmd_socket, "TYPE I\n"))
-        return NULL;
-    char * retr_command = cpl_malloc(strlen(eop_urlpath) + 7);
-    snprintf(retr_command, strlen(eop_urlpath) + 7, "RETR %s\n", eop_urlpath);
-    if(!gravity_eop_send_ftpcmd(cmd_socket, retr_command))
-    {
-        close(cmd_socket);
-        close(data_socket);
-        cpl_free(retr_command);
-        return NULL;
-    }
-    cpl_free(retr_command);
-
-    char * data_eop = gravity_eop_get_ftp_file(data_socket, data_length);
-
-    /* Close connection and free resources */
-    close(cmd_socket);
-    close(data_socket);
-
-    gravi_msg_function_exit(1);
-    return data_eop;
-}
-
-int gravity_get_socket_connection (const char * host, const char * port)
-{
-    int sockfd = 0;
-    gravi_msg_function_start(0);
-
-    /* IP Name resolution */
-
-    /* Set the hints. First we initialize to 0 the structure.
-       Only retrieve IPv4 or IPv6 if configured in the system */
-    struct addrinfo hints = { 0 };
-    hints.ai_family = AF_UNSPEC;
-    hints.ai_flags = AI_ADDRCONFIG;
-    hints.ai_socktype = SOCK_STREAM;
-    /* Getting the list of IP addresses */
-    cpl_msg_debug(cpl_func, "Getting IP");
-    struct addrinfo * addr_list = NULL;
-    // Note that after this call errno might be set to non-zero values.
-    // Checking errno is only meaningful if getaddrinfo itself returns EAI_SYSTEM
-    // https://stackoverflow.com/questions/60288845/getaddrinfo-returns-0-success-but-sets-errno-to-einval-22
-    int status = getaddrinfo(host, port, &hints, &addr_list);
-    if (status != 0) {
-        cpl_error_set_message(cpl_func, CPL_ERROR_DATA_NOT_FOUND,
-            "Couldn't get address for host");
-        if (addr_list != NULL) {
-            freeaddrinfo(addr_list);
-        }
-        return 0;
-    }
-
-    /* Connecting to the server for the FTP commands.
-       The first address to which we can connect will be used.
-       addr_list is a linked list */
-    cpl_msg_debug(cpl_func, "Connecting to server");
-    struct addrinfo *this_addr;
-    for(this_addr = addr_list; this_addr != NULL; this_addr = this_addr->ai_next)
-    {
-        /* Opening the socket */
-        if ((sockfd = socket(this_addr->ai_family, this_addr->ai_socktype,
-                this_addr->ai_protocol)) == -1) {
-            continue;
-        }
-
-        if (connect(sockfd, this_addr->ai_addr, this_addr->ai_addrlen) == -1) {
-            close(sockfd);
-            if(errno == ECONNREFUSED)
-                errno = 0; //Reset errno if no remote partner at this address
-            continue;
-        }
-        cpl_msg_debug(cpl_func, "Connection established");
-        break;
-    }
-
-    if (this_addr == NULL)
-    {
-        cpl_error_set_message(cpl_func, CPL_ERROR_DATA_NOT_FOUND,
-            "Couldn't connect to the host");
-        if (addr_list != NULL) {
-            freeaddrinfo(addr_list);
-        }
-        return 0;
-    }
-
-    if (addr_list != NULL) {
-        freeaddrinfo(addr_list);
-    }
-
-    gravi_msg_function_exit(0);
-    return sockfd;
-}
-
-int gravity_eop_send_ftpcmd (int sockfd, const char *cmd)
-{
-    gravi_msg_function_start(0);
-    cpl_msg_debug(cpl_func, "Sending FTP command <<%s>>", cmd);
-
-    if(write(sockfd, cmd, strlen(cmd))==0)
-    {
-        cpl_error_set_message(cpl_func, CPL_ERROR_DATA_NOT_FOUND,
-            "Problem during FTP transaction");
-        return 0;
-    }
-
-    char * msg;
-    if(!gravity_eop_ftp_reply(sockfd, &msg))
-    {
-        cpl_error_set_message(cpl_func, CPL_ERROR_DATA_NOT_FOUND,
-            "Problem during FTP transaction");
-        return 0;
-    }
-    if (msg != NULL)
-        free(msg);
-	
-    gravi_msg_function_exit(0);
-    return 1;
-}
-
-
-int gravity_eop_send_pasv (int sockfd, const char *cmd)
-{
-    gravi_msg_function_start(0);
-
-    if(write(sockfd, cmd, strlen(cmd))==0)
-    {
-        cpl_error_set_message(cpl_func, CPL_ERROR_DATA_NOT_FOUND,
-            "Problem during FTP transaction");
-        return 0;
-    }
-
-    char * msg = NULL;
-    char * new_con;
-    unsigned int v[6];
-
-    if(!gravity_eop_ftp_reply(sockfd, &msg))
-    {
-        cpl_error_set_message(cpl_func, CPL_ERROR_DATA_NOT_FOUND,
-            "Problem during FTP transaction");
-        return 0;
-    }
-    if (msg == NULL)
-      return 0;
-
-    new_con = strchr(msg,'(');
-    if (new_con == NULL)
-        return 0;
-    sscanf(new_con+1,"%u,%u,%u,%u,%u,%u",&v[2],&v[3],&v[4],&v[5],&v[0],&v[1]);
-
-    //Get the new port connection of passive mode
-    //This is coded in the reply of PASV
-    //See http://www.freefire.org/articles/ftpexample.php
-    int data_port = v[0] * 256 + v[1]; 
-
-    free(msg);
-	
-    gravi_msg_function_exit(0);
-    return data_port;
-}
-
-int gravity_eop_ftp_reply (int sockfd, char ** message)
-{
-    gravi_msg_function_start(0);
-    int  length, n;
-    char buffer[BUFFER_LENGTH];
-    char * msg = NULL;
-   
-    length = 0;
-    if(message != NULL)
-        *message = NULL;
-
-    while( ( n = recv(sockfd, buffer, BUFFER_LENGTH - 1, 0) ) > 0)
-    {
-        void * tmp = realloc(msg, length + n + 1);
-        if(tmp == NULL)
-        {
-            free(msg);
-            return 0;
-        }
-        else
-        {
-            msg =tmp;
-        }
-
-        strncpy(msg + length, buffer, n);
-        length += n;
-        
-        //Check FTP end of message.
-        //http://www.tcpipguide.com/free/t_FTPRepliesReplyCodeFormatandImportantReplyCodes-5.htm
-        if(msg[length-1]=='\n') //Reply contains full lines
-        {
-            //Search for the beggining of the last line
-            char * eolchar= msg + length - 1;
-            while(--eolchar != msg)
-                if (*(eolchar - 1) == '\n')
-                    break;
-            
-            //The FTP code has 3 numbers and a space afterwards if it is the last line
-            if(*(eolchar+3) == ' ')
-                break;
-        }
-    }
-
-    if(length == 0)
-    {
-        free(msg);
-        return 0;
-    }
-    msg[length] = '\0';
-
-    cpl_msg_debug(cpl_func,"FTP reply: <<%s>>", msg);
-
-    /* verify */
-    int verify = gravity_eop_verify_ftp_code(msg, length + 1);
-
-    if(message != NULL && verify)
-        *message = msg;
-    else
-        free(msg);
-	
-    gravi_msg_function_exit(0);
-    return verify;
-}
-
-char * gravity_eop_get_ftp_file(int sockfd, int * data_length)
-{
-    gravi_msg_function_start(1);
-    int  length, n;
-    char buffer[BUFFER_LENGTH];
-    char * msg = NULL;
-
-    length = 0;
-
-    /* Get the data */
-    cpl_msg_info(cpl_func, "Get the data");
-    while( ( n = recv(sockfd, buffer, BUFFER_LENGTH - 1, 0) ) > 0)
-    {
-        void * tmp = realloc(msg, length + n + 1);
-        if(tmp == NULL)
-        {
-            free(msg);
-            return 0;
-        }
-        else
-        {
-            msg =tmp;
-        }
-
-        strncpy(msg + length, buffer, n);
-        length += n;
-
-        cpl_msg_debug(cpl_func, "Received %d bytes so far",length);
-    }
-    if(length == 0)
-        return 0; 
-    msg[length] = '\0';
-    *data_length = length+1;
-
-    gravi_msg_function_exit(1);
-    return msg;
-}
-
-int gravity_eop_verify_ftp_code (char * msg, int length)
-{
-    gravi_msg_function_start(0);
-    char * line = msg;
-
-    //FTP protocol specifies that lines starting with 2xx codes are ok
-    //Starting with 3xx are ok but the server expects some extra input
-    //Starting with 4xx, 5xx or 6xx it denotes an error.
-    //http://www.tcpipguide.com/free/t_FTPRepliesReplyCodeFormatandImportantReplyCodes-2.htm
-    while(line[0] == '1' || line[0] == '2' || line[0] == '3')
-    {
-        line = strchr(line, '\n');
-        if(line == NULL || line - msg + 2 == length)
-            return 1;
-        line = line + 1;
-    }
-	
-    gravi_msg_function_exit(0);
-    return 0;
-}
-
-/*----------------------------------------------------------------------------*/
-/**
- * @brief    Export a raw string buffer containing EOP data to a CPL table
- * 
- * @param    eop_data     The string buffer with the data
- * @param    data_length  The total size of the data buffer 
- * @return   A string buffer with the full contents of the data
- * 
- * This function convert the ascii file retrieve from FTP
- * and convert it to a CPL table.
- * 
- * Possible #_cpl_error_code_ set in this function:
- * - CPL_ERROR_NULL_INPUT if eop_data is NULL
- * - CPL_ERROR_NULL_INPUT if data_length doesn't correspond with the expected 
- *   EOP records length
- */
-/*----------------------------------------------------------------------------*/
-
-cpl_table * gravity_eop_data_totable (const char * eop_data, int data_length)
-{
-    gravi_msg_function_start(1);
-    cpl_ensure (eop_data, CPL_ERROR_NULL_INPUT, NULL);
-
-    if(!((data_length - 1) % LINE_SIZE == 0))
-    {
-        cpl_error_set_message(cpl_func, CPL_ERROR_NULL_INPUT,
-            "Raw data doesn't have a fixed record width");
-        return 0;
-    }
-
-    /* Create tables */
-    cpl_size n_entries = (data_length - 1 ) / LINE_SIZE;
-    cpl_table * eop_table = cpl_table_new (n_entries);
-    cpl_msg_info (cpl_func, " EOP data has a total of %"CPL_SIZE_FORMAT" entries", n_entries);
-
-    /* Create columns */
-    cpl_table_new_column (eop_table, "MJD",  CPL_TYPE_DOUBLE);
-    cpl_table_new_column (eop_table, "PMX",  CPL_TYPE_DOUBLE);
-    cpl_table_new_column (eop_table, "PMY",  CPL_TYPE_DOUBLE);
-    cpl_table_new_column (eop_table, "DUT",  CPL_TYPE_DOUBLE);
-    cpl_table_new_column (eop_table, "FLAG", CPL_TYPE_STRING);
-
-    /* Set units */
-    cpl_table_set_column_unit (eop_table, "MJD", "d");
-    cpl_table_set_column_unit (eop_table, "PMX", "arcsec");
-    cpl_table_set_column_unit (eop_table, "PMY", "arcsec");
-    cpl_table_set_column_unit (eop_table, "DUT", "s");
-
-    /* Fill the columns from the string buffer */
-    for(cpl_size i=0; i<n_entries; i++)
-    {
-        char flag[2];
-        strncpy(flag, eop_data+i*LINE_SIZE+16, 1);
-        flag[1] = '\0';
-        cpl_table_set_string(eop_table, "FLAG", i, flag);
-
-        cpl_table_set_double(eop_table, "MJD", i, atof(eop_data+i*LINE_SIZE+7));
-        if(!strncmp(flag, "I", 1) || !strncmp(flag, "P", 1))
-        {
-            cpl_table_set_double(eop_table, "PMX", i, atof(eop_data+i*LINE_SIZE+18));
-            cpl_table_set_double(eop_table, "PMY", i, atof(eop_data+i*LINE_SIZE+37));
-            cpl_table_set_double(eop_table, "DUT", i, atof(eop_data+i*LINE_SIZE+58));
-        }
-    }
-
-    /* Remove the NULL columns */
-    cpl_table_unselect_all (eop_table);
-    cpl_table_or_selected_invalid (eop_table, "PMX");
-    cpl_table_or_selected_invalid (eop_table, "PMY");
-    cpl_table_or_selected_invalid (eop_table, "DUT");
-    cpl_msg_info (cpl_func,"Found %lld invalid", cpl_table_count_selected (eop_table));
-    cpl_table_erase_selected (eop_table);
-
-    gravi_msg_function_exit(1);
-    return eop_table;
 }
 
 /**@}*/
