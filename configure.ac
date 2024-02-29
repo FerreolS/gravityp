@@ -52,8 +52,7 @@ ESO_CHECK_DOCTOOLS
 AC_ENABLE_STATIC(no)
 AC_ENABLE_SHARED(yes)
 
-AC_PROG_LIBTOOL
-AC_SUBST(LIBTOOL_DEPS)
+LT_INIT([disable-static])
 
 # Checks for libraries.
 AC_CHECK_LIB(m, pow, [LIBS="$LIBS -lm"])
