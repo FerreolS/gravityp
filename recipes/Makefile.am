@@ -29,7 +29,7 @@ MAINTAINERCLEANFILES = Makefile.in
 endif
 
 
-AM_CPPFLAGS = $(all_includes)
+AM_CPPFLAGS = $(all_includes) $(HDRL_INCLUDES)
 
 noinst_HEADERS = 
 
