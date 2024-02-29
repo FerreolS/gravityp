@@ -27,7 +27,8 @@
 
 #include <cpl.h>
 #include <time.h>
-
+#include <hdrl_download.h>
+#include <hdrl_utils.h>
 #include "gravi_data.h"
 #include "gravi_dfs.h"
 #include "gravi_pfits.h"
@@ -162,7 +163,7 @@ static int gravity_eop_create(cpl_plugin * plugin)
                                 CPL_TYPE_STRING, 
                                  "FTP Host to retrieve the EOP from",
                                  "gravity.eop", 
-                                 "ftp.iers.org");
+                                 "https://datacenter.iers.org");
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "eop_host");
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
     cpl_parameterlist_append (recipe->parameters, p);
@@ -172,7 +173,7 @@ static int gravity_eop_create(cpl_plugin * plugin)
                                  CPL_TYPE_STRING, 
                                  "FTP URL path of the EOP file to retrieve",
                                  "gravity.eop", 
-                                 "/products/eop/rapid/standard/finals2000A.data");
+                                 "/data/latestVersion/finals.data.iau2000.txt");
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "eop_urlpath");
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
     cpl_parameterlist_append (recipe->parameters, p);
@@ -267,6 +268,35 @@ static int gravity_eop_destroy(cpl_plugin * plugin)
     return 0;                                                    
 }
 
+cpl_error_code gravity_eop_compute_qc (cpl_table * eop_table, 
+                                       cpl_propertylist* header,
+                                       double * mjd_lastfinal)
+{
+    double mjd_start;
+    double mjd_lastprediction;
+    int null;
+
+    mjd_start = cpl_table_get_double (eop_table, "MJD", 0, &null);
+    for(int i = 0 ; i < cpl_table_get_nrow(eop_table);  i++)
+    {
+        const char * flag = cpl_table_get_string(eop_table, "FLAG", i);
+        if(!strncmp(flag, "I", 1))
+            *mjd_lastfinal = cpl_table_get_double(eop_table, "MJD", i, &null);
+        if(!strncmp(flag, "P", 1))
+            mjd_lastprediction = cpl_table_get_double(eop_table, "MJD", i, &null);
+    }
+
+    cpl_msg_info (cpl_func, "QC EOP MJD START = %.3f", mjd_start);
+    cpl_msg_info (cpl_func, "QC EOP MJD LAST FINAL = %.3f", *mjd_lastfinal);
+    cpl_msg_info (cpl_func, "QC EOP MJD LAST PREDICTION = %.3f", mjd_lastprediction);
+
+    cpl_propertylist_append_double (header, "ESO QC EOP MJD START", mjd_start);
+    cpl_propertylist_append_double (header, "ESO QC EOP MJD LAST FINAL", *mjd_lastfinal);
+    cpl_propertylist_append_double (header, "ESO QC EOP MJD LAST PREDICTION", mjd_lastprediction);
+    cpl_propertylist_append_double (header, "MJD-OBS", *mjd_lastfinal);
+
+    return CPL_ERROR_NONE;
+}
 /*----------------------------------------------------------------------------*/
 /**
   @brief    Implement the recipe functionality
@@ -295,6 +325,7 @@ static int gravity_eop(cpl_frameset            * frameset,
        return an error code. */
     cpl_errorstate          prestate = cpl_errorstate_get();
 
+
     /* Retrieving eop_host */
     eop_host = gravi_param_get_string (parlist, "gravity.eop.eop_host");
 
@@ -311,9 +342,12 @@ static int gravity_eop(cpl_frameset            * frameset,
     /* Retrieve EOP file from the site. The data are stored in the buffer 
      eop_data, which should be freed with free() function */
     char * eop_data;
-    int  data_length;
+    size_t  data_length;
     cpl_msg_info (cpl_func, "Retrieving EOP file ");
-    eop_data = gravity_eop_download_finals2000A (eop_host, eop_urlpath, &data_length);
+
+    const char * url = cpl_sprintf("%s%s", eop_host, eop_urlpath);
+    eop_data = hdrl_download_url_to_buffer (url, &data_length);
+    cpl_free((char *)url);
 
     if (eop_data == NULL || !cpl_errorstate_is_equal(prestate)) {
         return (int)cpl_error_set_message(cpl_func, cpl_error_get_code(),
@@ -322,7 +356,7 @@ static int gravity_eop(cpl_frameset            * frameset,
 
     /* Convert to a CPL_TABLE */
     cpl_msg_info (cpl_func, "Convert EOP data to cpl_table");
-    cpl_table * eop_table = gravity_eop_data_totable (eop_data, data_length);
+    cpl_table * eop_table = hdrl_eop_data_totable (eop_data, (cpl_size)data_length);
 
     /* Check for a change in the CPL error state */
     cpl_ensure_code(cpl_errorstate_is_equal(prestate), cpl_error_get_code());
@@ -366,32 +400,4 @@ static int gravity_eop(cpl_frameset            * frameset,
     return (int)cpl_error_get_code();
 }
 
-cpl_error_code gravity_eop_compute_qc (cpl_table * eop_table, 
-                                       cpl_propertylist* header,
-                                       double * mjd_lastfinal)
-{
-    double mjd_start;
-    double mjd_lastprediction;
-    int null;
 
-    mjd_start = cpl_table_get_double (eop_table, "MJD", 0, &null);
-    for(int i = 0 ; i < cpl_table_get_nrow(eop_table);  i++)
-    {
-        const char * flag = cpl_table_get_string(eop_table, "FLAG", i);
-        if(!strncmp(flag, "I", 1))
-            *mjd_lastfinal = cpl_table_get_double(eop_table, "MJD", i, &null);
-        if(!strncmp(flag, "P", 1))
-            mjd_lastprediction = cpl_table_get_double(eop_table, "MJD", i, &null);
-    }
-
-    cpl_msg_info (cpl_func, "QC EOP MJD START = %.3f", mjd_start);
-    cpl_msg_info (cpl_func, "QC EOP MJD LAST FINAL = %.3f", *mjd_lastfinal);
-    cpl_msg_info (cpl_func, "QC EOP MJD LAST PREDICTION = %.3f", mjd_lastprediction);
-
-    cpl_propertylist_append_double (header, "ESO QC EOP MJD START", mjd_start);
-    cpl_propertylist_append_double (header, "ESO QC EOP MJD LAST FINAL", *mjd_lastfinal);
-    cpl_propertylist_append_double (header, "ESO QC EOP MJD LAST PREDICTION", mjd_lastprediction);
-    cpl_propertylist_append_double (header, "MJD-OBS", *mjd_lastfinal);
-
-    return CPL_ERROR_NONE;
-}
