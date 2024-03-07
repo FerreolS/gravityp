@@ -727,37 +727,8 @@ int gravi_wave_get_nlambda(cpl_table *wave_data, double lambda_min, double lambd
 int * gravi_image_extract_dimension (cpl_image * img_profile)
 {
 	cpl_ensure (img_profile, CPL_ERROR_NULL_INPUT, NULL);
-
-//    /* Collapse */
-//    cpl_image * collapse_img = cpl_image_collapse_create (img_profile, 0);
-//    cpl_size nx = cpl_image_get_size_x (collapse_img);
-//
-//    /* Median filter */
-//    cpl_size size = nx < 60 ? 2 : 5;
-//    cpl_mask * kernel = cpl_mask_new (size, 1); 
-//    cpl_mask_not (kernel);
-//
-//    cpl_image * filt_img = cpl_image_duplicate (collapse_img);
-//    cpl_image_filter_mask (filt_img, collapse_img, kernel,
-//                           CPL_FILTER_MEDIAN, CPL_BORDER_FILTER);
-//
-//    /* Search for limits */
-//    double max = cpl_image_get_max (filt_img) * 0.1;
-//    double imin = nx, imax = 0;
-//    for (cpl_size i = 1; i <= nx; nx++) {
-//        if (cpl_image_get (filt_img, i, 1) > max) {
-//            if (i < imin) imin = i;
-//            if (i > imax) imax = i;
-//        }
-//    }
-//    
-//    /* Return */
-//    int dim = cpl_malloc (2 * sizeof (int));
-//    dim[0] = imin;
-//    dim[1] = imax - imin + 1;
-//        
 	double sig;
-  int SPECTRAL_LEN; 
+  int SPECTRAL_LEN, hw_median_window; 
 	cpl_vector * vector, * vect, * vect_mean, * vect_sorted;
 
 	cpl_size nx = cpl_image_get_size_x (img_profile);
@@ -770,49 +741,40 @@ int * gravi_image_extract_dimension (cpl_image * img_profile)
 		cpl_vector_delete (vect);
 	}
 
-  if      (nx < 150) {SPECTRAL_LEN = 233;} // LOW
-  else if (nx < 400) {SPECTRAL_LEN = 233;} // MED
-  else               {SPECTRAL_LEN = 233;} // HIGH
+  if (nx < 150) { // LOW
+    SPECTRAL_LEN = 14;
+    hw_median_window = 2;} 
+  else if (nx < 400) {// MED
+    SPECTRAL_LEN = 246;
+    hw_median_window = 2;
+  } 
+  else {// HIGH
+    SPECTRAL_LEN = 1979;
+    hw_median_window = 5;
+  } 
 
-	cpl_vector_divide_scalar (vect_mean, ny);
-	if (nx < 60) { // case for LOW res
-		vector = cpl_vector_filter_median_create (vect_mean, 2);
-	}
-	else{ // case for MED and HIGH
-		vector = cpl_vector_filter_median_create (vect_mean, 5);
-	}
+
+	vector = cpl_vector_filter_median_create (vect_mean, hw_median_window);
+	
 
   vect_sorted = cpl_vector_duplicate (vector) ;
   cpl_vector_sort( 	vect_sorted,CPL_SORT_DESCENDING);
   sig = cpl_vector_get (vect_sorted,SPECTRAL_LEN);
-	//double max = cpl_vector_get_max  (vector);
-	//sig = max * 0.10; // cut the edge to 10 % of the flux
-    
-	int i_2 = nx, i_1 = 0;
-	for (cpl_size i = 1; i < nx - 1; i++){
-		if (cpl_vector_get (vector, i) > sig){
-			if ((cpl_vector_get (vector, i - 1) > sig) && (cpl_vector_get (vector, i + 1) < sig))
-				i_2 = i;
-		}
-	}
 
-	for (cpl_size i = 1; i < nx - 1; i++){
-		if (cpl_vector_get (vector, nx - i) > sig){
-			if ((cpl_vector_get (vector, nx - i - 1) < sig) && (cpl_vector_get (vector, nx - i + 1) > sig))
+  int i_1 =hw_median_window+1;
+	for (cpl_size i = hw_median_window+1; i < nx - hw_median_window - 1; i++){ // the border < hw_median_window is not median filtered
+		if (cpl_vector_get (vector, nx - i) >= sig){
+			if ((cpl_vector_get (vector, nx - i - 1) <= sig) && (cpl_vector_get (vector, nx - i + 1) >= sig))
 				i_1 = nx - i;
 		}
 	}
 
-	/* increase by 1 pixels */
-	i_1 -= 1;
-	i_2 += 2;
-	if (i_1 < 0) i_1 = 0;
-	if (i_2 >= nx) i_2 = nx-1;
+	if (i_1 + SPECTRAL_LEN > nx) SPECTRAL_LEN = nx -i_1;
 
     /* Fill output */
 	int * dim = cpl_malloc (2 * sizeof (int));
-	dim [0] = i_1 + 1;
-	dim [1] = i_2 - i_1; //SPECTRAL_LEN
+	dim [0] = i_1 ;
+	dim [1] = SPECTRAL_LEN;
 
 	cpl_vector_delete (vect_mean);
 	cpl_vector_delete (vect_sorted);
