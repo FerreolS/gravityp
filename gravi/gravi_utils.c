@@ -757,7 +757,8 @@ int * gravi_image_extract_dimension (cpl_image * img_profile)
 //    dim[1] = imax - imin + 1;
 //        
 	double sig;
-	cpl_vector * vector, * vect, * vect_mean;
+  int SPECTRAL_LEN; 
+	cpl_vector * vector, * vect, * vect_mean, * vect_sorted;
 
 	cpl_size nx = cpl_image_get_size_x (img_profile);
 	cpl_size ny = cpl_image_get_size_y (img_profile);
@@ -769,6 +770,10 @@ int * gravi_image_extract_dimension (cpl_image * img_profile)
 		cpl_vector_delete (vect);
 	}
 
+  if      (nx < 150) {SPECTRAL_LEN = 233;} // LOW
+  else if (nx < 400) {SPECTRAL_LEN = 233;} // MED
+  else               {SPECTRAL_LEN = 233;} // HIGH
+
 	cpl_vector_divide_scalar (vect_mean, ny);
 	if (nx < 60) { // case for LOW res
 		vector = cpl_vector_filter_median_create (vect_mean, 2);
@@ -777,14 +782,15 @@ int * gravi_image_extract_dimension (cpl_image * img_profile)
 		vector = cpl_vector_filter_median_create (vect_mean, 5);
 	}
 
-	double max = cpl_vector_get_max  (vector);
-	sig = max * 0.10; // cut the edge to 10 % of the flux
+  vect_sorted = cpl_vector_duplicate (vector) ;
+  cpl_vector_sort( 	vect_sorted,CPL_SORT_DESCENDING);
+  sig = cpl_vector_get (vect_sorted,SPECTRAL_LEN);
+	//double max = cpl_vector_get_max  (vector);
+	//sig = max * 0.10; // cut the edge to 10 % of the flux
     
-	double sum = 0;
 	int i_2 = nx, i_1 = 0;
 	for (cpl_size i = 1; i < nx - 1; i++){
 		if (cpl_vector_get (vector, i) > sig){
-			sum ++;
 			if ((cpl_vector_get (vector, i - 1) > sig) && (cpl_vector_get (vector, i + 1) < sig))
 				i_2 = i;
 		}
@@ -792,7 +798,6 @@ int * gravi_image_extract_dimension (cpl_image * img_profile)
 
 	for (cpl_size i = 1; i < nx - 1; i++){
 		if (cpl_vector_get (vector, nx - i) > sig){
-			sum ++;
 			if ((cpl_vector_get (vector, nx - i - 1) < sig) && (cpl_vector_get (vector, nx - i + 1) > sig))
 				i_1 = nx - i;
 		}
@@ -807,9 +812,10 @@ int * gravi_image_extract_dimension (cpl_image * img_profile)
     /* Fill output */
 	int * dim = cpl_malloc (2 * sizeof (int));
 	dim [0] = i_1 + 1;
-	dim [1] = i_2 - i_1;
+	dim [1] = i_2 - i_1; //SPECTRAL_LEN
 
 	cpl_vector_delete (vect_mean);
+	cpl_vector_delete (vect_sorted);
 	cpl_vector_delete (vector);
 
 	return dim;
