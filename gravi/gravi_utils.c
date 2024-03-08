@@ -755,11 +755,17 @@ int * gravi_image_extract_dimension (cpl_image * img_profile)
 
 
 	vector = cpl_vector_filter_median_create (vect_mean, hw_median_window);
-	
+  // zeroing un-filtered values
+  for (cpl_size i = 0; i< hw_median_window; i++)
+  {
+    cpl_vector_set (vector, i, 0.0);
+    cpl_vector_set (vector, nx - i - 1, 0.0);    
+  }
+  
 
   vect_sorted = cpl_vector_duplicate (vector) ;
   cpl_vector_sort( 	vect_sorted,CPL_SORT_DESCENDING);
-  sig = cpl_vector_get (vect_sorted,SPECTRAL_LEN);
+  sig = cpl_vector_get (vect_sorted,SPECTRAL_LEN -1);
 
   int i_1 =hw_median_window+1;
 	for (cpl_size i = hw_median_window+1; i < nx - hw_median_window - 1; i++){ // the border < hw_median_window is not median filtered
