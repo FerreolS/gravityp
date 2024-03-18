@@ -950,6 +950,8 @@ cpl_error_code gravi_vis_create_pfactor_sc (cpl_table * vis_SC, cpl_table * flux
   /* Create the column */
   gravi_table_new_column (vis_SC, "P_FACTOR", NULL, CPL_TYPE_DOUBLE);
   double * pFactor = cpl_table_get_data_double (vis_SC, "P_FACTOR");
+  gravi_table_new_column (vis_SC, "P3_FACTOR", NULL, CPL_TYPE_DOUBLE);
+  double * p3Factor = cpl_table_get_data_double (vis_SC, "P3_FACTOR");
 
   /* Get SC data */
   int * first_ft = cpl_table_get_data_int (vis_SC, "FIRST_FT");
@@ -962,25 +964,29 @@ cpl_error_code gravi_vis_create_pfactor_sc (cpl_table * vis_SC, cpl_table * flux
 
   /* Loop on base and SC rows */
   for (cpl_size base = 0; base < nbase; base++) {
-	for (cpl_size row_sc = 0; row_sc < nrow_sc; row_sc ++) {
-	  cpl_size nsc = row_sc*nbase+base;
+    for (cpl_size row_sc = 0; row_sc < nrow_sc; row_sc ++) {
+      cpl_size nsc = row_sc*nbase+base;
 
-	  /* Loop on the sync FT frames */
-	  double sf0f1 = 0.0, f0 = 0.0, f1 = 0.0;
-	  for (cpl_size row_ft = first_ft[nsc] ; row_ft < last_ft[nsc]; row_ft++) {
-		int t0 = GRAVI_BASE_TEL[base][0] + row_ft * ntel;
-		int t1 = GRAVI_BASE_TEL[base][1] + row_ft * ntel;
-		sf0f1 += sqrt (CPL_MAX(flux[t0] * flux[t1], 0));
-		f0   += flux[t0];
-		f1   += flux[t1];
-	  }
+      /* Loop on the sync FT frames */
+      double sf0f1 = 0.0, sf0f1f2 = 0.0, f0 = 0.0, f1 = 0.0, f2 = 0.0;
+      for (cpl_size row_ft = first_ft[nsc] ; row_ft < last_ft[nsc]; row_ft++) {
+        int t0 = GRAVI_BASE_TEL[base][0] + row_ft * ntel;
+        int t1 = GRAVI_BASE_TEL[base][1] + row_ft * ntel;
+        int t2 = GRAVI_BASE_TEL[base][2] + row_ft * ntel;
+        sf0f1 += sqrt (CPL_MAX(flux[t0] * flux[t1], 0));
+        sf0f1f2 += pow ( (CPL_MAX(flux[t0] * flux[t1] * flux[t2], 0)), 1.0/3);
+        f0   += flux[t0];
+        f1   += flux[t1];
+        f2   += flux[t2];
+      }
 
-	  /* Discard unused */
-	  if (f0==0 || f1==0) continue;
-	  
-	  /* Compute the pFactor */
-	  pFactor[nsc] = sf0f1 * sf0f1 / (f0 * f1);
-	}
+      /* Discard unused */
+      if (f0==0 || f1==0 || f2 == 0) continue;
+      
+      /* Compute the pFactor */
+      pFactor[nsc] = sf0f1 * sf0f1 / (f0 * f1);
+      p3Factor[nsc] = sf0f1f2 * sf0f1f2 * sf0f1f2 / (f0 * f1 * f2);
+    }
   }
   
   gravi_msg_function_exit(1);
