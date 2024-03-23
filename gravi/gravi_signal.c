@@ -85,7 +85,7 @@ cpl_error_code gravi_vis_compute_isdelay(cpl_table * oi_vis,
                                          const char * name_isp,
                                          const char * name_gdl,
                                          cpl_table * oi_wavelength);
-cpl_error_code gravi_vis_create_pfactor_sc (cpl_table * vis_SC, cpl_table * flux_FT);
+cpl_error_code gravi_vis_create_pfactor_sc (cpl_table * vis_SC, cpl_table * t3_SC, cpl_table * flux_FT);
 cpl_error_code gravi_vis_create_f1f2_sc (cpl_table * vis_SC, cpl_table * flux_SC);
 cpl_error_code gravi_vis_create_f1f2_ft (cpl_table * vis_FT, cpl_table * flux_FT);
 cpl_error_code gravi_vis_create_phaseref_ft (cpl_table * vis_FT);
@@ -930,28 +930,28 @@ cpl_error_code gravi_signal_create_sync (cpl_table * vis_SC, int nbase_sc, doubl
  * @brief Compute the PFACTOR for the SC
  * 
  * @param vis_SC:   output OI_VIS table of the SC
+ * @param t3_SC:    output OI_T3 table of the SC
  * @param flux_FT:  input OI_FLUX table of the FT
  *
  * The PFACTOR is computed for each SC DIT and saved in a newly created column
- * P_FACTOR in the vis_SC table. The synchronisation info shall be available.
+ * P_FACTOR in the vis_SC table. Likewise the P3FACTOR is saved in a newly
+ * created column in the t3_SC table. The synchronisation info shall be available.
  */
 /* -------------------------------------------------------------------------- */
 
-cpl_error_code gravi_vis_create_pfactor_sc (cpl_table * vis_SC, cpl_table * flux_FT)
+cpl_error_code gravi_vis_create_pfactor_sc (cpl_table * vis_SC, cpl_table * t3_SC, cpl_table * flux_FT)
 {
   gravi_msg_function_start(1);
   cpl_ensure_code (vis_SC,  CPL_ERROR_NULL_INPUT);
   cpl_ensure_code (flux_FT, CPL_ERROR_NULL_INPUT);
 
   /* Get the number of rows */
-  cpl_size nbase = 6, ntel = 4;
+  cpl_size nbase = 6, ntel = 4, nclo = 4;
   cpl_size nrow_sc = cpl_table_get_nrow (vis_SC) / nbase;
 
   /* Create the column */
   gravi_table_new_column (vis_SC, "P_FACTOR", NULL, CPL_TYPE_DOUBLE);
   double * pFactor = cpl_table_get_data_double (vis_SC, "P_FACTOR");
-  gravi_table_new_column (vis_SC, "P3_FACTOR", NULL, CPL_TYPE_DOUBLE);
-  double * p3Factor = cpl_table_get_data_double (vis_SC, "P3_FACTOR");
 
   /* Get SC data */
   int * first_ft = cpl_table_get_data_int (vis_SC, "FIRST_FT");
@@ -964,28 +964,57 @@ cpl_error_code gravi_vis_create_pfactor_sc (cpl_table * vis_SC, cpl_table * flux
 
   /* Loop on base and SC rows */
   for (cpl_size base = 0; base < nbase; base++) {
-    for (cpl_size row_sc = 0; row_sc < nrow_sc; row_sc ++) {
-      cpl_size nsc = row_sc*nbase+base;
+    for (cpl_size row_sc = 0; row_sc < nrow_sc; row_sc++) {
+      cpl_size nsc = row_sc * nbase + base;
 
       /* Loop on the sync FT frames */
-      double sf0f1 = 0.0, sf0f1f2 = 0.0, f0 = 0.0, f1 = 0.0, f2 = 0.0;
-      for (cpl_size row_ft = first_ft[nsc] ; row_ft < last_ft[nsc]; row_ft++) {
+      double sf0f1 = 0.0, f0 = 0.0, f1 = 0.0;
+      for (cpl_size row_ft = first_ft[nsc]; row_ft < last_ft[nsc]; row_ft++) {
         int t0 = GRAVI_BASE_TEL[base][0] + row_ft * ntel;
         int t1 = GRAVI_BASE_TEL[base][1] + row_ft * ntel;
-        int t2 = GRAVI_BASE_TEL[base][2] + row_ft * ntel;
         sf0f1 += sqrt (CPL_MAX(flux[t0] * flux[t1], 0));
+        f0 += flux[t0];
+        f1 += flux[t1];
+      }
+
+      /* Discard unused */
+      if (f0==0 || f1==0) continue;
+      
+      /* Compute the pFactor */
+      pFactor[nsc] = sf0f1 * sf0f1 / (f0 * f1);
+    }
+  }
+
+  /* Create the column */
+  gravi_table_new_column (t3_SC, "P3_FACTOR", NULL, CPL_TYPE_DOUBLE);
+  double * p3Factor = cpl_table_get_data_double (t3_SC, "P3_FACTOR");
+
+  /* Get T3 data */
+  first_ft = cpl_table_get_data_int (t3_SC, "FIRST_FT");
+  last_ft  = cpl_table_get_data_int (t3_SC, "LAST_FT");
+
+  /* Loop on closure triangle and SC rows */
+  for (cpl_size closure = 0; closure < nclo; closure++) {
+    for (cpl_size row_sc = 0; row_sc < nrow_sc; row_sc++) {
+      cpl_size nt3 = row_sc * nclo + closure;
+
+      /* Loop on the sync FT frames */
+      double sf0f1f2 = 0.0, f0 = 0.0, f1 = 0.0, f2 = 0.0;
+      for (cpl_size row_ft = first_ft[nt3]; row_ft < last_ft[nt3]; row_ft++) {
+        int t0 = GRAVI_CLO_TEL[closure][0] + row_ft * ntel;
+        int t1 = GRAVI_CLO_TEL[closure][1] + row_ft * ntel;
+        int t2 = GRAVI_CLO_TEL[closure][2] + row_ft * ntel;
         sf0f1f2 += pow ( (CPL_MAX(flux[t0] * flux[t1] * flux[t2], 0)), 1.0/3);
-        f0   += flux[t0];
-        f1   += flux[t1];
-        f2   += flux[t2];
+        f0 += flux[t0];
+        f1 += flux[t1];
+        f2 += flux[t2];
       }
 
       /* Discard unused */
       if (f0==0 || f1==0 || f2 == 0) continue;
       
-      /* Compute the pFactor */
-      pFactor[nsc] = sf0f1 * sf0f1 / (f0 * f1);
-      p3Factor[nsc] = sf0f1f2 * sf0f1f2 * sf0f1f2 / (f0 * f1 * f2);
+      /* Compute the p3Factor */
+      p3Factor[nt3] = sf0f1f2 * sf0f1f2 * sf0f1f2 / (f0 * f1 * f2);
     }
   }
   
@@ -3057,7 +3086,7 @@ cpl_error_code gravi_compute_signals (gravi_data * p2vmred_data,
   gravi_msg_function_start(1);
   cpl_ensure_code (p2vmred_data, CPL_ERROR_NULL_INPUT);
 
-  int nbase = 6, ntel = 4;
+  int nbase = 6, ntel = 4, nclo = 4;
 
   /* Get header data */
   cpl_propertylist * p2vmred_header = gravi_data_get_header (p2vmred_data);
@@ -3082,109 +3111,118 @@ cpl_error_code gravi_compute_signals (gravi_data * p2vmred_data,
    */
   for (int pol = 0; pol < CPL_MAX(npol_sc,npol_ft); pol++) {
 	
-	/* verbose */
-	cpl_msg_info (cpl_func, "Start polarisation %d over %d",pol+1, CPL_MAX(npol_sc,npol_ft));
-	cpl_msg_info(cpl_func, "Insname FT : %s, pol %d npol %d",
-                 GRAVI_INSNAME(GRAVI_FT,pol,npol_ft), pol+1, npol_ft);
-	cpl_msg_info(cpl_func, "Insname SC : %s, pol %d npol %d",
-                 GRAVI_INSNAME(GRAVI_SC,pol,npol_sc), pol+1, npol_sc);
+    /* verbose */
+    cpl_msg_info (cpl_func, "Start polarisation %d over %d",pol+1, CPL_MAX(npol_sc,npol_ft));
+    cpl_msg_info(cpl_func, "Insname FT : %s, pol %d npol %d",
+                  GRAVI_INSNAME(GRAVI_FT,pol,npol_ft), pol+1, npol_ft);
+    cpl_msg_info(cpl_func, "Insname SC : %s, pol %d npol %d",
+                  GRAVI_INSNAME(GRAVI_SC,pol,npol_sc), pol+1, npol_sc);
 
-	/* Get the table of reduced data from FT */
-	cpl_table * vis_FT = gravi_data_get_oi_vis (p2vmred_data, GRAVI_FT, pol, npol_ft);
-	cpl_table * flux_FT = gravi_data_get_oi_flux (p2vmred_data, GRAVI_FT, pol, npol_ft);
-	CPLCHECK_MSG ("Cannot get the FT tables");
-	
-	/* Get the table of reduced data from SC */
-	cpl_table * vis_SC = gravi_data_get_oi_vis (p2vmred_data, GRAVI_SC, pol, npol_sc);
-	cpl_table * flux_SC = gravi_data_get_oi_flux (p2vmred_data, GRAVI_SC, pol, npol_sc);
-	CPLCHECK_MSG ("Cannot get the SC tables");
-	
-	/* Get the metrology and FDDL */
-	cpl_table * vis_met = gravi_data_get_table (p2vmred_data, GRAVI_OI_VIS_MET_EXT);
-	cpl_table * fddl_table = gravi_data_get_table (p2vmred_data, GRAVI_FDDL_EXT);
-	CPLCHECK_MSG ("Cannot get the VIS_MET and FDDL tables");
-	
-	/* Get the OIFITS tables that are alredy in the data */
-	cpl_table * oi_wavelengthft = gravi_data_get_oi_wave (p2vmred_data, GRAVI_FT, pol, npol_ft);
-	cpl_table * oi_wavelengthsc = gravi_data_get_oi_wave (p2vmred_data, GRAVI_SC, pol, npol_sc);
-	CPLCHECK_MSG ("Cannot get the OI_WAVELENGTH tables");
+    /* Get the table of reduced data from FT */
+    cpl_table * vis_FT = gravi_data_get_oi_vis (p2vmred_data, GRAVI_FT, pol, npol_ft);
+    cpl_table * flux_FT = gravi_data_get_oi_flux (p2vmred_data, GRAVI_FT, pol, npol_ft);
+    CPLCHECK_MSG ("Cannot get the FT tables");
+    
+    /* Get the table of reduced data from SC */
+    cpl_table * vis_SC = gravi_data_get_oi_vis (p2vmred_data, GRAVI_SC, pol, npol_sc);
+    cpl_table * flux_SC = gravi_data_get_oi_flux (p2vmred_data, GRAVI_SC, pol, npol_sc);
+    cpl_table * t3_SC = gravi_data_get_oi_t3 (p2vmred_data, GRAVI_SC, pol, npol_sc);
+    CPLCHECK_MSG ("Cannot get the SC tables");
+    
+    /* Get the metrology and FDDL */
+    cpl_table * vis_met = gravi_data_get_table (p2vmred_data, GRAVI_OI_VIS_MET_EXT);
+    cpl_table * fddl_table = gravi_data_get_table (p2vmred_data, GRAVI_FDDL_EXT);
+    CPLCHECK_MSG ("Cannot get the VIS_MET and FDDL tables");
+    
+    /* Get the OIFITS tables that are alredy in the data */
+    cpl_table * oi_wavelengthft = gravi_data_get_oi_wave (p2vmred_data, GRAVI_FT, pol, npol_ft);
+    cpl_table * oi_wavelengthsc = gravi_data_get_oi_wave (p2vmred_data, GRAVI_SC, pol, npol_sc);
+    CPLCHECK_MSG ("Cannot get the OI_WAVELENGTH tables");
 
-
-	/* 
-	 * (1) Create synchronisation information
-	 */
-	
-	/* Create the FIRST_FT and LAST_FT for each SC frame */
-	gravi_signal_create_sync (vis_SC, 6, dit_sc, vis_FT, 6, "FT");
-	gravi_signal_create_sync (vis_SC, 6, dit_sc, vis_met, 4, "MET");
-	
-	CPLCHECK_MSG ("Cannot sync vis_SC");
-	
-	/* Create the FIRST_MET and LAST_MET for each SC frame */
-	gravi_signal_create_sync (flux_SC, 4, dit_sc, flux_FT, 4, "FT");
-	gravi_signal_create_sync (flux_SC, 4, dit_sc, vis_met, 4, "MET");
-	gravi_signal_create_sync (flux_SC, 4, dit_sc, fddl_table, 1, "FDDL");
-	
-	CPLCHECK_MSG ("Cannot sync flux_SC");
-	
-	/* 
-	 * (2) Create the signals for FLUX_FT
-	 */
-	
-	cpl_array ** flux_ft = cpl_table_get_data_array (flux_FT, "FLUX");
-	cpl_size nwave_ft = cpl_table_get_column_depth (vis_FT, "VISDATA");
-	cpl_size nrow_ft  = cpl_table_get_nrow (vis_FT) / nbase;
-
-	gravi_table_new_column (flux_FT, "TOTALFLUX", "e", CPL_TYPE_DOUBLE);
-	double * total_flux_ft = cpl_table_get_data_double (flux_FT, "TOTALFLUX");
-	
-	CPLCHECK_MSG ("Cannot create columns");
-
-	/* Total flux in [e] */
-	for (cpl_size row = 0; row < nrow_ft * ntel; row ++) {
-	  total_flux_ft[row] = cpl_array_get_mean (flux_ft[row]) * nwave_ft;
-	}
-
-	/* Smooth TOTALFLUX of the FT over few samples. Maybe make sure
-	 * this is a constant frequency, not a constant nb of samples */
-	gravi_table_smooth_column (flux_FT, "TOTALFLUX", "TOTALFLUX", 10, ntel);
-
-	CPLCHECK_MSG("Cannot compute TOTALFLUX for FT");
-
-	/* 
-	 * (3) Create the signals for VIS_FT
-	 */
-	
-	/* Create F1F2 and PHASE_REF column */
-	gravi_vis_create_f1f2_ft (vis_FT, flux_FT);
-	gravi_vis_create_phaseref_ft (vis_FT);
-
-	CPLCHECK_MSG ("Cannot create signals for VIS_FT");
-	
-	/* 
-	 *  (4) Create the signal for FLUX_SC
-	 */
-    gravi_flux_create_met_sc (flux_SC, vis_met);
-	gravi_flux_create_fddlpos_sc (flux_SC, fddl_table);
-	gravi_flux_create_totalflux_sc (flux_SC, flux_FT);
-
-	CPLCHECK_MSG ("Cannot create the signal for FLUX_SC");
-
-	/* 
-	 *  (5) Create the signals for VIS_SC
-	 */
-	gravi_vis_create_pfactor_sc (vis_SC, flux_FT);
-	gravi_vis_create_f1f2_sc (vis_SC, flux_SC);
-	gravi_vis_create_met_sc (vis_SC, vis_met, oi_wavelengthsc);
-	
-	gravi_vis_create_vfactor_sc (vis_SC, oi_wavelengthsc,
-								 vis_FT, oi_wavelengthft);
-
-	CPLCHECK_MSG ("Cannot create signals for VIS_SC");
 
     /* 
-     * Create QC for PFACTOR and VFACTOR
-     */
+    * (1) Create synchronisation information
+    */
+    
+    /* Create the FIRST and LAST for each vis_SC frame */
+    gravi_signal_create_sync (vis_SC, 6, dit_sc, vis_FT, 6, "FT");
+    gravi_signal_create_sync (vis_SC, 6, dit_sc, vis_met, 4, "MET");
+    
+    CPLCHECK_MSG ("Cannot sync vis_SC");
+    
+    /* Create the FIRST and LAST for each flux_SC frame */
+    gravi_signal_create_sync (flux_SC, 4, dit_sc, flux_FT, 4, "FT");
+    gravi_signal_create_sync (flux_SC, 4, dit_sc, vis_met, 4, "MET");
+    gravi_signal_create_sync (flux_SC, 4, dit_sc, fddl_table, 1, "FDDL");
+
+    CPLCHECK_MSG ("Cannot sync flux_SC");
+
+    /* Create the FIRST and LAST for each t3_SC frame */
+    /* FIXME: is it definitely ok to use flux_FT here? */
+    gravi_signal_create_sync (t3_SC, 4, dit_sc, flux_FT, 4, "FT");
+    gravi_signal_create_sync (t3_SC, 4, dit_sc, vis_met, 4, "MET");
+    gravi_signal_create_sync (t3_SC, 4, dit_sc, fddl_table, 1, "FDDL");
+    
+    CPLCHECK_MSG ("Cannot sync t3_SC");
+    
+    /* 
+    * (2) Create the signals for FLUX_FT
+    */
+    
+    cpl_array ** flux_ft = cpl_table_get_data_array (flux_FT, "FLUX");
+    cpl_size nwave_ft = cpl_table_get_column_depth (vis_FT, "VISDATA");
+    cpl_size nrow_ft  = cpl_table_get_nrow (vis_FT) / nbase;
+
+    gravi_table_new_column (flux_FT, "TOTALFLUX", "e", CPL_TYPE_DOUBLE);
+    double * total_flux_ft = cpl_table_get_data_double (flux_FT, "TOTALFLUX");
+    
+    CPLCHECK_MSG ("Cannot create columns");
+
+    /* Total flux in [e] */
+    for (cpl_size row = 0; row < nrow_ft * ntel; row ++) {
+      total_flux_ft[row] = cpl_array_get_mean (flux_ft[row]) * nwave_ft;
+    }
+
+    /* Smooth TOTALFLUX of the FT over few samples. Maybe make sure
+    * this is a constant frequency, not a constant nb of samples */
+    gravi_table_smooth_column (flux_FT, "TOTALFLUX", "TOTALFLUX", 10, ntel);
+
+    CPLCHECK_MSG("Cannot compute TOTALFLUX for FT");
+
+    /* 
+    * (3) Create the signals for VIS_FT
+    */
+    
+    /* Create F1F2 and PHASE_REF column */
+    gravi_vis_create_f1f2_ft (vis_FT, flux_FT);
+    gravi_vis_create_phaseref_ft (vis_FT);
+
+    CPLCHECK_MSG ("Cannot create signals for VIS_FT");
+    
+    /* 
+    *  (4) Create the signal for FLUX_SC
+    */
+    gravi_flux_create_met_sc (flux_SC, vis_met);
+    gravi_flux_create_fddlpos_sc (flux_SC, fddl_table);
+    gravi_flux_create_totalflux_sc (flux_SC, flux_FT);
+
+    CPLCHECK_MSG ("Cannot create the signal for FLUX_SC");
+
+    /* 
+    *  (5) Create the signals for VIS_SC and T3_SC
+    */
+    gravi_vis_create_pfactor_sc (vis_SC, t3_SC, flux_FT);
+    gravi_vis_create_f1f2_sc (vis_SC, flux_SC);
+    gravi_vis_create_met_sc (vis_SC, vis_met, oi_wavelengthsc);
+    
+    gravi_vis_create_vfactor_sc (vis_SC, oi_wavelengthsc,
+                  vis_FT, oi_wavelengthft);
+
+    CPLCHECK_MSG ("Cannot create signals for VIS_SC");
+
+    /* 
+    * Create QC for PFACTOR, VFACTOR and P3FACTOR
+    */
 
     for (int base = 0; base < nbase; base++) {        
         char qc_name[100];
@@ -3200,9 +3238,18 @@ cpl_error_code gravi_compute_signals (gravi_data * p2vmred_data,
         cpl_propertylist_set_comment (p2vmred_header, qc_name, "mean p-factor");
     }
 
+    for (int closure = 0; closure < nclo; closure++) {        
+        char qc_name[100];
+        
+        sprintf (qc_name, "ESO QC P3FACTOR%s_P%d AVG", GRAVI_CLO_NAME[closure], pol+1);
+        double p3mean = gravi_table_get_column_mean (t3_SC, "P3_FACTOR", closure, nclo);
+        cpl_propertylist_update_double (p2vmred_header, qc_name, p3mean);
+        cpl_propertylist_set_comment (p2vmred_header, qc_name, "mean p3-factor");
+    }
+
     /* 
-     * If available, create the signal from ACQ camera
-     */
+    * If available, create the signal from ACQ camera
+    */
     if (gravi_data_has_extension (p2vmred_data, GRAVI_OI_VIS_ACQ_EXT)) {
         
         cpl_table * vis_ACQ = gravi_data_get_table (p2vmred_data, GRAVI_OI_VIS_ACQ_EXT);
@@ -3213,50 +3260,49 @@ cpl_error_code gravi_compute_signals (gravi_data * p2vmred_data,
         gravi_flux_create_acq_sc (flux_SC, vis_ACQ);
     }
 
-	/* 
-     * Compute FDDL = (FDDL_SC + FDDL_FT)/2 in [m]
-     * from the POS_SC, POS_FT and the linearity coeficients 
-     *
-     * Compute the OPD_DISP = n(lbd) * ODD_MET 
-     * from the OPD_MET and the dispersion coeficients 
-     */
-     cpl_table * disp_table =  disp_data ? gravi_data_get_table (disp_data, "DISP_MODEL") : NULL;
-     
-     gravi_flux_create_fddllin_sc (flux_SC, disp_table);
-     gravi_vis_create_opddisp_sc (vis_SC, flux_SC, oi_wavelengthsc, disp_table, p2vmred_header, parlist);
-
-     CPLCHECK_MSG ("Cannot compute the OPD_DISP");
-
-	
-     /* 
-      * Compute the GDELAY of the FT and SC with the proper algorithm.
-      * Critical since these quantities are used for debuging astrometry 
-      */
+    /*
+    * Compute FDDL = (FDDL_SC + FDDL_FT)/2 in [m]
+    * from the POS_SC, POS_FT and the linearity coeficients 
+    *
+    * Compute the OPD_DISP = n(lbd) * ODD_MET 
+    * from the OPD_MET and the dispersion coeficients 
+    */
+    cpl_table * disp_table =  disp_data ? gravi_data_get_table (disp_data, "DISP_MODEL") : NULL;
     
-     /* Recompute the GDELAY of the FT (probably useless since one use GDELAY_FT) */
-     gravi_table_compute_group_delay (vis_FT, "VISDATA", "FLAG",
-				      "GDELAY", oi_wavelengthft);
+    gravi_flux_create_fddllin_sc (flux_SC, disp_table);
+    gravi_vis_create_opddisp_sc (vis_SC, flux_SC, oi_wavelengthsc, disp_table, p2vmred_header, parlist);
+
+    CPLCHECK_MSG ("Cannot compute the OPD_DISP");
 	
-     /* Recompute the GDELAY of the SC (probably usefull) */
-     gravi_table_compute_group_delay (vis_SC, "VISDATA", "FLAG",
-				      "GDELAY", oi_wavelengthsc);
+    /* 
+    * Compute the GDELAY of the FT and SC with the proper algorithm.
+    * Critical since these quantities are used for debuging astrometry 
+    */
+    
+    /* Recompute the GDELAY of the FT (probably useless since one use GDELAY_FT) */
+    gravi_table_compute_group_delay (vis_FT, "VISDATA", "FLAG",
+            "GDELAY", oi_wavelengthft);
 
-     /* Compute the GDELAY_FT of VISDATA_FT in SC table (critical) */
-     gravi_table_compute_group_delay (vis_SC, "VISDATA_FT", "FLAG",
-				      "GDELAY_FT", oi_wavelengthft);
-	
-     CPLCHECK_MSG ("Cannot compute the GDELAYs");
+    /* Recompute the GDELAY of the SC (probably usefull) */
+    gravi_table_compute_group_delay (vis_SC, "VISDATA", "FLAG",
+            "GDELAY", oi_wavelengthsc);
 
-     /* Compute the SELF_REF phase reference for SC (first) */
-     gravi_vis_create_phaseref_sc (vis_SC, oi_wavelengthsc, NULL, p2vmred_header, parlist);
-	
-     /* Compute the PHASE_REF reference for SC */
-     gravi_vis_create_phaseref_sc (vis_SC, oi_wavelengthsc, oi_wavelengthft, p2vmred_header, parlist);
+    /* Compute the GDELAY_FT of VISDATA_FT in SC table (critical) */
+    gravi_table_compute_group_delay (vis_SC, "VISDATA_FT", "FLAG",
+            "GDELAY_FT", oi_wavelengthft);
 
-     /* Create the IMAGING_REF phase ref, need PHASE_REF */
-     gravi_vis_create_imagingref_sc (vis_SC, oi_wavelengthsc, p2vmred_header, parlist);
+    CPLCHECK_MSG ("Cannot compute the GDELAYs");
 
-     CPLCHECK_MSG ("Cannot compute the PHASE_REF");
+    /* Compute the SELF_REF phase reference for SC (first) */
+    gravi_vis_create_phaseref_sc (vis_SC, oi_wavelengthsc, NULL, p2vmred_header, parlist);
+
+    /* Compute the PHASE_REF reference for SC */
+    gravi_vis_create_phaseref_sc (vis_SC, oi_wavelengthsc, oi_wavelengthft, p2vmred_header, parlist);
+
+    /* Create the IMAGING_REF phase ref, need PHASE_REF */
+    gravi_vis_create_imagingref_sc (vis_SC, oi_wavelengthsc, p2vmred_header, parlist);
+
+    CPLCHECK_MSG ("Cannot compute the PHASE_REF");
   } /* End loop on pol */
   
 

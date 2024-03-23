@@ -60,11 +60,11 @@ char GRAVI_BASE_NAME[6][3] = {"12","13","14","23","24","34"};
 int GRAVI_TRI_BASE[6][2][2] = { {{1,3},{2,4}}, {{0,3},{2,5}}, {{0,4},{1,5}}, {{0,1},{4,5}}, {{0,2},{3,5}}, {{1,2},{3,4}}};
 int GRAVI_TRI_SIGN[6][2][2] = { {{1,-1},{1,-1}},  {{1,1},{1,-1}}, {{1,1},{1,1}}, {{-1,1},{1,-1}}, {{-1,1},{1,1}}, {{-1,1},{-1,1}} };
 
-/* Closing telescope: [3 closures][tel1, tel2, tel3] */
+/* Closing telescope: [4 closures][tel1, tel2, tel3] */
 int GRAVI_CLO_TEL[4][3] = {{0,1,2}, {0,1,3}, {0,2,3}, {1,2,3}};
 char GRAVI_CLO_NAME[4][4] = {"123", "124", "134", "234"};
 
-/* Baseline in closure: [3 closures][base1, base2, -base3] */
+/* Baseline in closure: [4 closures][base1, base2, -base3] */
 int GRAVI_CLO_BASE[4][3] = {{0,3,1}, {0,4,2}, {1,5,2}, {3,5,4}};
 
 /* DATA and DATAERR region names */

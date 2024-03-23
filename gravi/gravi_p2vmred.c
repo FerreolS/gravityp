@@ -338,7 +338,7 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
 	cpl_ensure (parlist,       CPL_ERROR_NULL_INPUT, NULL);
 
 	char qc_name[90];
-    int ntel = 4, nbase = 6;
+    int ntel = 4, nclo = 4, nbase = 6;
 	int nv; /* npol_ft, npol_sc; */
 
 	/* Timers */
@@ -492,6 +492,7 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
 
             /* Create table */
 			cpl_table * oi_vis = gravi_table_oi_create (nwave, nrow, GRAVI_OI_VIS_EXT);
+			cpl_table * oi_t3 = gravi_table_oi_create (nwave, nrow, GRAVI_OI_T3_EXT);
  			cpl_table * oi_flux = gravi_table_oi_create (nwave, nrow, GRAVI_OI_FLUX_EXT);
 
 			/* Delete useless columns in this product */
@@ -503,8 +504,17 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
 			cpl_table_erase_column (oi_vis, "RVISERR");
 			cpl_table_erase_column (oi_vis, "IVIS");
 			cpl_table_erase_column (oi_vis, "IVISERR");
+		
+			cpl_table_erase_column (oi_t3, "T3AMP");
+			cpl_table_erase_column (oi_t3, "T3PHI");
+			cpl_table_erase_column (oi_t3, "T3AMPERR");
+			cpl_table_erase_column (oi_t3, "T3PHIERR");
+			cpl_table_erase_column (oi_t3, "U1COORD");
+			cpl_table_erase_column (oi_t3, "V1COORD");
+			cpl_table_erase_column (oi_t3, "U2COORD");
+			cpl_table_erase_column (oi_t3, "V2COORD");
 
-            /* Set table in p2vmred */
+			/* Set table in p2vmred */
 			cpl_propertylist * oi_plist = cpl_propertylist_new ();
             cpl_propertylist_copy_property (oi_plist, oiarray_plist, "ARRNAME");
             cpl_propertylist_copy_property (oi_plist, preproc_header, "DATE-OBS");
@@ -517,7 +527,12 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
                                   GRAVI_OI_VIS_EXT, oi_vis);
 
             oi_plist = cpl_propertylist_duplicate (oi_plist);
-            
+
+			gravi_data_add_table (p2vmred_data, oi_plist,
+                                  GRAVI_OI_T3_EXT, oi_t3);
+
+            oi_plist = cpl_propertylist_duplicate (oi_plist);
+
 			gravi_data_add_table (p2vmred_data, oi_plist,
                                   GRAVI_OI_FLUX_EXT, oi_flux);
 
@@ -629,13 +644,13 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
              * the PCR.ACQ.START, in order to correlate with RMN tables.
              * Thus this TIME column is *not* at the OIFITS standart */
 			cpl_table_set_column_unit (oi_vis,  "TIME", "us");
+			cpl_table_set_column_unit (oi_t3,  "TIME", "us");
 			cpl_table_set_column_unit (oi_flux, "TIME", "us");
 
 			/* Fill STA_INDEX and times for OI_VIS */
 			cpl_array * sta_index = cpl_array_new (2, CPL_TYPE_INT);
             
 			for (int base=0; base < nbase; ++base) {
-
 			    /* Build sta_index */
                 int sta0 = gravi_sta_index(GRAVI_BASE_TEL[base][0]+1, optical_train_table, oi_array);
                 int sta1 = gravi_sta_index(GRAVI_BASE_TEL[base][1]+1, optical_train_table, oi_array);
@@ -655,6 +670,31 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
 			cpl_array_delete (sta_index);
 			CPLCHECK_NUL ("Cannot fill sta_index or time in OI_VIS");
 
+			/* Fill STA_INDEX and times for OI_T3 */
+			sta_index = cpl_array_new (3, CPL_TYPE_INT);
+            
+			for (int closure=0; closure < nclo; ++closure) {
+			    /* Build sta_index */
+                int sta0 = gravi_sta_index(GRAVI_CLO_TEL[closure][0]+1, optical_train_table, oi_array);
+                int sta1 = gravi_sta_index(GRAVI_CLO_TEL[closure][1]+1, optical_train_table, oi_array);
+                int sta2 = gravi_sta_index(GRAVI_CLO_TEL[closure][2]+1, optical_train_table, oi_array);
+				cpl_array_set_int (sta_index, 0, sta0);
+				cpl_array_set_int (sta_index, 1, sta1);
+				cpl_array_set_int (sta_index, 2, sta2);
+                CPLCHECK_NUL ("Cannot find the sta_index");
+
+				/* loop on rows */
+				for (int row=0; row < nrow; ++row) {
+					int idx = row * nclo + closure;
+					cpl_table_set_array  (oi_t3, "STA_INDEX", idx, sta_index);
+					cpl_table_set (oi_t3, "TIME", idx, cpl_array_get (times, row, &nv));
+					cpl_table_set (oi_t3, "MJD", idx, cpl_array_get (mjds, row, &nv));
+				}
+			} /* End loop on closures */
+
+			cpl_array_delete (sta_index);
+			CPLCHECK_NUL ("Cannot fill sta_index or time in OI_T3");
+
 			/* Fill STA_INDEX and times for OI_FLUX */
 			for (int tel = 0; tel < ntel; tel++){
 				int sta0 = gravi_sta_index(tel+1, optical_train_table, oi_array);
@@ -673,6 +713,7 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
 			/* Fill the exposure time */
 			double exptime = gravi_pfits_get_dit (gravi_data_get_header (preproc_data), type_data);
 			cpl_table_fill_column_window  (oi_vis,  "INT_TIME", 0, nrow * nbase, exptime);
+			cpl_table_fill_column_window  (oi_t3,  "INT_TIME", 0, nrow * nclo, exptime);
 			cpl_table_fill_column_window  (oi_flux, "INT_TIME", 0, nrow * ntel, exptime);
 			CPLCHECK_NUL ("Cannot fill exptime");
 
@@ -680,6 +721,7 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
              * Same definition applies when building the OI_TARGET */
             int target_id = (!strcmp(mode, "gravi_dual") && (type_data==GRAVI_SC) )?2:1;
 			cpl_table_fill_column_window_int (oi_vis, "TARGET_ID", 0, nrow * nbase, target_id);
+			cpl_table_fill_column_window_int (oi_t3, "TARGET_ID", 0, nrow * nclo, target_id);
 			cpl_table_fill_column_window_int (oi_flux, "TARGET_ID", 0, nrow * ntel, target_id);
 			CPLCHECK_NUL ("Cannot fill target_id");
 			
