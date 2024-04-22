@@ -23,9 +23,9 @@ ACLOCAL_AMFLAGS = -I m4macros
 
 DISTCLEANFILES = *~
 
-COMPILE_FIRST = mira
+COMPILE_FIRST =
 
-TOPSUBDIRS = irplib hdrl gravi recipes reflex
+TOPSUBDIRS = irplib hdrl gravi recipes reflex regtests
 
 COMPILE_LAST =
 

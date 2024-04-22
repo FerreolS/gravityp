@@ -114,4 +114,7 @@ AC_CONFIG_FILES(Makefile
                 reflex/gravity_mastercalib.xml
                 recipes/Makefile
                 mira/Makefile)
+                regtests/Makefile
+                regtests/tests/Makefile)
+
 AC_OUTPUT
