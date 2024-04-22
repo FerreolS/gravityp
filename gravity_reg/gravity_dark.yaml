@@ -13,3 +13,7 @@ EsorexTests:
       recipe: gravity_dark
       sof:
         - ["gravity_dark/LOW_ins_SPLIT_ft_SPLIT_dit2_10.0000000_dit3_0.0008500_fddl_0.0000/GRAVI.2018-01-05T14:01:37.839.fits", DARK_RAW]
+   - 102.gravity_dark.HIGH_ins_COMBINED_ft_COMBINED_dit2_0.3000000_dit3_0.0008400_fddl_0.1000:
+      recipe: gravity_dark
+      sof:
+        - ["gravity_dark/HIGH_ins_COMBINED_ft_COMBINED_dit2_0.3000000_dit3_0.0008400_fddl_0.1000/GRAVI.2016-12-15T11:19:23.626.fits", DARK_RAW]
