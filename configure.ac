@@ -113,7 +113,7 @@ AC_CONFIG_FILES(Makefile
                 reflex/gravity_viscal.xml
                 reflex/gravity_mastercalib.xml
                 recipes/Makefile
-                mira/Makefile)
+                mira/Makefile
                 regtests/Makefile
                 regtests/tests/Makefile)
 
