@@ -97,8 +97,6 @@ HDRL_CHECK([hdrl])
 GRAVI_SET_PATHS 
 GRAVI_CREATE_SYMBOLS
 
-MIRA_SET_PATHS
-
 AM_WITH_DMALLOC
 
 
@@ -113,7 +111,6 @@ AC_CONFIG_FILES(Makefile
                 reflex/gravity_viscal.xml
                 reflex/gravity_mastercalib.xml
                 recipes/Makefile
-                mira/Makefile
                 regtests/Makefile
                 regtests/tests/Makefile)
 
