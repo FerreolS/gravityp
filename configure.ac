@@ -84,14 +84,7 @@ AC_CONFIG_SUBDIRS([hdrl])
 HDRL_CHECK([hdrl])
 
 #Check the presence of pkgconfig
-#ESO_PROG_PKGCONFIG
-
-# Check for <xx>clipm
-# - can be called multiple times
-# - replace the argument "xxclipm" by your library name,
-#   e.g. with KMOS: XXCLIPM_CHECK_LIB(kmclipm)
-# Comment in if required!
-# XXCLIPM_CHECK_LIB(xxclipm)
+ESO_PROG_PKGCONFIG
 
 # call after CPL_CHECK_LIBS and XXCLIPM_CHECK_LIB
 GRAVI_SET_PATHS 
