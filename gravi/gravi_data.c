@@ -1236,7 +1236,7 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
   CPLCHECK_MSG ("Cannot get data");
 
   /* Remove cosmic rays if requested */
-  if ( !gravi_param_get_bool_default (parlist, "gravity.preproc.remove-cosmicrays", CPL_TRUE) )
+  if ( gravi_param_get_bool_default (parlist, "gravity.preproc.remove-cosmicrays", CPL_TRUE) )
   {
     gravi_remove_cosmicrays_sc (imglist);
     CPLCHECK_MSG ("Cannot remove cosmic rays");
