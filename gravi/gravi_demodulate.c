@@ -114,7 +114,7 @@ const double diode_zeros[] = {
      0.0008010985218159154,  9.667686713004861e-05,  0.0008396378442216361,  0.0005619108431658763
 };
 
-static double model_x (const gsl_vector *X, double offset, int step)
+static double model_x (const gsl_vector *X, int step)
 {
     double fstep = (1.0 * step) / STEPS_PER_SECOND;
     double a = gsl_vector_get(X, 0);
@@ -122,10 +122,10 @@ static double model_x (const gsl_vector *X, double offset, int step)
     double pha1 = gsl_vector_get(X, 2);
     double pha2 = gsl_vector_get(X, 3);
 
-    return offset + a * sin(b * sin(fstep * TWOPI + pha1) + pha2);
+    return a * sin(b * sin(fstep * TWOPI + pha1) + pha2);
 }
 
-static double model_y (const gsl_vector *X, double offset, int step)
+static double model_y (const gsl_vector *X, int step)
 {
     double fstep = (1.0 * step) / STEPS_PER_SECOND;
     double a = gsl_vector_get(X, 0);
@@ -133,17 +133,16 @@ static double model_y (const gsl_vector *X, double offset, int step)
     double pha1 = gsl_vector_get(X, 2);
     double pha2 = gsl_vector_get(X, 3);
 
-    return offset + a * cos(b * sin(fstep * TWOPI + pha1) + pha2);
+    return a * cos(b * sin(fstep * TWOPI + pha1) + pha2);
 }
 
 static double modulation_model_chi2 (const gsl_vector *x, void *params);
 
 typedef struct _demodulation_model_params_ {
     const gsl_vector *volts_x, *volts_y;
-    double offset_x, offset_y;
 } model_params;
 
-static cpl_error_code fit_model_modulation (const gsl_vector *vx, const gsl_vector *vy, double zx, double zy, gsl_vector *Xsolve);
+static cpl_error_code fit_model_modulation (const gsl_vector *vx, const gsl_vector *vy, gsl_vector *Xsolve);
 
 /*-----------------------------------------------------------------------------
                               Function code
@@ -222,45 +221,6 @@ cpl_error_code gravi_metrology_demodulate (gravi_data *met_data, cpl_boolean zer
         }
         CPLCHECK_INT("Cannot extract the metrology data");
 
-        /* Calculate average over steps within chunk */
-        gsl_matrix * volts_averaged = gsl_matrix_alloc(STEPS_PER_SECOND, ncol);
-        for (int step = 0; step < STEPS_PER_SECOND; step++) {
-            for (int icol = 0; icol < ncol; icol++) {
-                /* Select the data in the appropriate column for the current step within each second */
-                double *start = volts->data + (step * ncol + icol);
-                gsl_vector_const_view step_col_view = gsl_vector_const_view_array_with_stride(
-                    start, STEPS_PER_SECOND * ncol, nsec);
-                /* NB: ignores fractional second at the end of last chunk */
-                double mean = gsl_stats_mean(
-                    step_col_view.vector.data, step_col_view.vector.stride, step_col_view.vector.size);
-                gsl_matrix_set(volts_averaged, step, icol, mean);
-            }
-        }
-
-        /* Fit demodulation model to averaged voltages */
-        gsl_matrix *Xsolve = gsl_matrix_alloc(ntel * ndiode * nside, 4);
-        int isolve = 0;
-        for (int tel = 0; tel < ntel; tel++) {
-            for (int diode = 0; diode < ndiode; diode++) {
-                for (int side = FT; side <= SC; side++) {
-                    int ix = diode_column_index(tel, diode, side);
-                    int iy = ix + 1;
-                    gsl_vector_const_view vx = gsl_matrix_const_column(volts_averaged, ix);
-                    gsl_vector_const_view vy = gsl_matrix_const_column(volts_averaged, iy);
-
-                    double ox = zero_subtracted ? 0.0 : diode_zeros[ix];
-                    double oy = zero_subtracted ? 0.0 : diode_zeros[iy];
-
-                    gsl_vector_view Xsolve_row = gsl_matrix_row(Xsolve, isolve);
-                    cpl_error_code status = fit_model_modulation(&vx.vector, &vy.vector, ox, oy, &Xsolve_row.vector);
-                    if (status)
-                        cpl_error_set(cpl_func, status);
-                    isolve++;
-                }
-            }
-        }
-        CPLCHECK_INT("Cannot fit modulation model");
-
         /* If DARK provided, metrology has already been zeroed by subtracting values from the DARK */
         /* Otherwise use hardcoded diode_zeros array to subtract offsets */
         gsl_matrix * volts_zeroed = gsl_matrix_alloc(nrow, ncol);
@@ -275,8 +235,8 @@ cpl_error_code gravi_metrology_demodulate (gravi_data *met_data, cpl_boolean zer
             gsl_matrix_scale(volts_zeroed, -1.0);
             gsl_matrix_add(volts_zeroed, volts);
         }
-        
-        /* Recalculate average over steps of zeroed data */
+
+         /* Calculate average over steps of zeroed data */
         gsl_matrix * volts_zeroed_averaged = gsl_matrix_alloc(STEPS_PER_SECOND, ncol);
         for (int step = 0; step < STEPS_PER_SECOND; step++) {
             for (int icol = 0; icol < ncol; icol++) {
@@ -290,6 +250,27 @@ cpl_error_code gravi_metrology_demodulate (gravi_data *met_data, cpl_boolean zer
                 gsl_matrix_set(volts_zeroed_averaged, step, icol, mean);
             }
         }
+
+        /* Fit demodulation model to averaged voltages */
+        gsl_matrix *Xsolve = gsl_matrix_alloc(ntel * ndiode * nside, 4);
+        int isolve = 0;
+        for (int tel = 0; tel < ntel; tel++) {
+            for (int diode = 0; diode < ndiode; diode++) {
+                for (int side = FT; side <= SC; side++) {
+                    int ix = diode_column_index(tel, diode, side);
+                    int iy = ix + 1;
+                    gsl_vector_const_view vx = gsl_matrix_const_column(volts_zeroed_averaged, ix);
+                    gsl_vector_const_view vy = gsl_matrix_const_column(volts_zeroed_averaged, iy);
+
+                    gsl_vector_view Xsolve_row = gsl_matrix_row(Xsolve, isolve);
+                    cpl_error_code status = fit_model_modulation(&vx.vector, &vy.vector, &Xsolve_row.vector);
+                    if (status)
+                        cpl_error_set(cpl_func, status);
+                    isolve++;
+                }
+            }
+        }
+        CPLCHECK_INT("Cannot fit modulation model");
 
         /* Calculate phase from average */
         gsl_matrix * volts_phase = gsl_matrix_alloc(STEPS_PER_SECOND, ntel * ndiode * nside);
@@ -354,13 +335,12 @@ cpl_error_code gravi_metrology_demodulate (gravi_data *met_data, cpl_boolean zer
         CPLCHECK_INT("Cannot store demodulated metrology data");
         
         /* Clean up intermediate values */
-        gsl_matrix_free(volts_phase);
-        gsl_matrix_free(volts_zeroed_averaged);
-        gsl_matrix_free(volts_zeroed);
-        gsl_matrix_free(Xsolve);
-        gsl_matrix_free(volts_averaged);
-        gsl_matrix_free(volts);
-        cpl_table_delete(chunk_data);
+        FREE(gsl_matrix_free, volts_phase);
+        FREE(gsl_matrix_free, volts_zeroed_averaged);
+        FREE(gsl_matrix_free, volts_zeroed);
+        FREE(gsl_matrix_free, Xsolve);
+        FREE(gsl_matrix_free, volts);
+        FREE(cpl_table_delete, chunk_data);
     } /* End loop over chunks */
 
     gravi_msg_function_exit(1);
@@ -383,8 +363,8 @@ double modulation_model_chi2 (const gsl_vector *X, void *params)
     gsl_vector *model_vx = gsl_vector_alloc(STEPS_PER_SECOND);
     gsl_vector *model_vy = gsl_vector_alloc(STEPS_PER_SECOND);
     for (int i = 0; i < STEPS_PER_SECOND; i++) {
-        gsl_vector_set(model_vx, i, model_x(X, p->offset_x, i));
-        gsl_vector_set(model_vy, i, model_y(X, p->offset_y, i));
+        gsl_vector_set(model_vx, i, model_x(X, i));
+        gsl_vector_set(model_vy, i, model_y(X, i));
     }
 
     /* form chi2 */
@@ -421,7 +401,7 @@ double modulation_model_chi2 (const gsl_vector *X, void *params)
  * 
  * @return CPL_ERROR_NONE if fit successful
 */
-cpl_error_code fit_model_modulation (const gsl_vector *vx, const gsl_vector *vy, double zx, double zy, gsl_vector *Xsolve)
+cpl_error_code fit_model_modulation (const gsl_vector *vx, const gsl_vector *vy, gsl_vector *Xsolve)
 {
     cpl_ensure_code(vx, CPL_ERROR_NULL_INPUT);
     cpl_ensure_code(vy, CPL_ERROR_NULL_INPUT);
@@ -438,9 +418,7 @@ cpl_error_code fit_model_modulation (const gsl_vector *vx, const gsl_vector *vy,
 
     model_params params = {
         .volts_x = vx,
-        .volts_y = vy,
-        .offset_x = zx,
-        .offset_y = zy,
+        .volts_y = vy
     };
 
     gsl_multimin_function func = {
@@ -510,5 +488,6 @@ cpl_error_code fit_model_modulation (const gsl_vector *vx, const gsl_vector *vy,
     else
         cpl_msg_debug(cpl_func, "converged with best-fit:\na\tb\tpha1\tpha2\n%.4f\t%.4f\t%.4f\t%.4f\n", mini->x->data[0], mini->x->data[1], mini->x->data[2], mini->x->data[3]);
 
+    FREE(gsl_multimin_fminimizer_free, mini);
     return status ? CPL_ERROR_ILLEGAL_OUTPUT : CPL_ERROR_NONE;
 }
