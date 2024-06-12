@@ -326,8 +326,6 @@ static int gravity_vis_from_p2vmred(cpl_frameset * frameset,
 
 	/* Message */
 	gravity_print_banner (); 
-	cpl_msg_set_time_on();
-	cpl_msg_set_component_on();
 	gravi_msg_function_start(1);
 
     cpl_ensure_code(gravi_dfs_set_groups(frameset) == CPL_ERROR_NONE,

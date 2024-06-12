@@ -319,8 +319,6 @@ static int gravity_pcacal(cpl_frameset            * frameset,
 
 	/* Message */
 	gravity_print_banner ();
-	cpl_msg_set_time_on();
-	cpl_msg_set_component_on();
 	gravi_msg_function_start(1);
 
     int min_tracking_ratio = cpl_parameter_get_int(

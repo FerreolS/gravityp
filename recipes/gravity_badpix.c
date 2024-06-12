@@ -280,8 +280,6 @@ static int gravity_badpix(cpl_frameset            * frameset,
 	
 	/* Message */
 	gravity_print_banner (); 
-	cpl_msg_set_time_on();
-	cpl_msg_set_component_on();
 	gravi_msg_function_start(1);
 
 	/* Get the input frameset */
