@@ -141,7 +141,10 @@ cpl_error_code gravi_dfs_set_groups(cpl_frameset * set)
 				  (!strcmp(tag, GRAVI_DIAMETER_CAT)) ||
 				  (!strcmp(tag, GRAVI_DISP_MODEL)) ||
 				  (!strcmp(tag, GRAVI_DIODE_POSITION))||
-	        (!strcmp(tag, GRAVI_KEY_PATCH))){
+	        (!strcmp(tag, GRAVI_KEY_PATCH)) ||
+	        (!strcmp(tag, GRAVI_ASTRO_CAL_PHASEREF)) ||
+	        (!strcmp(tag, GRAVI_ASTRO_TARGET)) ||
+          (!strcmp(tag, GRAVI_ASTRO_SWAP))){
         	/* CALIB frames */
         	cpl_frame_set_group(frame, CPL_FRAME_GROUP_CALIB);
         }else if (
@@ -1046,6 +1049,110 @@ cpl_error_code gravi_parameter_add_compute_vis (cpl_parameterlist *self, int isC
   return CPL_ERROR_NONE;
 }
 
+cpl_error_code gravi_parameter_add_astrometry (cpl_parameterlist *self)
+{
+    cpl_ensure_code (self, CPL_ERROR_NULL_INPUT);
+    
+    cpl_parameter *p;
+
+    /* just use fiber position for swaps rather than computing astrometry */
+    p = cpl_parameter_new_value("gravity.astrometry.use-swap-fiber-pos", CPL_TYPE_BOOL,
+      "use fiber position for swap rather than computing an astrometric solution.", "gravity.astrometry", CPL_FALSE);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "use-swap-fiber-pos");
+  	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	  cpl_parameterlist_append (self, p);
+
+    /* range in RA for swap astrometry */
+    p = cpl_parameter_new_value("gravity.astrometry.ra-lim-swap", CPL_TYPE_DOUBLE,
+      "specify the RA range (in mas) over which to search for the astrometry of the swap.", "gravity.astrometry", -1.0);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "ra-lim-swap");
+  	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	  cpl_parameterlist_append (self, p);
+
+    p = cpl_parameter_new_value("gravity.astrometry.nra-swap", CPL_TYPE_INT,
+      "number of points over the RA range for the swap.", "gravity.astrometry", 50);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "nra-swap");
+  	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	  cpl_parameterlist_append (self, p);
+
+    /* range in dec for swap astrometry */
+    p = cpl_parameter_new_value("gravity.astrometry.dec-lim-swap", CPL_TYPE_DOUBLE,
+      "specify the dec range (in mas) over which to search for the astrometry of the swap.", "gravity.astrometry", -1.0);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "dec-lim-swap");
+  	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	  cpl_parameterlist_append (self, p);
+
+    p = cpl_parameter_new_value("gravity.astrometry.ndec-swap", CPL_TYPE_INT,
+      "number of points over the dec range for the swap.", "gravity.astrometry", 50);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "ndec-swap");
+  	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	  cpl_parameterlist_append (self, p);
+
+    /* average over DITs before reduction for speed */
+    p = cpl_parameter_new_value("gravity.astrometry.average-over-dits", CPL_TYPE_BOOL,
+      "Average over DITs before reducing astrometry for speed.", "gravity.astrometry", CPL_FALSE);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "average-over-dits");
+  	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	  cpl_parameterlist_append (self, p);
+
+    p = cpl_parameter_new_value("gravity.astrometry.zoom-factor", CPL_TYPE_DOUBLE,
+      "Factor to magnify ra/dec limits by after initial fit to find precise solution.", "gravity.astrometry", 1.0);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "zoom-factor");
+  	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	  cpl_parameterlist_append (self, p);
+
+    // /* target name from FITS header */
+    // p = cpl_parameter_new_value("gravity.astrometry.target-name", CPL_TYPE_STRING,
+    //   "specify a particular target to reduce (read from FITS header)", "gravity.astrometry", NULL);
+    
+    // /* swap target name from FITS header */
+    // p = cpl_parameter_new_value("gravity.astrometry.swap-target-name", CPL_TYPE_STRING,
+    //   "specify a particular target for the swap calibration in off-axis mode (read from FITS header)", "gravity.astrometry", NULL);
+
+    /* fiber position */
+    // p = cpl_parameter_new_value("gravity.astrometry.fiber-pos-x", CPL_TYPE_DOUBLE,
+    //   "x position (in mas) of the fiber position to restrict the reduction to", "gravity.astrometry", 0.0);
+    // cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "fiber-pos-x");
+  	// cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	  // cpl_parameterlist_append (self, p);
+
+    // p = cpl_parameter_new_value("gravity.astrometry.fiber-pos-y", CPL_TYPE_DOUBLE,
+    //   "y position (in mas) of the fiber position to restrict the reduction to", "gravity.astrometry", 0.0);
+    // cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "fiber-pos-y");
+  	// cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	  // cpl_parameterlist_append (self, p);
+
+    /* FT flux threshold */
+    p = cpl_parameter_new_value("gravity.astrometry.ft-mean-flux", CPL_TYPE_DOUBLE,
+        "remove all data with FT flux below this factor times the mean", "gravity.astrometry", 0.2);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "ft-mean-flux");
+  	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	  cpl_parameterlist_append (self, p);
+
+    /* Calibration strategy for computing amplitude references */
+    const char * calib_strategies[] = {"none", "all", "self", "swap", "nearest"};
+    p = cpl_parameter_new_enum_from_array("gravity.astrometry.calib-strategy",  CPL_TYPE_STRING,
+        "how to calculate the reference coherent flux\n"
+        "\t'none': do not use an amplitude reference\n"
+        "\t'all': use all files\n"
+        "\t'self': calibrate each file individually\n"
+        "\t'swap': use the swap files\n"
+        "\t'nearest': use the two nearest available files.",
+        "gravity.astrometry", 0, 5, calib_strategies);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "calib-strategy");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	  cpl_parameterlist_append (self, p);
+
+    /* temp for debugging */
+    p = cpl_parameter_new_value("gravity.astrometry.wait-for-debugger", CPL_TYPE_BOOL,
+      "busy wait for attaching the debugger.", "gravity.astrometry", CPL_FALSE);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "wait-for-debugger");
+  	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	  cpl_parameterlist_append (self, p);
+
+    return CPL_ERROR_NONE;
+}
+
 cpl_error_code gravi_parameter_add_image (cpl_parameterlist *self)
 {
     cpl_ensure_code (self, CPL_ERROR_NULL_INPUT);
@@ -1258,6 +1365,18 @@ cpl_frameset * gravi_frameset_extract_vis_science (cpl_frameset * frameset) {
 cpl_frameset * gravi_frameset_extract_science_data (cpl_frameset * frameset) {
   const char *tags[] = {GRAVI_DUAL_SCIENCE_RAW, GRAVI_SINGLE_SCIENCE_RAW};
   return gravi_frameset_extract (frameset, tags, 2);
+}
+cpl_frameset * gravi_frameset_extract_astro_target (cpl_frameset * frameset) {
+  const char *tags[] = {GRAVI_ASTRO_TARGET};
+  return gravi_frameset_extract (frameset, tags, 1);
+}
+cpl_frameset * gravi_frameset_extract_astro_swap (cpl_frameset * frameset) {
+  const char *tags[] = {GRAVI_ASTRO_SWAP};
+  return gravi_frameset_extract (frameset, tags, 1);
+}
+cpl_frameset * gravi_frameset_extract_astro_phaseref (cpl_frameset * frameset) {
+  const char *tags[] = {GRAVI_ASTRO_CAL_PHASEREF};
+  return gravi_frameset_extract (frameset, tags, 1);
 }
 cpl_frameset * gravi_frameset_extract_p2vm_map (cpl_frameset * frameset) {
   const char *tags[] = {GRAVI_P2VM_MAP};

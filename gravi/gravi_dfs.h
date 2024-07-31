@@ -118,7 +118,13 @@
 #define GRAVI_VISPHI_TF_DUAL_CALIB          "DUAL_CAL_TF_VISPHI"
 #define GRAVI_VISPHI_TF_CALIB(data_mode) (data_mode==MODE_DUAL?GRAVI_VISPHI_TF_DUAL_CALIB:GRAVI_VISPHI_TF_SINGLE_CALIB)
 
-/* Still unsuported data */
+/* PRO.CATG / DO.CATG for astrometry products */
+#define GRAVI_ASTRO_TARGET                  "ASTRO_TARGET"
+#define GRAVI_ASTRO_SWAP                    "ASTRO_SWAP"
+#define GRAVI_ASTRO_CAL_PHASEREF            "ASTRO_CAL_PHASEREF"
+#define GRAVI_ASTRO_PHASE_CALIBRATED        "ASTRO_PHASE_CALIBRATED"
+
+/* Still unsupported data */
 #define GRAVI_ZP_CAL                        "ZP_CAL"
 #define GRAVI_MIRA_INPUT_PROCATG            "VIS_CALIBRATED"
 #define GRAVI_MIRA_OUTPUT_PROCATG           "IMAGE"
@@ -161,6 +167,7 @@ cpl_error_code gravi_parameter_add_compute_snr (cpl_parameterlist *self);
 cpl_error_code gravi_parameter_add_compute_signal (cpl_parameterlist *self);
 cpl_error_code gravi_parameter_add_rejection (cpl_parameterlist *self, int iscalib);
 cpl_error_code gravi_parameter_add_compute_vis (cpl_parameterlist *self, int iscalib);
+cpl_error_code gravi_parameter_add_astrometry (cpl_parameterlist *self);
 cpl_error_code gravi_parameter_add_image (cpl_parameterlist *self);
 
 cpl_frameset * gravi_frameset_extract (cpl_frameset * frameset, const char ** frame_tags, int nb_tabs);
@@ -180,6 +187,9 @@ cpl_frameset * gravi_frameset_extract_tf_calib (cpl_frameset * );
 cpl_frameset * gravi_frameset_extract_vis_calib (cpl_frameset * );
 cpl_frameset * gravi_frameset_extract_vis_science (cpl_frameset * );
 cpl_frameset * gravi_frameset_extract_science_data (cpl_frameset * );
+cpl_frameset * gravi_frameset_extract_astro_target (cpl_frameset * );
+cpl_frameset * gravi_frameset_extract_astro_swap (cpl_frameset * );
+cpl_frameset * gravi_frameset_extract_astro_phaseref (cpl_frameset * );
 cpl_frameset * gravi_frameset_extract_sky_data(cpl_frameset * );
 cpl_frameset * gravi_frameset_extract_wavelamp_data(cpl_frameset * );
 cpl_frameset * gravi_frameset_extract_dispvis_data(cpl_frameset * );

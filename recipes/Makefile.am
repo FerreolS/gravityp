@@ -45,7 +45,8 @@ plugin_LTLIBRARIES = gravity_dark.la \
 						gravity_badpix.la \
 						gravity_pcacal.la \
 						gravity_biasmask.la \
-						gravity_wavelamp.la
+						gravity_wavelamp.la \
+						gravity_astrometry.la
 
 gravity_dark_la_SOURCES = gravity_dark.c 
 gravity_dark_la_LIBADD = $(LIBGRAVI) $(HDRL_LIBS)
@@ -111,3 +112,8 @@ gravity_eop_la_SOURCES = gravity_eop.c
 gravity_eop_la_LIBADD = $(LIBGRAVI) $(HDRL_LIBS)
 gravity_eop_la_LDFLAGS = -module -avoid-version $(HDRL_LDFLAGS)
 gravity_eop_la_DEPENDENCIES = $(LIBGRAVI) $(LIBHDRL)
+
+gravity_astrometry_la_SOURCES = gravity_astrometry.c 
+gravity_astrometry_la_LIBADD = $(LIBGRAVI) $(HDRL_LIBS)
+gravity_astrometry_la_LDFLAGS = -module -avoid-version $(HDRL_LDFLAGS)
+gravity_astrometry_la_DEPENDENCIES = $(LIBGRAVI) $(LIBHDRL)

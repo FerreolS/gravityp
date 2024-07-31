@@ -56,7 +56,8 @@ noinst_HEADERS =    gravi_calib.h \
                     gravi_eop.h \
                     gravi_idp.h \
                     gravi_pca.h \
-                    gravi_demodulate.h
+                    gravi_demodulate.h \
+                    gravi_astrometry.h
 
 pkginclude_HEADERS =
 
@@ -84,7 +85,8 @@ libgravi_la_SOURCES =    gravi_calib.c \
                          gravi_eop.c \
                          gravi_idp.c \
                          gravi_pca.c \
-                         gravi_demodulate.c
+                         gravi_demodulate.c \
+                         gravi_astrometry.c
 
 libgravi_la_LDFLAGS = $(HDRL_LDFLAGS) $(CPL_LDFLAGS) $(GSL_LDFLAGS) -version-info $(LT_CURRENT):$(LT_REVISION):$(LT_AGE) 
 libgravi_la_LIBADD = $(HDRL_LIBS) $(LIBIRPLIB) $(LIBCPLDFS) $(LIBCPLUI) $(LIBCPLDRS) $(LIBCPLCORE) $(GSL_LIBS) $(ERFA_LIBS) 
