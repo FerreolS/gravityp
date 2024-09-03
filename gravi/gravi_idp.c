@@ -53,88 +53,95 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
     char qc_name[100];
 
     /* Scratch tables to merge polarization tables */
-    cpl_table * oi_vis2_SC_allpol = cpl_table_duplicate(gravi_data_get_oi_vis2 (vis_data, GRAVI_SC, 0, npol_sc));
-    cpl_table * oi_T3_SC_allpol = cpl_table_duplicate(gravi_data_get_oi_t3 (vis_data, GRAVI_SC, 0, npol_sc));
-    cpl_table * oi_wave_SC_allpol = cpl_table_duplicate(gravi_data_get_oi_wave (vis_data, GRAVI_SC, 0, npol_sc));
-
-    for (int pol = 1; pol < npol_sc; pol++) {
-        cpl_table_insert(oi_vis2_SC_allpol, gravi_data_get_oi_vis2 (vis_data, GRAVI_SC, pol, npol_sc), cpl_table_get_nrow(oi_vis2_SC_allpol));
-        cpl_table_insert(oi_T3_SC_allpol, gravi_data_get_oi_t3 (vis_data, GRAVI_SC, pol, npol_sc), cpl_table_get_nrow(oi_T3_SC_allpol));
-        cpl_table_insert(oi_wave_SC_allpol, gravi_data_get_oi_wave (vis_data, GRAVI_SC, pol, npol_sc), cpl_table_get_nrow(oi_wave_SC_allpol));
-    }
-
-    /* Compute QC values that aggregate on polarizations */
-    sprintf (qc_name, "VIS2ERR");
-    cpl_propertylist_update_double (idp_plist, qc_name, gravi_table_get_column_flagged_mean(oi_vis2_SC_allpol, "VIS2ERR"));
-    cpl_propertylist_set_comment (idp_plist, qc_name, "Representative squared visibility error [%]");
-
-    sprintf (qc_name, "T3PHIERR");
-    cpl_propertylist_update_double (idp_plist, qc_name, gravi_table_get_column_flagged_mean(oi_T3_SC_allpol, "T3PHIERR"));
-    cpl_propertylist_set_comment (idp_plist, qc_name, "Representative closure phase error [deg]");
-
-    double min_uvcoord, max_uvcoord;
-    gravi_data_get_minmax_uvcoord(oi_vis2_SC_allpol, &min_uvcoord, &max_uvcoord);
-
-    double min_eff_wave = cpl_table_get_column_min(oi_wave_SC_allpol, "EFF_WAVE");
-    double max_eff_wave = cpl_table_get_column_max(oi_wave_SC_allpol, "EFF_WAVE");
-
-    double base_max = max_uvcoord / min_eff_wave;
-    double base_min = min_uvcoord / max_eff_wave;
-    if(isnan(base_max) || isinf(base_max))
-        base_max = 0;
-    if(isnan(base_min) || isinf(base_min))
-        base_min = 0;
-
-    sprintf (qc_name, "BASE_MAX");
-    cpl_propertylist_update_double (idp_plist, qc_name, base_max);
-    cpl_propertylist_set_comment (idp_plist, qc_name, "Maximum baseline / Minimum effective wavelenth");
-
-    sprintf (qc_name, "BASE_MIN");
-    cpl_propertylist_update_double (idp_plist, qc_name, base_min);
-    cpl_propertylist_set_comment (idp_plist, qc_name, "Minimum baseline / Maximum effective wavelenth");
-
-    /* The rows in oi_wave_SC_allpol contain each wavelenght npol_sc times,
-       since it has been aggregated. Therefore dividing by npol_sc times */
-    sprintf (qc_name, "NUM_CHAN");
-    cpl_propertylist_update_int (idp_plist, qc_name, cpl_table_get_nrow(oi_wave_SC_allpol) / npol_sc );
-    cpl_propertylist_set_comment (idp_plist, qc_name, "Number of wavelength channels");
-
-    sprintf (qc_name, "WAVELMAX");
-    cpl_propertylist_update_double (idp_plist, qc_name, max_eff_wave);
-    cpl_propertylist_set_comment (idp_plist, qc_name, "Maximum wavelength");
-
-    sprintf (qc_name, "WAVELMIN");
-    cpl_propertylist_update_double (idp_plist, qc_name, min_eff_wave);
-    cpl_propertylist_set_comment (idp_plist, qc_name, "Minimum wavelength");
-
-    cpl_table_duplicate_column(oi_wave_SC_allpol, "SPEC_RES", oi_wave_SC_allpol, "EFF_WAVE");
-    cpl_table_divide_columns(oi_wave_SC_allpol,"EFF_WAVE", "EFF_BAND");
-
-    sprintf (qc_name, "SPEC_RES");
-    cpl_propertylist_update_double (idp_plist, qc_name, cpl_table_get_column_mean(oi_wave_SC_allpol, "SPEC_RES"));
-    cpl_propertylist_set_comment (idp_plist, qc_name, "Spectral resolution");
-
-    /* This is the mean INT_TIME, which includes duplicated entries due to the several polarizations.
-       Since it is a mean, the final value should be the same */
-    sprintf (qc_name, "EXPTIME");
-    double mean_int_time = gravi_table_get_column_flagged_mean(oi_vis2_SC_allpol, "INT_TIME");
-    cpl_propertylist_update_double (idp_plist, qc_name, mean_int_time);
-    cpl_propertylist_set_comment (idp_plist, qc_name, "Exposure time");
-
-    /* This is the sum of all INT_TIME divided by the number of baselines. The mean is multiplied
-       by the number of rows and then divided by the number of polarizations since they have been
-       aggregated. Finally divided by the number of baselines as specified in PIPE-9900 */
-    if(!cpl_propertylist_has(header, "TEXPTIME"))
+    cpl_table * oi_vis2_SC_allpol = NULL;
+    cpl_table * oi_T3_SC_allpol = NULL;
+    cpl_table * oi_wave_SC_allpol = NULL;
+ 
+    /* There are products like the p2vmred that do not have all columns */
+    if (gravi_data_has_extension(vis_data, GRAVI_OI_VIS2_EXT))
     {
-        sprintf (qc_name, "TEXPTIME");
-        cpl_propertylist_update_double (idp_plist, qc_name, mean_int_time * cpl_table_get_nrow(oi_vis2_SC_allpol) / npol_sc / nbase);
-        cpl_propertylist_set_comment (idp_plist, qc_name, "Total exposure time");
-    }
-    else
-    {
-        cpl_propertylist_update_double (idp_plist, "TEXPTIME",
-                cpl_propertylist_get_double(header, "TEXPTIME") );
-        cpl_propertylist_set_comment (idp_plist, "TEXPTIME", "Total exposure time");
+        oi_vis2_SC_allpol = cpl_table_duplicate(gravi_data_get_oi_vis2 (vis_data, GRAVI_SC, 0, npol_sc));
+        oi_T3_SC_allpol = cpl_table_duplicate(gravi_data_get_oi_t3 (vis_data, GRAVI_SC, 0, npol_sc));
+        oi_wave_SC_allpol = cpl_table_duplicate(gravi_data_get_oi_wave (vis_data, GRAVI_SC, 0, npol_sc));
+
+        for (int pol = 1; pol < npol_sc; pol++) {
+            cpl_table_insert(oi_vis2_SC_allpol, gravi_data_get_oi_vis2 (vis_data, GRAVI_SC, pol, npol_sc), cpl_table_get_nrow(oi_vis2_SC_allpol));
+            cpl_table_insert(oi_T3_SC_allpol, gravi_data_get_oi_t3 (vis_data, GRAVI_SC, pol, npol_sc), cpl_table_get_nrow(oi_T3_SC_allpol));
+            cpl_table_insert(oi_wave_SC_allpol, gravi_data_get_oi_wave (vis_data, GRAVI_SC, pol, npol_sc), cpl_table_get_nrow(oi_wave_SC_allpol));
+        }
+
+        /* Compute QC values that aggregate on polarizations */
+        sprintf (qc_name, "VIS2ERR");
+        cpl_propertylist_update_double (idp_plist, qc_name, gravi_table_get_column_flagged_mean(oi_vis2_SC_allpol, "VIS2ERR"));
+        cpl_propertylist_set_comment (idp_plist, qc_name, "Representative squared visibility error [%]");
+
+        sprintf (qc_name, "T3PHIERR");
+        cpl_propertylist_update_double (idp_plist, qc_name, gravi_table_get_column_flagged_mean(oi_T3_SC_allpol, "T3PHIERR"));
+        cpl_propertylist_set_comment (idp_plist, qc_name, "Representative closure phase error [deg]");
+
+        double min_uvcoord, max_uvcoord;
+        gravi_data_get_minmax_uvcoord(oi_vis2_SC_allpol, &min_uvcoord, &max_uvcoord);
+
+        double min_eff_wave = cpl_table_get_column_min(oi_wave_SC_allpol, "EFF_WAVE");
+        double max_eff_wave = cpl_table_get_column_max(oi_wave_SC_allpol, "EFF_WAVE");
+
+        double base_max = max_uvcoord / min_eff_wave;
+        double base_min = min_uvcoord / max_eff_wave;
+        if(isnan(base_max) || isinf(base_max))
+            base_max = 0;
+        if(isnan(base_min) || isinf(base_min))
+            base_min = 0;
+
+        sprintf (qc_name, "BASE_MAX");
+        cpl_propertylist_update_double (idp_plist, qc_name, base_max);
+        cpl_propertylist_set_comment (idp_plist, qc_name, "Maximum baseline / Minimum effective wavelenth");
+
+        sprintf (qc_name, "BASE_MIN");
+        cpl_propertylist_update_double (idp_plist, qc_name, base_min);
+        cpl_propertylist_set_comment (idp_plist, qc_name, "Minimum baseline / Maximum effective wavelenth");
+
+        /* The rows in oi_wave_SC_allpol contain each wavelenght npol_sc times,
+           since it has been aggregated. Therefore dividing by npol_sc times */
+        sprintf (qc_name, "NUM_CHAN");
+        cpl_propertylist_update_int (idp_plist, qc_name, cpl_table_get_nrow(oi_wave_SC_allpol) / npol_sc );
+        cpl_propertylist_set_comment (idp_plist, qc_name, "Number of wavelength channels");
+
+        sprintf (qc_name, "WAVELMAX");
+        cpl_propertylist_update_double (idp_plist, qc_name, max_eff_wave);
+        cpl_propertylist_set_comment (idp_plist, qc_name, "Maximum wavelength");
+
+        sprintf (qc_name, "WAVELMIN");
+        cpl_propertylist_update_double (idp_plist, qc_name, min_eff_wave);
+        cpl_propertylist_set_comment (idp_plist, qc_name, "Minimum wavelength");
+
+        cpl_table_duplicate_column(oi_wave_SC_allpol, "SPEC_RES", oi_wave_SC_allpol, "EFF_WAVE");
+        cpl_table_divide_columns(oi_wave_SC_allpol,"EFF_WAVE", "EFF_BAND");
+
+        sprintf (qc_name, "SPEC_RES");
+        cpl_propertylist_update_double (idp_plist, qc_name, cpl_table_get_column_mean(oi_wave_SC_allpol, "SPEC_RES"));
+        cpl_propertylist_set_comment (idp_plist, qc_name, "Spectral resolution");
+
+        /* This is the mean INT_TIME, which includes duplicated entries due to the several polarizations.
+           Since it is a mean, the final value should be the same */
+        sprintf (qc_name, "EXPTIME");
+        double mean_int_time = gravi_table_get_column_flagged_mean(oi_vis2_SC_allpol, "INT_TIME");
+        cpl_propertylist_update_double (idp_plist, qc_name, mean_int_time);
+        cpl_propertylist_set_comment (idp_plist, qc_name, "Exposure time");
+         /* This is the sum of all INT_TIME divided by the number of baselines. The mean is multiplied
+           by the number of rows and then divided by the number of polarizations since they have been
+           aggregated. Finally divided by the number of baselines as specified in PIPE-9900 */
+        if(!cpl_propertylist_has(header, "TEXPTIME"))
+        {
+            sprintf (qc_name, "TEXPTIME");
+            cpl_propertylist_update_double (idp_plist, qc_name, mean_int_time * cpl_table_get_nrow(oi_vis2_SC_allpol) / npol_sc / nbase);
+            cpl_propertylist_set_comment (idp_plist, qc_name, "Total exposure time");
+        }
+        else
+        {
+            cpl_propertylist_update_double (idp_plist, "TEXPTIME",
+                    cpl_propertylist_get_double(header, "TEXPTIME") );
+            cpl_propertylist_set_comment (idp_plist, "TEXPTIME", "Total exposure time");
+        }
     }
 
     /* PRODCATG */
@@ -142,9 +149,13 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
     cpl_propertylist_set_comment (idp_plist, "PRODCATG", "Data product category");
 
     /* MJD-END */
+    double exptime;
+    if ( cpl_propertylist_has(idp_plist, "EXPTIME") )
+        exptime = cpl_propertylist_get_double(idp_plist, "EXPTIME");
+    else
+        exptime = cpl_propertylist_get_double(header, "EXPTIME");
     cpl_propertylist_update_double (idp_plist, "MJD-END",
-        gravi_pfits_get_mjd(header) +
-            cpl_propertylist_get_double(header, "EXPTIME")/86400.);
+        gravi_pfits_get_mjd(header) + exptime / 86400.);
     cpl_propertylist_set_comment (idp_plist, "MJD-END", "End of observation");
 
     /* OBID */
@@ -175,13 +186,13 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
     // Only create OBSTECH if it does not exist yet.
     // This is needed for For gravity_viscal which starts from
     // products and does not have a ESO DPR TECH anymore
-    if(!cpl_propertylist_has(header, "OBSTECH"))
+    if(cpl_propertylist_has(header, "ESO DPR TECH"))
     {
         cpl_propertylist_update_string (idp_plist, "OBSTECH",
                 cpl_propertylist_get_string(header, "ESO DPR TECH") );
         cpl_propertylist_set_comment (idp_plist, "OBSTECH", "Observation technique");
     }
-    else
+    else if(cpl_propertylist_has(header, "OBSTECH"))
     {
         cpl_propertylist_update_string (idp_plist, "OBSTECH",
                 cpl_propertylist_get_string(header, "OBSTECH") );
