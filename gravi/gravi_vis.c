@@ -2029,12 +2029,12 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
                 int j=0;
                 int i=0;
                 str=(char*)malloc(l);
-                strncpy(str,rangeString,sizeof(str)-1); /*for future use*/
+                strncpy(str,rangeString,l); /*for future use*/
                 for (i = 0; i<l; ++i) if (str[i]!=' ' && str[i]!='\t') str[j++]=str[i]; //remove ALL blanks.
                 str[j]='\0';
                 l=strlen(str)+1;
                 str1=(char*)malloc(l);
-                strncpy(str1,str,sizeof(str1)-1); /*for future use, as strtok destroys its arguments*/
+                strncpy(str1,str,l); /*for future use, as strtok destroys its arguments*/
             
                 char *token;
                 token = strtok(str, "[,]");
