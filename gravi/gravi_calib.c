@@ -2792,9 +2792,11 @@ cpl_error_code gravi_remove_cosmicrays_sc (cpl_imagelist * imglist_sc)
                 
                 /* Fix the non-extrapolation inability of cpl_bivector_interpolate_linear */
                 xref_ptr[0] = 0;
-                xref_ptr[nGood+1] = nx;
                 yref_ptr[0] = good_y_ptr[0];
-                yref_ptr[nGood+1] = good_y_ptr[nGood-1];
+                for (int m = nGood+1; m < nx + 2; m++) {
+                    xref_ptr[m] = nx;
+                    yref_ptr[m] = good_y_ptr[nGood-1];
+                }
 
                 for (cpl_size i = 0; i < nCR; i++) {
                     xout_ptr[i] = CR_x_ptr[i];
