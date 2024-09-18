@@ -1975,7 +1975,7 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
             /* Re compute the astrometric phase from VISDATA to deal with absolute phase
              * VISDATA as well as (R,I) remains unchanged. The goal is to split
              * the differential phase, calibratable so far, from the absolute phase */
-            if ( !strcmp (output_phase_sc,"DIFFERENTIAL") ) {
+            if ( !strcmp (output_phase_sc,"DIFFERENTIAL") || !strcmp (output_phase_sc,"ABSOLUTE") ) {
             for (int base = 0; base < nbase; base++) {
                 
                 /* We duplicate VISDATA, to keep the value untouched in the table */
@@ -1988,8 +1988,8 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
                 cpl_array_abs (visErr_sc);
                 cpl_array_divide (visData_sc, visErr_sc);
 
-		/* Get the flag */
-		cpl_array * flag_sc;
+                /* Get the flag */
+                cpl_array * flag_sc;
                 flag_sc = (cpl_array *)cpl_table_get_array (oi_vis_SC, "FLAG", base);
                 
                 /* Compute and remove the mean group delay in [m] */
@@ -2007,9 +2007,11 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
                 /* Save this phase [rad] */
                 cpl_table_set (oi_vis_SC, "PHASE", base, mean_phase);
                 
-                /* Set back the phase in [deg] */
-                cpl_array_arg (visData_sc);
-                gravi_table_set_array_phase (oi_vis_SC, "VISPHI", base, visData_sc);
+                /* Set back the phase in [deg] (skip for ABSOLUTE mode) */
+                if ( !strcmp (output_phase_sc,"DIFFERENTIAL") ) {
+                  cpl_array_arg (visData_sc);
+                  gravi_table_set_array_phase (oi_vis_SC, "VISPHI", base, visData_sc);
+                }
                 cpl_array_delete (visData_sc);
                 cpl_array_delete (visErr_sc);
                 
