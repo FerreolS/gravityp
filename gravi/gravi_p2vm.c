@@ -225,7 +225,7 @@ cpl_table * gravi_create_oiwave_table_sc (cpl_table * wave_table,
     cpl_table * calib_eff_table = gravi_data_get_table (wave_param, "WAVE_TAB");
    // CPLCHECK_MSG ("STATIC_PARAM not available in the SOF. It is mandatory for acqcam reduction.");
 
-     if ( cpl_table_has_column(calib_eff_table , "FBAND_WAVE") ) {
+     if ( cpl_table_has_column(calib_eff_table , "FBAND_WAVE") == 1 ) {
          calib_eff_wave = cpl_table_get_data_double (calib_eff_table, "FBAND_WAVE");
          cpl_msg_info(cpl_func,"calib_eff_wave [0] : %e", calib_eff_wave[0] );
          cpl_msg_info(cpl_func,"calib_eff_wave [1] : %e", calib_eff_wave[1] );
@@ -234,6 +234,8 @@ cpl_table * gravi_create_oiwave_table_sc (cpl_table * wave_table,
      }
      else {
        cpl_msg_error(cpl_func,"Cannot get the default values for calib_eff_wave");
+       cpl_msg_error(cpl_func,"WAVE_TAB table in WAVE_PARAM input does not have FBAND_WAVE column");
+       return NULL;
      }
 
      /* Read the minimum and maximum wavelength values from the wave_param fits file
