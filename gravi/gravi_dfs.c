@@ -849,6 +849,15 @@ cpl_error_code gravi_parameter_add_compute_signal (cpl_parameterlist *self)
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
     cpl_parameterlist_append (self, p);
 
+    /* Width of sliding window for FT P_FACTOR */
+    p = cpl_parameter_new_value ("gravity.vis.pfactor-window-length", CPL_TYPE_INT,
+                                 "Length of the sliding window used to calculate the P_FACTOR.\n "
+                                 "For each FT frame, the window will run from -window_length to +window_length inclusive.",
+                                 "gravity.vis", 40);
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "pfactor-window-length");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (self, p);
+
     return CPL_ERROR_NONE;
 }
 
@@ -1000,6 +1009,14 @@ cpl_error_code gravi_parameter_add_compute_vis (cpl_parameterlist *self, int isC
 	cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "vis-correction-sc");
 	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
 	cpl_parameterlist_append (self, p);
+
+  p = cpl_parameter_new_enum ("gravity.vis.vis-correction-ft", CPL_TYPE_STRING,
+                                "Correction of FT visibility from losses due to long integration,\n "
+                                "using a sliding window P_FACTOR, or its square. Choices are:",
+                                "gravity.vis", "NONE", 3, "NONE", "PFACTOR", "PFACTOR_SQUARED");
+    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "vis-correction-ft");
+    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+    cpl_parameterlist_append (self, p);
 
     /* Phase referencing */
     p = cpl_parameter_new_enum ("gravity.vis.phase-ref-sc", CPL_TYPE_STRING,

@@ -86,6 +86,7 @@ cpl_error_code gravi_vis_compute_isdelay(cpl_table * oi_vis,
                                          const char * name_gdl,
                                          cpl_table * oi_wavelength);
 cpl_error_code gravi_vis_create_pfactor_sc (cpl_table * vis_SC, cpl_table * t3_SC, cpl_table * flux_FT);
+cpl_error_code gravi_vis_create_pfactor_ft (cpl_table * vis_FT, cpl_table * flux_FT, cpl_size window_width);
 cpl_error_code gravi_vis_create_f1f2_sc (cpl_table * vis_SC, cpl_table * flux_SC);
 cpl_error_code gravi_vis_create_f1f2_ft (cpl_table * vis_FT, cpl_table * flux_FT);
 cpl_error_code gravi_vis_create_phaseref_ft (cpl_table * vis_FT);
@@ -957,8 +958,8 @@ cpl_error_code gravi_vis_create_pfactor_sc (cpl_table * vis_SC, cpl_table * t3_S
   int * first_ft = cpl_table_get_data_int (vis_SC, "FIRST_FT");
   int * last_ft  = cpl_table_get_data_int (vis_SC, "LAST_FT");
 
-  /* Get FT data (used already computed and smoothed total-flux) */
-  double * flux = cpl_table_get_data_double (flux_FT, "TOTALFLUX");
+  /* Get FT data (use already computed unsmoothed total-flux) */
+  double * flux = cpl_table_get_data_double (flux_FT, "TOTALFLUX_UNSMOOTHED");
 
   CPLCHECK_MSG ("Cannot get pointer to data");
 
@@ -972,7 +973,9 @@ cpl_error_code gravi_vis_create_pfactor_sc (cpl_table * vis_SC, cpl_table * t3_S
       for (cpl_size row_ft = first_ft[nsc]; row_ft < last_ft[nsc]; row_ft++) {
         int t0 = GRAVI_BASE_TEL[base][0] + row_ft * ntel;
         int t1 = GRAVI_BASE_TEL[base][1] + row_ft * ntel;
-        sf0f1 += sqrt (CPL_MAX(flux[t0] * flux[t1], 0));
+        if (flux[t0] < 0.0 || flux[t1] < 0.0)
+          continue;
+        sf0f1 += sqrt (flux[t0] * flux[t1]);
         f0 += flux[t0];
         f1 += flux[t1];
       }
@@ -1004,19 +1007,108 @@ cpl_error_code gravi_vis_create_pfactor_sc (cpl_table * vis_SC, cpl_table * t3_S
         int t0 = GRAVI_CLO_TEL[closure][0] + row_ft * ntel;
         int t1 = GRAVI_CLO_TEL[closure][1] + row_ft * ntel;
         int t2 = GRAVI_CLO_TEL[closure][2] + row_ft * ntel;
-        sf0f1f2 += pow ( (CPL_MAX(flux[t0] * flux[t1] * flux[t2], 0)), 1.0/3);
+        if (flux[t0] < 0.0 || flux[t1 < 0.0] || flux[t2] < 0.0)
+          continue;
+        sf0f1f2 += pow (flux[t0] * flux[t1] * flux[t2], 1.0 / 3);
         f0 += flux[t0];
         f1 += flux[t1];
         f2 += flux[t2];
       }
 
       /* Discard unused */
-      if (f0==0 || f1==0 || f2 == 0) continue;
+      if (f0==0 || f1==0 || f2==0) continue;
       
       /* Compute the p3Factor */
       p3Factor[nt3] = sf0f1f2 * sf0f1f2 * sf0f1f2 / (f0 * f1 * f2);
     }
   }
+  
+  gravi_msg_function_exit(1);
+  return CPL_ERROR_NONE;
+}
+
+/* -------------------------------------------------------------------------- */
+/**
+ * @brief Compute the PFACTOR for the FT
+ * 
+ * @param vis_SC:   output OI_VIS table of the SC
+ * @param t3_SC:    output OI_T3 table of the SC
+ * @param flux_FT:  input OI_FLUX table of the FT
+ *
+ * The PFACTOR is computed using a sliding window on the unsmoothed flux and
+ * saved in a newly created column P_FACTOR in the vis_FT table.
+ */
+/* -------------------------------------------------------------------------- */
+
+cpl_error_code gravi_vis_create_pfactor_ft (cpl_table * vis_FT, cpl_table * flux_FT, cpl_size window_width)
+{
+  gravi_msg_function_start(1);
+  cpl_ensure_code (vis_FT,  CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (flux_FT, CPL_ERROR_NULL_INPUT);
+
+  /* Get the number of rows */
+  cpl_size nbase = 6, ntel = 4;
+  cpl_size nrow_ft = cpl_table_get_nrow (vis_FT) / nbase;
+
+  /* Get FT data (using unsmoothed flux) */
+  cpl_size nwave_ft = cpl_table_get_column_depth (flux_FT, "FLUX");
+  cpl_array **p_flux = cpl_table_get_data_array (flux_FT, "FLUX");
+
+  /* Create the column */
+  gravi_table_init_column_array(vis_FT, "P_FACTOR", NULL, CPL_TYPE_DOUBLE, nwave_ft);
+  cpl_array **p_pFactor = cpl_table_get_data_array (vis_FT, "P_FACTOR");
+
+  CPLCHECK_MSG ("Cannot get pointer to data");
+
+  double *sf0f1 = cpl_malloc(nwave_ft * sizeof(double));
+  double *f0 = cpl_malloc(nwave_ft * sizeof(double));
+  double *f1 = cpl_malloc(nwave_ft * sizeof(double));
+
+  /* Loop on base and FT rows */  
+  for (cpl_size base = 0; base < nbase; base++) {
+    for (cpl_size row_ft = 0; row_ft < nrow_ft; row_ft++) {
+      cpl_size nft = row_ft * nbase + base;
+    
+      /* Loop on window */
+      int window_start = CPL_MAX(0, row_ft - window_width);
+      int window_end = CPL_MIN(row_ft + window_width + 1, nrow_ft);
+
+      double *pFactor = cpl_array_get_data_double(p_pFactor[nft]);
+
+      for (cpl_size wave = 0; wave < nwave_ft; wave++)
+        sf0f1[wave] = f0[wave] = f1[wave] = 0.0;
+
+      for (cpl_size row_ft = window_start; row_ft < window_end; row_ft++) {
+        int t0 = GRAVI_BASE_TEL[base][0] + row_ft * ntel;
+        int t1 = GRAVI_BASE_TEL[base][1] + row_ft * ntel;
+
+        double *pf0 = cpl_array_get_data_double(p_flux[t0]);
+        double *pf1 = cpl_array_get_data_double(p_flux[t1]);
+
+        /* Loop over spectrum */
+        for (cpl_size wave = 0; wave < nwave_ft; wave++) {
+          if (pf0[wave] < 0.0 || pf1[wave] < 0.0)
+            continue;
+
+          sf0f1[wave] += sqrt (pf0[wave] * pf1[wave]);
+          f0[wave] += pf0[wave];
+          f1[wave] += pf1[wave];
+        }
+      }
+
+      for (cpl_size wave = 0; wave < nwave_ft; wave++) {
+        if (f0[wave] == 0 || f1[wave] == 0)
+          continue;
+
+        /* Compute the pFactor */
+        pFactor[wave] = sf0f1[wave] * sf0f1[wave] / (f0[wave] * f1[wave]);
+      }
+    }
+  }
+
+  cpl_free(sf0f1);
+  cpl_free(f0);
+  cpl_free(f1);
   
   gravi_msg_function_exit(1);
   return CPL_ERROR_NONE;
@@ -3095,6 +3187,10 @@ cpl_error_code gravi_compute_signals (gravi_data * p2vmred_data,
   
   CPLCHECK_MSG ("Cannot get header");
 
+    /* Get window width to use for FT P_FACTOR */
+  cpl_size window_width = cpl_parameter_get_int(cpl_parameterlist_find_const(
+    parlist, "gravity.vis.pfactor-window-length"));
+
   /* FIXME: probably doesn't work with npol_sc != npol_ft */
   if ( npol_sc != npol_ft ) {
       gravi_msg_warning ("FIXME", "Not sure this function works with npol_sc != npol_ft");
@@ -3183,6 +3279,9 @@ cpl_error_code gravi_compute_signals (gravi_data * p2vmred_data,
       total_flux_ft[row] = cpl_array_get_mean (flux_ft[row]) * nwave_ft;
     }
 
+    /* Duplicate the TOTALFLUX to have an unsmoothed copy */
+    cpl_table_duplicate_column (flux_FT, "TOTALFLUX_UNSMOOTHED", flux_FT, "TOTALFLUX");
+
     /* Smooth TOTALFLUX of the FT over few samples. Maybe make sure
     * this is a constant frequency, not a constant nb of samples */
     gravi_table_smooth_column (flux_FT, "TOTALFLUX", "TOTALFLUX", 10, ntel);
@@ -3192,8 +3291,7 @@ cpl_error_code gravi_compute_signals (gravi_data * p2vmred_data,
     /* 
     * (3) Create the signals for VIS_FT
     */
-    
-    /* Create F1F2 and PHASE_REF column */
+    gravi_vis_create_pfactor_ft (vis_FT, flux_FT, window_width);
     gravi_vis_create_f1f2_ft (vis_FT, flux_FT);
     gravi_vis_create_phaseref_ft (vis_FT);
 

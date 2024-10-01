@@ -542,7 +542,17 @@ cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
   double * pUCOORD  = cpl_table_get_data_double (oi_vis, "UCOORD");
   double * pVCOORD  = cpl_table_get_data_double (oi_vis, "VCOORD");
   cpl_array ** pVFACTOR = use_vFactor?cpl_table_get_data_array (oi_vis, "V_FACTOR"):NULL;
-  double * pPFACTOR = use_pFactor?cpl_table_get_data_double (oi_vis, "P_FACTOR"):NULL;
+  /* awkwardness for scalar PFACTOR if SC, array over wave if FT */
+  double *pPFACTOR = NULL;
+  cpl_array **ppPFACTOR = NULL;
+  if (use_pFactor) {
+    if (cpl_table_get_column_depth(oi_vis, "P_FACTOR") > 0) {
+      ppPFACTOR = cpl_table_get_data_array(oi_vis, "P_FACTOR");
+    } else {
+      pPFACTOR = cpl_table_get_data_double(oi_vis, "P_FACTOR");
+    }
+  }
+
   CPLCHECK_MSG ("Cannot get the data");
 
   /* Loop on closure */
@@ -572,8 +582,8 @@ cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
   cpl_ensure_code (flag, CPL_ERROR_ILLEGAL_INPUT);
   int * flagclo = cpl_malloc( sizeof(int) * nrow );
   for ( int row=0 ; row<nrow; row++ ) {
-	flagclo[row] = flag[row * nbase + base0] + flag[row * nbase + base1] + flag[row * nbase + base2];
-	if ( flagclo[row] == 0 ) nvalid++;
+    flagclo[row] = flag[row * nbase + base0] + flag[row * nbase + base1] + flag[row * nbase + base2];
+    if ( flagclo[row] == 0 ) nvalid++;
   }
   
   /* Build an optimal number of segment and nrow_per_segment */
@@ -596,7 +606,7 @@ cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
      */
 	
 	cpl_array **bisp = gravi_array_new_list (nseg + nmontecarlo, CPL_TYPE_DOUBLE_COMPLEX, nwave);
-    cpl_array **F012 = gravi_array_new_list (nseg + nmontecarlo, CPL_TYPE_DOUBLE, nwave);
+  cpl_array **F012 = gravi_array_new_list (nseg + nmontecarlo, CPL_TYPE_DOUBLE, nwave);
 
 	/* Loop on segment */
 	cpl_size row = -1;
@@ -609,10 +619,10 @@ cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
 		row = (row + 1) % nrow;
 		if ( flagclo[row] ) {continue;} else {r++;}
 
-        /* Get indices */
-        cpl_size rbase0 = row * nbase + base0;
-        cpl_size rbase1 = row * nbase + base1;
-        cpl_size rbase2 = row * nbase + base2;
+    /* Get indices */
+    cpl_size rbase0 = row * nbase + base0;
+    cpl_size rbase1 = row * nbase + base1;
+    cpl_size rbase2 = row * nbase + base2;
     
 		/* Compute the total integration time.
 		 * Do not integrate for the MonteCarlo samples */
@@ -625,46 +635,69 @@ cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
 		  v2Coord += pVCOORD[rbase1] * pINTTIME[rbase0];
 		}
 		
-        /* fast-no-CPL integration: get pointers on data */
+    /* fast-no-CPL integration: get pointers on data */
 		double complex * tbisp = cpl_array_get_data_double_complex (bisp[seg]);
 		double *tF012 = cpl_array_get_data_double (F012[seg]);
 		CPLCHECK_MSG ("Cannot get data");
-        
-        double PFACTOR0 = (use_pFactor?pPFACTOR[rbase0]:1.0);
-        double PFACTOR1 = (use_pFactor?pPFACTOR[rbase1]:1.0);
-        double PFACTOR2 = (use_pFactor?pPFACTOR[rbase2]:1.0);
-		CPLCHECK_MSG ("Cannot get FACTOR data");
+
+    double PFACTOR0 = 1.0, PFACTOR1 = 1.0, PFACTOR2 = 1.0;
+    if (use_pFactor && ppPFACTOR == NULL) { /* SC */
+      PFACTOR0 = pPFACTOR[rbase0];
+      PFACTOR1 = pPFACTOR[rbase1];
+      PFACTOR2 = pPFACTOR[rbase2];
+      if (use_pFactor == 2) {
+        PFACTOR0 *= PFACTOR0;
+        PFACTOR1 *= PFACTOR1;
+        PFACTOR2 *= PFACTOR2;
+      }
+      CPLCHECK_MSG ("Cannot get PFACTOR data"); 
+    }
 
 		/* Loop on wave */
 		for ( int w=0; w<nwave; w++ ) {
-          double complex Vis0 = cpl_array_get_complex (pVISDATA[rbase0], w, NULL);
-          double complex Vis1 = cpl_array_get_complex (pVISDATA[rbase1], w, NULL);
-          double complex Vis2 = cpl_array_get_complex (pVISDATA[rbase2], w, NULL);
-          double complex VisErr0 = cpl_array_get_complex (pVISERR[rbase0], w, NULL);
-          double complex VisErr1 = cpl_array_get_complex (pVISERR[rbase1], w, NULL);
-          double complex VisErr2 = cpl_array_get_complex (pVISERR[rbase2], w, NULL);
-          double F0 = cpl_array_get (pFLUX[row * ntel + ctel0], w, NULL);
-          double F1 = cpl_array_get (pFLUX[row * ntel + ctel1], w, NULL);
-          double F2 = cpl_array_get (pFLUX[row * ntel + ctel2], w, NULL);
-          double VFACTOR0 = (use_vFactor?cpl_array_get (pVFACTOR[rbase0], w, NULL):1.0);
-          double VFACTOR1 = (use_vFactor?cpl_array_get (pVFACTOR[rbase1], w, NULL):1.0);
-          double VFACTOR2 = (use_vFactor?cpl_array_get (pVFACTOR[rbase2], w, NULL):1.0);
-	  int outlier_flag0 = cpl_array_get (pFLAG[rbase0], w, NULL);
-	  int outlier_flag1 = cpl_array_get (pFLAG[rbase1], w, NULL);
-	  int outlier_flag2 = cpl_array_get (pFLAG[rbase2], w, NULL);
+      if (use_pFactor && ppPFACTOR) { /* FT */
+        pPFACTOR = cpl_array_get_data_double(ppPFACTOR[rbase0]);
+        PFACTOR0 = pPFACTOR[w];
+        pPFACTOR = cpl_array_get_data_double(ppPFACTOR[rbase1]);
+        PFACTOR1 = pPFACTOR[w];
+        pPFACTOR = cpl_array_get_data_double(ppPFACTOR[rbase2]);
+        PFACTOR2 = pPFACTOR[w];
+        if (use_pFactor == 2) {
+          PFACTOR0 *= PFACTOR0;
+          PFACTOR1 *= PFACTOR1;
+          PFACTOR2 *= PFACTOR2;
+        }
+        CPLCHECK_MSG ("Cannot get PFACTOR data"); 
+      }
 
-	  /* Reject outlier */
-	  if (outlier_flag0 || outlier_flag1 || outlier_flag2) {
-	    Vis0 = 0.0+0.0*I; 
-	    Vis1 = 0.0+0.0*I;
-	    Vis2 = 0.0+0.0*I;
-	    VisErr0 = 0.0+0.0*I;
-	    VisErr1 = 0.0+0.0*I;
-	    VisErr2 = 0.0+0.0*I;
-	    F0 = 0.0;
-	    F1 = 0.0;
-	    F2 = 0.0;
-	  }
+      double complex Vis0 = cpl_array_get_complex (pVISDATA[rbase0], w, NULL);
+      double complex Vis1 = cpl_array_get_complex (pVISDATA[rbase1], w, NULL);
+      double complex Vis2 = cpl_array_get_complex (pVISDATA[rbase2], w, NULL);
+      double complex VisErr0 = cpl_array_get_complex (pVISERR[rbase0], w, NULL);
+      double complex VisErr1 = cpl_array_get_complex (pVISERR[rbase1], w, NULL);
+      double complex VisErr2 = cpl_array_get_complex (pVISERR[rbase2], w, NULL);
+      double F0 = cpl_array_get (pFLUX[row * ntel + ctel0], w, NULL);
+      double F1 = cpl_array_get (pFLUX[row * ntel + ctel1], w, NULL);
+      double F2 = cpl_array_get (pFLUX[row * ntel + ctel2], w, NULL);
+      double VFACTOR0 = (use_vFactor?cpl_array_get (pVFACTOR[rbase0], w, NULL):1.0);
+      double VFACTOR1 = (use_vFactor?cpl_array_get (pVFACTOR[rbase1], w, NULL):1.0);
+      double VFACTOR2 = (use_vFactor?cpl_array_get (pVFACTOR[rbase2], w, NULL):1.0);
+      int outlier_flag0 = cpl_array_get (pFLAG[rbase0], w, NULL);
+      int outlier_flag1 = cpl_array_get (pFLAG[rbase1], w, NULL);
+      int outlier_flag2 = cpl_array_get (pFLAG[rbase2], w, NULL);
+
+	    /* Reject outlier */
+      if (outlier_flag0 || outlier_flag1 || outlier_flag2) {
+      Vis0 = 0.0+0.0*I; 
+      Vis1 = 0.0+0.0*I;
+      Vis2 = 0.0+0.0*I;
+      VisErr0 = 0.0+0.0*I;
+      VisErr1 = 0.0+0.0*I;
+      VisErr2 = 0.0+0.0*I;
+      F0 = 0.0;
+      F1 = 0.0;
+      F2 = 0.0;
+      }
 	  
 		  /* Add noise if this is a Monte Carlo sample.
 		   * APPROX: Noise is only added to the coherent fluxes */
@@ -681,10 +714,10 @@ cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
 		  tbisp[w] += Vis0 * Vis1 * conj (Vis2);
 
 		  /* F012 = < F0*F1*F2 > over the frames in [e^3] 
-           * corrected from expected visibility losses */
-          tF012[w] += F0 * F1 * F2 *
-                      sqrt (CPL_MAX (VFACTOR0 * VFACTOR1 * VFACTOR2 *
-                                     PFACTOR0 * PFACTOR1 * PFACTOR2, 0.0));
+       * corrected from expected visibility losses */
+      tF012[w] += F0 * F1 * F2 *
+                  sqrt (CPL_MAX (VFACTOR0 * VFACTOR1 * VFACTOR2 *
+                                 PFACTOR0 * PFACTOR1 * PFACTOR2, 0.0));
 		  
 		} /* End loop on wave */
 	  } /* End loop on rows in this segment */
@@ -871,6 +904,7 @@ cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
  * @param base:           base to consider (0..5)
  * @param phase_ref:      phase used to rephase the DITs
  * @param use_vFactor:    use the VFACTOR to compensate for vis. losses
+ * @param use_pFactor:    use the VFACTOR to compensate for vis. losses
  *
  * Average the coherent flux and photometric fluex, then normalize and
  * compute the final visibilities, considering the rejection flags.
@@ -884,7 +918,7 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
 											int nboot,
 											const char * phase_ref,
 											int use_vFactor,
-                                            int use_pFactor,
+                      int use_pFactor,
 					    int use_debiasing,
 					    double outlier_threshold)
 {
@@ -909,7 +943,16 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
   double * pUCOORD  = cpl_table_get_data_double (oi_vis, "UCOORD");
   double * pVCOORD  = cpl_table_get_data_double (oi_vis, "VCOORD");
   cpl_array ** pVFACTOR = use_vFactor?cpl_table_get_data_array (oi_vis, "V_FACTOR"):NULL;
-  double * pPFACTOR = use_pFactor?cpl_table_get_data_double (oi_vis, "P_FACTOR"):NULL;
+  /* awkwardness for scalar PFACTOR if SC, array over wave if FT */
+  double *pPFACTOR = NULL;
+  cpl_array **ppPFACTOR = NULL;
+  if (use_pFactor) {
+    if (cpl_table_get_column_depth(oi_vis, "P_FACTOR") > 0) {
+      ppPFACTOR = cpl_table_get_data_array(oi_vis, "P_FACTOR");
+    } else {
+      pPFACTOR = cpl_table_get_data_double(oi_vis, "P_FACTOR");
+    }
+  }
   CPLCHECK_MSG ("Cannot get the data");
 
   /* Get the reference phase */
@@ -978,17 +1021,17 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
     	  row = (row + 1) % nrow;
     	  if ( flag[row * nbase + base] ) {continue;} else {r++;}
 
-          /* Get indices */
-          cpl_size rbase = row * nbase + base;
+        /* Get indices */
+        cpl_size rbase = row * nbase + base;
     
     	  /* Compute the total integration time.
-		   * Do not integrate for the MonteCarlo samples */
-		  if (seg < nseg) {
-			total_exptime += pINTTIME[rbase];
-			mjd_avg += pMJD[rbase] * pINTTIME[rbase];
-			uCoord += pUCOORD[rbase] * pINTTIME[rbase];
-			vCoord += pVCOORD[rbase] * pINTTIME[rbase];
-		  }
+  		   * Do not integrate for the MonteCarlo samples */
+	  	  if (seg < nseg) {
+          total_exptime += pINTTIME[rbase];
+          mjd_avg += pMJD[rbase] * pINTTIME[rbase];
+          uCoord += pUCOORD[rbase] * pINTTIME[rbase];
+          vCoord += pVCOORD[rbase] * pINTTIME[rbase];
+        }
 		  
     	  /* fast-no-CPL integration: get pointers on data */
     	  double *tR  = cpl_array_get_data_double (visR[seg]);
@@ -996,62 +1039,72 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
     	  double *tP  = cpl_array_get_data_double (POWER[seg]);
     	  double *tF1F2 = cpl_array_get_data_double (F1F2[seg]);
     	  double *tF12  = cpl_array_get_data_double (F12[seg]);
-		  CPLCHECK_MSG ("Cannot get data");
+		    CPLCHECK_MSG ("Cannot get data");
 
-          double  PFACTOR = (use_pFactor?pPFACTOR[rbase]:1.0);
-          CPLCHECK_MSG ("Cannot get FACTOR data");
-          
+        double PFACTOR = 1.0;
+        if (use_pFactor && ppPFACTOR == NULL) { /* SC */
+          PFACTOR = pPFACTOR[rbase];
+          if (use_pFactor == 2) PFACTOR *= PFACTOR;
+          CPLCHECK_MSG ("Cannot get PFACTOR data"); 
+        }
+            
     	  /* Loop on wave */
     	  for (int w = 0; w < nwave; w++) {
-            double VFACTOR = use_vFactor?cpl_array_get (pVFACTOR[rbase], w, NULL):1.0;
-            double PHASEREF = pPHASEREF?cpl_array_get (pPHASEREF[rbase], w, NULL):0.0;
-            double FNORM = cpl_array_get (pFNORM[rbase], w, NULL);
-            double complex Vis  = cpl_array_get_complex (pVISDATA[rbase], w, NULL);
-            double complex VErr = cpl_array_get_complex (pVISERR[rbase], w, NULL);
-	    double mR  = creal (Vis);
-	    double mI  = cimag (Vis);
-	    double eR = creal (VErr);
-	    double eI = cimag (VErr);
-            int outlier_flag = cpl_array_get (pFLAG[rbase], w, NULL);
-            CPLCHECK_MSG ("Cannot get data");
+          if (use_pFactor && ppPFACTOR) { /* FT */
+            pPFACTOR = cpl_array_get_data_double(ppPFACTOR[rbase]);
+            PFACTOR = pPFACTOR[w];
+            if (use_pFactor == 2) PFACTOR *= PFACTOR;
+            CPLCHECK_MSG ("Cannot get PFACTOR data");
+          }
+          double VFACTOR = use_vFactor?cpl_array_get (pVFACTOR[rbase], w, NULL):1.0;
+          double PHASEREF = pPHASEREF?cpl_array_get (pPHASEREF[rbase], w, NULL):0.0;
+          double FNORM = cpl_array_get (pFNORM[rbase], w, NULL);
+          double complex Vis  = cpl_array_get_complex (pVISDATA[rbase], w, NULL);
+          double complex VErr = cpl_array_get_complex (pVISERR[rbase], w, NULL);
+	        double mR  = creal (Vis);
+	        double mI  = cimag (Vis);
+	        double eR = creal (VErr);
+	        double eI = cimag (VErr);
+          int outlier_flag = cpl_array_get (pFLAG[rbase], w, NULL);
+          CPLCHECK_MSG ("Cannot get data");
 
-	    /* Reject outlier */
-	    if (outlier_flag) {
-	      mR = 0.0; mI = 0.0;
-	      eR = 0.0; eI = 0.0;
-	      FNORM = 0.0;
-	    }
+          /* Reject outlier */
+          if (outlier_flag) {
+            mR = 0.0; mI = 0.0;
+            eR = 0.0; eI = 0.0;
+            FNORM = 0.0;
+          }
 
-			/* Add noise if this is a Monte Carlo sample.
-			 * APPROX: Noise is only added to the coherent flux */
-			if ( seg > nseg-1 ) {
-			  mR += 2 * eR * gravi_randn();
-			  mI += 2 * eI * gravi_randn();
-			}
-            if (PHASEREF) {
-                /* Integrate <R> and <I> rephased */
-                tR[w] += cos(PHASEREF) * mR - sin(PHASEREF) * mI;
-                tI[w] += cos(PHASEREF) * mI + sin(PHASEREF) * mR;
-            } else {
-                /* Integrate directly without rephasing */
-                tR[w] += mR;
-                tI[w] += mI;
-            }
+          /* Add noise if this is a Monte Carlo sample.
+          * APPROX: Noise is only added to the coherent flux */
+          if ( seg > nseg-1 ) {
+            mR += 2 * eR * gravi_randn();
+            mI += 2 * eI * gravi_randn();
+          }
+          if (PHASEREF) {
+              /* Integrate <R> and <I> rephased */
+              tR[w] += cos(PHASEREF) * mR - sin(PHASEREF) * mI;
+              tI[w] += cos(PHASEREF) * mI + sin(PHASEREF) * mR;
+          } else {
+              /* Integrate directly without rephasing */
+              tR[w] += mR;
+              tI[w] += mI;
+          }
     
-    		/* Compute the flux <F1F2> and <sqrt(|F1F2|)> x sign(F1F2)
-    		 * corrected by the vFactor if needed */
-            tF1F2[w] += FNORM * VFACTOR * PFACTOR;
-            tF12[w]  += sqrt( CPL_MAX (FNORM * VFACTOR * PFACTOR, 0.0) );
+    		  /* Compute the flux <F1F2> and <sqrt(|F1F2|)> x sign(F1F2)
+    		   * corrected by the vFactor if needed */
+          tF1F2[w] += FNORM * VFACTOR * PFACTOR;
+          tF12[w]  += sqrt( CPL_MAX (FNORM * VFACTOR * PFACTOR, 0.0) );
 			
-    		/* Integrate < R2 + I2 - sR2 - sI2 > */
-    		if (use_debiasing) {
-    		  tP[w] += mR*mR + mI*mI - eR*eR - eI*eI;
-    		} else {
-    		  tP[w] += mR*mR + mI*mI;
-    		}
+          /* Integrate < R2 + I2 - sR2 - sI2 > */
+          if (use_debiasing) {
+            tP[w] += mR*mR + mI*mI - eR*eR - eI*eI;
+          } else {
+            tP[w] += mR*mR + mI*mI;
+          }
     	  } /* End loop on wave */
     	} /* End loop on rows in this segment */
-    }/* End loop on segments */
+    } /* End loop on segments */
 
     
     /*
@@ -1074,9 +1127,9 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
     	for (int rowb = 0; rowb < nseg; rowb ++) {
     			  	
     	  /* For the first bootstrap, we use all observed samples
-		   * For the others, we also includes the possible montecarlo
+		     * For the others, we also includes the possible montecarlo
     	   * FIXME: verify the uniformity of rand for small nrows */
-		  int rows;
+		    int rows;
     	  if (boot == 0 )  rows = rowb;
     	  else             rows = rand()%(nseg+nmontecarlo);
     
@@ -1101,7 +1154,7 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
     			  
     	/* Norm of coherent integration
     	   visAmp = sqrt(visR^2 + visR^2) / F12 */
-	FREE (cpl_array_delete, visAmp_res[0]);
+	    FREE (cpl_array_delete, visAmp_res[0]);
     	visAmp_res[0] = gravi_array_compute_norm2 (visR_res[0], visI_res[0]);
     	cpl_array_power (visAmp_res[0], 0.5);
     	cpl_array_divide (visAmp_res[0], F12_boot);
@@ -1109,9 +1162,9 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
     	
     	/* Phase of coherent integration 
     	   visPhi = arctan( visI, visR ) */
-		FREE (cpl_array_delete, visPhi_res[0]);
+		  FREE (cpl_array_delete, visPhi_res[0]);
     	visPhi_res[0] = gravi_array_wrap_complex (visR_res[0], visI_res[0]);
-		cpl_array_arg (visPhi_res[0]);
+		  cpl_array_arg (visPhi_res[0]);
     			
     	/* Compute the VARIANCE over the bootstraped samples with the 'online_variance' algorithm.
     	 * See https://en.wikipedia.org/wiki/Algorithms_for_calculating_variance */
@@ -1136,20 +1189,19 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
     FREELOOP (cpl_array_delete, F12, nseg + nmontecarlo);
     FREELOOP (cpl_array_delete, F1F2, nseg + nmontecarlo);
 
-	/* Convert variance from bootstrap to RMS */
-	cpl_msg_debug (cpl_func,"Put the RMS over bootstrap");	
-	cpl_array_power (vis2_res[3], 0.5);
-	cpl_array_power (visAmp_res[3], 0.5);
-	cpl_array_power (visPhi_res[3], 0.5);
-	cpl_array_power (visR_res[3], 0.5);
-	cpl_array_power (visI_res[3], 0.5);
-	CPLCHECK_MSG ("while converting variance -> rms");
+    /* Convert variance from bootstrap to RMS */
+    cpl_msg_debug (cpl_func,"Put the RMS over bootstrap");	
+    cpl_array_power (vis2_res[3], 0.5);
+    cpl_array_power (visAmp_res[3], 0.5);
+    cpl_array_power (visPhi_res[3], 0.5);
+    cpl_array_power (visR_res[3], 0.5);
+    cpl_array_power (visI_res[3], 0.5);
+    CPLCHECK_MSG ("while converting variance -> rms");
 
-	/* Normalize integration */
-	mjd_avg /= total_exptime;
-	uCoord /= total_exptime;
-	vCoord /= total_exptime;
-	
+    /* Normalize integration */
+    mjd_avg /= total_exptime;
+    uCoord /= total_exptime;
+    vCoord /= total_exptime;
   } 
 
   /* 
@@ -1698,10 +1750,18 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
 		/* Reduction parameters */
 		int v_factor_flag_ft = 0;
 		int p_factor_flag_ft = 0;
+    const char *p_factor_str_ft = gravi_param_get_string (parlist, "gravity.vis.vis-correction-ft");
+    if (!strcmp("PFACTOR", p_factor_str_ft))
+      p_factor_flag_ft = 1;
+    else if (!strcmp("PFACTOR_SQUARED", p_factor_str_ft))
+      p_factor_flag_ft = 2;
 		int debiasing_flag_ft = gravi_param_get_bool (parlist, "gravity.vis.debias-ft");
-        int nboot_ft = gravi_param_get_int (parlist, "gravity.vis.nboot");
-        const char * phase_ref_ft = "SELF_REF";
-	double outlier_threshold_ft = 0.0;
+    int nboot_ft = gravi_param_get_int (parlist, "gravity.vis.nboot");
+    const char * phase_ref_ft = "SELF_REF";
+    double outlier_threshold_ft = 0.0;
+    cpl_msg_info (cpl_func, "vFactor correction for FT is %s",v_factor_flag_ft?"ENABLE":"DISABLE");
+		cpl_msg_info (cpl_func, "pFactor correction for FT is %s",(p_factor_flag_ft>0)?p_factor_str_ft:"DISABLE");
+
 		CPLCHECK_NUL("Cannot get parameters");
 
         cpl_msg_info (cpl_func, "Bias subtraction of V2 for FT is %s",debiasing_flag_ft?"ENABLE":"DISABLE");
