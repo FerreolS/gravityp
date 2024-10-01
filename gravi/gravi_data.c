@@ -1042,6 +1042,24 @@ cpl_error_code gravi_data_save_new (gravi_data 		  * self,
 	  return CPL_ERROR_NULL_INPUT;
 	}
 
+  /* add a diagnostic for invalid header values which cannot be saved, to tell which card was the problem */
+  for (int i = 0; i < cpl_propertylist_get_size(applist); i++) {
+    cpl_property *p = cpl_propertylist_get(applist, i);
+    if (cpl_property_get_type(p) == CPL_TYPE_FLOAT) {
+      const char *name = cpl_property_get_name(p);
+      const float value = cpl_property_get_float(p);
+      if (!isfinite(value)) {
+        cpl_msg_error(cpl_func, "Card %s has invalid value %f", name, value);
+      }
+    } else if(cpl_property_get_type(p) == CPL_TYPE_DOUBLE) {
+      const char *name = cpl_property_get_name(p);
+      const double value = cpl_property_get_double(p);
+      if (!isfinite(value)) {
+        cpl_msg_error(cpl_func, "Card %s has invalid value %f", name, value);
+      }
+    }
+  }
+
 	/* Save the primary header */
 	cpl_dfs_save_propertylist (allframes, NULL, parlist,
 							   frameset, frame, recipe, applist,
