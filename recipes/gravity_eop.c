@@ -364,7 +364,7 @@ static int gravity_eop(cpl_frameset            * frameset,
     /* Add the product category  */
     cpl_propertylist_append_string (applist, CPL_DFS_PRO_CATG, GRAVI_EOP_MAP);
     cpl_propertylist_append_string (applist, "ESO PRO TECH", "CATALOG");
-    cpl_propertylist_append_string (applist, "ESO PRO TYPE", "IERS");
+    cpl_propertylist_append_string (applist, "ESO PRO TYPE", "STATIC");
 
     /* Add a QC parameter  */
     gravity_eop_compute_qc (eop_table, applist, &mjd_lastfinal);
