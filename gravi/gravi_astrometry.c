@@ -117,22 +117,6 @@ static cpl_error_code gravi_astrometry_minimise_chi2_descent(gravi_astrometry_mo
                               Function code
  -----------------------------------------------------------------------------*/
 
-/* 
- * this function copied from GSL 2.7
- * if pipeline dependency is updated, it can be removed from here
- */ 
-static double _gsl_vector_sum(const gsl_vector *a)
-{
-    const size_t N = a->size;
-    const size_t stride = a->stride;
-    double sum = 0.0;
-    size_t i;
-    
-    for (i = 0; i < N; i++)
-        sum += a->data[i * stride];
-    return sum;
-}
-
 static int _gsl_vector_int_sum(const gsl_vector_int *a)
 {
     const size_t N = a->size;
@@ -269,7 +253,7 @@ static cpl_error_code gravi_astrometry_mul_visibilities(astro_data *self, const 
 {
     cpl_ensure_code(self, CPL_ERROR_NULL_INPUT);
     cpl_ensure_code(factor, CPL_ERROR_NULL_INPUT);
-    cpl_ensure_code(self->ndit * self->nchannel == factor->size, CPL_ERROR_INCOMPATIBLE_INPUT);
+    cpl_ensure_code((size_t) (self->ndit * self->nchannel) == factor->size, CPL_ERROR_INCOMPATIBLE_INPUT);
 
     gsl_matrix_complex *complex_factor = gsl_matrix_complex_alloc(self->ndit * self->nchannel, self->nwave);
     gsl_matrix_complex *complex_factor_ft = gsl_matrix_complex_alloc(self->ndit * self->nchannel, self->nwave_ft);
@@ -1281,7 +1265,7 @@ static gsl_matrix_complex *gravi_astrometry_calculate_visref_swap(astro_data **d
     for (int j = 0; j < data[0]->nchannel; j++) {
         for (int k = 0; k < data[0]->nwave; k++) {
             int ngood_jk = gsl_matrix_int_get(ngood, j, k);
-            if (ngood > 0) {
+            if (ngood_jk > 0) {
                 gsl_complex visref_jk = gsl_matrix_complex_get(visref, j, k);
                 visref_jk = gsl_complex_div_real(visref_jk, ngood_jk);
                 gsl_matrix_complex_set(visref, j, k, visref_jk);
@@ -1342,7 +1326,7 @@ static cpl_error_code gravi_astrometry_minimise_chi2_grid(
 
     cpl_size n_ra = ra_grid->size;
     cpl_size n_dec = dec_grid->size;
-    double ra_dec[2];
+    double ra_dec[2] = {0};
     gsl_vector_const_view ra_dec_view = gsl_vector_const_view_array(ra_dec, 2);
     double best_ra, best_dec, best_chi2 = INFINITY;
     
@@ -1640,8 +1624,8 @@ static gsl_matrix_complex *gravi_astrometry_create_swap_reference(astro_data **s
 {
     cpl_ensure(swap_data, CPL_ERROR_NULL_INPUT, NULL);
 
-    size_t nchannel = swap_data[0]->nchannel;
-    size_t nwave = swap_data[0]->nwave;
+    int nchannel = swap_data[0]->nchannel;
+    int nwave = swap_data[0]->nwave;
 
     gsl_matrix_complex *phase_ref_s1  = gsl_matrix_complex_calloc(nchannel, nwave);
     gsl_matrix_complex *phase_ref_s2  = gsl_matrix_complex_calloc(nchannel, nwave);

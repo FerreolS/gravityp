@@ -2071,7 +2071,7 @@ cpl_error_code gravi_metrology_drs (cpl_table * metrology_table,
             for (cpl_size row = 0; row < nbrow_met; row ++)
             {
                 int time_met = cpl_table_get_int (metrology_table, "TIME", row, NULL);
-                for (int repeat_counter;  repeat_counter < repeat1; repeat_counter ++)
+                for (int repeat_counter = 0;  repeat_counter < repeat1; repeat_counter ++)
                     {
                         if (  time_met > timer1_start+rate1*repeat_counter &&
                                 time_met < timer2_start+rate2*repeat_counter)

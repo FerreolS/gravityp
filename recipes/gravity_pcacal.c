@@ -283,11 +283,13 @@ static cpl_boolean gravi_test_tracking_ratio(const cpl_propertylist *hdr, int mi
         sprintf(tr_param_name, "ESO QC TRACKING_RATIO_FT%s", GRAVI_BASE_NAME[i]);
         const cpl_property *tr_prop = cpl_propertylist_get_property_const(hdr, tr_param_name);
 
-        int tracking_ratio;
+        int tracking_ratio = 0;
         if (cpl_property_get_type(tr_prop) == CPL_TYPE_INT)
             tracking_ratio = cpl_property_get_int(tr_prop);
         else if (cpl_property_get_type(tr_prop) == CPL_TYPE_DOUBLE)
             tracking_ratio = (int) cpl_property_get_double(tr_prop);
+        else
+            cpl_msg_error(cpl_func, "Could not get tracking ratio");
  
         if (tracking_ratio < min_ratio)
             return CPL_FALSE;

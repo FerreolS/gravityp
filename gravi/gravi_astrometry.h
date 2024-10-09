@@ -41,4 +41,4 @@ cpl_table *gravi_astrometry_get_phase_reference(astro_data *self);
 
 cpl_error_code gravi_astrometry_reduce_swaps(astro_data **swap_data, cpl_size nswap, cpl_parameterlist *parlist);
 
-#endif
+#endif // GRAVI_ASTROMETRY_H

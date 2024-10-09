@@ -42,17 +42,28 @@
                             Private function prototypes
  -----------------------------------------------------------------------------*/
 
-static int gravity_astro_create(cpl_plugin *);
-static int gravity_astro_exec(cpl_plugin *);
-static int gravity_astro_destroy(cpl_plugin *);
+static int gravity_astrometry_create(cpl_plugin *);
+static int gravity_astrometry_exec(cpl_plugin *);
+static int gravity_astrometry_destroy(cpl_plugin *);
 static int gravity_astrometry(cpl_frameset *, cpl_parameterlist *);
 
 /*-----------------------------------------------------------------------------
                             Static variables
  -----------------------------------------------------------------------------*/
-static char gravity_astro_short[] = "TODO";
+static char gravity_astro_short[] = "Compute astrometric phase reference";
 static char gravity_astro_description[] =
-    "TODO \n"
+    "This recipe computes phase and amplitude referencing for astrometric observations.\n"
+    "It supports on- and off-axis observing strategies, as well as the use of swaps.\n"
+    GRAVI_RECIPE_FLOW"\n"
+    "* If swaps are present: obtain astrometric solution and compute swap phase reference\n"
+    "* Compute phase reference for the target.\n"
+    "* Write output product with correctly referenced phase.\n"
+    GRAVI_RECIPE_INPUT"\n"
+    GRAVI_ASTRO_CAL_PHASEREF" : star frames to use for phase referencing\n"
+    GRAVI_ASTRO_TARGET":\tplanet frames to be referenced\n"
+    GRAVI_ASTRO_SWAP":\talternating star/planet frames for swap observing mode\n"
+    GRAVI_RECIPE_OUTPUT"\n"
+    GRAVI_ASTRO_PHASE_CALIBRATED" : output astroreduced file with correctly referenced phase\n"
     "";
 
 /*-----------------------------------------------------------------------------
@@ -82,12 +93,12 @@ int cpl_plugin_get_info(cpl_pluginlist * list)
                     "gravity_astrometry",
                     gravity_astro_short,
                     gravity_astro_description,
-                    "Calvin Sykes, Mathias Nowak",
+                    "Calvin Sykes, Mathias Nowak, Sebastian Hoenig",
                     PACKAGE_BUGREPORT,
                     gravi_get_license(),
-                    gravity_astro_create,
-                    gravity_astro_exec,
-                    gravity_astro_destroy)) {
+                    gravity_astrometry_create,
+                    gravity_astrometry_exec,
+                    gravity_astrometry_destroy)) {
         cpl_msg_error(cpl_func, "Plugin initialization failed");
         (void)cpl_error_set_where(cpl_func);                          
         return 1;                                               
@@ -111,10 +122,9 @@ int cpl_plugin_get_info(cpl_pluginlist * list)
   Defining the command-line/configuration parameters for the recipe.
  */
 /*----------------------------------------------------------------------------*/
-static int gravity_astro_create(cpl_plugin * plugin)
+static int gravity_astrometry_create(cpl_plugin * plugin)
 {
     cpl_recipe    * recipe;                                               
-    cpl_parameter * p;
                                                                        
     /* Do not create the recipe if an error code is already set */     
     if (cpl_error_get_code() != CPL_ERROR_NONE) {                      
@@ -160,7 +170,7 @@ static int gravity_astro_create(cpl_plugin * plugin)
   @return   0 if everything is ok
  */
 /*----------------------------------------------------------------------------*/
-static int gravity_astro_exec(cpl_plugin * plugin)
+static int gravity_astrometry_exec(cpl_plugin * plugin)
 {
 
     cpl_recipe * recipe;                                                   
@@ -225,7 +235,7 @@ static int gravity_astro_exec(cpl_plugin * plugin)
   @return   0 if everything is ok
  */
 /*----------------------------------------------------------------------------*/
-static int gravity_astro_destroy(cpl_plugin * plugin)
+static int gravity_astrometry_destroy(cpl_plugin * plugin)
 {
     cpl_recipe * recipe;                                          
                                                                   
@@ -260,12 +270,10 @@ static int gravity_astro_destroy(cpl_plugin * plugin)
 static astro_data** load_data(cpl_frameset *frameset, cpl_frameset *used_frameset, gravi_data **out_data)
 {
     cpl_frame *frame = NULL;
-    cpl_propertylist *header = NULL;
     gravi_data *tmp_data = NULL;
     astro_data **data = NULL;
 
     cpl_size nframes = cpl_frameset_get_size(frameset);
-    cpl_size n_used = 0;
 
     data = cpl_calloc(nframes, sizeof(astro_data *));
     for (int i = 0; i < nframes; i++) {
@@ -301,10 +309,7 @@ static int gravity_astrometry(cpl_frameset * frameset,
                  *used_frameset=NULL;
 	
 	cpl_frame *frame=NULL;
-
-    gravi_data *tmp_data = NULL;
     cpl_size n_target = 0, n_swap = 0, n_phaseref = 0;
-
     gravi_data **tgt_data = NULL, **swap_data = NULL;
     astro_data **tgt_astro = NULL, **swap_astro=NULL, **phaseref_astro=NULL;
 	
@@ -390,6 +395,8 @@ static int gravity_astrometry(cpl_frameset * frameset,
     CPLCHECK_CLEAN("Could not reduce swaps");
 
     /* If there are targets, calculate phase reference */
+    /* TODO: if there are no targets, the recipe runs but does nothing */
+    /* TODO: it might be desirable to be able to (f.e.) reduce swaps in isolation */
     if (n_target > 0) {
         double ft_mean_flux_tgt = 0.0;
         for (int i = 0; i < n_target; i++)

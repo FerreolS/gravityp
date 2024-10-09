@@ -1161,11 +1161,11 @@ cpl_error_code gravi_parameter_add_astrometry (cpl_parameterlist *self)
 	  cpl_parameterlist_append (self, p);
 
     /* temp for debugging */
-    p = cpl_parameter_new_value("gravity.astrometry.wait-for-debugger", CPL_TYPE_BOOL,
-      "busy wait for attaching the debugger.", "gravity.astrometry", CPL_FALSE);
-    cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "wait-for-debugger");
-  	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
-	  cpl_parameterlist_append (self, p);
+    // p = cpl_parameter_new_value("gravity.astrometry.wait-for-debugger", CPL_TYPE_BOOL,
+    //   "busy wait for attaching the debugger.", "gravity.astrometry", CPL_FALSE);
+    // cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "wait-for-debugger");
+  	// cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
+	  // cpl_parameterlist_append (self, p);
 
     return CPL_ERROR_NONE;
 }
