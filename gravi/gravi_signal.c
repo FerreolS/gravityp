@@ -1007,7 +1007,7 @@ cpl_error_code gravi_vis_create_pfactor_sc (cpl_table * vis_SC, cpl_table * t3_S
         int t0 = GRAVI_CLO_TEL[closure][0] + row_ft * ntel;
         int t1 = GRAVI_CLO_TEL[closure][1] + row_ft * ntel;
         int t2 = GRAVI_CLO_TEL[closure][2] + row_ft * ntel;
-        if (flux[t0] < 0.0 || flux[t1 < 0.0] || flux[t2] < 0.0)
+        if (flux[t0] < 0.0 || flux[t1] < 0.0 || flux[t2] < 0.0)
           continue;
         sf0f1f2 += pow (flux[t0] * flux[t1] * flux[t2], 1.0 / 3);
         f0 += flux[t0];
