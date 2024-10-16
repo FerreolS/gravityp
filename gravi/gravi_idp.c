@@ -164,24 +164,26 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
     cpl_propertylist_set_comment (idp_plist, "OBID1", "Obseration Block ID");
 
     /* NCOMBINE */
-    cpl_frameset * science_frames = gravi_frameset_extract_science_data(frameset);
-    cpl_size nscience = cpl_frameset_get_size(science_frames);
-    cpl_frameset_delete(science_frames);
-    if(!cpl_propertylist_has(header, "NCOMBINE"))
+    if(frameset != NULL)
     {
-        if (nscience != 0)
+        cpl_frameset * science_frames = gravi_frameset_extract_science_data(frameset);
+        cpl_size nscience = cpl_frameset_get_size(science_frames);
+        cpl_frameset_delete(science_frames);
+        if(!cpl_propertylist_has(header, "NCOMBINE"))
         {
-            cpl_propertylist_update_int (idp_plist, "NCOMBINE", nscience);
+            if (nscience != 0)
+            {
+                cpl_propertylist_update_int (idp_plist, "NCOMBINE", nscience);
+                cpl_propertylist_set_comment (idp_plist, "NCOMBINE", "Number of raw science combined");
+            }
+        }
+        else
+        {
+            cpl_propertylist_update_int (idp_plist, "NCOMBINE",
+                    cpl_propertylist_get_int(header, "NCOMBINE") );
             cpl_propertylist_set_comment (idp_plist, "NCOMBINE", "Number of raw science combined");
         }
     }
-    else
-    {
-        cpl_propertylist_update_int (idp_plist, "NCOMBINE",
-                cpl_propertylist_get_int(header, "NCOMBINE") );
-        cpl_propertylist_set_comment (idp_plist, "NCOMBINE", "Number of raw science combined");
-    }
-
     /* OBSTECH */
     // Only create OBSTECH if it does not exist yet.
     // This is needed for For gravity_viscal which starts from
@@ -227,21 +229,24 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
     cpl_propertylist_set_comment (idp_plist, "SPEC_SYE", "Systematic error in spectral coordinate");
 
     /* PROV keywords */
-    const cpl_frame *frame;
-    size_t i_prov = 1;
-    char prov_keyword[8];
-    cpl_frameset_iterator *it = cpl_frameset_iterator_new(frameset);
-    while ((frame = cpl_frameset_iterator_get(it)) != NULL) {
-        if (cpl_frame_get_group(frame) == CPL_FRAME_GROUP_RAW)
-        {
-            snprintf(prov_keyword, 7, "PROV%zu",i_prov);
-            cpl_propertylist_update_string(idp_plist, prov_keyword, cpl_frame_get_filename(frame));
-            i_prov++;
+    if(frameset != NULL)
+    {
+        const cpl_frame *frame;
+        size_t i_prov = 1;
+        char prov_keyword[8];
+        cpl_frameset_iterator *it = cpl_frameset_iterator_new(frameset);
+        while ((frame = cpl_frameset_iterator_get(it)) != NULL) {
+            if (cpl_frame_get_group(frame) == CPL_FRAME_GROUP_RAW)
+            {
+                snprintf(prov_keyword, 7, "PROV%zu",i_prov);
+                cpl_propertylist_update_string(idp_plist, prov_keyword, cpl_frame_get_filename(frame));
+                i_prov++;
+            }
+            cpl_frameset_iterator_advance(it, 1);
         }
-        cpl_frameset_iterator_advance(it, 1);
+        cpl_frameset_iterator_delete(it);
     }
-    cpl_frameset_iterator_delete(it);
-
+        
     /* Delete scratch tables */
     cpl_table_delete(oi_vis2_SC_allpol);
     cpl_table_delete(oi_T3_SC_allpol);
