@@ -86,8 +86,7 @@ const cpl_size ndiode = 4;
 const cpl_size nside = 2;
 
 /**
- * Diode zero offsets from Stefan Gillesen dated TODO
- * To be updated with new values dated TODO
+ * Diode zero offsets from Stefan Gillesen as of 2023-11-01
  * Ordering is such that it matches the VOLT column in the metrology data
  * Used iff no DARK was provided
  **/
@@ -395,8 +394,6 @@ double modulation_model_chi2 (const gsl_vector *X, void *params)
  * 
  * @param vx x voltages
  * @param vy y voltages
- * @param zx x zero offset
- * @param zy y zero offset
  * @param[out] Xsolve returned best-fit parameters, which must already be allocated.
  * 
  * @return CPL_ERROR_NONE if fit successful
@@ -413,7 +410,7 @@ cpl_error_code fit_model_modulation (const gsl_vector *vx, const gsl_vector *vy,
     const int MAX_ITERATIONS = 1000;
     const gsl_multimin_fminimizer_type *T = gsl_multimin_fminimizer_nmsimplex2rand;
     gsl_multimin_fminimizer *mini = gsl_multimin_fminimizer_alloc(T, dim);
-    int status;
+    int status, iterations;
     double size;
 
     model_params params = {
@@ -436,7 +433,7 @@ cpl_error_code fit_model_modulation (const gsl_vector *vx, const gsl_vector *vy,
     double phase_step = phase_range / (2 * nphase);
 
     /* Try multiple starting points for minimisation to ensure global minimum */
-    for (int iph1 = -nphase; iph1 < nphase ; iph1++) {
+    for (int iph1 = -nphase; iph1 < nphase; iph1++) {
         for (int iph2 = -nphase; iph2 < nphase; iph2++) {
             double pha1_guess = iph1 * phase_step;
             double pha2_guess = iph2 * phase_step;
@@ -447,7 +444,7 @@ cpl_error_code fit_model_modulation (const gsl_vector *vx, const gsl_vector *vy,
             gsl_vector_view step_view = gsl_vector_view_array(step_size, dim);
             gsl_multimin_fminimizer_set(mini, &func, &guess_view.vector, &step_view.vector);
 
-            int iterations = 0;
+            iterations = 0;
             do {
                 iterations++;
                 status = gsl_multimin_fminimizer_iterate(mini);
