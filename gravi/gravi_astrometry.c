@@ -20,7 +20,10 @@
 /**
  * @defgroup gravi_astrometry  Astrometric Solutions
  *
- * TODO
+ * This module contains functions for computing phase referencing for dual-
+ * field astrometric observations. These functions are used by the
+ * gravity_astrometry recipe, and are applicable to on-axis, off-axis and swap
+ * observing strategies.
  */
 
 #include "gravi_astrometry.h"
@@ -29,6 +32,7 @@
 #include "gravi_utils.h"
 
 #include <assert.h>
+#include <ctype.h>
 #include <math.h>
 
 #include <gsl/gsl_blas.h>
@@ -775,18 +779,22 @@ cpl_error_code gravi_astrometry_create_phase_reference(astro_data *self, astro_d
     gsl_matrix_complex *vis_ref = NULL, *vis_ref_tmp = NULL;
 
     /* Parameters */
-    const char *calib_strategy = cpl_parameter_get_string(
-        cpl_parameterlist_find(parlist, "gravity.astrometry.calib-strategy"));
+    char *calib_strategy = cpl_strdup(cpl_parameter_get_string(
+        cpl_parameterlist_find(parlist, "gravity.astrometry.calib-strategy")));
+    /* just in case: tolerate mixed/lower case arguments */
+    for(int i = 0; calib_strategy[i]; i++)
+        calib_strategy[i] = toupper(calib_strategy[i]);
+    
     CPLCHECK_INT("Could not get parameters");
 
     cpl_msg_debug(cpl_func, "Calibrating amplitude reference with '%s' strategy", calib_strategy);
 
-    if (!strcmp(calib_strategy, "none")) {
+    if (!strcmp(calib_strategy, "NONE")) {
         amp_ref = gsl_matrix_alloc(self->nchannel, self->nwave);
         vis_ref = gsl_matrix_complex_alloc(self->nchannel, self->nwave);
         gsl_matrix_set_all(amp_ref, 1.0);
         gsl_matrix_complex_set_all(vis_ref, GSL_COMPLEX_ONE);
-    } else if (!strcmp(calib_strategy, "self")) {
+    } else if (!strcmp(calib_strategy, "SELF")) {
         // abs first, then mean over dits
         amp_ref_tmp = gsl_matrix_alloc(self->ndit * self->nchannel, self->nwave);
         for (int i = 0; i < self->ndit * self->nchannel; i++) {
@@ -809,12 +817,12 @@ cpl_error_code gravi_astrometry_create_phase_reference(astro_data *self, astro_d
         int nphase_used;
         gsl_vector_int *phase_indices;
 
-        if (!strcmp(calib_strategy, "all")) {
+        if (!strcmp(calib_strategy, "ALL")) {
             nphase_used = nphase;
             phase_indices = gsl_vector_int_alloc(nphase_used);
             for (int n = 0; n < nphase_used; n++)
                 gsl_vector_int_set(phase_indices, n, n);
-        } else if (!strcmp(calib_strategy, "nearest")) {
+        } else if (!strcmp(calib_strategy, "NEAREST")) {
             nphase_used = 2;
             phase_indices = gsl_vector_int_alloc(nphase_used);
             cpl_size idx_before = gravi_astrometry_find_closest_mjd(self, phase_refs, nphase, FIND_MODE_BEFORE);
@@ -882,7 +890,7 @@ cpl_error_code gravi_astrometry_create_phase_reference(astro_data *self, astro_d
         vis_ref = self->phase_ref_astro;
 
         /* Take the amplitude reference from the swaps */
-        if (!strcmp(calib_strategy, "swap")) {
+        if (!strcmp(calib_strategy, "SWAP")) {
             cpl_size n_swapon = 0;
 
             gsl_matrix_set_zero(amp_ref);
@@ -934,6 +942,7 @@ cpl_error_code gravi_astrometry_create_phase_reference(astro_data *self, astro_d
         }
     }
 
+    cpl_free(calib_strategy);
     return CPL_ERROR_NONE;
 }
 

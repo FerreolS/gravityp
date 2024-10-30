@@ -52,8 +52,8 @@ static int gravity_astrometry(cpl_frameset *, cpl_parameterlist *);
  -----------------------------------------------------------------------------*/
 static char gravity_astro_short[] = "Compute astrometric phase reference";
 static char gravity_astro_description[] =
-    "This recipe computes phase and amplitude referencing for astrometric observations.\n"
-    "It supports on- and off-axis observing strategies, as well as the use of swaps.\n"
+    "This recipe computes phase and amplitude referencing for dual-field astrometric observations.\n"
+    "It supports on-axis, off-axis and off-axis swap observing strategies.\n"
     GRAVI_RECIPE_FLOW"\n"
     "* If swaps are present: obtain astrometric solution and compute swap phase reference\n"
     "* Compute phase reference for the target.\n"
@@ -319,17 +319,17 @@ static int gravity_astrometry(cpl_frameset * frameset,
 	cpl_msg_set_component_on();
 	gravi_msg_function_start(1);
 
-    cpl_boolean debug = cpl_parameter_get_bool(
-        cpl_parameterlist_find(parlist, "gravity.astrometry.wait-for-debugger"));
+    // cpl_boolean debug = cpl_parameter_get_bool(
+    //     cpl_parameterlist_find(parlist, "gravity.astrometry.wait-for-debugger"));
 
-    if (debug) {
-        fprintf(stderr, "PID is: %d\n", getpid());
-        fprintf(stderr, "Waiting for debugger to attach...\n");
-        volatile int attach = 1;
-        while (attach) {
-            if (attach == 0) break;
-        }
-    }
+    // if (debug) {
+    //     fprintf(stderr, "PID is: %d\n", getpid());
+    //     fprintf(stderr, "Waiting for debugger to attach...\n");
+    //     volatile int attach = 1;
+    //     while (attach) {
+    //         if (attach == 0) break;
+    //     }
+    // }
 
     // const char *target = cpl_parameter_get_string(
     //     cpl_parameterlist_find_const(parlist, "gravity.astrometry.target-name")

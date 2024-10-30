@@ -1081,7 +1081,7 @@ cpl_error_code gravi_parameter_add_astrometry (cpl_parameterlist *self)
 
     /* range in RA for swap astrometry */
     p = cpl_parameter_new_value("gravity.astrometry.ra-lim-swap", CPL_TYPE_DOUBLE,
-      "specify the RA range (in mas) over which to search for the astrometry of the swap.", "gravity.astrometry", -1.0);
+      "specify the RA range (in mas) over which to search for the astrometry of the swap. Default specifies entire field of view.", "gravity.astrometry", -1.0);
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "ra-lim-swap");
   	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
 	  cpl_parameterlist_append (self, p);
@@ -1094,7 +1094,7 @@ cpl_error_code gravi_parameter_add_astrometry (cpl_parameterlist *self)
 
     /* range in dec for swap astrometry */
     p = cpl_parameter_new_value("gravity.astrometry.dec-lim-swap", CPL_TYPE_DOUBLE,
-      "specify the dec range (in mas) over which to search for the astrometry of the swap.", "gravity.astrometry", -1.0);
+      "specify the dec range (in mas) over which to search for the astrometry of the swap. Default specifies entire field of view.", "gravity.astrometry", -1.0);
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "dec-lim-swap");
   	cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
 	  cpl_parameterlist_append (self, p);
@@ -1147,14 +1147,14 @@ cpl_error_code gravi_parameter_add_astrometry (cpl_parameterlist *self)
 	  cpl_parameterlist_append (self, p);
 
     /* Calibration strategy for computing amplitude references */
-    const char * calib_strategies[] = {"none", "all", "self", "swap", "nearest"};
+    const char * calib_strategies[] = {"NONE", "ALL", "SELF", "SWAP", "NEAREST"};
     p = cpl_parameter_new_enum_from_array("gravity.astrometry.calib-strategy",  CPL_TYPE_STRING,
         "how to calculate the reference coherent flux\n"
-        "\t'none': do not use an amplitude reference\n"
-        "\t'all': use all files\n"
-        "\t'self': calibrate each file individually\n"
-        "\t'swap': use the swap files\n"
-        "\t'nearest': use the two nearest available files.",
+        "\t'NONE': do not use an amplitude reference\n"
+        "\t'ALL': use all files\n"
+        "\t'SELF': calibrate each file individually\n"
+        "\t'SWAP': use the swap files\n"
+        "\t'NEAREST': use the nearest two (in time) files.",
         "gravity.astrometry", 0, 5, calib_strategies);
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "calib-strategy");
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
