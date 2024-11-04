@@ -123,12 +123,12 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
         cpl_propertylist_set_comment (idp_plist, qc_name, "Number of wavelength channels");
 
         sprintf (qc_name, "WAVELMAX");
-        cpl_propertylist_update_double (idp_plist, qc_name, max_eff_wave);
-        cpl_propertylist_set_comment (idp_plist, qc_name, "Maximum wavelength");
+        cpl_propertylist_update_double (idp_plist, qc_name, max_eff_wave * 1e9);
+        cpl_propertylist_set_comment (idp_plist, qc_name, "[nm] Maximum wavelength");
 
         sprintf (qc_name, "WAVELMIN");
-        cpl_propertylist_update_double (idp_plist, qc_name, min_eff_wave);
-        cpl_propertylist_set_comment (idp_plist, qc_name, "Minimum wavelength");
+        cpl_propertylist_update_double (idp_plist, qc_name, min_eff_wave * 1e9);
+        cpl_propertylist_set_comment (idp_plist, qc_name, "[nm] Minimum wavelength");
 
         cpl_table_duplicate_column(oi_wave_SC_allpol, "SPEC_RES", oi_wave_SC_allpol, "EFF_WAVE");
         cpl_table_divide_columns(oi_wave_SC_allpol,"EFF_WAVE", "EFF_BAND");
