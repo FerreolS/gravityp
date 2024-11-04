@@ -26,6 +26,7 @@
 #endif
 
 #include <math.h>
+#include <string.h>
 #include "gravi_idp.h"
 #include "gravi_pfits.h"
 #include "gravi_dfs.h"
@@ -60,23 +61,29 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
     /* There are products like the p2vmred that do not have all columns */
     if (gravi_data_has_extension(vis_data, GRAVI_OI_VIS2_EXT))
     {
-        oi_vis2_SC_allpol = cpl_table_duplicate(gravi_data_get_oi_vis2 (vis_data, GRAVI_SC, 0, npol_sc));
-        oi_T3_SC_allpol = cpl_table_duplicate(gravi_data_get_oi_t3 (vis_data, GRAVI_SC, 0, npol_sc));
-        oi_wave_SC_allpol = cpl_table_duplicate(gravi_data_get_oi_wave (vis_data, GRAVI_SC, 0, npol_sc));
-
-        for (int pol = 1; pol < npol_sc; pol++) {
-            cpl_table_insert(oi_vis2_SC_allpol, gravi_data_get_oi_vis2 (vis_data, GRAVI_SC, pol, npol_sc), cpl_table_get_nrow(oi_vis2_SC_allpol));
-            cpl_table_insert(oi_T3_SC_allpol, gravi_data_get_oi_t3 (vis_data, GRAVI_SC, pol, npol_sc), cpl_table_get_nrow(oi_T3_SC_allpol));
-            cpl_table_insert(oi_wave_SC_allpol, gravi_data_get_oi_wave (vis_data, GRAVI_SC, pol, npol_sc), cpl_table_get_nrow(oi_wave_SC_allpol));
+        double vis2err = 0;
+        double visphierr = 0;
+        double t3phierr = 0;
+        for (int pol = 0; pol < npol_sc; pol++) {
+            double this_pol_vis2err = gravi_table_get_column_flagged_mean(gravi_data_get_oi_vis2 (vis_data, GRAVI_SC, pol, npol_sc), "VIS2ERR");
+            vis2err += this_pol_vis2err * this_pol_vis2err;
+            double this_pol_visphierr = gravi_table_get_column_flagged_mean(gravi_data_get_oi_vis (vis_data, GRAVI_SC, pol, npol_sc), "VISPHIERR");
+            visphierr += this_pol_visphierr * this_pol_visphierr;
+            double this_pol_t3phierr = gravi_table_get_column_flagged_mean(gravi_data_get_oi_t3 (vis_data, GRAVI_SC, pol, npol_sc), "T3PHIERR");
+            t3phierr += this_pol_t3phierr * this_pol_t3phierr;
         }
 
         /* Compute QC values that aggregate on polarizations */
         sprintf (qc_name, "VIS2ERR");
-        cpl_propertylist_update_double (idp_plist, qc_name, gravi_table_get_column_flagged_mean(oi_vis2_SC_allpol, "VIS2ERR"));
+        cpl_propertylist_update_double (idp_plist, qc_name, sqrt(vis2err));
         cpl_propertylist_set_comment (idp_plist, qc_name, "Representative squared visibility error [%]");
 
+        sprintf (qc_name, "VISPHIERR");
+        cpl_propertylist_update_double (idp_plist, qc_name, sqrt(visphierr));
+        cpl_propertylist_set_comment (idp_plist, qc_name, "Representative visibility phase error [%]");
+
         sprintf (qc_name, "T3PHIERR");
-        cpl_propertylist_update_double (idp_plist, qc_name, gravi_table_get_column_flagged_mean(oi_T3_SC_allpol, "T3PHIERR"));
+        cpl_propertylist_update_double (idp_plist, qc_name, sqrt(t3phierr));
         cpl_propertylist_set_comment (idp_plist, qc_name, "Representative closure phase error [deg]");
 
         double min_uvcoord, max_uvcoord;
@@ -236,10 +243,17 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
         char prov_keyword[8];
         cpl_frameset_iterator *it = cpl_frameset_iterator_new(frameset);
         while ((frame = cpl_frameset_iterator_get(it)) != NULL) {
-            if (cpl_frame_get_group(frame) == CPL_FRAME_GROUP_RAW)
+            if (strcmp(cpl_frame_get_tag(frame), GRAVI_SINGLE_SCIENCE_RAW) == 0 || 
+                strcmp(cpl_frame_get_tag(frame), GRAVI_DUAL_SCIENCE_RAW) == 0)
             {
                 snprintf(prov_keyword, 7, "PROV%zu",i_prov);
-                cpl_propertylist_update_string(idp_plist, prov_keyword, cpl_frame_get_filename(frame));
+                const char * filename = cpl_frame_get_filename(frame);
+                const char * filename_no_path = strrchr(filename, '/');
+                if (filename_no_path == NULL)
+                    filename_no_path = filename;
+                else
+                    filename_no_path += 1;
+                cpl_propertylist_update_string(idp_plist, prov_keyword, filename_no_path);
                 i_prov++;
             }
             cpl_frameset_iterator_advance(it, 1);
