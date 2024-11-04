@@ -131,7 +131,7 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
         cpl_propertylist_set_comment (idp_plist, qc_name, "[nm] Minimum wavelength");
 
         cpl_table_duplicate_column(oi_wave_SC_allpol, "SPEC_RES", oi_wave_SC_allpol, "EFF_WAVE");
-        cpl_table_divide_columns(oi_wave_SC_allpol,"EFF_WAVE", "EFF_BAND");
+        cpl_table_divide_columns(oi_wave_SC_allpol,"SPEC_RES", "EFF_BAND");
 
         sprintf (qc_name, "SPEC_RES");
         cpl_propertylist_update_double (idp_plist, qc_name, cpl_table_get_column_mean(oi_wave_SC_allpol, "SPEC_RES"));
