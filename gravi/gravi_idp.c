@@ -64,6 +64,15 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
         double vis2err = 0;
         double visphierr = 0;
         double t3phierr = 0;
+        oi_vis2_SC_allpol = cpl_table_duplicate(gravi_data_get_oi_vis2 (vis_data, GRAVI_SC, 0, npol_sc));
+        oi_T3_SC_allpol = cpl_table_duplicate(gravi_data_get_oi_t3 (vis_data, GRAVI_SC, 0, npol_sc));
+        oi_wave_SC_allpol = cpl_table_duplicate(gravi_data_get_oi_wave (vis_data, GRAVI_SC, 0, npol_sc));
+        for (int pol = 1; pol < npol_sc; pol++) {
+            cpl_table_insert(oi_vis2_SC_allpol, gravi_data_get_oi_vis2 (vis_data, GRAVI_SC, pol, npol_sc), cpl_table_get_nrow(oi_vis2_SC_allpol));
+            cpl_table_insert(oi_T3_SC_allpol, gravi_data_get_oi_t3 (vis_data, GRAVI_SC, pol, npol_sc), cpl_table_get_nrow(oi_T3_SC_allpol));
+            cpl_table_insert(oi_wave_SC_allpol, gravi_data_get_oi_wave (vis_data, GRAVI_SC, pol, npol_sc), cpl_table_get_nrow(oi_wave_SC_allpol));
+        }
+        
         for (int pol = 0; pol < npol_sc; pol++) {
             double this_pol_vis2err = gravi_table_get_column_flagged_mean(gravi_data_get_oi_vis2 (vis_data, GRAVI_SC, pol, npol_sc), "VIS2ERR");
             vis2err += this_pol_vis2err * this_pol_vis2err;
@@ -78,7 +87,7 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
         cpl_propertylist_update_double (idp_plist, qc_name, sqrt(vis2err));
         cpl_propertylist_set_comment (idp_plist, qc_name, "Representative squared visibility error [%]");
 
-        sprintf (qc_name, "VISPHIERR");
+        sprintf (qc_name, "VISPHERR");
         cpl_propertylist_update_double (idp_plist, qc_name, sqrt(visphierr));
         cpl_propertylist_set_comment (idp_plist, qc_name, "Representative visibility phase error [%]");
 
