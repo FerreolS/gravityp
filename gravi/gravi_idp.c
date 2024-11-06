@@ -166,13 +166,33 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
     cpl_propertylist_set_comment (idp_plist, "PRODCATG", "Data product category");
 
     /* MJD-END */
+    double mjd_obs_last = 0;
+    if(frameset != NULL)
+    {
+        const cpl_frame *frame;
+        cpl_frameset * science_frames = gravi_frameset_extract_science_data(frameset);
+        cpl_frameset_iterator *it = cpl_frameset_iterator_new(science_frames);
+        while ((frame = cpl_frameset_iterator_get(it)) != NULL) {
+            cpl_propertylist * this_frame_header = cpl_propertylist_load(cpl_frame_get_filename(frame), 0);
+            double mjd_obs = gravi_pfits_get_mjd(this_frame_header);
+            if (mjd_obs > mjd_obs_last)
+                mjd_obs_last = mjd_obs;
+            cpl_frameset_iterator_advance(it, 1);
+            cpl_propertylist_delete(this_frame_header);
+        }
+        cpl_frameset_delete(science_frames);
+        cpl_frameset_iterator_delete(it);
+    }
+    if (mjd_obs_last == 0)
+        mjd_obs_last = gravi_pfits_get_mjd(header);
+
     double exptime;
     if ( cpl_propertylist_has(idp_plist, "EXPTIME") )
         exptime = cpl_propertylist_get_double(idp_plist, "EXPTIME");
     else
         exptime = cpl_propertylist_get_double(header, "EXPTIME");
     cpl_propertylist_update_double (idp_plist, "MJD-END",
-        gravi_pfits_get_mjd(header) + exptime / 86400.);
+        mjd_obs_last + exptime / 86400.);
     cpl_propertylist_set_comment (idp_plist, "MJD-END", "End of observation");
 
     /* OBID */
