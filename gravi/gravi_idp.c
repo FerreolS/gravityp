@@ -170,7 +170,7 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
     if(frameset != NULL)
     {
         const cpl_frame *frame;
-        cpl_frameset * science_frames = gravi_frameset_extract_science_data(frameset);
+        cpl_frameset * science_frames = gravi_frameset_extract_fringe_data(frameset);
         cpl_frameset_iterator *it = cpl_frameset_iterator_new(science_frames);
         while ((frame = cpl_frameset_iterator_get(it)) != NULL) {
             cpl_propertylist * this_frame_header = cpl_propertylist_load(cpl_frame_get_filename(frame), 0);
