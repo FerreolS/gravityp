@@ -338,7 +338,7 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
 	cpl_ensure (parlist,       CPL_ERROR_NULL_INPUT, NULL);
 
 	char qc_name[90];
-    int ntel = 4, nclo = 4, nbase = 6;
+    int ntel = 4, nclo = 4 ;
 	int nv; /* npol_ft, npol_sc; */
 
 	/* Timers */
@@ -650,7 +650,7 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
 			/* Fill STA_INDEX and times for OI_VIS */
 			cpl_array * sta_index = cpl_array_new (2, CPL_TYPE_INT);
             
-			for (int base=0; base < nbase; ++base) {
+			for (int base=0; base < GRAVI_NBASE; ++base) {
 			    /* Build sta_index */
                 int sta0 = gravi_sta_index(GRAVI_BASE_TEL[base][0]+1, optical_train_table, oi_array);
                 int sta1 = gravi_sta_index(GRAVI_BASE_TEL[base][1]+1, optical_train_table, oi_array);
@@ -660,7 +660,7 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
 
 				/* loop on rows */
 				for (int row=0; row < nrow; ++row) {
-					int idx = row * nbase + base;
+					int idx = row * GRAVI_NBASE + base;
 					cpl_table_set_array  (oi_vis, "STA_INDEX", idx, sta_index);
 					cpl_table_set (oi_vis, "TIME", idx, cpl_array_get (times, row, &nv));
 					cpl_table_set (oi_vis, "MJD", idx, cpl_array_get (mjds, row, &nv));
@@ -712,7 +712,7 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
 
 			/* Fill the exposure time */
 			double exptime = gravi_pfits_get_dit (gravi_data_get_header (preproc_data), type_data);
-			cpl_table_fill_column_window  (oi_vis,  "INT_TIME", 0, nrow * nbase, exptime);
+			cpl_table_fill_column_window  (oi_vis,  "INT_TIME", 0, nrow * GRAVI_NBASE, exptime);
 			cpl_table_fill_column_window  (oi_t3,  "INT_TIME", 0, nrow * nclo, exptime);
 			cpl_table_fill_column_window  (oi_flux, "INT_TIME", 0, nrow * ntel, exptime);
 			CPLCHECK_NUL ("Cannot fill exptime");
@@ -720,7 +720,7 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
             /* target_id is 1 unless type_data==SC and mode==dual_field 
              * Same definition applies when building the OI_TARGET */
             int target_id = (!strcmp(mode, "gravi_dual") && (type_data==GRAVI_SC) )?2:1;
-			cpl_table_fill_column_window_int (oi_vis, "TARGET_ID", 0, nrow * nbase, target_id);
+			cpl_table_fill_column_window_int (oi_vis, "TARGET_ID", 0, nrow * GRAVI_NBASE, target_id);
 			cpl_table_fill_column_window_int (oi_t3, "TARGET_ID", 0, nrow * nclo, target_id);
 			cpl_table_fill_column_window_int (oi_flux, "TARGET_ID", 0, nrow * ntel, target_id);
 			CPLCHECK_NUL ("Cannot fill target_id");
@@ -840,19 +840,19 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
                 }
 
                 /* Set VISDATA */
-                for (int base = 0; base < nbase; base++){
+                for (int base = 0; base < GRAVI_NBASE; base++){
                     double complex * data = cpl_malloc (nwave * sizeof(double complex));
                     for (cpl_size wave = 0 ; wave < nwave ; wave++ ) 
                         data[wave] = (double complex)( pOut[(base+4)*nwave+wave] + 1.*I * pOut[(base+10)*nwave+wave] );
-                    tVis[row*nbase+base] = cpl_array_wrap_double_complex (data, nwave);
+                    tVis[row*GRAVI_NBASE+base] = cpl_array_wrap_double_complex (data, nwave);
                 }
 
                 /* Set VISDATAERR */
-                for (int base = 0; base < nbase; base++){
+                for (int base = 0; base < GRAVI_NBASE; base++){
                     double complex * data = cpl_malloc (nwave * sizeof(double complex));
                     for (cpl_size wave = 0 ; wave < nwave ; wave++ ) 
                         data[wave] = (double complex)( sqrt(pOutVar[(base+4)*nwave+wave]) + 1.*I * sqrt(pOutVar[(base+10)*nwave+wave]) );
-                    tVisErr[row*nbase+base] = cpl_array_wrap_double_complex (data, nwave);
+                    tVisErr[row*GRAVI_NBASE+base] = cpl_array_wrap_double_complex (data, nwave);
                 }
 
                 /* Free the PREPROC data to save memory
@@ -944,7 +944,7 @@ cpl_error_code gravi_compute_opdc_state (gravi_data * p2vmred_data)
 	gravi_msg_function_start(1);
     cpl_ensure_code (p2vmred_data, CPL_ERROR_NULL_INPUT);
     
-    int nbase = 6, ntel = 4;
+    int ntel = 4;
     char qc_name[90];
 
     /* Get necessary data */
@@ -953,7 +953,7 @@ cpl_error_code gravi_compute_opdc_state (gravi_data * p2vmred_data)
 	cpl_table * oi_vis  = gravi_data_get_oi_vis (p2vmred_data, GRAVI_FT, 0, npol_ft);
 	cpl_table * oi_flux = gravi_data_get_oi_flux (p2vmred_data, GRAVI_FT, 0, npol_ft);
 	cpl_table * opdc   = gravi_data_get_table (p2vmred_data, GRAVI_OPDC_EXT);
-	cpl_size nrow_ft   = cpl_table_get_nrow (oi_vis) / nbase;
+	cpl_size nrow_ft   = cpl_table_get_nrow (oi_vis) / GRAVI_NBASE;
 	cpl_size nrow_opdc = cpl_table_get_nrow (opdc);
     CPLCHECK_MSG ("Cannot get data");
 
@@ -966,11 +966,11 @@ cpl_error_code gravi_compute_opdc_state (gravi_data * p2vmred_data)
 	
 	/* Create the OPDC state for each baseline in the OI_VIS table */
 	cpl_table_new_column (oi_vis,  "STATE", CPL_TYPE_INT);
-	cpl_table_fill_column_window (oi_vis,  "STATE", 0, nrow_ft * nbase, -1);
+	cpl_table_fill_column_window (oi_vis,  "STATE", 0, nrow_ft * GRAVI_NBASE, -1);
 
     /* Create the Global OPDC state in the OI_VIS table */
 	cpl_table_new_column (oi_vis, "OPDC_STATE", CPL_TYPE_INT);
-	cpl_table_fill_column_window (oi_vis, "OPDC_STATE", 0, nrow_ft * nbase, -1);
+	cpl_table_fill_column_window (oi_vis, "OPDC_STATE", 0, nrow_ft * GRAVI_NBASE, -1);
     
 	if (nrow_opdc < nrow_ft) 
 	  cpl_msg_warning (cpl_func,"Missing FT or OPDC data:  nrow_ft - nrow_opdc = %lli", nrow_ft-nrow_opdc);
@@ -988,12 +988,12 @@ cpl_error_code gravi_compute_opdc_state (gravi_data * p2vmred_data)
 
 		/* Check bounds or find the OPDC sample just following the current FT 
 		 * FIXME: We should use the closesd OPDC sample in the past, not future */
-		if ( (time_ft[row_ft*nbase] < time_opdc[0]) || (time_ft[row_ft*nbase] > time_opdc[nrow_opdc-1]) ) continue;
-		while ( time_ft[row_ft*nbase] > time_opdc[row_opdc] ) row_opdc ++;
+		if ( (time_ft[row_ft*GRAVI_NBASE] < time_opdc[0]) || (time_ft[row_ft*GRAVI_NBASE] > time_opdc[nrow_opdc-1]) ) continue;
+		while ( time_ft[row_ft*GRAVI_NBASE] > time_opdc[row_opdc] ) row_opdc ++;
         
         /* Set the global OPDC state */
-        for (int base = 0; base < nbase; base++)
-            global_state[row_ft*nbase+base] = global_state_opdc[row_opdc];
+        for (int base = 0; base < GRAVI_NBASE; base++)
+            global_state[row_ft*GRAVI_NBASE+base] = global_state_opdc[row_opdc];
     }
 
     /* BASELINE_STATE was not in the original data of the instrument */
@@ -1011,8 +1011,8 @@ cpl_error_code gravi_compute_opdc_state (gravi_data * p2vmred_data)
 
 		/* Check bounds or find the OPDC sample just following the current FT 
 		 * FIXME: We should use the closesd OPDC sample in the past, not future */
-		if ( (time_ft[row_ft*nbase] < time_opdc[0]) || (time_ft[row_ft*nbase] > time_opdc[nrow_opdc-1]) ) continue;
-		while ( time_ft[row_ft*nbase] > time_opdc[row_opdc] ) row_opdc ++;
+		if ( (time_ft[row_ft*GRAVI_NBASE] < time_opdc[0]) || (time_ft[row_ft*GRAVI_NBASE] > time_opdc[nrow_opdc-1]) ) continue;
+		while ( time_ft[row_ft*GRAVI_NBASE] > time_opdc[row_opdc] ) row_opdc ++;
 
         /* Get the flag */
         int state_flag = state_opdc[row_opdc];
@@ -1024,23 +1024,23 @@ cpl_error_code gravi_compute_opdc_state (gravi_data * p2vmred_data)
 
 		/* Disentangle the state of each baseline:
          * The 6 baselines are the bits from 5 to 10 */
-        for (int base = 0; base < nbase; base++)
-            base_state[row_ft*nbase+base] = gravi_bit_get (state_flag, ntel+base);
+        for (int base = 0; base < GRAVI_NBASE; base++)
+            base_state[row_ft*GRAVI_NBASE+base] = gravi_bit_get (state_flag, ntel+base);
 
         /* Bit 11 (>>10) is the Kalman state */
-        // kalman = gravi_bit_get (state_opdc[row_opdc], ntel+nbase);
+        // kalman = gravi_bit_get (state_opdc[row_opdc], ntel+GRAVI_NBASE);
 
         /* Remaing bits are the off-load system */
         // offload = state_opdc[row_opdc] >> 11;
         
 		/* Use the closing triangles to recover the tracking on some baselines */
-		for (cpl_size base = 0; base < nbase; base++) {
-		  base_state[row_ft*nbase+base] = CPL_MAX( base_state[row_ft*nbase+base],
-                                                   base_state[row_ft*nbase+GRAVI_TRI_BASE[base][0][0]] *
-                                                   base_state[row_ft*nbase+GRAVI_TRI_BASE[base][0][1]] );
-		  base_state[row_ft*nbase+base] = CPL_MAX( base_state[row_ft*nbase+base],
-                                                   base_state[row_ft*nbase+GRAVI_TRI_BASE[base][1][0]] *
-                                                   base_state[row_ft*nbase+GRAVI_TRI_BASE[base][1][1]] );
+		for (cpl_size base = 0; base < GRAVI_NBASE; base++) {
+		  base_state[row_ft*GRAVI_NBASE+base] = CPL_MAX( base_state[row_ft*GRAVI_NBASE+base],
+                                                   base_state[row_ft*GRAVI_NBASE+GRAVI_TRI_BASE[base][0][0]] *
+                                                   base_state[row_ft*GRAVI_NBASE+GRAVI_TRI_BASE[base][0][1]] );
+		  base_state[row_ft*GRAVI_NBASE+base] = CPL_MAX( base_state[row_ft*GRAVI_NBASE+base],
+                                                   base_state[row_ft*GRAVI_NBASE+GRAVI_TRI_BASE[base][1][0]] *
+                                                   base_state[row_ft*GRAVI_NBASE+GRAVI_TRI_BASE[base][1][1]] );
 		}
 
 		/* Disentangle the piezo steps, in units of [pi/8 rad] 
@@ -1054,8 +1054,8 @@ cpl_error_code gravi_compute_opdc_state (gravi_data * p2vmred_data)
         }
 
 		/* Compute the FT target phase of each baseline, in [rad] */
-		for (int base=0; base<nbase; base++) {
-		  base_steps[row_ft*nbase+base] = (tmp_arr[GRAVI_BASE_TEL[base][1]] - tmp_arr[GRAVI_BASE_TEL[base][0]]) * CPL_MATH_PI / 8.0;
+		for (int base=0; base<GRAVI_NBASE; base++) {
+		  base_steps[row_ft*GRAVI_NBASE+base] = (tmp_arr[GRAVI_BASE_TEL[base][1]] - tmp_arr[GRAVI_BASE_TEL[base][0]]) * CPL_MATH_PI / 8.0;
 		}
         
 	  } /* End loop on FT rows */
@@ -1064,7 +1064,7 @@ cpl_error_code gravi_compute_opdc_state (gravi_data * p2vmred_data)
 	  cpl_msg_warning (cpl_func,"No column BASELINE_STATE in OPDC... old data ?");
 	  cpl_msg_warning (cpl_func,"The STATE flags are set to 1 (valid) although the information is unavailable");
       cpl_table_fill_column_window (oi_flux, "STATE", 0, nrow_ft * ntel, 1);
-      cpl_table_fill_column_window (oi_vis,  "STATE", 0, nrow_ft * nbase, 1);
+      cpl_table_fill_column_window (oi_vis,  "STATE", 0, nrow_ft * GRAVI_NBASE, 1);
 	}
 
 	/* Duplicate in the second polarisation if any */
@@ -1094,20 +1094,20 @@ cpl_error_code gravi_compute_opdc_state (gravi_data * p2vmred_data)
 	double complex * tmp_cpx = cpl_malloc (sizeof(double complex)*nrow_ft);
 
 	/* Loop on base */
-	for (int base = 0; base < nbase; base ++) {
+	for (int base = 0; base < GRAVI_NBASE; base ++) {
 
 	  /* Compute real-time phase and its mean (as phasors) */
 	  double complex mean_cpx = 0.0 + I * 0.0;
 	  for (cpl_size row_ft=0 ; row_ft<nrow_ft ; row_ft++) {
-		if (state[row_ft*nbase+base] < 1) continue;
-		tmp_cpx[row_ft] = cpl_array_get_mean_complex (visdata[row_ft*nbase+base]) * cexp (-I*target_phase[row_ft*nbase+base]);
+		if (state[row_ft*GRAVI_NBASE+base] < 1) continue;
+		tmp_cpx[row_ft] = cpl_array_get_mean_complex (visdata[row_ft*GRAVI_NBASE+base]) * cexp (-I*target_phase[row_ft*GRAVI_NBASE+base]);
 		mean_cpx += tmp_cpx[row_ft];
 	  }
 
 	  /* Compute <phi**2> and the number of valid point */
 	  double sum = 0.0000001, sum2 = 0.0;
 	  for (cpl_size row_ft=0 ; row_ft<nrow_ft ; row_ft++) {
-		if (state[row_ft*nbase+base] < 1) continue;
+		if (state[row_ft*GRAVI_NBASE+base] < 1) continue;
 		sum2 += pow (carg (tmp_cpx[row_ft] * conj(mean_cpx)), 2);
 		sum += 1.0;
 	  }
@@ -1168,7 +1168,6 @@ cpl_error_code gravi_compute_tau0 (gravi_data * data)
   gravi_msg_function_start(1);
   cpl_ensure_code (data, CPL_ERROR_NULL_INPUT);
 
-  int nbase = 6;
   double gain = 16.8; // [rad/V]
   char qc_name[90];
   
@@ -1190,7 +1189,7 @@ cpl_error_code gravi_compute_tau0 (gravi_data * data)
   CPLCHECK_MSG("Cannot load the PIEZO_OFFSET columns");
 
   /* Loop on base */
-  for (int base=0; base<nbase; base++) {
+  for (int base=0; base<GRAVI_NBASE; base++) {
 	int t1 = GRAVI_BASE_TEL[base][0];
 	int t2 = GRAVI_BASE_TEL[base][1];
 
@@ -1352,7 +1351,6 @@ cpl_error_code gravi_compute_qc_ft_opd_estimator (gravi_data * p2vmred_data)
     gravi_msg_function_start(1);
     cpl_ensure_code (p2vmred_data, CPL_ERROR_NULL_INPUT);
     
-    int nbase = 6;
     char qc_name[100];
     int nv;
     
@@ -1383,16 +1381,16 @@ cpl_error_code gravi_compute_qc_ft_opd_estimator (gravi_data * p2vmred_data)
 
 
             /* For each baseline */
-            for (int base = 0; base<nbase; base++) {
+            for (int base = 0; base<GRAVI_NBASE; base++) {
                 cpl_size row_oivis = base;
                 /* For each row */
                 for (cpl_size row = 0; row<nrow; row++)
                 {
 
                     /* FIXME: get rid of the 0.0011/2 (half step) */
-                    while (( fabs (time_oivis[row_oivis+nbase]-time_opdc[row]+0.0011/2*1e6 )< fabs (time_oivis[row_oivis]-time_opdc[row]+0.0011/2*1e6 ) ) && (row_oivis<nrow_oivis-2*nbase))
+                    while (( fabs (time_oivis[row_oivis+GRAVI_NBASE]-time_opdc[row]+0.0011/2*1e6 )< fabs (time_oivis[row_oivis]-time_opdc[row]+0.0011/2*1e6 ) ) && (row_oivis<nrow_oivis-2*GRAVI_NBASE))
                     {
-                        row_oivis+=nbase;
+                        row_oivis+=GRAVI_NBASE;
                     }
 
                     double complex visdata_mean=cpl_array_get_mean_complex (visdata[row_oivis]);

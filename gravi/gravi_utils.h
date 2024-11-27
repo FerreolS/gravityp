@@ -102,10 +102,11 @@
  * and closure phases 
  */
 
-extern int GRAVI_BASE_TEL[6][2];
-extern char GRAVI_BASE_NAME[6][3];
-extern int GRAVI_TRI_BASE[6][2][2];
-extern int GRAVI_TRI_SIGN[6][2][2];
+#define GRAVI_NBASE 6 // Number of baselines
+extern int GRAVI_BASE_TEL[GRAVI_NBASE][2];
+extern char GRAVI_BASE_NAME[GRAVI_NBASE][3];
+extern int GRAVI_TRI_BASE[GRAVI_NBASE][2][2];
+extern int GRAVI_TRI_SIGN[GRAVI_NBASE][2][2];
 extern int GRAVI_CLO_BASE[4][3];
 extern int GRAVI_CLO_TEL[4][3];
 extern char GRAVI_CLO_NAME[4][4];

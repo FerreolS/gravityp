@@ -357,8 +357,8 @@ cpl_error_code gravi_opds_correct_closures (cpl_table * phase_table,
 	cpl_ensure_code (phase_table, CPL_ERROR_NULL_INPUT);
 	cpl_ensure_code (name,        CPL_ERROR_NULL_INPUT);
     
-    int nbase = 6, nclo = 4;
-    cpl_size nrow = cpl_table_get_nrow (phase_table) / nbase;
+    int nclo = 4;
+    cpl_size nrow = cpl_table_get_nrow (phase_table) / GRAVI_NBASE;
 
     /* Get the data */
     double * phase = cpl_table_get_data_double (phase_table, name);
@@ -367,7 +367,7 @@ cpl_error_code gravi_opds_correct_closures (cpl_table * phase_table,
     /* Model and right-hand-side for the lineary system
      * (unfilled matrix are 0.0) */
     cpl_matrix * rhs_matrix   = cpl_matrix_new (nrow * nclo, 1);
-    cpl_matrix * model_matrix = cpl_matrix_new (nrow * nclo, nbase-1 + nclo);
+    cpl_matrix * model_matrix = cpl_matrix_new (nrow * nclo, GRAVI_NBASE-1 + nclo);
 
     for (cpl_size row = 0; row < nrow; row++) {
         for (int clo = 0; clo < nclo; clo++) {
@@ -376,9 +376,9 @@ cpl_error_code gravi_opds_correct_closures (cpl_table * phase_table,
             int b2 = GRAVI_CLO_BASE[clo][2];
 
             /* Fill the rhs with measured closure */
-            double closure = phase[row*nbase+b0] +
-                             phase[row*nbase+b1] -
-                             phase[row*nbase+b2];
+            double closure = phase[row*GRAVI_NBASE+b0] +
+                             phase[row*GRAVI_NBASE+b1] -
+                             phase[row*GRAVI_NBASE+b2];
             cpl_matrix_set (rhs_matrix, row*nclo+clo, 0, closure);
             CPLCHECK_MSG ("Cannot fill rhs_matrix");
 
@@ -387,12 +387,12 @@ cpl_error_code gravi_opds_correct_closures (cpl_table * phase_table,
             CPLCHECK_MSG ("Cannot fill k in model_matrix");
 
             /* Fill the f in of the model_matrix */
-            if (b0 < nbase-1) cpl_matrix_set (model_matrix, row*nclo+clo, nclo+b0,
-                                              +phase[row*nbase+b0]);
-            if (b1 < nbase-1) cpl_matrix_set (model_matrix, row*nclo+clo, nclo+b1,
-                                              +phase[row*nbase+b1]);
-            if (b2 < nbase-1) cpl_matrix_set (model_matrix, row*nclo+clo, nclo+b2,
-                                              -phase[row*nbase+b2]);
+            if (b0 < GRAVI_NBASE-1) cpl_matrix_set (model_matrix, row*nclo+clo, nclo+b0,
+                                              +phase[row*GRAVI_NBASE+b0]);
+            if (b1 < GRAVI_NBASE-1) cpl_matrix_set (model_matrix, row*nclo+clo, nclo+b1,
+                                              +phase[row*GRAVI_NBASE+b1]);
+            if (b2 < GRAVI_NBASE-1) cpl_matrix_set (model_matrix, row*nclo+clo, nclo+b2,
+                                              -phase[row*GRAVI_NBASE+b2]);
             CPLCHECK_MSG ("Cannot fill phase in model_matrix");
         }
     } /* End loop on clo and rows */
@@ -407,10 +407,10 @@ cpl_error_code gravi_opds_correct_closures (cpl_table * phase_table,
 	double rms_fit = cpl_matrix_get_stdev (residual_matrix);
 
     /* Correct baseline with (1-f). Last baseline is kept unchanged */
-	for (int base = 0; base < nbase - 1; base ++) {
+	for (int base = 0; base < GRAVI_NBASE - 1; base ++) {
         double f = cpl_matrix_get (res_matrix, nclo + base, 0);
         cpl_msg_info (cpl_func,"correction factor f = 1 %+.20f", -1*f);
-        for (cpl_size row = 0; row < nrow; row++) phase[row*nbase+base] *= 1 - f;
+        for (cpl_size row = 0; row < nrow; row++) phase[row*GRAVI_NBASE+base] *= 1 - f;
 	}
 
     /* Dump the residual with their units */
@@ -445,7 +445,7 @@ cpl_error_code gravi_opds_correct_closures (cpl_table * phase_table,
  * OPD_SC==0). Then it solves the systems and compute residuals.
  * 
  * Since the routine uses a single coefficient (a) for all 6 baselines, the
- * 6 corresponding OPDs shall form a system with constant closure phase
+ 6 corresponding OPDs shall form a system with constant closure phase
  * versus modulation.
  *
  * The ft_table shall contain a column OPD with the FT OPDs, a 
@@ -460,10 +460,9 @@ cpl_vector * gravi_opds_fit_opdmet (cpl_table * ft_table, double lbd_met)
     gravi_msg_function_start(1);
 	cpl_ensure (ft_table, CPL_ERROR_NULL_INPUT, NULL);
     
-	int nbase = 6;
 
 	/* Get the number of acquisitions */
-	cpl_size nrow = cpl_table_get_nrow (ft_table) / nbase;
+	cpl_size nrow = cpl_table_get_nrow (ft_table) / GRAVI_NBASE;
 
     /* Get the pointer to data */
     double * opd_sc    = cpl_table_get_data_double (ft_table, "OPD_SC");
@@ -473,24 +472,24 @@ cpl_vector * gravi_opds_fit_opdmet (cpl_table * ft_table, double lbd_met)
     
     /* Number of valid rows */
     cpl_size nrow_valid = 0;
-    for (cpl_size row = 0; row < nrow; row++) if (opd_sc[row*nbase] != 0) nrow_valid++;
+    for (cpl_size row = 0; row < nrow; row++) if (opd_sc[row*GRAVI_NBASE] != 0) nrow_valid++;
     cpl_msg_info (cpl_func,"nrow_valid = %lld", nrow_valid);
 
     cpl_ensure (nrow_valid > 100, CPL_ERROR_ILLEGAL_INPUT, NULL);
 
     /* Model and right-hand-side for the lineary system
      * (unfilled matrix are 0.0) */
-    cpl_matrix * rhs_matrix   = cpl_matrix_new (nrow_valid*nbase, 1);
-    cpl_matrix * model_matrix = cpl_matrix_new (nrow_valid*nbase, nbase + 2);
+    cpl_matrix * rhs_matrix   = cpl_matrix_new (nrow_valid*GRAVI_NBASE, 1);
+    cpl_matrix * model_matrix = cpl_matrix_new (nrow_valid*GRAVI_NBASE, GRAVI_NBASE + 2);
 
-    for (int base = 0; base < nbase; base++) {
+    for (int base = 0; base < GRAVI_NBASE; base++) {
         cpl_size row_valid = 0;
         
         for (cpl_size row=0; row<nrow; row++) {
-            if (opd_sc[row*nbase] == 0) continue;
+            if (opd_sc[row*GRAVI_NBASE] == 0) continue;
             
-            int idv = row_valid * nbase + base;
-            int id  = row * nbase + base;
+            int idv = row_valid * GRAVI_NBASE + base;
+            int id  = row * GRAVI_NBASE + base;
 
             /* Fill the OPD metrology */
             cpl_matrix_set (rhs_matrix, idv, 0, phase_met[id] * lbd_met / CPL_MATH_2PI);
@@ -516,7 +515,7 @@ cpl_vector * gravi_opds_fit_opdmet (cpl_table * ft_table, double lbd_met)
     cpl_matrix * residual_matrix = cpl_matrix_product_create (model_matrix, res_matrix);
     cpl_matrix_subtract (residual_matrix, rhs_matrix);
     double rms_fit = cpl_matrix_get_stdev (residual_matrix);
-    //cpl_plot_vector(NULL, NULL, NULL, cpl_vector_wrap(nrow_valid*nbase,cpl_matrix_get_data(residual_matrix)));
+    //cpl_plot_vector(NULL, NULL, NULL, cpl_vector_wrap(nrow_valid*GRAVI_NBASE,cpl_matrix_get_data(residual_matrix)));
 
     /* Verbose */
     cpl_msg_info (cpl_func, "coeff SC = %.20g ", cpl_matrix_get (res_matrix, 0, 0));
@@ -575,11 +574,11 @@ cpl_table * gravi_opds_compute_guess (cpl_table * spectrumsc_table,
     cpl_ensure (vismet_table,        CPL_ERROR_NULL_INPUT, NULL);
     cpl_ensure (dit_sc>0,         CPL_ERROR_ILLEGAL_INPUT, NULL);
 
-    int nbase = 6, ntel = 4;
+    int ntel = 4;
 
     cpl_size nrow = cpl_table_get_nrow (spectrumsc_table);
     cpl_size nrow_met = cpl_table_get_nrow (vismet_table) / ntel;
-    cpl_size nrow_ft  = cpl_table_get_nrow (ft_table) / nbase;
+    cpl_size nrow_ft  = cpl_table_get_nrow (ft_table) / GRAVI_NBASE;
     int * time_SC  = cpl_table_get_data_int (spectrumsc_table, "TIME");
     CPLCHECK_NUL ("Cannot get data");
 
@@ -594,11 +593,11 @@ cpl_table * gravi_opds_compute_guess (cpl_table * spectrumsc_table,
     CPLCHECK_NUL ("Cannot get FT data");
     
     /* Create table */
-    cpl_table * guess_table = cpl_table_new (nrow * nbase);    
+    cpl_table * guess_table = cpl_table_new (nrow * GRAVI_NBASE);    
     gravi_table_new_column (guess_table, "OPD", "m", CPL_TYPE_DOUBLE);
 
     /* Loop on base */
-    for (int base = 0; base < nbase; base++) {
+    for (int base = 0; base < GRAVI_NBASE; base++) {
         int tel0 = GRAVI_BASE_TEL[base][0];
         int tel1 = GRAVI_BASE_TEL[base][1];
         
@@ -633,9 +632,9 @@ cpl_table * gravi_opds_compute_guess (cpl_table * spectrumsc_table,
              */
             int counter_ft = 0;
             double opd_ft = 0.0;
-            while   (time_FT[row_ft*nbase+base] < (time_SC[row] + dit_sc/2.)) {
-                if ((time_FT[row_ft*nbase+base] > (time_SC[row] - dit_sc/2.)) && (row_ft < nrow_ft)) {
-                    opd_ft += opd_FT[row_ft*nbase+base];
+            while   (time_FT[row_ft*GRAVI_NBASE+base] < (time_SC[row] + dit_sc/2.)) {
+                if ((time_FT[row_ft*GRAVI_NBASE+base] > (time_SC[row] - dit_sc/2.)) && (row_ft < nrow_ft)) {
+                    opd_ft += opd_FT[row_ft*GRAVI_NBASE+base];
                     counter_ft ++;
                 }
                 
@@ -651,7 +650,7 @@ cpl_table * gravi_opds_compute_guess (cpl_table * spectrumsc_table,
             opd_ft = opd_ft / counter_ft;
                     
             /* Set the total guess OPD as OPD_FT - OPD_MET */
-            cpl_table_set (guess_table, "OPD", row*nbase+base, opd_ft - opd_met);
+            cpl_table_set (guess_table, "OPD", row*GRAVI_NBASE+base, opd_ft - opd_met);
             CPLCHECK_NUL ("Cannot compute opd guess");
         } /* End loop on row */
     } /* End loop on base */
@@ -661,9 +660,9 @@ cpl_table * gravi_opds_compute_guess (cpl_table * spectrumsc_table,
      */
     cpl_msg_info (cpl_func, "Remove the mean from opdguess table");
     
-    for (int base = 0; base < 6; base++) {
-        double mean = gravi_table_get_column_mean (guess_table, "OPD", base, nbase);
-        gravi_table_add_scalar (guess_table, "OPD", base, nbase, -1*mean);
+    for (int base = 0; base < GRAVI_NBASE; base++) {
+        double mean = gravi_table_get_column_mean (guess_table, "OPD", base, GRAVI_NBASE);
+        gravi_table_add_scalar (guess_table, "OPD", base, GRAVI_NBASE, -1*mean);
     }
     
     gravi_msg_function_exit(1);
@@ -699,8 +698,6 @@ cpl_table * gravi_opds_calibration (cpl_table * spectrum_table,
                                     cpl_table * detector_table,
                                     cpl_table * guess_table)
 {
-	int nbase = 6;
-    
 	/* Verbose */
 	gravi_msg_function_start(1);
 	cpl_ensure (spectrum_table, CPL_ERROR_NULL_INPUT, NULL);
@@ -734,26 +731,26 @@ cpl_table * gravi_opds_calibration (cpl_table * spectrum_table,
     }
 
     /* Create column in phase table */
-    cpl_table * output_table = cpl_table_new (nbase * nrow);
+    cpl_table * output_table = cpl_table_new (GRAVI_NBASE * nrow);
     gravi_table_new_column (output_table,"OPD", "m", CPL_TYPE_DOUBLE);
     gravi_table_new_column (output_table,"TIME", "us", CPL_TYPE_INT);
 
     /* Set the time */
     for (cpl_size row = 0; row < nrow; row++) {
         double value = cpl_table_get (spectrum_table, "TIME", row, NULL);
-        for (int base = 0; base < nbase; base++)
-            cpl_table_set (output_table, "TIME", row*nbase+base, value);
+        for (int base = 0; base < GRAVI_NBASE; base++)
+            cpl_table_set (output_table, "TIME", row*GRAVI_NBASE+base, value);
     }
 
 	/* Loop on base */
-	for (int base = 0; base < 6; base ++) {
+	for (int base = 0; base < GRAVI_NBASE; base ++) {
         
         /* Check if a guess exists */
         cpl_vector * opd_guess = NULL;
         if (guess_table) {
             opd_guess = cpl_vector_new (nrow);
             for (cpl_size row = 0; row < nrow; row++) {
-                double value = cpl_table_get (guess_table, "OPD", row*nbase+base, NULL);
+                double value = cpl_table_get (guess_table, "OPD", row*GRAVI_NBASE+base, NULL);
                 cpl_vector_set (opd_guess, row, value);
             }
         }
@@ -769,7 +766,7 @@ cpl_table * gravi_opds_calibration (cpl_table * spectrum_table,
         /* Save the mean opd [m] */
         for (cpl_size row = 0; row < nrow; row++) {
             double value = cpl_vector_get (mean_opd, row);
-            cpl_table_set (output_table, "OPD", row*nbase+base, value);
+            cpl_table_set (output_table, "OPD", row*GRAVI_NBASE+base, value);
         }
         CPLCHECK_NUL ("Cannot set phase");
 
@@ -997,7 +994,6 @@ cpl_table * gravi_wave_fibre (cpl_table * spectrum_table,
     cpl_ensure (detector_table, CPL_ERROR_NULL_INPUT, NULL);
     cpl_ensure (opd_table,      CPL_ERROR_NULL_INPUT, NULL);
 
-    int nbase = 6;
     char name[100];
     
     /* Create the output table */
@@ -1015,9 +1011,9 @@ cpl_table * gravi_wave_fibre (cpl_table * spectrum_table,
      */
 
     for (int pol = 0; pol < npol; pol++) {
-        for (int base = 0; base < nbase; base ++) {
+        for (int base = 0; base < GRAVI_NBASE; base ++) {
             cpl_msg_info (cpl_func, "Compute wave fibre for pol %i over %i, base %i over %i",
-                          pol+1, npol, base+1, nbase);
+                          pol+1, npol, base+1, GRAVI_NBASE);
 
             /* Get the index of the ABCD. */
             int iA = gravi_get_region (detector_table, base, 'A', pol);
@@ -1035,7 +1031,7 @@ cpl_table * gravi_wave_fibre (cpl_table * spectrum_table,
             cpl_matrix * opd_matrix = cpl_matrix_new (1, nrow);
             cpl_vector * opd_vector = cpl_vector_new (nrow);
             for (cpl_size row = 0; row < nrow; row ++ ) {
-                double value = cpl_table_get (opd_table, "OPD", row*nbase+base, NULL);
+                double value = cpl_table_get (opd_table, "OPD", row*GRAVI_NBASE+base, NULL);
                 cpl_matrix_set (opd_matrix, 0, row, value);
                 cpl_vector_set (opd_vector, row, value);
             }
@@ -1191,7 +1187,6 @@ cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
 	cpl_ensure (wavefibre_table, CPL_ERROR_NULL_INPUT, NULL);
 	cpl_ensure (detector_table,  CPL_ERROR_NULL_INPUT, NULL);
 
-	int nbase = 6;
 	char name[100];
 	*rms_residuals = 0;
 
@@ -1221,18 +1216,18 @@ cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
 
 		/* Prepare the 2D coordinates 
 		 * and values to fit */
-		cpl_vector * coord_X = cpl_vector_new (nbase * nwave);
-		cpl_vector * coord_Y = cpl_vector_new (nbase * nwave);
+		cpl_vector * coord_X = cpl_vector_new (GRAVI_NBASE * nwave);
+		cpl_vector * coord_Y = cpl_vector_new (GRAVI_NBASE * nwave);
         
-		cpl_vector * all_wavelength = cpl_vector_new (nbase * nwave);
-		cpl_vector * all_wavechi2 = cpl_vector_new (nbase * nwave);
-		cpl_vector * all_valid = cpl_vector_new (nbase * nwave);
+		cpl_vector * all_wavelength = cpl_vector_new (GRAVI_NBASE * nwave);
+		cpl_vector * all_wavechi2 = cpl_vector_new (GRAVI_NBASE * nwave);
+		cpl_vector * all_valid = cpl_vector_new (GRAVI_NBASE * nwave);
         
 		/* 
 		 * Loop on base and wave to get all
 		 * wavelenght and coordinates 
 		 */
-		for (int base = 0; base < nbase; base ++) {
+		for (int base = 0; base < GRAVI_NBASE; base ++) {
             
             /* Mean position of this baseline */
             int iA = gravi_get_region (detector_table, base, 'A', pol);
@@ -1313,12 +1308,12 @@ cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
 		cpl_size nvalid = cpl_vector_get_sum (all_valid);
 		
 		cpl_msg_info (cpl_func, "Remove %lld/%lld bad wave",
-					  nbase*nwave - nvalid, nbase * nwave);
+					  GRAVI_NBASE*nwave - nvalid, GRAVI_NBASE * nwave);
 		
 		cpl_vector * vector = cpl_vector_new (nvalid);
 		cpl_matrix * matrix = cpl_matrix_new (2, nvalid);
 		
-		for (cpl_size c = 0, i = 0 ; i < nwave * nbase; i ++) {
+		for (cpl_size c = 0, i = 0 ; i < nwave * GRAVI_NBASE; i ++) {
             if (!cpl_vector_get (all_valid, i)) continue;
             cpl_vector_set (vector, c, cpl_vector_get (all_wavelength, i));
             cpl_matrix_set (matrix, 0, c, cpl_vector_get (coord_X, i));
@@ -1452,7 +1447,6 @@ cpl_table * gravi_wave_fit_individual (cpl_table * wave_individual_table,
     cpl_size n_region = cpl_table_get_nrow (detector_table);
     cpl_size nrow = cpl_table_get_nrow (spectrum_table);
     int npol = (n_region > 24 ? 2 : 1);
-    int nbase = 6;
     cpl_size nwave_ref=3000;
     if (nwave<10) nwave_ref=600;
     
@@ -1507,7 +1501,7 @@ cpl_table * gravi_wave_fit_individual (cpl_table * wave_individual_table,
             double wave_value=cpl_array_get(wave_reference_array,wave_ref,NULL);
             
             for (cpl_size row = 0; row < nrow; row ++ ) {
-                double opd = cpl_table_get (opd_table, "OPD", row*nbase+base, NULL);
+                double opd = cpl_table_get (opd_table, "OPD", row*GRAVI_NBASE+base, NULL);
                 double coherence_loss=1;
                 if (fabs(opd) > 1e-9)
                 {
@@ -1712,7 +1706,6 @@ cpl_error_code gravi_wave_correct_dispersion (cpl_table * wave_fibre,
 	gravi_msg_function_start(1);
 	cpl_ensure_code (wave_fibre, CPL_ERROR_NULL_INPUT);
     
-	int nbase = 6;
 	char name[100];
 	  
     /* Get the number of polarisation */
@@ -1720,7 +1713,7 @@ cpl_error_code gravi_wave_correct_dispersion (cpl_table * wave_fibre,
 
     /* Loop on columns in the table */
     for (int pol = 0; pol < npol; pol ++) {
-		for (int base = 0; base < nbase; base ++) {
+		for (int base = 0; base < GRAVI_NBASE; base ++) {
             
             /* Get data of this region */
             sprintf (name, "BASE_%s_%s", GRAVI_BASE_NAME[base], GRAVI_POLAR(pol, npol));

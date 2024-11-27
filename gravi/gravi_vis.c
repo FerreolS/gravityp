@@ -527,9 +527,9 @@ cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
    * sta_index_t3[1] <-> tel1[clo[j][1]] = tel2[clo[j][0]]
    * sta_index_t3[2] <-> tel2[clo[j][2]] = tel2[clo[j][1]]
    */
-  int nv = 0, nbase = 6, ntel = 4, nclo = 4;
+  int nv = 0, ntel = 4, nclo = 4;
 
-  cpl_size nrow = cpl_table_get_nrow (oi_vis) / nbase;
+  cpl_size nrow = cpl_table_get_nrow (oi_vis) / GRAVI_NBASE;
   cpl_size nwave = cpl_table_get_column_depth (oi_vis, "VISDATA");
 
   /* Pointer to column, to speed-up */
@@ -582,7 +582,7 @@ cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
   cpl_ensure_code (flag, CPL_ERROR_ILLEGAL_INPUT);
   int * flagclo = cpl_malloc( sizeof(int) * nrow );
   for ( int row=0 ; row<nrow; row++ ) {
-    flagclo[row] = flag[row * nbase + base0] + flag[row * nbase + base1] + flag[row * nbase + base2];
+    flagclo[row] = flag[row * GRAVI_NBASE + base0] + flag[row * GRAVI_NBASE + base1] + flag[row * GRAVI_NBASE + base2];
     if ( flagclo[row] == 0 ) nvalid++;
   }
   
@@ -620,9 +620,9 @@ cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
 		if ( flagclo[row] ) {continue;} else {r++;}
 
     /* Get indices */
-    cpl_size rbase0 = row * nbase + base0;
-    cpl_size rbase1 = row * nbase + base1;
-    cpl_size rbase2 = row * nbase + base2;
+    cpl_size rbase0 = row * GRAVI_NBASE + base0;
+    cpl_size rbase1 = row * GRAVI_NBASE + base1;
+    cpl_size rbase2 = row * GRAVI_NBASE + base2;
     
 		/* Compute the total integration time.
 		 * Do not integrate for the MonteCarlo samples */
@@ -817,9 +817,9 @@ cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
   int * sum_flag = cpl_array_get_data_int (array);
   
   for (int row=0; row < nrow; row++) {
-      cpl_array * arr0 = pFLAG[row * nbase + base0];
-      cpl_array * arr1 = pFLAG[row * nbase + base1];
-      cpl_array * arr2 = pFLAG[row * nbase + base2];
+      cpl_array * arr0 = pFLAG[row * GRAVI_NBASE + base0];
+      cpl_array * arr1 = pFLAG[row * GRAVI_NBASE + base1];
+      cpl_array * arr2 = pFLAG[row * GRAVI_NBASE + base2];
       for (int wave = 0; wave < nwave; wave++) {
 	if (cpl_array_get (arr0, wave, NULL) ||
 	    cpl_array_get (arr1, wave, NULL) ||
@@ -929,8 +929,8 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
   cpl_ensure_code (nboot>0, CPL_ERROR_ILLEGAL_INPUT);
 
   /* Parameters */
-  int nv = 0, nbase = 6;
-  cpl_size nrow = cpl_table_get_nrow (oi_vis) / nbase;
+  int nv = 0;
+  cpl_size nrow = cpl_table_get_nrow (oi_vis) / GRAVI_NBASE;
   cpl_size nwave = cpl_table_get_column_depth (oi_vis, "VISDATA");
 
   /* Pointer to columns, to speed-up */
@@ -962,7 +962,7 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
   CPLCHECK_MSG ("Cannot get the reference phase data (column missing?)");
   
   /* Loop on base */
-  for (cpl_size base = 0; base < nbase; base ++) {
+  for (cpl_size base = 0; base < GRAVI_NBASE; base ++) {
 
   /* Tel for base */
   cpl_size nvalid = 0;
@@ -984,7 +984,7 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
   /* Get the number of non-rejected frames */
   int * flag = cpl_table_get_data_int (oi_vis, "REJECTION_FLAG");
   cpl_ensure_code (flag, CPL_ERROR_ILLEGAL_INPUT);
-  for ( int row=0 ; row<nrow; row++ ) if ( flag[row * nbase + base] == 0 ) nvalid++;
+  for ( int row=0 ; row<nrow; row++ ) if ( flag[row * GRAVI_NBASE + base] == 0 ) nvalid++;
 
   /* Build an optimal number of segment and nrow_per_segment */
   cpl_size nrow_per_seg = CPL_MAX (nvalid / CPL_MIN (nrow, 100), 1);
@@ -1019,10 +1019,10 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
     	cpl_size r = 0;
     	while ( r < nrow_per_seg ) {
     	  row = (row + 1) % nrow;
-    	  if ( flag[row * nbase + base] ) {continue;} else {r++;}
+    	  if ( flag[row * GRAVI_NBASE + base] ) {continue;} else {r++;}
 
         /* Get indices */
-        cpl_size rbase = row * nbase + base;
+        cpl_size rbase = row * GRAVI_NBASE + base;
     
     	  /* Compute the total integration time.
   		   * Do not integrate for the MonteCarlo samples */
@@ -1221,7 +1221,7 @@ cpl_error_code gravi_vis_average_bootstrap (cpl_table * oi_vis_avg,
      Also flag channels with too much outliers. */
   cpl_array ** pflag_vis  = cpl_table_get_data_array (oi_vis_avg,  "FLAG");
   cpl_array ** pflag_vis2 = cpl_table_get_data_array (oi_vis2_avg, "FLAG");
-  cpl_array * array = gravi_table_get_column_sum_array (oi_vis, "FLAG", base, nbase);
+  cpl_array * array = gravi_table_get_column_sum_array (oi_vis, "FLAG", base, GRAVI_NBASE);
   CPLCHECK_MSG("cannot get data");
   
   for (int wave = 0; wave < nwave; wave++) {
@@ -1391,8 +1391,7 @@ cpl_error_code gravi_average_self_visphi(cpl_table * oi_vis_avg,
   cpl_ensure_code(oi_vis, CPL_ERROR_NULL_INPUT);
 
   /* Parameters */
-  int nbase = 6;
-  cpl_size nrow = cpl_table_get_nrow(oi_vis) / nbase;
+  cpl_size nrow = cpl_table_get_nrow(oi_vis) / GRAVI_NBASE;
   cpl_size nwave = cpl_table_get_column_depth(oi_vis, "VISDATA");
 
   int use_crange = (nrange > 0);
@@ -1430,7 +1429,7 @@ cpl_error_code gravi_average_self_visphi(cpl_table * oi_vis_avg,
   CPLCHECK_MSG("Cannot get the reference phase data (column missing?)");
 
   /* Loop on base */
-  for (cpl_size base = 0; base < nbase; base++) {
+  for (cpl_size base = 0; base < GRAVI_NBASE; base++) {
 
     /* number of valid rows for base */
     cpl_size nvalid = 0;
@@ -1442,7 +1441,7 @@ cpl_error_code gravi_average_self_visphi(cpl_table * oi_vis_avg,
     /* Get the number of non-rejected frames */
     int * flag = cpl_table_get_data_int(oi_vis, "REJECTION_FLAG");
     cpl_ensure_code(flag, CPL_ERROR_ILLEGAL_INPUT);
-    for (int row = 0; row < nrow; row++) if (flag[row * nbase + base] == 0) nvalid++;
+    for (int row = 0; row < nrow; row++) if (flag[row * GRAVI_NBASE + base] == 0) nvalid++;
 
     cpl_msg_info("Stat (SELF_VISPHI)", "%6lld valid frames over %6lld (%5.1f%%)",
         nvalid, nrow, (double) nvalid / (double) nrow * 100.0);
@@ -1469,11 +1468,11 @@ cpl_error_code gravi_average_self_visphi(cpl_table * oi_vis_avg,
     /* Loop on row */
 
     for (cpl_size currentRow = 0, validRowIndex = -1; currentRow < nrow; currentRow++) {
-      if (flag[currentRow * nbase + base]) {
+      if (flag[currentRow * GRAVI_NBASE + base]) {
         continue;
       } else {
         /* Get indices */
-        cpl_size rbase = currentRow * nbase + base;
+        cpl_size rbase = currentRow * GRAVI_NBASE + base;
         validRowIndex++;
 
         /* fast-no-CPL integration: get pointers on data */
@@ -1681,7 +1680,7 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
 	cpl_ensure (p2vmred_data, CPL_ERROR_NULL_INPUT, NULL);
 	cpl_ensure (parlist,      CPL_ERROR_NULL_INPUT, NULL);
 	
-	int nv, nbase = 6, ntel = 4;
+	int nv, ntel = 4;
 
     /* 
      * Compute the limit of integration
@@ -1701,7 +1700,7 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
     /* Get the vis_SC table for first polarisation */
     int npol_sc = gravi_pfits_get_pola_num (p2vmred_header, GRAVI_SC);
     cpl_table * vis_SC = gravi_data_get_oi_vis (p2vmred_data, GRAVI_SC, 0, npol_sc);
-    cpl_size nrow = cpl_table_get_nrow (vis_SC) / nbase;
+    cpl_size nrow = cpl_table_get_nrow (vis_SC) / GRAVI_NBASE;
     
     /* Get first and last frame for this integration */
     cpl_size sframe = *current_frame;
@@ -1713,8 +1712,8 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
     
     /* Compute start and end-time */
     double start_time, end_time;
-    start_time  = cpl_table_get (vis_SC, "TIME", sframe*nbase, &nv) - dit_sc/2;
-    end_time    = cpl_table_get (vis_SC, "TIME", eframe*nbase, &nv) + dit_sc/2;
+    start_time  = cpl_table_get (vis_SC, "TIME", sframe*GRAVI_NBASE, &nv) - dit_sc/2;
+    end_time    = cpl_table_get (vis_SC, "TIME", eframe*GRAVI_NBASE, &nv) + dit_sc/2;
     
     /* Compute verbose */
     cpl_msg_info (cpl_func,"Integrate frames: first = %lli  last = %lli", sframe, eframe);
@@ -2036,7 +2035,7 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
              * VISDATA as well as (R,I) remains unchanged. The goal is to split
              * the differential phase, calibratable so far, from the absolute phase */
             if ( !strcmp (output_phase_sc,"DIFFERENTIAL") || !strcmp (output_phase_sc,"ABSOLUTE") ) {
-            for (int base = 0; base < nbase; base++) {
+            for (int base = 0; base < GRAVI_NBASE; base++) {
                 
                 /* We duplicate VISDATA, to keep the value untouched in the table */
                 cpl_array * visData_sc, * visErr_sc;
@@ -2237,7 +2236,7 @@ cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data, cpl_frameset* frames
   gravi_msg_function_start(1);
   cpl_ensure_code (vis_data, CPL_ERROR_NULL_INPUT);
 
-  int nv, nbase = 6, ntel=4, nclo=4;
+  int nv, ntel=4, nclo=4;
   char qc_name[100];
 
   /* 
@@ -2268,28 +2267,28 @@ cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data, cpl_frameset* frames
             cpl_table * oi_vis2_FT = gravi_data_get_oi_vis2 (vis_data, GRAVI_FT, pol, npol_ft);
             cpl_table * oi_vis_FT = gravi_data_get_oi_vis (vis_data, GRAVI_FT, pol, npol_ft);
 
-            for (int base = 0; base < nbase; base++) {
+            for (int base = 0; base < GRAVI_NBASE; base++) {
                 
                 /* Add the QC parameters for FT */
                 
                 sprintf (qc_name, "ESO QC VISPHIERR_FT%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
-                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_FT, "VISPHIERR", base, nbase));
+                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_FT, "VISPHIERR", base, GRAVI_NBASE));
                 cpl_propertylist_set_comment (plist, qc_name, "[deg] mean over lbd");
                 
                 sprintf (qc_name, "ESO QC VIS2_FT%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
-                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis2_FT, "VIS2DATA", base, nbase));
+                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis2_FT, "VIS2DATA", base, GRAVI_NBASE));
                 cpl_propertylist_set_comment (plist, qc_name, "mean over lbd");
                 
                 sprintf (qc_name, "ESO QC VIS2ERR_FT%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
-                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis2_FT, "VIS2ERR", base, nbase));
+                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis2_FT, "VIS2ERR", base, GRAVI_NBASE));
                 cpl_propertylist_set_comment (plist, qc_name, "mean over lbd");
                 
                 sprintf (qc_name, "ESO QC VISAMP_FT%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
-                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_FT, "VISAMP", base, nbase));
+                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_FT, "VISAMP", base, GRAVI_NBASE));
                 cpl_propertylist_set_comment (plist, qc_name, "mean over lbd");
                 
                 sprintf (qc_name, "ESO QC VISAMPERR_FT%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
-                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_FT, "VISAMPERR", base, nbase));
+                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_FT, "VISAMPERR", base, GRAVI_NBASE));
                 cpl_propertylist_set_comment (plist, qc_name, "mean over lbd");
                 
                 CPLCHECK_MSG("Cannot compute QC parameter for OI_VIS for FT");
@@ -2367,45 +2366,45 @@ cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data, cpl_frameset* frames
             cpl_table * oi_vis2_SC = gravi_data_get_oi_vis2 (vis_data, GRAVI_SC, pol, npol_sc);
             cpl_table * oi_vis_SC = gravi_data_get_oi_vis (vis_data, GRAVI_SC, pol, npol_sc);
             
-            for (int base = 0; base < nbase; base++) {
+            for (int base = 0; base < GRAVI_NBASE; base++) {
                 /* FIXME: repair these QC parameters, for instance by computing them in P2VMRED */
                 
                 // sprintf (qc_name, "ESO QC VFACTOR%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
-                // double vmean = gravi_table_get_column_mean (vis_SC, "V_FACTOR_WL", base, nbase);
+                // double vmean = gravi_table_get_column_mean (vis_SC, "V_FACTOR_WL", base, GRAVI_NBASE);
                 // cpl_propertylist_update_double (plist, qc_name, vmean);
                 // cpl_propertylist_set_comment (plist, qc_name, "mean v-factor");
                 // 
                 // sprintf (qc_name, "ESO QC PFACTOR%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
-                // double pmean = gravi_table_get_column_mean (vis_SC, "P_FACTOR", base, nbase);
+                // double pmean = gravi_table_get_column_mean (vis_SC, "P_FACTOR", base, GRAVI_NBASE);
                 // cpl_propertylist_update_double (plist, qc_name, pmean);
                 // cpl_propertylist_set_comment (plist, qc_name, "mean p-factor");
                 
                 sprintf (qc_name, "ESO QC GD_SC%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
-                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_SC, "GDELAY", base, nbase));
+                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_SC, "GDELAY", base, GRAVI_NBASE));
                 cpl_propertylist_set_comment (plist, qc_name, "[m] mean Group-Delay");
                 
                 sprintf (qc_name, "ESO QC VIS2_SC%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
-                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis2_SC, "VIS2DATA", base, nbase));
+                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis2_SC, "VIS2DATA", base, GRAVI_NBASE));
                 cpl_propertylist_set_comment (plist, qc_name, "mean over lbd");
                 
                 sprintf (qc_name, "ESO QC VIS2ERR_SC%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
-                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis2_SC, "VIS2ERR", base, nbase));
+                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis2_SC, "VIS2ERR", base, GRAVI_NBASE));
                 cpl_propertylist_set_comment (plist, qc_name, "mean over lbd");
                 
                 sprintf (qc_name, "ESO QC VISPHI_SC%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
-                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_SC, "VISPHI", base, nbase));
+                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_SC, "VISPHI", base, GRAVI_NBASE));
                 cpl_propertylist_set_comment (plist, qc_name, "[deg] mean over lbd");
                 
                 sprintf (qc_name, "ESO QC VISPHIERR_SC%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
-                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_SC, "VISPHIERR", base, nbase));
+                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_SC, "VISPHIERR", base, GRAVI_NBASE));
                 cpl_propertylist_set_comment (plist, qc_name, "[deg] mean over lbd");
                 
                 sprintf (qc_name, "ESO QC VISAMP_SC%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
-                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_SC, "VISAMP", base, nbase));
+                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_SC, "VISAMP", base, GRAVI_NBASE));
                 cpl_propertylist_set_comment (plist, qc_name, "mean over lbd");
                 
                 sprintf (qc_name, "ESO QC VISAMPERR_SC%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
-                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_SC, "VISAMPERR", base, nbase));
+                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_SC, "VISAMPERR", base, GRAVI_NBASE));
                 cpl_propertylist_set_comment (plist, qc_name, "mean over lbd");
                 
                 double coeff2 = gravi_table_get_value (oi_vis_SC, "PHASE_REF_COEFF", base, 2);
@@ -3023,7 +3022,7 @@ cpl_error_code gravi_average_vis (gravi_data * oi_data)
 	int npol = gravi_pfits_get_pola_num (header, type_data);
 	for (int pol = 0 ; pol < npol ; pol++ ) {
 
-      cpl_size nrow = cpl_table_get_nrow (gravi_data_get_oi_vis (oi_data, type_data, pol, npol))/nbase;
+      cpl_size nrow = cpl_table_get_nrow (gravi_data_get_oi_vis (oi_data, type_data, pol, npol))/GRAVI_NBASE;
       if (nrow == 1) {
           cpl_msg_info (cpl_func, "OI_VIS %s has only one observation, skip", GRAVI_TYPE(type_data));
           continue;

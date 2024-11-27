@@ -255,11 +255,11 @@ cpl_error_code gravi_eop_pointing_uv (cpl_table * input_table,
     * Note: The telescope locations STAXYZ are given in the [West,South,Up]
     *   frame (ESO convention), whereas the UVW, calculated later on, are in
     *   the [East,North,Up] frame. Hence the sign changes below on X and Y. */
-    double baseline[6][3];
+    double baseline[GRAVI_NBASE][3];
     double * uCoord;
     double * vCoord;
     if (compute_uv) {
-        for ( int base = 0; base < 6; base ++) {
+        for ( int base = 0; base < GRAVI_NBASE; base ++) {
            int tel1=0; while ( cpl_table_get (array_table, "STA_INDEX", tel1, NULL) != gravi_table_get_value (input_table, "STA_INDEX", base, 0) ) tel1++;
            int tel2=0; while ( cpl_table_get (array_table, "STA_INDEX", tel2, NULL) != gravi_table_get_value (input_table, "STA_INDEX", base, 1) ) tel2++;
            baseline[base][0] = -(gravi_table_get_value (array_table, "STAXYZ", tel2, 0) - gravi_table_get_value (array_table, "STAXYZ", tel1, 0));
@@ -438,7 +438,7 @@ cpl_error_code gravi_eop_pointing_uv (cpl_table * input_table,
         *       the vacuum baseline. */
         double n_air = 1.0002028;
         if (compute_uv) {
-            int base = row % 6;
+            int base = row % GRAVI_NBASE;
             uCoord[row] = (eUo[0] * baseline[base][0] + eUo[1] * baseline[base][1] + eUo[2] * baseline[base][2])/n_air;
             vCoord[row] = (eVo[0] * baseline[base][0] + eVo[1] * baseline[base][1] + eVo[2] * baseline[base][2])/n_air;
         }

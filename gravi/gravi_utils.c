@@ -53,12 +53,12 @@
  -----------------------------------------------------------------------------*/
 
 /* Baseline: [6 bases][tel1, tel2] */
-int GRAVI_BASE_TEL[6][2] = { {0,1}, {0,2}, {0,3}, {1,2}, {1,3}, {2,3} };
+int GRAVI_BASE_TEL[GRAVI_NBASE][2] = { {0,1}, {0,2}, {0,3}, {1,2}, {1,3}, {2,3} };
 char GRAVI_BASE_NAME[6][3] = {"12","13","14","23","24","34"};
 
 /* Closing triangle: [6 bases][2 closing triangle][base1, base2] */
-int GRAVI_TRI_BASE[6][2][2] = { {{1,3},{2,4}}, {{0,3},{2,5}}, {{0,4},{1,5}}, {{0,1},{4,5}}, {{0,2},{3,5}}, {{1,2},{3,4}}};
-int GRAVI_TRI_SIGN[6][2][2] = { {{1,-1},{1,-1}},  {{1,1},{1,-1}}, {{1,1},{1,1}}, {{-1,1},{1,-1}}, {{-1,1},{1,1}}, {{-1,1},{-1,1}} };
+int GRAVI_TRI_BASE[GRAVI_NBASE][2][2] = { {{1,3},{2,4}}, {{0,3},{2,5}}, {{0,4},{1,5}}, {{0,1},{4,5}}, {{0,2},{3,5}}, {{1,2},{3,4}}};
+int GRAVI_TRI_SIGN[GRAVI_NBASE][2][2] = { {{1,-1},{1,-1}},  {{1,1},{1,-1}}, {{1,1},{1,1}}, {{-1,1},{1,-1}}, {{-1,1},{1,1}}, {{-1,1},{-1,1}} };
 
 /* Closing telescope: [4 closures][tel1, tel2, tel3] */
 int GRAVI_CLO_TEL[4][3] = {{0,1,2}, {0,1,3}, {0,2,3}, {1,2,3}};
@@ -365,14 +365,14 @@ int gravi_region_get_base (cpl_table *imaging_detector, int region)
 
 	const char * regname_i;
 	int base = 0;
-	const char * bases[6]={"12","13","14","23","24","34"};
-	const char * bases_inv[6]={"21","31","41","32","42","43"};
+	const char * bases[GRAVI_NBASE]={"12","13","14","23","24","34"};
+	const char * bases_inv[GRAVI_NBASE]={"21","31","41","32","42","43"};
 
 
 	/* get the regname of region */
 	regname_i = cpl_table_get_string(imaging_detector, "REGNAME", region);
 
-	for (base=0; base<6; base++){
+	for (base=0; base<GRAVI_NBASE; base++){
 		if (!(strncmp(bases[base], regname_i, 2)) || !(strncmp(bases_inv[base], regname_i, 2))){
 			return base;
 		}
@@ -399,7 +399,7 @@ int gravi_region_get_base (cpl_table *imaging_detector, int region)
 int gravi_region_get_base_sign (cpl_table *imaging_detector, int base)
 {
 	cpl_ensure (imaging_detector,   CPL_ERROR_NULL_INPUT, 0);
-	cpl_ensure (base>=0 && base<=5, CPL_ERROR_ILLEGAL_INPUT, 0);
+	cpl_ensure (base>=0 && base<=GRAVI_NBASE-1, CPL_ERROR_ILLEGAL_INPUT, 0);
 
 	cpl_size n_region = cpl_table_get_nrow (imaging_detector);
     const char * basename = GRAVI_BASE_NAME[base];
