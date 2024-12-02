@@ -203,7 +203,7 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
     /* NCOMBINE */
     if(frameset != NULL)
     {
-        cpl_frameset * science_frames = gravi_frameset_extract_science_data(frameset);
+        cpl_frameset * science_frames = gravi_frameset_extract_fringe_data(frameset);
         cpl_size nscience = cpl_frameset_get_size(science_frames);
         cpl_frameset_delete(science_frames);
         if(!cpl_propertylist_has(header, "NCOMBINE"))
