@@ -973,15 +973,32 @@ static int gravity_vis(cpl_frameset * frameset,
 	 * in all OIFITS tables to follow standard */
 	gravi_vis_mjd_to_time (vis_data);
 
-	/* Save the output data file based on the first frame of the frameset */
-	cpl_frameset_join (used_frameset, recipe_frameset);
-	frame = cpl_frameset_get_position (recipe_frameset, 0);
-	
-        if(gravi_param_get_bool (parlist, "gravity.vis.oifits2") ) {
-            gravi_vis_copy_fluxdata(vis_data, 1);
+	/* Save the output data file based on the first frame of the frameset in order of MJD-OBS*/
+    const cpl_frame *it_frame;
+    cpl_frameset * science_frames = gravi_frameset_extract_fringe_data(used_frameset);
+    cpl_frameset_iterator *it = cpl_frameset_iterator_new(science_frames);
+    double mjd_obs_first = DBL_MAX;
+    while ((it_frame = cpl_frameset_iterator_get(it)) != NULL) {
+        cpl_propertylist * this_frame_header = cpl_propertylist_load(cpl_frame_get_filename(it_frame), 0);
+        double mjd_obs = gravi_pfits_get_mjd(this_frame_header);
+        if (mjd_obs < mjd_obs_first)
+        {
+            mjd_obs_first = mjd_obs;
+            frame = cpl_frameset_iterator_get(it);
         }
+        cpl_frameset_iterator_advance(it, 1);
+        cpl_propertylist_delete(this_frame_header);
+    }
+    cpl_frameset_iterator_delete(it);
+
+	cpl_frameset_join (used_frameset, recipe_frameset);
+	
+    if(gravi_param_get_bool (parlist, "gravity.vis.oifits2") ) {
+        gravi_vis_copy_fluxdata(vis_data, 1);
+    }
 	gravi_data_save_new (vis_data, frameset, NULL, NULL, parlist,
 			     used_frameset, frame, "gravity_vis", NULL, proCatg);
+    cpl_frameset_delete(science_frames);
 
 	CPLCHECK_CLEAN ("Cannot save the VIS product");
 
