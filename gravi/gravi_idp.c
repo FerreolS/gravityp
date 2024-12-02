@@ -176,6 +176,29 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
     cpl_propertylist_update_string (idp_plist, "PRODCATG", "SCIENCE.VISIBILITY.UNCALIBRATED");
     cpl_propertylist_set_comment (idp_plist, "PRODCATG", "Data product category");
 
+    /* MJD-OBS */
+    double mjd_obs_first = DBL_MAX;
+    if(frameset != NULL)
+    {
+        const cpl_frame *frame;
+        cpl_frameset * science_frames = gravi_frameset_extract_fringe_data(frameset);
+        cpl_frameset_iterator *it = cpl_frameset_iterator_new(science_frames);
+        while ((frame = cpl_frameset_iterator_get(it)) != NULL) {
+            cpl_propertylist * this_frame_header = cpl_propertylist_load(cpl_frame_get_filename(frame), 0);
+            double mjd_obs = gravi_pfits_get_mjd(this_frame_header);
+            if (mjd_obs < mjd_obs_first)
+                mjd_obs_first = mjd_obs;
+            cpl_frameset_iterator_advance(it, 1);
+            cpl_propertylist_delete(this_frame_header);
+        }
+        cpl_frameset_delete(science_frames);
+        cpl_frameset_iterator_delete(it);
+    }
+    if (mjd_obs_first == 0)
+        mjd_obs_first = gravi_pfits_get_mjd(header);
+    cpl_propertylist_update_double (idp_plist, "MJD-OBS", mjd_obs_first);
+    cpl_propertylist_set_comment (idp_plist, "MJD-OBS", "Start of observation");
+
     /* MJD-END */
     double mjd_obs_last = 0;
     double exptime_last = 0;
