@@ -27,6 +27,7 @@
 
 #include <math.h>
 #include <string.h>
+#include "gravi_utils.h"
 #include "gravi_idp.h"
 #include "gravi_pfits.h"
 #include "gravi_dfs.h"
@@ -149,8 +150,18 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
            aggregated. Finally divided by the number of baselines as specified in PIPE-9900 */
         if(!cpl_propertylist_has(header, "TEXPTIME"))
         {
+            cpl_size nsets = cpl_table_get_nrow(oi_vis2_SC_allpol) / GRAVI_NBASE ;
+            double texptime = 0;
+            for (cpl_size  set = 0 ; set < nsets ; set++)
+            {
+                cpl_table * int_time_this_set = cpl_table_extract(oi_vis2_SC_allpol, GRAVI_NBASE * set, GRAVI_NBASE);
+                double max_int_time = gravi_table_get_column_flagged_max(int_time_this_set, "INT_TIME");
+                texptime += max_int_time;
+                cpl_table_delete(int_time_this_set);
+            }
+            
             sprintf (qc_name, "TEXPTIME");
-            cpl_propertylist_update_double (idp_plist, qc_name, mean_int_time * cpl_table_get_nrow(oi_vis2_SC_allpol) / npol_sc / nbase);
+            cpl_propertylist_update_double (idp_plist, qc_name, texptime);
             cpl_propertylist_set_comment (idp_plist, qc_name, "Total exposure time");
         }
         else

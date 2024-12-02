@@ -272,6 +272,74 @@ double gravi_table_get_column_flagged_mean (cpl_table * table, const char * name
   return mean;
 }
 
+/**
+ * @brief
+ *   Function to compute the maximum of a column table with arrays.
+ *
+ * @param table    The table to get the maximum of the column
+ * @param name     The name of the column to average
+ *
+ * @return The maximum value
+ *
+ * This function computes the maximum of a column table which contains arrays.
+ * It ignores flagged values, i.e., those ones in which
+ * the column 'FLAG' in the same table contains invalid elements.
+ * Note that the flagging is evaluated on a per array element basis.
+ * Also note that the maximum is computed for all rows.
+ */
+double gravi_table_get_column_flagged_max (cpl_table * table, const char * name)
+{
+  cpl_ensure (table, CPL_ERROR_NULL_INPUT, 0.0);
+  cpl_ensure (name,  CPL_ERROR_NULL_INPUT, 0.0);
+
+  double max = 0.0;
+  cpl_size valid_elem = 0;
+  int valid;
+  cpl_size nrow = cpl_table_get_nrow (table);
+  cpl_ensure (nrow,  CPL_ERROR_ILLEGAL_INPUT, 0.0);
+
+  cpl_type type  = cpl_table_get_column_type (table, name);
+  cpl_size depth = cpl_table_get_column_depth (table, name);
+
+  cpl_array ** flags = cpl_table_get_data_array (table, "FLAG");
+
+  if (depth > 0) {
+    cpl_array ** arrays = cpl_table_get_data_array (table, name);
+    cpl_ensure (arrays,  CPL_ERROR_ILLEGAL_INPUT, 0.0);
+    cpl_size array_size = cpl_array_get_size(arrays[0]);
+    for (cpl_size r=0; r<nrow;r++)
+      for(cpl_size el=0; el<array_size; el++)
+        if (!cpl_array_get_int(flags[r], el, &valid))
+        {
+          if(cpl_array_get_double(arrays[r], el, &valid) > max)
+            max = cpl_array_get_double(arrays[r], el, &valid);
+        } 
+  }
+  else if (depth == 0 && type == CPL_TYPE_DOUBLE) {
+    double * data = cpl_table_get_data_double (table, name);
+    cpl_ensure (data, CPL_ERROR_ILLEGAL_INPUT, 0.0);
+    cpl_size array_size = cpl_array_get_size(flags[0]);
+    for (cpl_size r=0; r<nrow;r++) 
+    {
+      for(cpl_size el=0; el<array_size; el++)
+      {
+        if (!cpl_array_get_int(flags[r], el, &valid))
+        {
+          if(data[r] > max)
+            max = data[r];
+        }
+      }
+    }
+  }
+
+  else {
+    cpl_error_set_message (cpl_func,CPL_ERROR_ILLEGAL_INPUT,"unknow type");
+    return 0.0;
+  }
+
+  return max;
+}
+
 double gravi_table_get_column_mean (cpl_table * table, const char * name, int base, int nbase)
 {
   cpl_ensure (table, CPL_ERROR_NULL_INPUT, 0.0);
