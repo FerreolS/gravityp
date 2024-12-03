@@ -30,6 +30,7 @@ CPL_BEGIN_DECLS
 #include <cpl.h>
 #include <stdio.h>
 #include <string.h>
+#include "gravi_pfits.h"
 
 /*-----------------------------------------------------------------------------
                                    New types

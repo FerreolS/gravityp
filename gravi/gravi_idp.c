@@ -333,6 +333,22 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
         cpl_frameset_iterator_delete(it);
     }
         
+    if (gravi_data_has_extension(vis_data, GRAVI_OI_ARRAY_EXT))
+    {
+        cpl_table * oi_array = gravi_data_get_table (vis_data, GRAVI_OI_ARRAY_EXT);
+        cpl_table_new_column(oi_array, "FOV", CPL_TYPE_DOUBLE);
+        cpl_table_new_column(oi_array, "FOVTYPE", CPL_TYPE_STRING);
+        double fov;
+        const char * telname = gravi_conf_get_telname (0, header);
+        if (telname[0] == 'U')
+            fov = 0.03;  // Hard-coded UT FOV
+        else
+            fov = 0.14;  // Hard-coded AT FOV
+
+        cpl_table_fill_column_window_double(oi_array, "FOV",  0, cpl_table_get_nrow(oi_array), fov);
+        cpl_table_fill_column_window_string(oi_array, "FOVTYPE",  0, cpl_table_get_nrow(oi_array),"RADIUS");
+    }
+
     /* Delete scratch tables */
     cpl_table_delete(oi_vis2_SC_allpol);
     cpl_table_delete(oi_T3_SC_allpol);
