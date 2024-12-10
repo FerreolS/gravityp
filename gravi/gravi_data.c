@@ -1063,7 +1063,7 @@ cpl_error_code gravi_data_save_new (gravi_data 		  * self,
 	/* Save the primary header */
 	cpl_dfs_save_propertylist (allframes, NULL, parlist,
 							   frameset, frame, recipe, applist,
-							   NULL, PACKAGE_STRING, product_name);
+							   NULL, PACKAGE "/" PACKAGE_VERSION, product_name);
 	CPLCHECK_MSG("Cannot save the first extension primary header");
 
 	/* Save the extensions */
