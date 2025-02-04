@@ -198,8 +198,6 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
         mjd_obs_first = gravi_pfits_get_mjd(header);
     cpl_propertylist_update_double (idp_plist, "MJD-OBS", mjd_obs_first);
     cpl_propertylist_set_comment (idp_plist, "MJD-OBS", "Start of observation");
-    /* Delete MJD-OBS from the main header, since it will take precedence over what is computed here*/
-    cpl_propertylist_erase (header, "MJD-OBS");
 
     /* MJD-END */
     double mjd_obs_last = 0;
@@ -236,6 +234,9 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
     cpl_propertylist_update_double (idp_plist, "MJD-END",
         mjd_obs_last + exptime_last / 86400.);
     cpl_propertylist_set_comment (idp_plist, "MJD-END", "End of observation");
+
+    /* Delete MJD-OBS from the main header, since it will take precedence over what is computed here*/
+    cpl_propertylist_erase (header, "MJD-OBS");
 
     /* OBID */
     cpl_propertylist_update_int (idp_plist, "OBID1",
