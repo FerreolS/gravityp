@@ -194,7 +194,7 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
         cpl_frameset_delete(science_frames);
         cpl_frameset_iterator_delete(it);
     }
-    if (mjd_obs_first == 0)
+    if (mjd_obs_first == DBL_MAX)
         mjd_obs_first = gravi_pfits_get_mjd(header);
     cpl_propertylist_update_double (idp_plist, "MJD-OBS", mjd_obs_first);
     cpl_propertylist_set_comment (idp_plist, "MJD-OBS", "Start of observation");
@@ -340,10 +340,15 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
         cpl_table_new_column(oi_array, "FOVTYPE", CPL_TYPE_STRING);
         double fov;
         const char * telname = gravi_conf_get_telname (0, header);
-        if (telname[0] == 'U')
-            fov = 0.03;  // Hard-coded UT FOV
-        else
-            fov = 0.14;  // Hard-coded AT FOV
+        if (telname == NULL) {
+            cpl_msg_warning(cpl_func, "Cannot get TELNAME, FOV is not determined");
+            fov = 0.0;
+        } else {
+            if (telname[0] == 'U')
+                fov = 0.03;  // Hard-coded UT FOV
+            else
+                fov = 0.14;  // Hard-coded AT FOV
+        }
 
         cpl_table_fill_column_window_double(oi_array, "FOV",  0, cpl_table_get_nrow(oi_array), fov);
         cpl_table_fill_column_window_string(oi_array, "FOVTYPE",  0, cpl_table_get_nrow(oi_array),"RADIUS");
