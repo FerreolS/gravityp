@@ -125,11 +125,11 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
 
         sprintf (qc_name, "WAVELMAX");
         double avg_band = cpl_table_get_column_mean(oi_wave_SC_allpol, "EFF_BAND");
-        cpl_propertylist_update_double (idp_plist, qc_name, (max_eff_wave - avg_band / 2.) * 1e9);
+        cpl_propertylist_update_double (idp_plist, qc_name, (max_eff_wave + avg_band / 2.) * 1e9);
         cpl_propertylist_set_comment (idp_plist, qc_name, "[nm] Maximum wavelength");
 
         sprintf (qc_name, "WAVELMIN");
-        cpl_propertylist_update_double (idp_plist, qc_name, (min_eff_wave + avg_band / 2.) * 1e9);
+        cpl_propertylist_update_double (idp_plist, qc_name, (min_eff_wave - avg_band / 2.) * 1e9);
         cpl_propertylist_set_comment (idp_plist, qc_name, "[nm] Minimum wavelength");
 
         cpl_table_duplicate_column(oi_wave_SC_allpol, "SPEC_RES", oi_wave_SC_allpol, "EFF_WAVE");
