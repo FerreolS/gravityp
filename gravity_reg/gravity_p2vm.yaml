@@ -1,0 +1,29 @@
+# log default parameters
+PreExec:
+  - "esorex --man gravity_p2vm"
+
+Defaults:
+  EsorexTests:
+    result:
+      fitsdiff:
+
+EsorexTests:
+
+   - 200.gravity_p2vm.MEDIUM_ins_COMBINED_ft_COMBINED:
+      recipe: gravity_p2vm
+      sof:
+        - ["gravity_p2vm/MEDIUM_ins_COMBINED_ft_COMBINED/GRAVI.2016-01-21T11:56:21.144.fits", DARK_RAW]
+        - ["gravity_p2vm/MEDIUM_ins_COMBINED_ft_COMBINED/GRAVI.2020-01-04T09:37:24.823.fits", FLAT_RAW]
+        - ["gravity_p2vm/MEDIUM_ins_COMBINED_ft_COMBINED/GRAVI.2020-01-04T09:38:06.825.fits", FLAT_RAW]
+        - ["gravity_p2vm/MEDIUM_ins_COMBINED_ft_COMBINED/GRAVI.2020-01-04T09:38:48.826.fits", FLAT_RAW]
+        - ["gravity_p2vm/MEDIUM_ins_COMBINED_ft_COMBINED/GRAVI.2020-01-04T09:39:30.829.fits", FLAT_RAW]
+        - ["gravity_p2vm/MEDIUM_ins_COMBINED_ft_COMBINED/GRAVI.2020-01-04T09:40:21.831.fits", WAVESC_RAW]
+        - ["gravity_p2vm/MEDIUM_ins_COMBINED_ft_COMBINED/GRAVI.2020-01-04T09:46:27.846.fits", WAVE_RAW]
+        - ["gravity_p2vm/MEDIUM_ins_COMBINED_ft_COMBINED/GRAVI.2020-01-04T09:51:39.859.fits", P2VM_RAW]
+        - ["gravity_p2vm/MEDIUM_ins_COMBINED_ft_COMBINED/GRAVI.2020-01-04T09:54:33.866.fits", P2VM_RAW]
+        - ["gravity_p2vm/MEDIUM_ins_COMBINED_ft_COMBINED/GRAVI.2020-01-04T09:57:24.873.fits", P2VM_RAW]
+        - ["gravity_p2vm/MEDIUM_ins_COMBINED_ft_COMBINED/GRAVI.2020-01-04T10:00:18.881.fits", P2VM_RAW]
+        - ["gravity_p2vm/MEDIUM_ins_COMBINED_ft_COMBINED/GRAVI.2020-01-04T10:03:12.888.fits", P2VM_RAW]
+        - ["gravity_p2vm/MEDIUM_ins_COMBINED_ft_COMBINED/GRAVI.2020-01-04T10:06:03.895.fits", P2VM_RAW]
+        - ["gravity_p2vm/MEDIUM_ins_COMBINED_ft_COMBINED/GRAVI.2020-01-04T09:35:57.820_dark.fits", DARK]
+        - ["datastatic/GRAVI_WAVE_2019-10-12.fits", WAVE_PARAM]
