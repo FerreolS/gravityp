@@ -12,7 +12,6 @@ EsorexTests:
    - 200.gravity_p2vm.MEDIUM_ins_COMBINED_ft_COMBINED:
       recipe: gravity_p2vm
       sof:
-        - ["gravity_p2vm/MEDIUM_ins_COMBINED_ft_COMBINED/GRAVI.2016-01-21T11:56:21.144.fits", DARK_RAW]
         - ["gravity_p2vm/MEDIUM_ins_COMBINED_ft_COMBINED/GRAVI.2020-01-04T09:37:24.823.fits", FLAT_RAW]
         - ["gravity_p2vm/MEDIUM_ins_COMBINED_ft_COMBINED/GRAVI.2020-01-04T09:38:06.825.fits", FLAT_RAW]
         - ["gravity_p2vm/MEDIUM_ins_COMBINED_ft_COMBINED/GRAVI.2020-01-04T09:38:48.826.fits", FLAT_RAW]
@@ -26,4 +25,22 @@ EsorexTests:
         - ["gravity_p2vm/MEDIUM_ins_COMBINED_ft_COMBINED/GRAVI.2020-01-04T10:03:12.888.fits", P2VM_RAW]
         - ["gravity_p2vm/MEDIUM_ins_COMBINED_ft_COMBINED/GRAVI.2020-01-04T10:06:03.895.fits", P2VM_RAW]
         - ["gravity_p2vm/MEDIUM_ins_COMBINED_ft_COMBINED/GRAVI.2020-01-04T09:35:57.820_dark.fits", DARK]
+        - ["datastatic/GRAVI_WAVE_2019-10-12.fits", WAVE_PARAM]
+
+   - 205.gravity_p2vm.LOW_ins_COMBINED_ft_COMBINED:
+      recipe: gravity_p2vm
+      sof:
+        - ["gravity_p2vm/LOW_ins_COMBINED_ft_COMBINED/GRAVI.2023-09-25T11:04:40.507.fits", FLAT_RAW]
+        - ["gravity_p2vm/LOW_ins_COMBINED_ft_COMBINED/GRAVI.2023-09-25T11:05:46.510.fits", FLAT_RAW]
+        - ["gravity_p2vm/LOW_ins_COMBINED_ft_COMBINED/GRAVI.2023-09-25T11:06:49.512.fits", FLAT_RAW]
+        - ["gravity_p2vm/LOW_ins_COMBINED_ft_COMBINED/GRAVI.2023-09-25T11:07:52.515.fits", FLAT_RAW]
+        - ["gravity_p2vm/LOW_ins_COMBINED_ft_COMBINED/GRAVI.2023-09-25T11:11:07.524.fits", WAVESC_RAW]
+        - ["gravity_p2vm/LOW_ins_COMBINED_ft_COMBINED/GRAVI.2023-09-25T11:17:10.539.fits", WAVE_RAW]
+        - ["gravity_p2vm/LOW_ins_COMBINED_ft_COMBINED/GRAVI.2023-09-25T11:22:19.552.fits", P2VM_RAW]
+        - ["gravity_p2vm/LOW_ins_COMBINED_ft_COMBINED/GRAVI.2023-09-25T11:25:13.559.fits", P2VM_RAW]
+        - ["gravity_p2vm/LOW_ins_COMBINED_ft_COMBINED/GRAVI.2023-09-25T11:28:07.566.fits", P2VM_RAW]
+        - ["gravity_p2vm/LOW_ins_COMBINED_ft_COMBINED/GRAVI.2023-09-25T11:30:58.573.fits", P2VM_RAW]
+        - ["gravity_p2vm/LOW_ins_COMBINED_ft_COMBINED/GRAVI.2023-09-25T11:33:52.581.fits", P2VM_RAW]
+        - ["gravity_p2vm/LOW_ins_COMBINED_ft_COMBINED/GRAVI.2023-09-25T11:36:46.588.fits", P2VM_RAW]
+        - ["gravity_p2vm/LOW_ins_COMBINED_ft_COMBINED/GRAVI.2023-09-25T11:03:13.504_dark.fits", DARK]
         - ["datastatic/GRAVI_WAVE_2019-10-12.fits", WAVE_PARAM]
