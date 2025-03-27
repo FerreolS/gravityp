@@ -62,3 +62,21 @@ EsorexTests:
         - ["gravity_p2vm/LOW_ins_SPLIT_ft_SPLIT/GRAVI.2023-06-02T12:24:51.307.fits", P2VM_RAW]
         - ["gravity_p2vm/LOW_ins_SPLIT_ft_SPLIT/GRAVI.2023-06-02T12:28:21.316.fits", P2VM_RAW]
         - ["datastatic/GRAVI_WAVE_2019-10-12.fits", WAVE_PARAM]
+
+   - 215.gravity_p2vm.HIGH_ins_COMBINED_ft_COMBINED:
+      recipe: gravity_p2vm
+      sof:
+        - ["gravity_p2vm/HIGH_ins_COMBINED_ft_COMBINED/GRAVI.2024-05-26T11:42:42.582.fits", FLAT_RAW]
+        - ["gravity_p2vm/HIGH_ins_COMBINED_ft_COMBINED/GRAVI.2024-05-26T11:43:51.586.fits", FLAT_RAW]
+        - ["gravity_p2vm/HIGH_ins_COMBINED_ft_COMBINED/GRAVI.2024-05-26T11:45:00.588.fits", FLAT_RAW]
+        - ["gravity_p2vm/HIGH_ins_COMBINED_ft_COMBINED/GRAVI.2024-05-26T11:46:09.591.fits", FLAT_RAW]
+        - ["gravity_p2vm/HIGH_ins_COMBINED_ft_COMBINED/GRAVI.2024-05-26T11:47:27.594.fits", WAVESC_RAW]
+        - ["gravity_p2vm/HIGH_ins_COMBINED_ft_COMBINED/GRAVI.2024-05-26T11:52:33.607.fits", WAVE_RAW]
+        - ["gravity_p2vm/HIGH_ins_COMBINED_ft_COMBINED/GRAVI.2024-05-26T11:56:48.618.fits", P2VM_RAW]
+        - ["gravity_p2vm/HIGH_ins_COMBINED_ft_COMBINED/GRAVI.2024-05-26T12:00:09.627.fits", P2VM_RAW]
+        - ["gravity_p2vm/HIGH_ins_COMBINED_ft_COMBINED/GRAVI.2024-05-26T12:03:33.635.fits", P2VM_RAW]
+        - ["gravity_p2vm/HIGH_ins_COMBINED_ft_COMBINED/GRAVI.2024-05-26T12:06:54.644.fits", P2VM_RAW]
+        - ["gravity_p2vm/HIGH_ins_COMBINED_ft_COMBINED/GRAVI.2024-05-26T12:10:18.653.fits", P2VM_RAW]
+        - ["gravity_p2vm/HIGH_ins_COMBINED_ft_COMBINED/GRAVI.2024-05-26T12:13:42.661.fits", P2VM_RAW]
+        - ["gravity_p2vm/HIGH_ins_COMBINED_ft_COMBINED/GRAVI.2024-05-26T11:41:06.578_dark.fits", DARK]
+        - ["datastatic/GRAVI_WAVE_2019-10-12.fits", WAVE_PARAM]
