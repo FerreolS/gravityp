@@ -321,6 +321,7 @@ static int gravity_vis_from_p2vmred(cpl_frameset * frameset,
 	char * proCatg = NULL, * mode=NULL;
 	
 	gravi_data * p2vmred_data=NULL, * vis_data=NULL, * tmpvis_data=NULL, * pca_calib_data=NULL;
+    cpl_propertylist ** p2vm_qcs = NULL;
 	
 	int nb_frame;
 
@@ -401,12 +402,15 @@ static int gravity_vis_from_p2vmred(cpl_frameset * frameset,
 	 */
 	
     nb_frame = cpl_frameset_get_size (recipe_frameset);
+    p2vm_qcs = cpl_malloc(sizeof(cpl_propertylist*) * nb_frame);
+
     for (int ivis = 0; ivis < nb_frame; ivis++){
 
 		cpl_msg_info (cpl_func, " ***** P2VMREDUCED %d over %d ***** ", ivis+1, nb_frame);
 
 		frame = cpl_frameset_get_position (recipe_frameset, ivis);
 		p2vmred_data = gravi_data_load_frame (frame, used_frameset);
+        p2vm_qcs[ivis] = cpl_propertylist_new();
 
 		/* Compute rejection flags for averaging */
         if (gravi_param_get_bool (parlist, "gravity.signal.use-existing-rejection")) {
@@ -424,6 +428,10 @@ static int gravity_vis_from_p2vmred(cpl_frameset * frameset,
             gravi_compute_rejection (p2vmred_data, parlist);
             CPLCHECK_MSG ("Cannot recompute rejection flags signals");
         }
+
+        /* Temporary copy for averaging over all frames */
+        gravi_copy_p2vm_qcs(p2vmred_data, p2vm_qcs[ivis]);
+        CPLCHECK_MSG ("Cannot copy QC for averaging");
 
         /* Loop on the wanted sub-integration */
         cpl_size current_frame = 0;
@@ -475,7 +483,7 @@ static int gravity_vis_from_p2vmred(cpl_frameset * frameset,
     }
 
     /* Compute QC parameters */
-    gravi_compute_vis_qc (vis_data, used_frameset);
+    gravi_compute_vis_qc (vis_data, used_frameset, p2vm_qcs, nb_frame);
     
 	/* Perform the normalisation of the SC vis2 and visamp
 	 * to match those of the FT */
@@ -527,6 +535,7 @@ cleanup:
 	FREE (cpl_frameset_delete,used_frameset);
     FREE (cpl_free,proCatg);
     FREE (cpl_free,mode);
+    FREELOOP(cpl_propertylist_delete, p2vm_qcs, nb_frame);
 	
 	gravi_msg_function_exit(1);
     return (int)cpl_error_get_code();

@@ -45,6 +45,8 @@ cpl_error_code gravi_compute_signals (gravi_data * reduce_data,
 									gravi_data * disp_data,
 									const cpl_parameterlist * parlist);
 
+cpl_error_code gravi_copy_p2vm_qcs(gravi_data *p2vmred_data, cpl_propertylist *plist);
+
 cpl_error_code gravi_compute_rejection (gravi_data * reduce_data,
 										const cpl_parameterlist * parlist);
 

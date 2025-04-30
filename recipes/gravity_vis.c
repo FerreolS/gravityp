@@ -407,6 +407,7 @@ static int gravity_vis(cpl_frameset * frameset,
         * vis_data=NULL, * disp_map=NULL, * diodepos_data=NULL, * diamcat_data=NULL, *eop_map=NULL,
         * static_param_data=NULL, * pca_calib_data=NULL;
 	gravi_data ** sky_maps = NULL;
+    cpl_propertylist ** p2vm_qcs = NULL;
 	
 	int nb_frame, nb_sky;
 
@@ -677,8 +678,10 @@ static int gravity_vis(cpl_frameset * frameset,
 	 */
 	
     nb_frame = cpl_frameset_get_size (recipe_frameset);
+    p2vm_qcs = cpl_malloc(sizeof(cpl_propertylist*) * nb_frame);
 	
     for (int ivis = 0; ivis < nb_frame; ivis++){
+        p2vm_qcs[ivis] = cpl_propertylist_new();
         int isky;
         char filename_suffix[20];
         snprintf(filename_suffix, 16, "%d", ivis);
@@ -849,6 +852,10 @@ static int gravity_vis(cpl_frameset * frameset,
 		gravi_compute_signals (p2vmred_data, disp_map, parlist);
 		CPLCHECK_MSG ("Cannot compute signals");
 
+        /* Temporary copy to allow averaging over all frames */
+        gravi_copy_p2vm_qcs(p2vmred_data, p2vm_qcs[ivis]);
+		CPLCHECK_MSG ("Cannot copy QC for averaging");
+
 		/* Compute rejection flags for averaging */
 		gravi_compute_rejection (p2vmred_data, parlist);
 		CPLCHECK_MSG ("Cannot compute rejection flags signals");
@@ -924,7 +931,8 @@ static int gravity_vis(cpl_frameset * frameset,
 
     /* Compute QC parameters */
     cpl_msg_info (cpl_func, "Computing QC parameters for visibilities");
-    gravi_compute_vis_qc (vis_data, frameset);
+    gravi_compute_vis_qc (vis_data, frameset, p2vm_qcs, nb_frame);
+    CPLCHECK_CLEAN ("Cannot compute VIS QCs");
 
     /* Compute the QC parameters of the TF 
      * FIXME: compute QC TF only for CALIB star */
@@ -1047,6 +1055,7 @@ cleanup:
     FREE (cpl_free,redCatg);
     FREE (cpl_free,skyCatg);
     FREE (cpl_free,mode);
+    FREELOOP(cpl_propertylist_delete, p2vm_qcs, nb_frame);
     //This is a workaround to aliviate PIPE-6316. For some reason the allocation
     //pattern of the recipe causes malloc to keep many pages in the allocation
     //arena which are not returned to the OS (typically calling brk()).

@@ -328,6 +328,7 @@ static int gravity_disp(cpl_frameset            * frameset,
 	gravi_data * disp_map = NULL, * data = NULL, * dark_map = NULL, * wave_map = NULL,
 	  * profile_map = NULL, * badpix_map = NULL, * p2vmred_data = NULL, * preproc_data = NULL,
         * p2vm_map = NULL, * vis_data = NULL, * tmpvis_data=NULL, * argon_data=NULL, * static_param_data=NULL;
+    cpl_propertylist ** p2vm_qcs = NULL;
 	
 	int nb_frame;
 
@@ -446,8 +447,11 @@ static int gravity_disp(cpl_frameset            * frameset,
 		 */
 		
         nb_frame = cpl_frameset_get_size (disp_frameset);
+        p2vm_qcs = cpl_malloc(sizeof(cpl_propertylist*) * nb_frame);
+
         for (int ivis = 0; ivis < nb_frame; ivis++) {
 			current_frameset = cpl_frameset_duplicate (used_frameset);
+            p2vm_qcs[ivis] = cpl_propertylist_new();
 		  
 		    cpl_msg_info (cpl_func, "*** Processing file %d over %d *** ", ivis+1, nb_frame);
 			
@@ -506,7 +510,7 @@ static int gravity_disp(cpl_frameset            * frameset,
 			gravi_metrology_reduce (p2vmred_data, NULL, static_param_data, NULL, parlist);
             CPLCHECK_CLEAN ("Cannot reduce metrology");
 
-	    /* Find outliers */
+	        /* Find outliers */
             gravi_compute_outliers (p2vmred_data, parlist);
             CPLCHECK_MSG ("Cannot compute outliers");
 	    
@@ -521,6 +525,10 @@ static int gravity_disp(cpl_frameset            * frameset,
 			/* Compute rejection flags for averaging */
 			gravi_compute_rejection (p2vmred_data, parlist);
 			CPLCHECK_MSG ("Cannot rejection flags signals");
+
+            /* Temporary copy for averaging over all frames */
+            gravi_copy_p2vm_qcs(p2vmred_data, p2vm_qcs[ivis]);
+	    	CPLCHECK_MSG ("Cannot copy QC for averaging");
 			
 			/* Save the P2VMREDUCED */
 			if (gravi_param_get_bool (parlist,"gravity.dfs.p2vmred-file")) {
@@ -543,8 +551,8 @@ static int gravity_disp(cpl_frameset            * frameset,
 			tmpvis_data = gravi_compute_vis (p2vmred_data, parlist, &current_frame);
 			CPLCHECK_CLEAN ("Cannot average the visibilities");
 
-            /* Compute QC parameters */
-            gravi_compute_vis_qc (tmpvis_data, 0);
+            /* Compute QC parameters (for this frame individually) */
+            gravi_compute_vis_qc (tmpvis_data, NULL, NULL, 0);
 
 			/* Save the VIS */
 			if (gravi_param_get_bool (parlist,"gravity.dfs.vis-file")) {
@@ -586,6 +594,9 @@ static int gravity_disp(cpl_frameset            * frameset,
         }
 		/* End loop on the input files to reduce */
 
+        /* Compute QC parameters (for all frames averaged) */
+        gravi_compute_vis_qc (tmpvis_data, used_frameset, p2vm_qcs, nb_frame);
+
 		/* Recompute the TIME column from the MJD column
 		 * in all OIFITS tables to follow standard */
 		gravi_vis_mjd_to_time (vis_data);
@@ -619,6 +630,7 @@ static int gravity_disp(cpl_frameset            * frameset,
     	FREE (cpl_frameset_delete, badcalib_frameset);
         FREE (cpl_frameset_delete, p2vmcalib_frameset);
         FREE (cpl_frameset_delete, wavelampcalib_frameset);
+        FREELOOP(cpl_propertylist_delete, p2vm_qcs, nb_frame);
     }
     else {
 
@@ -678,6 +690,7 @@ cleanup :
     FREE (cpl_frameset_delete, wavelampcalib_frameset);
 	FREE (cpl_frameset_delete, used_frameset);
 	FREE (cpl_frameset_delete, current_frameset);
+    FREELOOP(cpl_propertylist_delete, p2vm_qcs, nb_frame);
 
 	gravi_msg_function_exit(1);
     return (int)cpl_error_get_code();

@@ -2224,14 +2224,18 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
 
 /*----------------------------------------------------------------------------*/
 /**
- * @brief The function compute the QC parameters for a VIS (averaged) data
+ * @brief Compute the QC parameters for a VIS (averaged) data
  * 
  * @param vis_data  VIS data containing OI_FLUX and OI_VIS tables
- * 	  	            comming from the @c gravi_compute_vis
+ * 	  	            coming from the @c gravi_compute_vis.
+ * @param frameset  The frameset.
+ * @param frame_qcs Array containing QCs from each frame to be combined.
+ * @param nb_frame  Length of @c frame_qcs.
  */
 /*----------------------------------------------------------------------------*/
 
-cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data, cpl_frameset* frameset)
+cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data, cpl_frameset* frameset,
+                                     cpl_propertylist **frame_qcs, cpl_size nb_frame)
 {
   gravi_msg_function_start(1);
   cpl_ensure_code (vis_data, CPL_ERROR_NULL_INPUT);
@@ -2367,52 +2371,66 @@ cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data, cpl_frameset* frames
             cpl_table * oi_vis_SC = gravi_data_get_oi_vis (vis_data, GRAVI_SC, pol, npol_sc);
             
             for (int base = 0; base < GRAVI_NBASE; base++) {
-                /* FIXME: repair these QC parameters, for instance by computing them in P2VMRED */
-                
-                // sprintf (qc_name, "ESO QC VFACTOR%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
-                // double vmean = gravi_table_get_column_mean (vis_SC, "V_FACTOR_WL", base, GRAVI_NBASE);
-                // cpl_propertylist_update_double (plist, qc_name, vmean);
-                // cpl_propertylist_set_comment (plist, qc_name, "mean v-factor");
-                // 
-                // sprintf (qc_name, "ESO QC PFACTOR%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
-                // double pmean = gravi_table_get_column_mean (vis_SC, "P_FACTOR", base, GRAVI_NBASE);
-                // cpl_propertylist_update_double (plist, qc_name, pmean);
-                // cpl_propertylist_set_comment (plist, qc_name, "mean p-factor");
-                
-                sprintf (qc_name, "ESO QC GD_SC%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
-                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_SC, "GDELAY", base, GRAVI_NBASE));
-                cpl_propertylist_set_comment (plist, qc_name, "[m] mean Group-Delay");
-                
-                sprintf (qc_name, "ESO QC VIS2_SC%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
-                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis2_SC, "VIS2DATA", base, GRAVI_NBASE));
-                cpl_propertylist_set_comment (plist, qc_name, "mean over lbd");
-                
-                sprintf (qc_name, "ESO QC VIS2ERR_SC%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
-                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis2_SC, "VIS2ERR", base, GRAVI_NBASE));
-                cpl_propertylist_set_comment (plist, qc_name, "mean over lbd");
-                
-                sprintf (qc_name, "ESO QC VISPHI_SC%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
-                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_SC, "VISPHI", base, GRAVI_NBASE));
-                cpl_propertylist_set_comment (plist, qc_name, "[deg] mean over lbd");
-                
-                sprintf (qc_name, "ESO QC VISPHIERR_SC%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
-                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_SC, "VISPHIERR", base, GRAVI_NBASE));
-                cpl_propertylist_set_comment (plist, qc_name, "[deg] mean over lbd");
-                
-                sprintf (qc_name, "ESO QC VISAMP_SC%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
-                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_SC, "VISAMP", base, GRAVI_NBASE));
-                cpl_propertylist_set_comment (plist, qc_name, "mean over lbd");
-                
-                sprintf (qc_name, "ESO QC VISAMPERR_SC%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
-                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_SC, "VISAMPERR", base, GRAVI_NBASE));
-                cpl_propertylist_set_comment (plist, qc_name, "mean over lbd");
-                
-                double coeff2 = gravi_table_get_value (oi_vis_SC, "PHASE_REF_COEFF", base, 2);
-                sprintf (qc_name, "ESO QC PHASE_REF_COEFF2 SC%s_P%d", GRAVI_BASE_NAME[base], pol+1);
-                cpl_propertylist_update_double (plist, qc_name, coeff2);
-                cpl_propertylist_set_comment (plist, qc_name, "[rad] 2sd order of FT phase");
-                
-                CPLCHECK_MSG("Cannot set QC parameter for OI_VIS for SC");
+              double pfactor = 0, vfactor = 0;
+              if (frame_qcs != NULL) {
+                cpl_size total_weight = 0;
+                for (int frame = 0; frame < nb_frame; frame++) {
+                  cpl_size weight = cpl_propertylist_get_long_long(frame_qcs[frame], "NROW");
+                  total_weight += weight;
+                  sprintf (qc_name, "ESO QC VFACTOR%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
+                  vfactor += weight * cpl_propertylist_get_double(frame_qcs[frame], qc_name);
+                  sprintf (qc_name, "ESO QC PFACTOR%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
+                  pfactor += weight * cpl_propertylist_get_double(frame_qcs[frame], qc_name);
+                }
+                vfactor /= total_weight;
+                pfactor /= total_weight;
+              } else {
+                vfactor = gravi_table_get_column_mean (oi_vis_SC, "V_FACTOR_WL", base, GRAVI_NBASE);
+                pfactor = gravi_table_get_column_mean (oi_vis_SC, "P_FACTOR", base, GRAVI_NBASE);
+              }
+
+              sprintf (qc_name, "ESO QC VFACTOR%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
+              cpl_propertylist_update_double(plist, qc_name, vfactor);
+              cpl_propertylist_set_comment (plist, qc_name, "mean v-factor");
+
+              sprintf (qc_name, "ESO QC PFACTOR%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
+              cpl_propertylist_update_double(plist, qc_name, pfactor);
+              cpl_propertylist_set_comment (plist, qc_name, "mean p-factor");
+              
+              sprintf (qc_name, "ESO QC GD_SC%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
+              cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_SC, "GDELAY", base, GRAVI_NBASE));
+              cpl_propertylist_set_comment (plist, qc_name, "[m] mean Group-Delay");
+              
+              sprintf (qc_name, "ESO QC VIS2_SC%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
+              cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis2_SC, "VIS2DATA", base, GRAVI_NBASE));
+              cpl_propertylist_set_comment (plist, qc_name, "mean over lbd");
+              
+              sprintf (qc_name, "ESO QC VIS2ERR_SC%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
+              cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis2_SC, "VIS2ERR", base, GRAVI_NBASE));
+              cpl_propertylist_set_comment (plist, qc_name, "mean over lbd");
+              
+              sprintf (qc_name, "ESO QC VISPHI_SC%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
+              cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_SC, "VISPHI", base, GRAVI_NBASE));
+              cpl_propertylist_set_comment (plist, qc_name, "[deg] mean over lbd");
+              
+              sprintf (qc_name, "ESO QC VISPHIERR_SC%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
+              cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_SC, "VISPHIERR", base, GRAVI_NBASE));
+              cpl_propertylist_set_comment (plist, qc_name, "[deg] mean over lbd");
+              
+              sprintf (qc_name, "ESO QC VISAMP_SC%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
+              cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_SC, "VISAMP", base, GRAVI_NBASE));
+              cpl_propertylist_set_comment (plist, qc_name, "mean over lbd");
+              
+              sprintf (qc_name, "ESO QC VISAMPERR_SC%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
+              cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_SC, "VISAMPERR", base, GRAVI_NBASE));
+              cpl_propertylist_set_comment (plist, qc_name, "mean over lbd");
+              
+              double coeff2 = gravi_table_get_value (oi_vis_SC, "PHASE_REF_COEFF", base, 2);
+              sprintf (qc_name, "ESO QC PHASE_REF_COEFF2 SC%s_P%d", GRAVI_BASE_NAME[base], pol+1);
+              cpl_propertylist_update_double (plist, qc_name, coeff2);
+              cpl_propertylist_set_comment (plist, qc_name, "[rad] 2sd order of FT phase");
+              
+              CPLCHECK_MSG("Cannot set QC parameter for OI_VIS for SC");
             } /* End loop on base */
             
             /* 
@@ -2422,17 +2440,33 @@ cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data, cpl_frameset* frames
             
             cpl_table * oi_T3_SC = gravi_data_get_oi_t3 (vis_data, GRAVI_SC, pol, npol_sc);
             
-            for (int clo = 0; clo < nclo; clo++){
-                
-                sprintf (qc_name, "ESO QC T3PHI_SC%s_P%d AVG", GRAVI_CLO_NAME[clo], pol+1);
-                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_T3_SC, "T3PHI", clo, nclo));
-                cpl_propertylist_set_comment (plist, qc_name, "[deg] mean over lbd");
-                
-                sprintf (qc_name, "ESO QC T3PHIERR_SC%s_P%d AVG", GRAVI_CLO_NAME[clo], pol+1);
-                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_T3_SC, "T3PHIERR", clo, nclo));
-                cpl_propertylist_set_comment (plist, qc_name, "[deg] mean over lbd");
-          
-                CPLCHECK_MSG("Cannot set QC parameter for OI_T3 for SC");
+            for (int clo = 0; clo < nclo; clo++) {
+              sprintf (qc_name, "ESO QC P3FACTOR%s_P%d AVG", GRAVI_CLO_NAME[clo], pol+1);
+              cpl_size total_weight = 0;
+              double p3factor = 0;
+              if (frame_qcs != NULL) {
+                for (int frame = 0; frame < nb_frame; frame++) {
+                  cpl_size weight = cpl_propertylist_get_long_long(frame_qcs[frame], "NROW");
+                  total_weight += weight;
+                  p3factor += weight * cpl_propertylist_get_double(frame_qcs[frame], qc_name);
+                }
+                p3factor /= total_weight;
+              } else {
+                p3factor = gravi_table_get_column_mean (oi_T3_SC, "P3_FACTOR", clo, nclo);
+              }
+
+              cpl_propertylist_update_double(plist, qc_name, p3factor);
+              cpl_propertylist_set_comment (plist, qc_name, "mean p3-factor");
+              
+              sprintf (qc_name, "ESO QC T3PHI_SC%s_P%d AVG", GRAVI_CLO_NAME[clo], pol+1);
+              cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_T3_SC, "T3PHI", clo, nclo));
+              cpl_propertylist_set_comment (plist, qc_name, "[deg] mean over lbd");
+              
+              sprintf (qc_name, "ESO QC T3PHIERR_SC%s_P%d AVG", GRAVI_CLO_NAME[clo], pol+1);
+              cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_T3_SC, "T3PHIERR", clo, nclo));
+              cpl_propertylist_set_comment (plist, qc_name, "[deg] mean over lbd");
+
+              CPLCHECK_MSG("Cannot set QC parameter for OI_T3 for SC");
             }/* End loop on triplets */
             
             /* 

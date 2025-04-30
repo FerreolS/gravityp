@@ -3187,9 +3187,9 @@ cpl_error_code gravi_compute_signals (gravi_data * p2vmred_data,
   
   CPLCHECK_MSG ("Cannot get header");
 
-    /* Get window width to use for FT P_FACTOR */
+  /* Get window width to use for FT P_FACTOR */
   cpl_size window_width = cpl_parameter_get_int(cpl_parameterlist_find_const(
-    parlist, "gravity.vis.pfactor-window-length"));
+  parlist, "gravity.vis.pfactor-window-length"));
 
   /* FIXME: probably doesn't work with npol_sc != npol_ft */
   if ( npol_sc != npol_ft ) {
@@ -3405,6 +3405,57 @@ cpl_error_code gravi_compute_signals (gravi_data * p2vmred_data,
   
 
   gravi_msg_function_exit(1);
+  return CPL_ERROR_NONE;
+}
+
+/*----------------------------------------------------------------------------*/
+/**
+ * @brief Copy PFACTOR and VFACTOR QCs so that they may be aggregated over all frames.
+ * 
+ * @param p2vmred_data  The P2VMREDUCED data.
+ * @param proplist      Propertylist to copy data into.
+ */
+/*----------------------------------------------------------------------------*/
+
+cpl_error_code gravi_copy_p2vm_qcs(gravi_data *p2vmred_data, cpl_propertylist *plist) {
+  cpl_ensure_code(p2vmred_data, CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code(plist, CPL_ERROR_NULL_INPUT);
+
+  cpl_propertylist *p2vmred_header = gravi_data_get_header (p2vmred_data);
+  CPLCHECK_MSG ("Cannot get header");
+
+  int nbase = 6, nclo = 4;
+  int npol_ft = gravi_pfits_get_pola_num (p2vmred_header, GRAVI_FT);
+  int npol_sc = gravi_pfits_get_pola_num (p2vmred_header, GRAVI_SC);
+  
+  cpl_table * vis_SC = gravi_data_get_oi_vis (p2vmred_data, GRAVI_SC, 0, npol_sc);
+  cpl_size nrow = cpl_table_get_nrow (vis_SC) / nbase;
+
+  for (int pol = 0; pol < CPL_MAX(npol_sc,npol_ft); pol++) {
+    for (int base = 0; base < nbase; base++) {        
+        char qc_name[100];
+
+        sprintf (qc_name, "ESO QC VFACTOR%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
+        const cpl_property *qc_val = cpl_propertylist_get_property_const(p2vmred_header, qc_name);
+        cpl_propertylist_append_property(plist, qc_val);
+
+        sprintf (qc_name, "ESO QC PFACTOR%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
+        qc_val = cpl_propertylist_get_property_const(p2vmred_header, qc_name);
+        cpl_propertylist_append_property(plist, qc_val);
+    }
+    CPLCHECK_MSG("Could not copy PFACTOR/VFACTOR");
+
+    for (int closure = 0; closure < nclo; closure++) {        
+        char qc_name[100];
+        
+        sprintf (qc_name, "ESO QC P3FACTOR%s_P%d AVG", GRAVI_CLO_NAME[closure], pol+1);
+        const cpl_property *qc_val = cpl_propertylist_get_property_const(p2vmred_header, qc_name);
+        cpl_propertylist_append_property(plist, qc_val);
+    }
+    CPLCHECK_INT("Could not copy P3FACTOR");
+  }
+
+  cpl_propertylist_append_long_long(plist, "NROW", nrow);
   return CPL_ERROR_NONE;
 }
 
