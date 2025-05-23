@@ -519,8 +519,8 @@ cpl_error_code gravi_apply_tf_phi( gravi_data * science,
 /*----------------------------------------------------------------------------*/
 
 gravi_data * gravi_calibrate_vis(gravi_data * vis_data, gravi_data ** tf_data, int num_tf, gravi_data * phi_tf_data,
-							 gravi_data * tf_science,
-							 const cpl_parameterlist * parlist)
+                                 gravi_data * tf_science,
+                                 const cpl_parameterlist * parlist)
 {
     gravi_msg_function_start(1);
     cpl_ensure (vis_data, CPL_ERROR_NULL_INPUT, NULL);
@@ -528,163 +528,171 @@ gravi_data * gravi_calibrate_vis(gravi_data * vis_data, gravi_data ** tf_data, i
     cpl_ensure (parlist,  CPL_ERROR_NULL_INPUT, NULL);
     cpl_ensure (num_tf>0, CPL_ERROR_NULL_INPUT, NULL);
 
-	int i;
-	gravi_data * vis_calib;
-	char * setup_science, * setup_tf;
+    int i;
+    gravi_data * vis_calib;
+    char * setup_science, * setup_tf;
 
-	/* Check the inputs */
-	cpl_ensure( (vis_data != NULL) && (tf_data != NULL), CPL_ERROR_NULL_INPUT, NULL );
+    /* Check the inputs */
+    cpl_ensure( (vis_data != NULL) && (tf_data != NULL), CPL_ERROR_NULL_INPUT, NULL );
 
-	if (gravi_param_get_bool (parlist, "gravity.viscal.separate-phase-calib"))
-		cpl_ensure(phi_tf_data != NULL, CPL_ERROR_NULL_INPUT, NULL);
+    if (gravi_param_get_bool (parlist, "gravity.viscal.separate-phase-calib"))
+        cpl_ensure(phi_tf_data != NULL, CPL_ERROR_NULL_INPUT, NULL);
 
-	/* 
-	 * Find out the TF files who have the same setup keywords
-	 * with the input SCIENCE file 
-	 */
-	
-	/* This will store the pointer to usefull TF data */
-	gravi_data ** used_tf_data = cpl_malloc (sizeof( gravi_data *) * num_tf);
-	cpl_msg_info (cpl_func,"Number of possible TF: %i", num_tf);
+    /* 
+     * Find out the TF files who have the same setup keywords
+     * with the input SCIENCE file 
+     */
 
-	/* Verbose the options */
-	double delta_t = gravi_param_get_double (parlist, "gravity.viscal.delta-time-calib");
-	cpl_msg_info (cpl_func, "Delta time to interpolate the TF: %f s (%f h)", delta_t, delta_t/3600.0);
+    /* This will store the pointer to usefull TF data */
+    gravi_data ** used_tf_data = cpl_malloc (sizeof( gravi_data *) * num_tf);
+    cpl_msg_info (cpl_func,"Number of possible TF: %i", num_tf);
 
-	int force_calib = gravi_param_get_bool (parlist, "gravity.viscal.force-calib");
-	cpl_msg_info (cpl_func,"Force calibration of the SCI by CALs: %s", force_calib?"T":"F");
-	
-	/* Get setup keywords of the input SCIENCE file */
-	setup_science = gravi_calib_setupstring (vis_data);
-	cpl_msg_info (cpl_func,"Setup of SCIENCE: %s", setup_science);
-	
-	CPLCHECK_NUL("Cannot build the setup string for SCIENCE");
+    /* Verbose the options */
+    double delta_t = gravi_param_get_double (parlist, "gravity.viscal.delta-time-calib");
+    cpl_msg_info (cpl_func, "Delta time to interpolate the TF: %f s (%f h)", delta_t, delta_t/3600.0);
 
-	/* Loop on the TF files */
-	int num_used_tf = 0;
-	for (i = 0; i < num_tf; i++){
+    int force_calib = gravi_param_get_bool (parlist, "gravity.viscal.force-calib");
+    cpl_msg_info (cpl_func,"Force calibration of the SCI by CALs: %s", force_calib?"T":"F");
 
-	  /* Get the setup string of this TF */
-	  setup_tf = gravi_calib_setupstring (tf_data[i]);
+    /* Get setup keywords of the input SCIENCE file */
+    setup_science = gravi_calib_setupstring (vis_data);
+    cpl_msg_info (cpl_func,"Setup of SCIENCE: %s", setup_science);
 
-	  /* Check if compatible with SCIENCE */
-	  if (!(strcmp (setup_tf, setup_science )) ) {
-		/* case same setup */
-		used_tf_data[num_used_tf] = tf_data[i];
-		num_used_tf ++;
-		cpl_msg_info (cpl_func,"Setup of TF file: %s -> keep", setup_tf);
-	  } else if (force_calib) {
-		/* case different setups but forced */
-		used_tf_data[num_used_tf] = tf_data[i];
-		num_used_tf ++;
-		cpl_msg_info (cpl_func,"Setup of TF file: %s -> keep  (force_calib)", setup_tf);
-	  } else 
-		/* case different setups */
-		cpl_msg_info (cpl_func,"Setup of TF file: %s -> discard", setup_tf);
-		
-	  cpl_free (setup_tf);
-	}
-	/* End loop on TF files */
+    CPLCHECK_NUL("Cannot build the setup string for SCIENCE");
 
-	if (num_used_tf == 0) {
-		cpl_free (used_tf_data);
-		cpl_error_set_message (cpl_func, CPL_ERROR_NULL_INPUT, "No calib file with the same keywords");
-		return NULL;
-	}
+    /* Loop on the TF files */
+    int num_used_tf = 0;
+    for (i = 0; i < num_tf; i++){
 
-	if (gravi_param_get_bool (parlist, "gravity.viscal.separate-phase-calib")){
-		 /* Get the setup string of phical TF */
-	  	setup_tf = gravi_calib_setupstring (phi_tf_data);
+        /* Get the setup string of this TF */
+        setup_tf = gravi_calib_setupstring (tf_data[i]);
 
-		/* Check if phical compatible with SCIENCE */
-		if (!force_calib && (strcmp (setup_tf, setup_science )) ) {
-			cpl_error_set_message (cpl_func, CPL_ERROR_NULL_INPUT, "Visphi calib file does not have the same keywords");
-			return NULL;
-		}
-			
-		cpl_free (setup_tf);
-	}
+        /* Check if compatible with SCIENCE */
+        if (!(strcmp (setup_tf, setup_science )) ) {
+            /* case same setup */
+            used_tf_data[num_used_tf] = tf_data[i];
+            num_used_tf ++;
+            cpl_msg_info (cpl_func,"Setup of TF file: %s -> keep", setup_tf);
+        } else if (force_calib) {
+            /* case different setups but forced */
+            used_tf_data[num_used_tf] = tf_data[i];
+            num_used_tf ++;
+            cpl_msg_info (cpl_func,"Setup of TF file: %s -> keep  (force_calib)", setup_tf);
+        } else 
+        /* case different setups */
+        cpl_msg_info (cpl_func,"Setup of TF file: %s -> discard", setup_tf);
 
-	/* Duplicate the data to create a calibrated dataset */
-	vis_calib = gravi_data_duplicate (vis_data);
+        cpl_free (setup_tf);
+    }
+    /* End loop on TF files */
 
-	/* Get the header */
-	cpl_propertylist * hdr_data = gravi_data_get_header (vis_calib);
-	
-	/* For each type of data SC / FT */
-	int type_data, ntype_data = 2;
-	for (type_data = 0; type_data < ntype_data ; type_data ++) {
+    if (num_used_tf == 0) {
+        cpl_free (used_tf_data);
+        cpl_error_set_message (cpl_func, CPL_ERROR_NULL_INPUT, "No calib file with the same keywords");
+        return NULL;
+    }
 
-	  /* Loop on polarisation */
-	  int pol, npol = gravi_pfits_get_pola_num( hdr_data, type_data );
-	  for ( pol= 0 ; pol < npol ; pol++ ) {
+    if (gravi_param_get_bool (parlist, "gravity.viscal.separate-phase-calib")){
+        /* Get the setup string of phical TF */
+        setup_tf = gravi_calib_setupstring (phi_tf_data);
 
-		/* Calibrate the VIS2 as a real quantity */
-		gravi_apply_tf_amp (vis_calib, tf_science, used_tf_data, num_used_tf,
-							GRAVI_OI_VIS2_EXT,
-							GRAVI_INSNAME(type_data, pol, npol),
-							"VIS2DATA", "VIS2ERR", 6, delta_t);
-		  
-		CPLCHECK_NUL("Cannot apply tf to VIS2DATA");
+        /* Check if phical compatible with SCIENCE */
+        if (!force_calib && (strcmp (setup_tf, setup_science )) ) {
+            cpl_error_set_message (cpl_func, CPL_ERROR_NULL_INPUT, "Visphi calib file does not have the same keywords");
+            return NULL;
+        }
 
-		/* Calibrate the VISAMP as a real quantity --> to be discussed */
-		gravi_apply_tf_amp (vis_calib, tf_science, used_tf_data, num_used_tf,
-							GRAVI_OI_VIS_EXT,
-							GRAVI_INSNAME(type_data, pol, npol),
-							"VISAMP", "VISAMPERR", 6, delta_t);
+        cpl_free (setup_tf);
+    }
 
-		CPLCHECK_NUL("Cannot apply tf to VISAMP");
+    /* Duplicate the data to create a calibrated dataset */
+    vis_calib = gravi_data_duplicate (vis_data);
 
-		/* Calibrate the T3AMP as a scalar quantity --> to be discussed */
-		gravi_apply_tf_amp (vis_calib, tf_science, used_tf_data, num_used_tf,
-							GRAVI_OI_T3_EXT,
-							GRAVI_INSNAME(type_data, pol, npol),
-							"T3AMP", "T3AMPERR", 4, delta_t);
+    /* Get the header */
+    cpl_propertylist * hdr_data = gravi_data_get_header (vis_calib);
 
-		CPLCHECK_NUL("Cannot apply tf to T3AMP");
+    /* For each type of data SC / FT */
+    int type_data, ntype_data = 2;
+    for (type_data = 0; type_data < ntype_data ; type_data ++) {
 
-		/* Calibrate the VISPHI --> to be discussed for the astrometry */
-		if (gravi_param_get_bool (parlist, "gravity.viscal.separate-phase-calib")) {
-			gravi_apply_tf_phi (vis_calib, tf_science, &phi_tf_data, 1,
-								GRAVI_OI_VIS_EXT,
-								GRAVI_INSNAME(type_data, pol, npol),
-								"VISPHI", "VISPHIERR", 6, delta_t);
-		} else {
-			gravi_apply_tf_phi (vis_calib, tf_science, used_tf_data, num_used_tf,
-								GRAVI_OI_VIS_EXT,
-								GRAVI_INSNAME(type_data, pol, npol),
-								"VISPHI", "VISPHIERR", 6, delta_t);
-		}
-		CPLCHECK_NUL("Cannot apply tf to VISPHI");
+        /* Loop on polarisation */
+        int pol, npol = gravi_pfits_get_pola_num( hdr_data, type_data );
+        for ( pol= 0 ; pol < npol ; pol++ ) {
 
-		/* Calibrate the T3PHI as a phasor */
-		gravi_apply_tf_phi (vis_calib, tf_science, used_tf_data, num_used_tf,
-							GRAVI_OI_T3_EXT,
-							GRAVI_INSNAME(type_data, pol, npol),
-							"T3PHI", "T3PHIERR", 4, delta_t);
-		CPLCHECK_NUL("Cannot apply tf to T3PHI");
-		
-		/* Calibrate the FLUX as a real quantity  --> not calibrated */
-		if (gravi_param_get_bool (parlist, "gravity.viscal.calib-flux")){
-	        gravi_apply_tf_amp (vis_calib, tf_science, used_tf_data, num_used_tf,
-	                            GRAVI_OI_FLUX_EXT,
-	                            GRAVI_INSNAME(type_data, pol, npol),
-	                            "FLUX", "FLUXERR", 4, delta_t);
+            /* Calibrate the VIS2 as a real quantity */
+            gravi_apply_tf_amp (vis_calib, tf_science, used_tf_data, num_used_tf,
+                                GRAVI_OI_VIS2_EXT,
+                                GRAVI_INSNAME(type_data, pol, npol),
+                                "VIS2DATA", "VIS2ERR", 6, delta_t);
 
-	        CPLCHECK_NUL("Cannot apply tf to FLUX");
-		}
+            CPLCHECK_NUL("Cannot apply tf to VIS2DATA");
 
-	  }
-	  /* End loop on polarisation */
-	}
-	/* End loop on data_type */
+            /* Calibrate the VISAMP as a real quantity --> to be discussed */
+            gravi_apply_tf_amp (vis_calib, tf_science, used_tf_data, num_used_tf,
+                                GRAVI_OI_VIS_EXT,
+                                GRAVI_INSNAME(type_data, pol, npol),
+                                "VISAMP", "VISAMPERR", 6, delta_t);
 
-	/* Free */
-	cpl_free (used_tf_data);
-	cpl_free (setup_science);
-	
-	gravi_msg_function_exit(1);
-	return vis_calib;
+            CPLCHECK_NUL("Cannot apply tf to VISAMP");
+
+            /* Calibrate the T3AMP as a scalar quantity --> to be discussed */
+            gravi_apply_tf_amp (vis_calib, tf_science, used_tf_data, num_used_tf,
+                                GRAVI_OI_T3_EXT,
+                                GRAVI_INSNAME(type_data, pol, npol),
+                                "T3AMP", "T3AMPERR", 4, delta_t);
+
+            CPLCHECK_NUL("Cannot apply tf to T3AMP");
+
+            /* Calibrate the VISPHI --> to be discussed for the astrometry */
+            if (gravi_param_get_bool (parlist, "gravity.viscal.separate-phase-calib")) {
+                gravi_apply_tf_phi (vis_calib, tf_science, &phi_tf_data, 1,
+                                    GRAVI_OI_VIS_EXT,
+                                    GRAVI_INSNAME(type_data, pol, npol),
+                                    "VISPHI", "VISPHIERR", 6, delta_t);
+            } else {
+                gravi_apply_tf_phi (vis_calib, tf_science, used_tf_data, num_used_tf,
+                                    GRAVI_OI_VIS_EXT,
+                                    GRAVI_INSNAME(type_data, pol, npol),
+                                    "VISPHI", "VISPHIERR", 6, delta_t);
+            }
+            CPLCHECK_NUL("Cannot apply tf to VISPHI");
+
+            /* Calibrate the T3PHI as a phasor */
+            gravi_apply_tf_phi (vis_calib, tf_science, used_tf_data, num_used_tf,
+                                GRAVI_OI_T3_EXT,
+                                GRAVI_INSNAME(type_data, pol, npol),
+                                "T3PHI", "T3PHIERR", 4, delta_t);
+            CPLCHECK_NUL("Cannot apply tf to T3PHI");
+
+            /* Calibrate the FLUX as a real quantity  --> not calibrated */
+            if (gravi_param_get_bool (parlist, "gravity.viscal.calib-flux")){
+                char * fluxcolumn;
+                cpl_table * sci_table = gravi_data_get_oi_table (vis_calib, GRAVI_OI_FLUX_EXT, GRAVI_INSNAME(type_data, pol, npol));
+                if(cpl_table_has_column(sci_table, "FLUXDATA"))
+                    fluxcolumn = cpl_sprintf("%s","FLUXDATA");
+                else
+                    fluxcolumn = cpl_sprintf("%s", "FLUX");
+
+                cpl_msg_info(cpl_func, "Calibrating flux column %s", fluxcolumn);
+                gravi_apply_tf_amp (vis_calib, tf_science, used_tf_data, num_used_tf,
+                                GRAVI_OI_FLUX_EXT,
+                                GRAVI_INSNAME(type_data, pol, npol),
+                                fluxcolumn, "FLUXERR", 4, delta_t);
+                cpl_free(fluxcolumn);
+                CPLCHECK_NUL("Cannot apply tf to FLUX");
+            }
+
+        }
+        /* End loop on polarisation */
+    }
+    /* End loop on data_type */
+
+    /* Free */
+    cpl_free (used_tf_data);
+    cpl_free (setup_science);
+
+    gravi_msg_function_exit(1);
+    return vis_calib;
 }
 
 
@@ -778,223 +786,236 @@ cpl_size gravi_get_row_in_cat (cpl_table * diam_table, double ra, double dec, do
 gravi_data * gravi_compute_tf (gravi_data * vis_data, gravi_data * diamcat_data)
 {
     gravi_msg_function_start(1);
-	cpl_ensure (vis_data, CPL_ERROR_NULL_INPUT, NULL);
+    cpl_ensure (vis_data, CPL_ERROR_NULL_INPUT, NULL);
   
-	gravi_data * tf_data = NULL;
-	cpl_propertylist * plist;
-	cpl_table * tf_vistable;
-	cpl_table * tf_vis2table;
-	cpl_table * oi_wavelength;
-	int nv, type_data;
-	double diameter, diameter_err, lambda, r_vis, r_vis2, tf_v, tf_v2;
-	char qc_name[90];
+    gravi_data * tf_data = NULL;
+    cpl_propertylist * plist;
+    cpl_table * tf_vistable;
+    cpl_table * tf_vis2table;
+    cpl_table * oi_wavelength;
+    int nv, type_data;
+    double diameter, diameter_err, lambda, r_vis, r_vis2, tf_v, tf_v2;
+    char qc_name[90];
 
-	/* Get the OIFITS table */
-	tf_data = gravi_data_duplicate (vis_data);
-	plist = gravi_data_get_header (tf_data);
+    /* Get the OIFITS table */
+    tf_data = gravi_data_duplicate (vis_data);
+    plist = gravi_data_get_header (tf_data);
 
-	/* Loop on SC / FT */
-	for (type_data = 0; type_data < 2; type_data ++) {
-	    cpl_table * diam_table;
-	    double sep = 99.0;
-	    cpl_size row_cat = -1;
+    /* Loop on SC / FT */
+    for (type_data = 0; type_data < 2; type_data ++) {
+        cpl_table * diam_table;
+        double sep = 99.0;
+        cpl_size row_cat = -1;
+        char * diameter_source = NULL;
 
-	    /* Search in catalogue. Actually this should only
-	     * be for SINGLE since catalogue won't be accurate for dual */
-	    if (diamcat_data) {
-	      /* Get the matching row */
-	      diam_table = gravi_data_get_table_x (diamcat_data, 0);
-	      row_cat = gravi_get_row_in_cat (diam_table,
-	    							  gravi_pfits_get_type_raep (plist, type_data),
-	    							  gravi_pfits_get_type_decep (plist, type_data),
-									  &sep);
+        /* Search in catalogue. Actually this should only
+         * be for SINGLE since catalogue won't be accurate for dual */
+        if (diamcat_data) {
+            /* Get the matching row */
+            diam_table = gravi_data_get_table_x (diamcat_data, 0);
+            row_cat = gravi_get_row_in_cat (diam_table,
+                                            gravi_pfits_get_type_raep (plist, type_data),
+                                            gravi_pfits_get_type_decep (plist, type_data),
+                                            &sep);
 
-		  /* Use it only if closest than 5" */
-	      if ( (row_cat > -1) && (sep < 5.0) ) {
-			cpl_msg_info (cpl_func, "Find match in DIAMETER_CAT (best sep=%.2f arcsec)", sep);
-			diameter = cpl_table_get (diam_table, "UDDK", row_cat, NULL);
-			diameter_err = cpl_table_get (diam_table, "e_LDD", row_cat, NULL);
-	      } else {
-			cpl_msg_warning (cpl_func, "No match in DIAMETER_CAT (best sep=%.2f arcsec), use the HEADER value instead", sep);
-			diameter = gravi_pfits_get_diameter (plist, type_data);
-			diameter_err = 0.15;
-		  }
-		  
-	    } else {
-	      cpl_msg_info (cpl_func, "No DIAMETER_CAT, use the HEADER value if any");
-		  diameter = gravi_pfits_get_diameter (plist, type_data);
-		  diameter_err = 0.15;
-	    }
-
-		/* Verbose about diameter value with a warning if weird value 
-		 * Or a return NULL is value is zero */
-		if ( diameter>=4.0 ) {
-		  cpl_msg_warning (cpl_func,"Diameter for %s target: %.3f (+-%.3f) mas. Expected ?", GRAVI_TYPE(type_data), diameter, diameter_err);
+            /* Use it only if closest than 5" */
+            if ( (row_cat > -1) && (sep < 5.0) ) {
+                cpl_msg_info (cpl_func, "Find match in DIAMETER_CAT (best sep=%.2f arcsec)", sep);
+                diameter = cpl_table_get (diam_table, "UDDK", row_cat, NULL);
+                diameter_err = cpl_table_get (diam_table, "e_LDD", row_cat, NULL);
+                diameter_source = cpl_sprintf("%s","CAT");
+            } else {
+                cpl_msg_warning (cpl_func, "No match in DIAMETER_CAT (best sep=%.2f arcsec), use the HEADER value instead", sep);
+                diameter = gravi_pfits_get_diameter (plist, type_data);
+                diameter_err = 0.15;
+                diameter_source = cpl_sprintf("%s","HDR");
+            }
 		}
-		else if (diameter <= 0.0 && !gravi_data_is_internal(vis_data)) {
-		  cpl_msg_warning (cpl_func, "Diameter for %s target: 0.0 mas. Probably wrong, check parameter value", GRAVI_TYPE(type_data));
-		  /* FREE (gravi_data_delete, tf_data);
-		  return NULL;*/
-		}
-		else {
-		  cpl_msg_info(cpl_func,"Diameter for %s target: %.3f (+-%.3f) mas", GRAVI_TYPE(type_data), diameter, diameter_err);
-		}
+        else {
+            cpl_msg_info (cpl_func, "No DIAMETER_CAT, use the HEADER value if any");
+            diameter = gravi_pfits_get_diameter (plist, type_data);
+            diameter_err = 0.15;
+            diameter_source = cpl_sprintf("%s","HDR");
+        }
+
+        /* Verbose about diameter value with a warning if weird value 
+         * Or a return NULL is value is zero */
+        if ( diameter>=4.0 ) {
+            cpl_msg_warning (cpl_func,"Diameter for %s target: %.3f (+-%.3f) mas. Expected ?", GRAVI_TYPE(type_data), diameter, diameter_err);
+        }
+        else if (diameter <= 0.0 && !gravi_data_is_internal(vis_data)) {
+            cpl_msg_warning (cpl_func, "Diameter for %s target: 0.0 mas. Probably wrong, check parameter value", GRAVI_TYPE(type_data));
+        }
+        else {
+            cpl_msg_info(cpl_func,"Diameter for %s target: %.3f (+-%.3f) mas", GRAVI_TYPE(type_data), diameter, diameter_err);
+        }
 		
-		/* Loop on polarisations */
-		int pol,npol = gravi_pfits_get_pola_num (plist, type_data);
-		for (pol = 0; pol < npol; pol ++){
+        /* Loop on polarisations */
+        int pol,npol = gravi_pfits_get_pola_num (plist, type_data);
+        for (pol = 0; pol < npol; pol ++)
+		{
 
-			oi_wavelength = gravi_data_get_oi_wave (vis_data, type_data, pol,npol);
-			tf_vistable = gravi_data_get_oi_vis (tf_data, type_data, pol,npol);
-			tf_vis2table = gravi_data_get_oi_vis2 (tf_data, type_data, pol,npol);
+            oi_wavelength = gravi_data_get_oi_wave (vis_data, type_data, pol,npol);
+            tf_vistable = gravi_data_get_oi_vis (tf_data, type_data, pol,npol);
+            tf_vis2table = gravi_data_get_oi_vis2 (tf_data, type_data, pol,npol);
 
-			if ((tf_vistable == NULL) || (tf_vis2table == NULL) || (oi_wavelength == NULL)){
-			  FREE (gravi_data_delete, tf_data);
-			  cpl_error_set_message (cpl_func, CPL_ERROR_NULL_INPUT,
-									 "Missing OI_VIS or OI_VIS2 or OI_WAVELENGTH");
-			  return NULL;
+            if ((tf_vistable == NULL) || (tf_vis2table == NULL) || (oi_wavelength == NULL)){
+                FREE (gravi_data_delete, tf_data);
+                cpl_error_set_message (cpl_func, CPL_ERROR_NULL_INPUT,
+                    "Missing OI_VIS or OI_VIS2 or OI_WAVELENGTH");
+                return NULL;
+            }
+
+            /* Construction of the data */
+
+            /* Loop on row in the table -- warning, we here suppose the OI_VIS and
+             * OI_VIS2 have the same number of rows */
+            int nrow = cpl_table_get_nrow (tf_vistable);
+            int nwave = cpl_table_get_column_depth (tf_vis2table, "VIS2DATA" );
+            for (cpl_size row = 0; row < nrow; row ++){
+
+                /* Compute norm for the baseline in meters */
+                r_vis  = sqrt (pow (cpl_table_get_double (tf_vistable, "UCOORD", row, &nv), 2) +
+                    pow (cpl_table_get_double (tf_vistable, "VCOORD", row, &nv), 2));
+				
+                r_vis2 = sqrt (pow (cpl_table_get_double (tf_vis2table, "UCOORD", row, &nv), 2) +
+                    pow (cpl_table_get_double (tf_vis2table, "VCOORD", row, &nv), 2));
+
+                CPLCHECK_NUL ("Cannot extract UVCOORD");
+
+                /* Compute the model visibility from uniform disk */
+                cpl_array * model_vis = cpl_array_new (nwave, CPL_TYPE_DOUBLE);
+                cpl_array * model_vis2 = cpl_array_new (nwave, CPL_TYPE_DOUBLE);
+
+                /* Loop on wave */
+                for (cpl_size wave = 0; wave < nwave ; wave ++){
+                    /* This computation is validated */
+                    lambda = cpl_table_get (oi_wavelength, "EFF_WAVE", wave, &nv);
+                    tf_v  = gravi_visibility_UD (r_vis, diameter, lambda);
+                    tf_v2 = pow (gravi_visibility_UD (r_vis2, diameter, lambda), 2.0);
+
+                    /* Set into the temporary array */
+                    cpl_array_set_double (model_vis, wave, tf_v);
+                    cpl_array_set_double (model_vis2, wave, tf_v2);
+                }
+                /* End loop on wave */
+
+                /* Divide the observed visibilities by the model for VISAMP */
+                cpl_array * tf_vis  = cpl_table_get_data_array (tf_vistable, "VISAMP")[row];
+                cpl_array * tf_visErr  = cpl_table_get_data_array (tf_vistable, "VISAMPERR")[row];
+                cpl_array_divide (tf_vis, model_vis);
+                cpl_array_divide (tf_visErr, model_vis);
+				
+                /* Divide the observed visibilities by the model for VIS2 */
+                cpl_array * tf_vis2 = cpl_table_get_data_array (tf_vis2table, "VIS2DATA")[row];
+                cpl_array * tf_vis2Err = cpl_table_get_data_array (tf_vis2table, "VIS2ERR")[row];
+                cpl_array_divide (tf_vis2, model_vis2);
+                cpl_array_divide (tf_vis2Err, model_vis2);
+
+                CPLCHECK_NUL("Cannot set the tf array");
+
+                /* Compute the relative error on the TF at 2.2 microns 
+                 * due to the diameter uncertainty */
+                double errRelTF = fabs (( gravi_visibility_UD (r_vis, (diameter+diameter_err), 2.2e-6) -
+                                          gravi_visibility_UD (r_vis, (diameter-diameter_err), 2.2e-6) ) /
+                                          gravi_visibility_UD (r_vis, diameter, 2.2e-6) );
+				
+                /* Note that VISPHI, T3PHI, T3AMP, VISDATA are already in
+                 * output table since they are duplicated */
+
+                /* Add QC params. FIXME: deal with QC parameter if multiple files
+                 * - *mean* over file QC TF VISAMP_SC12_P1 AVG
+                 * - *p2p* over file 
+                 * FIXME: put both polarisation in a single QC */
+
+                /* Get baseline name and id */
+                int base=row%6;
+
+                sprintf (qc_name, "ESO QC TF VISMOD_%s%s RELERR", GRAVI_TYPE(type_data), GRAVI_BASE_NAME[base]);
+                gravi_pfits_update_double (plist, qc_name, errRelTF);
+                cpl_propertylist_set_comment (plist, qc_name, "TF rel.err from diameter at 2.2um");
+                CPLCHECK_NUL ("QC TF VISMOD RELERR");
+
+                sprintf (qc_name, "ESO QC TF VISAMP_%s%s_P%d MED", GRAVI_TYPE(type_data), GRAVI_BASE_NAME[base], pol+1);
+                gravi_pfits_update_double (plist, qc_name, cpl_array_get_median (tf_vis));
+                cpl_propertylist_set_comment (plist, qc_name, "TF. VIS median over lbd.");
+                CPLCHECK_NUL ("QC TF VIS AVG");
+
+                sprintf (qc_name, "ESO QC TF VIS2_%s%s_P%d MED", GRAVI_TYPE(type_data), GRAVI_BASE_NAME[base], pol+1);
+                gravi_pfits_update_double (plist, qc_name, cpl_array_get_median (tf_vis2));
+                cpl_propertylist_set_comment (plist, qc_name, "TF. VIS2 median over lbd.");
+                CPLCHECK_NUL ("QC TF VIS2 AVG");
+
+                /* Free Memory */
+                cpl_array_delete (model_vis2);
+                cpl_array_delete (model_vis);
+            }
+            /* End loop on rows */
+        }
+        /* End loop on pol */
+
+        /* QC params with the diameter info */
+        sprintf (qc_name, "ESO QC TF CAL_%s DIAM",GRAVI_TYPE(type_data));
+        gravi_pfits_update_double (plist, qc_name, diameter);
+        sprintf (qc_name, "ESO QC TF CAL_%s DIAM ERR",GRAVI_TYPE(type_data));
+        gravi_pfits_update_double (plist, qc_name, diameter_err);
+        sprintf (qc_name, "ESO QC TF CAL_%s DIAM SOURCE",GRAVI_TYPE(type_data));
+        cpl_propertylist_update_string (plist, qc_name, diameter_source);
+        cpl_free(diameter_source);
+
+        /* Compute the transmission QC only if a
+         * valid match with catalog is found */
+        if ( (row_cat > -1) && (sep < 5.0) ) {
+
+            /* Check if consistent setup (all ATs or all UTs) */
+            cpl_table * oi_array = gravi_data_get_table (vis_data, GRAVI_OI_ARRAY_EXT);
+            const char sta = *cpl_table_get_string (oi_array, "TEL_NAME", 0);
+            if (*cpl_table_get_string (oi_array, "TEL_NAME", 1) != sta ||
+                *cpl_table_get_string (oi_array, "TEL_NAME", 2) != sta ||
+                *cpl_table_get_string (oi_array, "TEL_NAME", 3) != sta)
+            {
+                cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT, "AT/UT mode is not supported");
+                return NULL;
+            }
+
+            /* Compute in [photons/s/m2] */
+            double diam = 1.0;
+            if      (sta=='U') { diam = 8.0; cpl_msg_info (cpl_func, "Use UTs"); }
+            else if (sta=='A') { diam = 1.8; cpl_msg_info (cpl_func, "Use ATs"); }
+            else               { diam = 1.0; cpl_msg_warning (cpl_func, "Cannot find the diameter of telescope"); }
+
+            /* Get the expected flux in [photons/s] */
+            double Kmag = cpl_table_get (diam_table, "Kmag", row_cat, NULL);
+            double flux0 = 1.71173e+09 * pow (10.0, -Kmag/2.5) * (CPL_MATH_PI * pow (diam/2, 2));
+            cpl_msg_info (cpl_func, "Use Kmag=%.2f for QC.TRANS", Kmag);
+
+            /* Loop on beam */
+            for (int tel = 0; tel < 4; tel++) {
+                double flux = 0.0;
+
+                /* Get the total observed flux in [e/s] */
+                sprintf (qc_name, "ESO QC FLUXRATE_%s%i_P1 SUM",GRAVI_TYPE(type_data),tel+1);
+                flux += gravi_pfits_get_double_silentdefault (plist, qc_name, 0.);
+                sprintf (qc_name, "ESO QC FLUXRATE_%s%i_P2 SUM",GRAVI_TYPE(type_data),tel+1);
+                flux += gravi_pfits_get_double_silentdefault (plist, qc_name, 0.);
+                CPLCHECK_NUL ("Cannot get fluxrate");
+
+                /* Add the QC parameter */
+                sprintf (qc_name, "ESO QC TF TRANS_%s%i",GRAVI_TYPE(type_data),tel+1);
+                gravi_pfits_update_double (plist, qc_name, flux / flux0 * 100.0);
+                cpl_propertylist_set_comment (plist, qc_name, "[%] Total transmission");
+                cpl_msg_info (cpl_func, "%s = %.2f%%", qc_name, flux / flux0 * 100.0);
+                CPLCHECK_NUL ("QC TRANS");
+
+                sprintf (qc_name, "ESO QC TF CAL_%s DIAM CATNAME",GRAVI_TYPE(type_data));
+                cpl_propertylist_update_string (plist, qc_name, cpl_table_get_string(diam_table, "Name", row_cat));
 			}
+        } /* End computation of TF */
+    }
+    /* End loop on type_data */
 
-			/* Construction of the data */
-
-			/* Loop on row in the table -- warning, we here suppose the OI_VIS and
-			 * OI_VIS2 have the same number of rows */
-			int nrow = cpl_table_get_nrow (tf_vistable);
-			int nwave = cpl_table_get_column_depth (tf_vis2table, "VIS2DATA" );
-			for (cpl_size row = 0; row < nrow; row ++){
-
-				/* Compute norm for the baseline in meters */
-				r_vis  = sqrt (pow (cpl_table_get_double (tf_vistable, "UCOORD", row, &nv), 2) +
-							   pow (cpl_table_get_double (tf_vistable, "VCOORD", row, &nv), 2));
-				
-				r_vis2 = sqrt (pow (cpl_table_get_double (tf_vis2table, "UCOORD", row, &nv), 2) +
-							   pow (cpl_table_get_double (tf_vis2table, "VCOORD", row, &nv), 2));
-
-				CPLCHECK_NUL ("Cannot extract UVCOORD");
-
-				/* Compute the model visibility from uniform disk */
-				cpl_array * model_vis = cpl_array_new (nwave, CPL_TYPE_DOUBLE);
-				cpl_array * model_vis2 = cpl_array_new (nwave, CPL_TYPE_DOUBLE);
-
-				/* Loop on wave */
-				for (cpl_size wave = 0; wave < nwave ; wave ++){
-					/* This computation is validated */
-					lambda = cpl_table_get (oi_wavelength, "EFF_WAVE", wave, &nv);
-					tf_v  = gravi_visibility_UD (r_vis, diameter, lambda);
-					tf_v2 = pow (gravi_visibility_UD (r_vis2, diameter, lambda), 2.0);
-
-					/* Set into the temporary array */
-					cpl_array_set_double (model_vis, wave, tf_v);
-					cpl_array_set_double (model_vis2, wave, tf_v2);
-				}
-				/* End loop on wave */
-
-				/* Divide the observed visibilities by the model for VISAMP */
-				cpl_array * tf_vis  = cpl_table_get_data_array (tf_vistable, "VISAMP")[row];
-				cpl_array * tf_visErr  = cpl_table_get_data_array (tf_vistable, "VISAMPERR")[row];
-				cpl_array_divide (tf_vis, model_vis);
-				cpl_array_divide (tf_visErr, model_vis);
-				
-				/* Divide the observed visibilities by the model for VIS2 */
-				cpl_array * tf_vis2 = cpl_table_get_data_array (tf_vis2table, "VIS2DATA")[row];
-				cpl_array * tf_vis2Err = cpl_table_get_data_array (tf_vis2table, "VIS2ERR")[row];
-				cpl_array_divide (tf_vis2, model_vis2);
-				cpl_array_divide (tf_vis2Err, model_vis2);
-
-				CPLCHECK_NUL("Cannot set the tf array");
-
-				/* Compute the relative error on the TF at 2.2 microns 
-				 * due to the diameter uncertainty */
-				double errRelTF = fabs (( gravi_visibility_UD (r_vis, (diameter+diameter_err), 2.2e-6) -
-										  gravi_visibility_UD (r_vis, (diameter-diameter_err), 2.2e-6) ) /
-										gravi_visibility_UD (r_vis, diameter, 2.2e-6) );
-				
-				/* Note that VISPHI, T3PHI, T3AMP, VISDATA are already in
-				 * output table since they are duplicated */
-
-				/* Add QC params. FIXME: deal with QC parameter if multiple files
-				 * - *mean* over file QC TF VISAMP_SC12_P1 AVG
-				 * - *p2p* over file 
-				 * FIXME: put both polarisation in a single QC */
-
-				/* Get baseline name and id */
-				int base=row%6;
-
-				sprintf (qc_name, "ESO QC TF VISMOD_%s%s RELERR", GRAVI_TYPE(type_data), GRAVI_BASE_NAME[base]);
-				gravi_pfits_update_double (plist, qc_name, errRelTF);
-				cpl_propertylist_set_comment (plist, qc_name, "TF rel.err from diameter at 2.2um");
-				CPLCHECK_NUL ("QC TF VISMOD RELERR");
-
-				sprintf (qc_name, "ESO QC TF VISAMP_%s%s_P%d MED", GRAVI_TYPE(type_data), GRAVI_BASE_NAME[base], pol+1);
-				gravi_pfits_update_double (plist, qc_name, cpl_array_get_median (tf_vis));
-				cpl_propertylist_set_comment (plist, qc_name, "TF. VIS median over lbd.");
-				CPLCHECK_NUL ("QC TF VIS AVG");
-
-				sprintf (qc_name, "ESO QC TF VIS2_%s%s_P%d MED", GRAVI_TYPE(type_data), GRAVI_BASE_NAME[base], pol+1);
-				gravi_pfits_update_double (plist, qc_name, cpl_array_get_median (tf_vis2));
-				cpl_propertylist_set_comment (plist, qc_name, "TF. VIS2 median over lbd.");
-				CPLCHECK_NUL ("QC TF VIS2 AVG");
-
-				/* Free Memory */
-				cpl_array_delete (model_vis2);
-				cpl_array_delete (model_vis);
-			}
-			/* End loop on rows */
-		}
-		/* End loop on pol */
-
-		
-		/* Compute the transmission QC only if a
-		 * valid match with catalog is found */
-		if ( (row_cat > -1) && (sep < 5.0) ) {
-
-		  /* Check if consistent setup (all ATs or all UTs) */
-		  cpl_table * oi_array = gravi_data_get_table (vis_data, GRAVI_OI_ARRAY_EXT);
-		  const char sta = *cpl_table_get_string (oi_array, "TEL_NAME", 0);
-		  if (*cpl_table_get_string (oi_array, "TEL_NAME", 1) != sta ||
-			  *cpl_table_get_string (oi_array, "TEL_NAME", 2) != sta ||
-			  *cpl_table_get_string (oi_array, "TEL_NAME", 3) != sta)
-		  {
-			cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT, "AT/UT mode is not supported");
-			return NULL;
-		  }
-
-		  /* Compute in [photons/s/m2] */
-		  double diam = 1.0;
-		  if      (sta=='U') { diam = 8.0; cpl_msg_info (cpl_func, "Use UTs"); }
-		  else if (sta=='A') { diam = 1.8; cpl_msg_info (cpl_func, "Use ATs"); }
-		  else               { diam = 1.0; cpl_msg_warning (cpl_func, "Cannot find the diameter of telescope"); }
-
-		  /* Get the expected flux in [photons/s] */
-		  double Kmag = cpl_table_get (diam_table, "Kmag", row_cat, NULL);
-		  double flux0 = 1.71173e+09 * pow (10.0, -Kmag/2.5) * (CPL_MATH_PI * pow (diam/2, 2));
-		  cpl_msg_info (cpl_func, "Use Kmag=%.2f for QC.TRANS", Kmag);
-
-		  /* Loop on beam */
-		  for (int tel = 0; tel < 4; tel++) {
-			double flux = 0.0;
-
-			/* Get the total observed flux in [e/s] */
-			sprintf (qc_name, "ESO QC FLUXRATE_%s%i_P1 SUM",GRAVI_TYPE(type_data),tel+1);
-			flux += gravi_pfits_get_double_silentdefault (plist, qc_name, 0.);
-			sprintf (qc_name, "ESO QC FLUXRATE_%s%i_P2 SUM",GRAVI_TYPE(type_data),tel+1);
-			flux += gravi_pfits_get_double_silentdefault (plist, qc_name, 0.);
-			CPLCHECK_NUL ("Cannot get fluxrate");
-
-			/* Add the QC parameter */
-			sprintf (qc_name, "ESO QC TF TRANS_%s%i",GRAVI_TYPE(type_data),tel+1);
-			gravi_pfits_update_double (plist, qc_name, flux / flux0 * 100.0);
-			cpl_propertylist_set_comment (plist, qc_name, "[%] Total transmission");
-			cpl_msg_info (cpl_func, "%s = %.2f%%", qc_name, flux / flux0 * 100.0);
-			CPLCHECK_NUL ("QC TRANS");
-		  }
-		} /* End computation of TF */
-		
-	}
-	/* End loop on type_data */
-
-	gravi_msg_function_exit(1);
-	return tf_data;
+    gravi_msg_function_exit(1);
+    return tf_data;
 }
 
 /*----------------------------------------------------------------------------*/

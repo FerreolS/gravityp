@@ -716,6 +716,10 @@ static int gravity_vis(cpl_frameset * frameset,
 		 */
 		
 		frame = cpl_frameset_get_position (recipe_frameset, ivis);
+        /* Add this frame to the used frameset */
+        cpl_frameset_insert(used_frameset, cpl_frame_duplicate (frame));
+
+        /* Start processing */
 		data = gravi_data_load_rawframe (frame, current_frameset);
 		gravi_data_patch (data, patch_frameset);
         gravi_data_detector_cleanup (data, parlist);

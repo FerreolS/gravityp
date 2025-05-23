@@ -2274,11 +2274,7 @@ cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data, cpl_frameset* frames
             for (int base = 0; base < GRAVI_NBASE; base++) {
                 
                 /* Add the QC parameters for FT */
-                
-                sprintf (qc_name, "ESO QC VISPHIERR_FT%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
-                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_FT, "VISPHIERR", base, GRAVI_NBASE));
-                cpl_propertylist_set_comment (plist, qc_name, "[deg] mean over lbd");
-                
+
                 sprintf (qc_name, "ESO QC VIS2_FT%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
                 cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis2_FT, "VIS2DATA", base, GRAVI_NBASE));
                 cpl_propertylist_set_comment (plist, qc_name, "mean over lbd");
@@ -2286,6 +2282,14 @@ cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data, cpl_frameset* frames
                 sprintf (qc_name, "ESO QC VIS2ERR_FT%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
                 cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis2_FT, "VIS2ERR", base, GRAVI_NBASE));
                 cpl_propertylist_set_comment (plist, qc_name, "mean over lbd");
+                
+                sprintf (qc_name, "ESO QC VISPHI_FT%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
+                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_FT, "VISPHI", base, GRAVI_NBASE));
+                cpl_propertylist_set_comment (plist, qc_name, "[deg] mean over lbd");
+                
+                sprintf (qc_name, "ESO QC VISPHIERR_FT%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
+                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_FT, "VISPHIERR", base, GRAVI_NBASE));
+                cpl_propertylist_set_comment (plist, qc_name, "[deg] mean over lbd");
                 
                 sprintf (qc_name, "ESO QC VISAMP_FT%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
                 cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_vis_FT, "VISAMP", base, GRAVI_NBASE));
@@ -3399,69 +3403,78 @@ cpl_error_code gravi_vis_smooth (gravi_data * oi_data,
                                  cpl_size nsamp_flx,
                                  cpl_size maxdeg)
 {
-  gravi_msg_function_start(1);
-  cpl_ensure_code (oi_data, CPL_ERROR_NULL_INPUT);
+    gravi_msg_function_start(1);
+    cpl_ensure_code (oi_data, CPL_ERROR_NULL_INPUT);
   
-  cpl_table * oi_table;
+    cpl_table * oi_table;
 
-  /* Create output data */
-  cpl_propertylist * header = gravi_data_get_header (oi_data);
+    /* Create output data */
+    cpl_propertylist * header = gravi_data_get_header (oi_data);
 
-  int type_data = GRAVI_SC;
-  int npol = gravi_pfits_get_pola_num (header, type_data);
+    int type_data = GRAVI_SC;
+    int npol = gravi_pfits_get_pola_num (header, type_data);
   
-  for (int pol = 0 ; pol < npol ; pol++ ) {
+    for (int pol = 0 ; pol < npol ; pol++ ) {
 
-	/* OI_FLUX */
-	oi_table = gravi_data_get_oi_flux (oi_data, type_data, pol, npol);
+        /* OI_FLUX */
+        oi_table = gravi_data_get_oi_flux (oi_data, type_data, pol, npol);
         gravi_vis_flag_nan (oi_table);
-	gravi_vis_flag_lower (oi_table, "FLUXERR", "FLAG", 0.0);
-	gravi_vis_smooth_amp (oi_table, "FLUX", "FLUXERR", nsamp_flx);
-	gravi_vis_flag_relative_threshold (oi_table, "FLUXERR", "FLUX", "FLAG", 1.0);
-	CPLCHECK_MSG ("Cannot resamp OI_FLUX");
+        gravi_vis_flag_lower (oi_table, "FLUXERR", "FLAG", 0.0);
+        if (cpl_table_has_column(oi_table, "FLUXDATA"))
+        {
+            cpl_msg_info(cpl_func, "Smoothing OIFITS2 FLUXDATA column");
+            gravi_vis_smooth_amp (oi_table, "FLUXDATA", "FLUXERR", nsamp_flx);
+            gravi_vis_flag_relative_threshold (oi_table, "FLUXERR", "FLUXDATA", "FLAG", 1.0);
+        }
+        else
+        {
+            gravi_vis_smooth_amp (oi_table, "FLUX", "FLUXERR", nsamp_flx);
+            gravi_vis_flag_relative_threshold (oi_table, "FLUXERR", "FLUX", "FLAG", 1.0);
+        }
+        CPLCHECK_MSG ("Cannot resamp OI_FLUX");
 
-	/* OI_VIS2 */
-	oi_table = gravi_data_get_oi_vis2 (oi_data, type_data, pol, npol);
+        /* OI_VIS2 */
+        oi_table = gravi_data_get_oi_vis2 (oi_data, type_data, pol, npol);
         gravi_vis_flag_nan (oi_table);
-	gravi_vis_flag_lower (oi_table, "VIS2ERR", "FLAG", 0.);
+        gravi_vis_flag_lower (oi_table, "VIS2ERR", "FLAG", 0.);
         gravi_vis_flag_median (oi_table, "VIS2ERR", "FLAG", 5.0);    
-	gravi_vis_smooth_amp (oi_table, "VIS2DATA", "VIS2ERR", nsamp_vis);
+        gravi_vis_smooth_amp (oi_table, "VIS2DATA", "VIS2ERR", nsamp_vis);
         gravi_vis_fit_amp (oi_table, "VIS2DATA", "VIS2ERR", maxdeg);
-	gravi_vis_flag_threshold (oi_table, "VIS2ERR", "FLAG", 1.);
-	CPLCHECK_MSG ("Cannot resamp OI_VIS2");
+        gravi_vis_flag_threshold (oi_table, "VIS2ERR", "FLAG", 1.);
+        CPLCHECK_MSG ("Cannot resamp OI_VIS2");
 
-	/* OI_VIS */
-	oi_table = gravi_data_get_oi_vis (oi_data, type_data, pol, npol);
+        /* OI_VIS */
+        oi_table = gravi_data_get_oi_vis (oi_data, type_data, pol, npol);
         gravi_vis_flag_nan (oi_table);
-	gravi_vis_flag_lower (oi_table, "VISAMPERR", "FLAG", 0.);
+        gravi_vis_flag_lower (oi_table, "VISAMPERR", "FLAG", 0.);
         gravi_vis_flag_median (oi_table, "VISPHIERR", "FLAG", 5.0);
-	gravi_vis_smooth_amp (oi_table, "VISAMP", "VISAMPERR", nsamp_vis);
-	gravi_vis_smooth_phi (oi_table, "VISPHI", "VISPHIERR", nsamp_vis);
+        gravi_vis_smooth_amp (oi_table, "VISAMP", "VISAMPERR", nsamp_vis);
+        gravi_vis_smooth_phi (oi_table, "VISPHI", "VISPHIERR", nsamp_vis);
         gravi_vis_fit_amp (oi_table, "VISAMP", "VISAMPERR", maxdeg);
         gravi_vis_fit_amp (oi_table, "VISPHI", "VISPHIERR", maxdeg);
-	gravi_vis_smooth_amp (oi_table, "RVIS", "RVISERR", nsamp_flx);
-	gravi_vis_smooth_amp (oi_table, "IVIS", "IVISERR", nsamp_flx);
-	gravi_vis_flag_threshold (oi_table, "VISAMPERR", "FLAG", 1.);
+        gravi_vis_smooth_amp (oi_table, "RVIS", "RVISERR", nsamp_flx);
+        gravi_vis_smooth_amp (oi_table, "IVIS", "IVISERR", nsamp_flx);
+        gravi_vis_flag_threshold (oi_table, "VISAMPERR", "FLAG", 1.);
     
         gravi_msg_warning ("FIXME", "VISDATA is not properly smooth !!");
-	CPLCHECK_MSG ("Cannot resamp OI_VIS");
-	
-	/* OI_T3 */
-	oi_table = gravi_data_get_oi_t3 (oi_data, type_data, pol, npol);
-        gravi_vis_flag_nan (oi_table);
-	gravi_vis_flag_lower (oi_table, "T3AMPERR", "FLAG", 0.0);
-        gravi_vis_flag_median (oi_table, "T3PHIERR", "FLAG", 5.0);
-	gravi_vis_smooth_amp (oi_table, "T3AMP", "T3AMPERR", nsamp_vis);
-	gravi_vis_smooth_phi (oi_table, "T3PHI", "T3PHIERR", nsamp_vis);
-	gravi_vis_fit_amp (oi_table, "T3AMP", "T3AMPERR", maxdeg);
-	gravi_vis_fit_amp (oi_table, "T3PHI", "T3PHIERR", maxdeg);
-	gravi_vis_flag_threshold (oi_table, "T3AMPERR", "FLAG", 1.0);
-	CPLCHECK_MSG ("Cannot resamp OI_T3");
-	  
-  } /* End loop on polarisation */
+        CPLCHECK_MSG ("Cannot resamp OI_VIS");
 
-  gravi_msg_function_exit(1);
-  return CPL_ERROR_NONE;
+        /* OI_T3 */
+        oi_table = gravi_data_get_oi_t3 (oi_data, type_data, pol, npol);
+        gravi_vis_flag_nan (oi_table);
+        gravi_vis_flag_lower (oi_table, "T3AMPERR", "FLAG", 0.0);
+        gravi_vis_flag_median (oi_table, "T3PHIERR", "FLAG", 5.0);
+        gravi_vis_smooth_amp (oi_table, "T3AMP", "T3AMPERR", nsamp_vis);
+        gravi_vis_smooth_phi (oi_table, "T3PHI", "T3PHIERR", nsamp_vis);
+        gravi_vis_fit_amp (oi_table, "T3AMP", "T3AMPERR", maxdeg);
+        gravi_vis_fit_amp (oi_table, "T3PHI", "T3PHIERR", maxdeg);
+        gravi_vis_flag_threshold (oi_table, "T3AMPERR", "FLAG", 1.0);
+        CPLCHECK_MSG ("Cannot resamp OI_T3");
+
+    } /* End loop on polarisation */
+
+    gravi_msg_function_exit(1);
+    return CPL_ERROR_NONE;
 }
 
 /*----------------------------------------------------------------------------*/

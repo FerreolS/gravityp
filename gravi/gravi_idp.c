@@ -142,7 +142,21 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
         /* This is the mean INT_TIME, which includes duplicated entries due to the several polarizations.
            Since it is a mean, the final value should be the same */
         sprintf (qc_name, "EXPTIME");
-        double mean_int_time = gravi_table_get_column_flagged_mean(oi_vis2_SC_allpol, "INT_TIME");
+        double mean_int_time = 0.0;
+        cpl_size valid_elem = 0;
+        cpl_size nrow = cpl_table_get_nrow (oi_vis2_SC_allpol);
+        double * inttime = cpl_table_get_data_double (oi_vis2_SC_allpol, "INT_TIME");
+        for (cpl_size r=0; r<nrow;r++) 
+        {
+            if (inttime[r])
+            {
+                mean_int_time += inttime[r];
+                valid_elem++;
+            }
+        }
+
+        if(valid_elem)
+            mean_int_time = mean_int_time / valid_elem;
         cpl_propertylist_update_double (idp_plist, qc_name, mean_int_time);
         cpl_propertylist_set_comment (idp_plist, qc_name, "Exposure time");
          /* This is the sum of all INT_TIME divided by the number of baselines. The mean is multiplied
@@ -150,14 +164,19 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
            aggregated. Finally divided by the number of baselines as specified in PIPE-9900 */
         if(!cpl_propertylist_has(header, "TEXPTIME"))
         {
-            cpl_size nsets = cpl_table_get_nrow(oi_vis2_SC_allpol) / GRAVI_NBASE ;
             double texptime = 0;
-            for (cpl_size  set = 0 ; set < nsets ; set++)
-            {
-                cpl_table * int_time_this_set = cpl_table_extract(oi_vis2_SC_allpol, GRAVI_NBASE * set, GRAVI_NBASE);
-                double max_int_time = gravi_table_get_column_flagged_max(int_time_this_set, "INT_TIME");
-                texptime += max_int_time;
-                cpl_table_delete(int_time_this_set);
+            for (int pol = 0; pol < npol_sc; pol++) {
+                cpl_table * this_pol_table = gravi_data_get_oi_vis2 (vis_data, GRAVI_SC, pol, npol_sc);
+                double this_pol_texptime = 0;
+                cpl_size nsets = cpl_table_get_nrow(this_pol_table) / GRAVI_NBASE ;
+                for (cpl_size  set = 0 ; set < nsets ; set++)
+                {
+                    cpl_table *  int_time_this_set = cpl_table_extract(this_pol_table, GRAVI_NBASE * set, GRAVI_NBASE);
+                    double max_int_time = gravi_table_get_column_flagged_max(int_time_this_set, "INT_TIME");
+                    this_pol_texptime += max_int_time;
+                    cpl_table_delete(int_time_this_set);
+                }
+                texptime = fmax(texptime, this_pol_texptime);
             }
             
             sprintf (qc_name, "TEXPTIME");
@@ -317,7 +336,9 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
         cpl_frameset_iterator *it = cpl_frameset_iterator_new(frameset);
         while ((frame = cpl_frameset_iterator_get(it)) != NULL) {
             if (strcmp(cpl_frame_get_tag(frame), GRAVI_SINGLE_SCIENCE_RAW) == 0 || 
-                strcmp(cpl_frame_get_tag(frame), GRAVI_DUAL_SCIENCE_RAW) == 0)
+                strcmp(cpl_frame_get_tag(frame), GRAVI_DUAL_SCIENCE_RAW) == 0 || 
+                strcmp(cpl_frame_get_tag(frame), GRAVI_SINGLE_CALIB_RAW) == 0 || 
+                strcmp(cpl_frame_get_tag(frame), GRAVI_DUAL_CALIB_RAW) == 0)
             {
                 snprintf(prov_keyword, 7, "PROV%zu",i_prov);
                 const char * filename = cpl_frame_get_filename(frame);
@@ -333,26 +354,29 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
         }
         cpl_frameset_iterator_delete(it);
     }
-        
+
     if (gravi_data_has_extension(vis_data, GRAVI_OI_ARRAY_EXT))
     {
         cpl_table * oi_array = gravi_data_get_table (vis_data, GRAVI_OI_ARRAY_EXT);
-        cpl_table_new_column(oi_array, "FOV", CPL_TYPE_DOUBLE);
-        cpl_table_new_column(oi_array, "FOVTYPE", CPL_TYPE_STRING);
-        double fov;
-        const char * telname = gravi_conf_get_telname (0, header);
-        if (telname == NULL) {
-            cpl_msg_warning(cpl_func, "Cannot get TELNAME, FOV is not determined");
-            fov = 0.0;
-        } else {
-            if (telname[0] == 'U')
-                fov = 0.03;  // Hard-coded UT FOV
-            else
-                fov = 0.14;  // Hard-coded AT FOV
-        }
+        if(!cpl_table_has_column(oi_array, "FOV"))
+        {
+            cpl_table_new_column(oi_array, "FOV", CPL_TYPE_DOUBLE);
+            cpl_table_new_column(oi_array, "FOVTYPE", CPL_TYPE_STRING);
+            double fov;
+            const char * telname = gravi_conf_get_telname (0, header);
+            if (telname == NULL) {
+                cpl_msg_warning(cpl_func, "Cannot get TELNAME, FOV is not determined");
+                fov = 0.0;
+            } else {
+                if (telname[0] == 'U')
+                    fov = 0.03;  // Hard-coded UT FOV
+                else
+                    fov = 0.14;  // Hard-coded AT FOV
+            }
 
-        cpl_table_fill_column_window_double(oi_array, "FOV",  0, cpl_table_get_nrow(oi_array), fov);
-        cpl_table_fill_column_window_string(oi_array, "FOVTYPE",  0, cpl_table_get_nrow(oi_array),"RADIUS");
+            cpl_table_fill_column_window_double(oi_array, "FOV",  0, cpl_table_get_nrow(oi_array), fov);
+            cpl_table_fill_column_window_string(oi_array, "FOVTYPE",  0, cpl_table_get_nrow(oi_array),"RADIUS");
+        }
     }
 
     /* Delete scratch tables */

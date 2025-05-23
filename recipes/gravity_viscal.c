@@ -457,7 +457,7 @@ static int gravity_viscal(cpl_frameset            * frameset,
                 cpl_msg_info (cpl_func, "*** TF %i over %i to be used for visphi ***", j+1, nb_frame_calib);
 
                 gravi_data_save_new (vis_calib, frameset, NULL, NULL, parlist,
-                             NULL, frame, "gravity_vis",
+                             NULL, frame, "gravity_viscal",
                              NULL, GRAVI_VISPHI_TF_CALIB(data_mode));
                 CPLCHECK_GOTO ("Cannot save the TF", cleanup_rawtf);
 
@@ -466,7 +466,7 @@ static int gravity_viscal(cpl_frameset            * frameset,
             }
         } else {
             gravi_data_save_new (vis_calib, frameset, NULL, NULL, parlist,
-                             NULL, frame, "gravity_vis",
+                             NULL, frame, "gravity_viscal",
                              NULL, GRAVI_TF_CALIB(data_mode));
             CPLCHECK_GOTO ("Cannot save the TF", cleanup_rawtf);
 
@@ -536,7 +536,7 @@ static int gravity_viscal(cpl_frameset            * frameset,
       CPLCHECK_GOTO("Cannot compute ZP", cleanup_zp);
       
       gravi_data_save_new (zero_data, frameset, "output.fits", NULL, parlist,
-                           used_frameset, NULL, "gravity_vis",
+                           used_frameset, NULL, "gravity_viscal",
                            NULL, GRAVI_ZP_CAL);
       
       CPLCHECK_GOTO("Cannot save ZP", cleanup_zp);
@@ -570,12 +570,16 @@ static int gravity_viscal(cpl_frameset            * frameset,
         cpl_msg_info (cpl_func, "Computing QC parameters for calibrated visibilities");
         cpl_propertylist * idp_hdr = gravi_idp_compute(calibrated,  gravi_data_get_header (calibrated),
                     current_frameset);
+        /* For this product only 1 input is used, i.e., 
+         there is a 1-1 relation between uncalibrated and calibrated science */
+        cpl_propertylist_update_int (idp_hdr, "NCOMBINE", 1);
+
         cpl_propertylist * extra_header = gravi_data_get_extra_primary_header (calibrated);
         cpl_propertylist_append(extra_header, idp_hdr);
         cpl_propertylist_delete(idp_hdr);
 
         gravi_data_save_new (calibrated, frameset, NULL, NULL, parlist,
-                             current_frameset, frame, "gravity_vis",
+                             current_frameset, frame, "gravity_viscal",
                              NULL, GRAVI_VIS_CALIBRATED(data_mode));
         
         CPLCHECK_GOTO("Cannot save the calibrated visibility", cleanup_calib);
@@ -584,7 +588,7 @@ static int gravity_viscal(cpl_frameset            * frameset,
         data_mode = gravi_data_frame_get_mode (frame);
         
         gravi_data_save_new (tf_science, frameset, NULL, NULL, parlist,
-                             current_frameset, frame, "gravity_vis", NULL,
+                             current_frameset, frame, "gravity_viscal", NULL,
                              GRAVI_TF_SCIENCE(data_mode));
         
         CPLCHECK_GOTO("Cannot save the TF interpolated for this visibility", cleanup_calib);

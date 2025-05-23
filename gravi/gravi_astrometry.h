@@ -22,9 +22,6 @@
 
 #include <cpl.h>
 
-#include <gsl/gsl_matrix.h>
-#include <gsl/gsl_vector.h>
-
 #include "gravi_data.h"
 
 typedef struct _astrometry_data_ astro_data;
