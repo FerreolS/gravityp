@@ -1,0 +1,48 @@
+default_parameters: &default
+  is_default: yes
+  parameter_metadata:
+    $associate_calibrators: "Strategy to select calibrator. 
+      Valid options are:
+      'night'             Use all available calibrators in the same night as the science observations, 
+                          regardless of the observing program (default).
+      'obs.prog.id'       Use calibrators of the same observing program of the same night.
+                          It can use calibrators for different targets.
+      'obs.container.id'  Use calibrators of the same observing container of the same night. It uses
+                          only calibrators for the same observing sequence."
+    $match_exposure_time: "Are calibrators with exposure times different from science data processed?
+      Valid values are:
+      'det2.seq1.dit'     Only calibrators with the same exposure time as the science frame are processed.
+      'instrume'          Calibrators with different exposure times are also processed. In order to use them
+                          to calibrate science, the parameter in the vical recipe force-calib has to be set 
+                          to  'TRUE'. "
+  workflow_parameters: &default_w
+    $associate_calibrators: "night"
+    $match_exposure_time: "instrume"
+  recipe_parameters: &default_r
+    target_visibilities:
+      gravity.test.reduce-acq-cam: "TRUE"
+    calibrator_visibilities:
+      gravity.test.reduce-acq-cam: "FALSE"
+    calibrate_visibilities:
+      gravity.viscal.force-calib: "TRUE"
+    calibrate_pre-computed_visibilities:
+      gravity.viscal.force-calib: "TRUE"
+
+qc0_parameters:
+  <<: *default
+  is_default: no
+
+science_parameters:
+  <<: *default
+  is_default: no
+  workflow_parameters:
+    <<: *default_w
+    $match_exposure_time: "det2.seq1.dit"
+  recipe_parameters:
+    <<: *default_r
+    calibrator_visibilities:
+      gravity.test.reduce-acq-cam: "TRUE"
+    calibrate_visibilities:
+      gravity.viscal.force-calib: "FALSE"
+    calibrate_pre-computed_visibilities:
+      gravity.viscal.force-calib: "FALSE"

@@ -25,7 +25,7 @@ DISTCLEANFILES = *~
 
 COMPILE_FIRST =
 
-TOPSUBDIRS = irplib hdrl gravi recipes reflex regtests
+TOPSUBDIRS = irplib hdrl gravi recipes reports workflows reflex
 
 COMPILE_LAST =
 

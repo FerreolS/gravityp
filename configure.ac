@@ -1,6 +1,6 @@
 # Process this file with autoconf to produce a configure script.
 
-AC_INIT([GRAVITY Instrument Pipeline], [1.7.0b1], [https://support.eso.org],
+AC_INIT([GRAVITY Instrument Pipeline], [1.9.0], [https://support.eso.org],
 [gravity])
 AC_PREREQ([2.59])
 
@@ -104,7 +104,6 @@ AC_CONFIG_FILES(Makefile
                 reflex/gravity_viscal.xml
                 reflex/gravity_mastercalib.xml
                 recipes/Makefile
-                regtests/Makefile
-                regtests/tests/Makefile)
-
+                reports/Makefile
+                workflows/Makefile)
 AC_OUTPUT
