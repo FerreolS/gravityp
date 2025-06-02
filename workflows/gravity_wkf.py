@@ -47,7 +47,7 @@ calibrator_visibilities = (task('calibrator_visibilities')
                            .with_associated_input(static_param)
                            .with_associated_input(eop_param, min_ret=0)
                            .with_associated_input(diameter_catalog, min_ret=0)
-                           .with_meta_targets([qc1calib, calchecker])
+                           .with_meta_targets([qc1calib, calchecker, idp])
                            .build())
 
 # - Task that computes the uncalibrated visibilites for the science target
@@ -61,7 +61,7 @@ target_visiblities = (task('target_visibilities')
                       .with_associated_input(static_param)
                       .with_associated_input(eop_param, min_ret=0)
                       .with_associated_input(diameter_catalog, min_ret=0)
-                      .with_meta_targets([qc0, calchecker])
+                      .with_meta_targets([qc0, calchecker, idp])
                       .build())
 
 # Subworkflow that computes the calibrated visibilities, either starting from the raw data or from pre-processed data

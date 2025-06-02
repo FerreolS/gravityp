@@ -20,17 +20,29 @@ default_parameters: &default
     $match_exposure_time: "instrume"
   recipe_parameters: &default_r
     target_visibilities:
-      gravity.test.reduce-acq-cam: "TRUE"
+      gravity.test.reduce-acq-cam: "FALSE"
+      gravity.dfs.astro-file: "TRUE"
+      gravity.signal.opd-pupil-stddev-max-sc: 0
+      gravity.vis.vis-correction-sc: "NONE"
+      gravity.vis.phase-ref-sc: "SELF_REF"
+      gravity.vis.output-phase-sc: "SELF_VISPHI"
     calibrator_visibilities:
       gravity.test.reduce-acq-cam: "FALSE"
+      gravity.dfs.astro-file: "TRUE"
+      gravity.signal.opd-pupil-stddev-max-sc: 0
+      gravity.vis.vis-correction-sc: "NONE"
+      gravity.vis.phase-ref-sc: "SELF_REF"
+      gravity.vis.output-phase-sc: "SELF_VISPHI"
     calibrate_visibilities:
       gravity.viscal.force-calib: "TRUE"
     calibrate_pre-computed_visibilities:
       gravity.viscal.force-calib: "TRUE"
 
+
 qc0_parameters:
   <<: *default
   is_default: no
+
 
 science_parameters:
   <<: *default
@@ -40,9 +52,47 @@ science_parameters:
     $match_exposure_time: "det2.seq1.dit"
   recipe_parameters:
     <<: *default_r
+    target_visibilities:
+      gravity.test.reduce-acq-cam: "TRUE"
+      gravity.dfs.astro-file: "FALSE"
     calibrator_visibilities:
       gravity.test.reduce-acq-cam: "TRUE"
+      gravity.dfs.astro-file: "FALSE"
     calibrate_visibilities:
       gravity.viscal.force-calib: "FALSE"
     calibrate_pre-computed_visibilities:
       gravity.viscal.force-calib: "FALSE"
+  packaging_config: &default_pkg
+    calibrator_visibilities:
+      - $DATASET/$TIMESTAMP/:ASTROREDUCED_$arcfile$: [ ^ASTROREDUCED$ ]
+      - $DATASET/$TIMESTAMP/SINGLE_SKY_$arcfile$: [ ^SINGLE_SKY$ ]
+      - $DATASET/$TIMESTAMP/SINGLE_CALIBRATOR_VISIBILITY_$arcfile$: [ ^SINGLE_CAL_VIS$ ]
+      - $DATASET/$TIMESTAMP/DUAL_SKY_$arcfile$: [ ^DUAL_SKY$ ]
+      - $DATASET/$TIMESTAMP/DUAL_CALIBRATOR_VISIBILITY_$arcfile$: [ ^DUAL_CAL_VIS$ ]
+    target_visibilities:
+      - $DATASET/$TIMESTAMP/:ASTROREDUCED_$arcfile$: [ ^ASTROREDUCED$ ]
+      - $DATASET/$TIMESTAMP/SINGLE_SKY_$arcfile$: [ ^SINGLE_SKY$ ]
+      - $DATASET/$TIMESTAMP/SINGLE_TARGET_VISIBILITY_$arcfile$: [ ^SINGLE_SCI_VIS$ ]
+      - $DATASET/$TIMESTAMP/DUAL_SKY_$arcfile$: [ ^DUAL_SKY$ ]
+      - $DATASET/$TIMESTAMP/DUAL_TARGET_VISIBILITY_$arcfile$: [ ^DUAL_SCI_VIS$ ]
+    calibrate_visibilities:
+      - $DATASET/$TIMESTAMP/DUAL_TARGET_CALIBRATED_VISIBILITY: [ ^DUAL_SCI_VIS_CALIBRATED$ ]
+      - $DATASET/$TIMESTAMP/SINGLE_TARGET_CALIBRATED_VISIBILITY: [ ^SINGLE_SCI_VIS_CALIBRATED$ ]
+      - $DATASET/$TIMESTAMP/SINGLE_CALIBRATOR_TRANSFER_FUNCTION: [ ^SINGLE_CAL_TF$ ]
+      - $DATASET/$TIMESTAMP/SINGLE_TARGET_TRANSFER_FUNCTION: [ ^SINGLE_SCI_TF$ ]
+      - $DATASET/$TIMESTAMP/DUAL_CALIBRATOR_TRANSFER_FUNCTION: [ ^DUAL_CAL_TF$ ]
+      - $DATASET/$TIMESTAMP/DUAL_TARGET_TRANSFER_FUNCTION: [ ^DUAL_SCI_TF$ ]
+    calibrate_pre-computed_visibilities:
+      - $DATASET/$TIMESTAMP/DUAL_TARGET_CALIBRATED_VISIBILITY: [ ^DUAL_SCI_VIS_CALIBRATED$ ]
+      - $DATASET/$TIMESTAMP/SINGLE_TARGET_CALIBRATED_VISIBILITY: [ ^SINGLE_SCI_VIS_CALIBRATED$ ]
+      - $DATASET/$TIMESTAMP/SINGLE_CALIBRATOR_TRANSFER_FUNCTION: [ ^SINGLE_CAL_TF$ ]
+      - $DATASET/$TIMESTAMP/SINGLE_TARGET_TRANSFER_FUNCTION: [ ^SINGLE_SCI_TF$ ]
+      - $DATASET/$TIMESTAMP/DUAL_CALIBRATOR_TRANSFER_FUNCTION: [ ^DUAL_CAL_TF$ ]
+      - $DATASET/$TIMESTAMP/DUAL_TARGET_TRANSFER_FUNCTION: [ ^DUAL_SCI_TF$ ]
+
+
+idp_parameters:
+  <<: *default
+  is_default: no
+  packaging_config:
+    <<: *default_pkg

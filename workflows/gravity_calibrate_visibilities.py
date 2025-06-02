@@ -23,7 +23,7 @@ def calibrate_visibilities(target_visiblities, calibrator_visibilities):
 
     # - This task creates calibrated visibilites from uncalibrated visibilites (e.g. downloaded from the
     # ESO science archive, or generated from previous reductions).
-    calibrate_pre_computed_visibilites = (task('calibrate_pre-computed_visibilities')
+    calibrate_pre_computed_visibilites = (task('calibrate_pre_computed_visibilities')
                                           .with_recipe('gravity_viscal')
                                           .with_main_input(target_pre_computed_visibilities)
                                           .with_associated_input(calibrator_pre_computed_visibilites, min_ret=1,
