@@ -369,13 +369,14 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
                 fov = 0.0;
             } else {
                 if (telname[0] == 'U')
-                    fov = 0.03;  // Hard-coded UT FOV
+                    fov = 0.0285;  // Hard-coded UT FOV
                 else
-                    fov = 0.14;  // Hard-coded AT FOV
+                    fov = 0.126;  // Hard-coded AT FOV
             }
 
             cpl_table_fill_column_window_double(oi_array, "FOV",  0, cpl_table_get_nrow(oi_array), fov);
             cpl_table_fill_column_window_string(oi_array, "FOVTYPE",  0, cpl_table_get_nrow(oi_array),"RADIUS");
+            cpl_table_set_column_unit(oi_array, "FOV", "arcsec");
         }
     }
 
