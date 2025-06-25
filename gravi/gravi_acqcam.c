@@ -636,6 +636,7 @@ cpl_error_code gravi_acqcam_pupil_v2(cpl_image * mean_img, cpl_imagelist * acqca
         gravi_data *static_param_data)
 {
 gravi_msg_function_start(1);
+ 
 cpl_ensure_code(acqcam_imglist, CPL_ERROR_NULL_INPUT);
 cpl_ensure_code(header, CPL_ERROR_NULL_INPUT);
 cpl_ensure_code(acqcam_table, CPL_ERROR_NULL_INPUT);
@@ -2755,7 +2756,8 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
                                     gravi_data * input_data,
                                     gravi_data * sky_data,
                                     gravi_data * dark_data,
-                                    gravi_data * static_param_data)
+                                    gravi_data * static_param_data,
+                                    cpl_parameterlist * parlist)
 {
     gravi_msg_function_start(1);
     cpl_ensure_code (output_data, CPL_ERROR_NULL_INPUT);
@@ -2826,19 +2828,28 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
                         acqcam_table, o_header, static_param_data);
     CPLCHECK_MSG ("Cannot reduce acquisition field images");
 
-    /* Compute PUPIL columns with algorithm 2.0*/
-    gravi_acqcam_pupil_v2 (mean_img, acqcam_imglist_v2, header,
-                        acqcam_table, o_header, static_param_data);
-    CPLCHECK_MSG ("Cannot reduce pupil images");
+    /* Compute the PUPIL and save output only if the flag is to TRUE */
+    if (!strcmp (gravi_param_get_string (parlist, "gravity.test.reduce-acq-cam"), "TRUE"))
+    {
+       /* Compute PUPIL columns with algorithm 2.0 */
+        gravi_acqcam_pupil_v2 (mean_img, acqcam_imglist_v2, header,
+                               acqcam_table, o_header, static_param_data);
+        CPLCHECK_MSG ("Cannot reduce pupil images");
 
-    /* Add this output table in the gravi_data */
-    cpl_propertylist * plist_acq_cam = cpl_propertylist_new ();
-    cpl_propertylist_update_string (plist_acq_cam, "INSNAME", INSNAME_ACQ);
+        /* Add this output table in the gravi_data */
+        cpl_propertylist * plist_acq_cam = cpl_propertylist_new ();
+        cpl_propertylist_update_string (plist_acq_cam, "INSNAME", INSNAME_ACQ);
 	gravi_data_add_img (output_data, plist_acq_cam, GRAVI_IMAGING_DATA_ACQ_EXT, mean_img);
 	CPLCHECK_MSG ("Cannot add acqcam_table in data");
 
 	gravi_data_add_table (output_data, NULL, GRAVI_OI_VIS_ACQ_EXT, acqcam_table);
 	CPLCHECK_MSG ("Cannot add acqcam_table in data");
+    }
+    else
+    {
+        FREE (cpl_table_delete, acqcam_table);
+        FREE (cpl_image_delete, mean_img);
+    }
 
     gravi_msg_function_exit(1);
     return CPL_ERROR_NONE;

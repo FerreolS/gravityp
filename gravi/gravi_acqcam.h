@@ -44,6 +44,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
                                     gravi_data * input_data,
                                     gravi_data * sky_data,
                                     gravi_data * dark_data,
-                                    gravi_data * static_param_frameset);
+                                    gravi_data * static_param_frameset,
+                                    cpl_parameterlist * parlist);
 
 #endif 	/* !GRAVI_ACQCAM_H */

@@ -187,9 +187,12 @@ static int gravity_vis_from_p2vmred_create(cpl_plugin * plugin)
     gravi_parameter_add_compute_vis (recipe->parameters, isCalib);
 
     /* Reduce ACQ_CAM */
-    p = cpl_parameter_new_value ("gravity.test.reduce-acq-cam", CPL_TYPE_BOOL,
-                                 "If TRUE, reduced ACQ_CAM images",
-                                 "gravity.test", FALSE);
+    p = cpl_parameter_new_enum ("gravity.test.reduce-acq-cam", CPL_TYPE_STRING,
+                                "If TRUE, reduced ACQ_CAM images. If QC, compute only\n "
+                                "the QC parameters of the field part. If FALSE, ignore\n " 
+                                "completely the acquisition camera.",
+                                "gravity.test", "FALSE",
+                                3, "TRUE", "FALSE", "QC");
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "reduce-acq-cam");
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
     cpl_parameterlist_append (recipe->parameters, p);
@@ -451,7 +454,7 @@ static int gravity_vis_from_p2vmred(cpl_frameset * frameset,
         }
             
         /* Copy the acquisition camera if requested */
-        if (current_frame < 0 && gravi_param_get_bool (parlist, "gravity.test.reduce-acq-cam"))
+        if (current_frame < 0 && !strcmp (gravi_param_get_string (parlist, "gravity.test.reduce-acq-cam"), "TRUE"))
         {
    	    cpl_msg_info (cpl_func, "Copy ACQ into the VIS file");
             gravi_data_copy_ext_insname (tmpvis_data, p2vmred_data, GRAVI_IMAGING_DATA_ACQ_EXT, INSNAME_ACQ);
