@@ -2741,6 +2741,13 @@ cpl_error_code gravi_acqcam_field (cpl_image * mean_img,
  *                      will be created, with ndit * ntel rows.
  * @param input_data:   The input gravi_data here the ACQ imagelist is
  *                      read.
+ * @param sky_data:     The input gravi_data of the sky.
+ * @param dark_data:    The input gravi_data of the dark.
+ * @param static_param_data: the input gravi_data with static parameters.
+ * @param saveAcqTable: If 0, the pupil is not reduced and the acq table is
+ *                      not saved in the output data. The field is still 
+ *                      reduced and the correspodning QC are produced.
+ *
  * \exception CPL_ERROR_NULL_INPUT input data is missing
  *
  * The routine process the PUPIL sensor. It creates a table with
@@ -2757,7 +2764,7 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
                                     gravi_data * sky_data,
                                     gravi_data * dark_data,
                                     gravi_data * static_param_data,
-                                    cpl_parameterlist * parlist)
+                                    int saveAcqTable)
 {
     gravi_msg_function_start(1);
     cpl_ensure_code (output_data, CPL_ERROR_NULL_INPUT);
@@ -2828,8 +2835,8 @@ cpl_error_code gravi_reduce_acqcam (gravi_data * output_data,
                         acqcam_table, o_header, static_param_data);
     CPLCHECK_MSG ("Cannot reduce acquisition field images");
 
-    /* Compute the PUPIL and save output only if the flag is to TRUE */
-    if (!strcmp (gravi_param_get_string (parlist, "gravity.test.reduce-acq-cam"), "TRUE"))
+    /* Compute the PUPIL and save output only if requested */
+    if (saveAcqTable)
     {
        /* Compute PUPIL columns with algorithm 2.0 */
         gravi_acqcam_pupil_v2 (mean_img, acqcam_imglist_v2, header,

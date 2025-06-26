@@ -811,10 +811,14 @@ static int gravity_vis(cpl_frameset * frameset,
 		                                     parlist);
 		CPLCHECK_CLEAN ("Cannot apply p2vm to the preproc data");
 
-        /* Reduce the Acquisition Camera and delete data */
-        if (!strcmp (gravi_param_get_string (parlist, "gravity.test.reduce-acq-cam"), "TRUE") ||
-            !strcmp (gravi_param_get_string (parlist, "gravity.test.reduce-acq-cam"), "QC")) {
-            gravi_reduce_acqcam (p2vmred_data, preproc_data, sky_maps[isky], dark_map, static_param_data, parlist);
+        /* Reduce the Acquisition Camera */
+        if (!strcmp (gravi_param_get_string (parlist, "gravity.test.reduce-acq-cam"), "TRUE")) {
+            int saveAcqTable = 1;
+            gravi_reduce_acqcam (p2vmred_data, preproc_data, sky_maps[isky], dark_map, static_param_data, saveAcqTable);
+        }
+        else if (!strcmp (gravi_param_get_string (parlist, "gravity.test.reduce-acq-cam"), "QC")) {
+            int saveAcqTable = 0;
+            gravi_reduce_acqcam (p2vmred_data, preproc_data, sky_maps[isky], dark_map, static_param_data, saveAcqTable);
         }
 
         /* Move extensions and delete preproc */
