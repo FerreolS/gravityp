@@ -2239,6 +2239,7 @@ cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data, cpl_frameset* frames
 {
   gravi_msg_function_start(1);
   cpl_ensure_code (vis_data, CPL_ERROR_NULL_INPUT);
+  cpl_ensure_code (frame_qcs, CPL_ERROR_NULL_INPUT);
 
   int nv, ntel=4, nclo=4;
   char qc_name[100];
@@ -2376,22 +2377,17 @@ cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data, cpl_frameset* frames
             
             for (int base = 0; base < GRAVI_NBASE; base++) {
               double pfactor = 0, vfactor = 0;
-              if (frame_qcs != NULL) {
-                cpl_size total_weight = 0;
-                for (int frame = 0; frame < nb_frame; frame++) {
-                  cpl_size weight = cpl_propertylist_get_long_long(frame_qcs[frame], "NROW");
-                  total_weight += weight;
-                  sprintf (qc_name, "ESO QC VFACTOR%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
-                  vfactor += weight * cpl_propertylist_get_double(frame_qcs[frame], qc_name);
-                  sprintf (qc_name, "ESO QC PFACTOR%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
-                  pfactor += weight * cpl_propertylist_get_double(frame_qcs[frame], qc_name);
-                }
-                vfactor /= total_weight;
-                pfactor /= total_weight;
-              } else {
-                vfactor = gravi_table_get_column_mean (oi_vis_SC, "V_FACTOR_WL", base, GRAVI_NBASE);
-                pfactor = gravi_table_get_column_mean (oi_vis_SC, "P_FACTOR", base, GRAVI_NBASE);
+              cpl_size total_weight = 0;
+              for (int frame = 0; frame < nb_frame; frame++) {
+                cpl_size weight = cpl_propertylist_get_long_long(frame_qcs[frame], "NROW");
+                total_weight += weight;
+                sprintf (qc_name, "ESO QC VFACTOR%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
+                vfactor += weight * cpl_propertylist_get_double(frame_qcs[frame], qc_name);
+                sprintf (qc_name, "ESO QC PFACTOR%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
+                pfactor += weight * cpl_propertylist_get_double(frame_qcs[frame], qc_name);
               }
+              vfactor /= total_weight;
+              pfactor /= total_weight;
 
               sprintf (qc_name, "ESO QC VFACTOR%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
               cpl_propertylist_update_double(plist, qc_name, vfactor);
@@ -2448,16 +2444,12 @@ cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data, cpl_frameset* frames
               sprintf (qc_name, "ESO QC P3FACTOR%s_P%d AVG", GRAVI_CLO_NAME[clo], pol+1);
               cpl_size total_weight = 0;
               double p3factor = 0;
-              if (frame_qcs != NULL) {
-                for (int frame = 0; frame < nb_frame; frame++) {
-                  cpl_size weight = cpl_propertylist_get_long_long(frame_qcs[frame], "NROW");
-                  total_weight += weight;
-                  p3factor += weight * cpl_propertylist_get_double(frame_qcs[frame], qc_name);
-                }
-                p3factor /= total_weight;
-              } else {
-                p3factor = gravi_table_get_column_mean (oi_T3_SC, "P3_FACTOR", clo, nclo);
+              for (int frame = 0; frame < nb_frame; frame++) {
+                cpl_size weight = cpl_propertylist_get_long_long(frame_qcs[frame], "NROW");
+                total_weight += weight;
+                p3factor += weight * cpl_propertylist_get_double(frame_qcs[frame], qc_name);
               }
+              p3factor /= total_weight;
 
               cpl_propertylist_update_double(plist, qc_name, p3factor);
               cpl_propertylist_set_comment (plist, qc_name, "mean p3-factor");
@@ -2518,6 +2510,7 @@ cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data, cpl_frameset* frames
         cpl_propertylist_append(plist, idp_hdr);
         cpl_propertylist_delete(idp_hdr);
 
+        CPLCHECK_MSG("Cannot compute IDP parameters");
     } /* End SC */
 
 

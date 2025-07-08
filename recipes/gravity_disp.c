@@ -551,13 +551,16 @@ static int gravity_disp(cpl_frameset            * frameset,
 			tmpvis_data = gravi_compute_vis (p2vmred_data, parlist, &current_frame);
 			CPLCHECK_CLEAN ("Cannot average the visibilities");
 
-            /* Compute QC parameters (for this frame individually) */
-            gravi_compute_vis_qc (tmpvis_data, NULL, NULL, 0);
-
 			/* Save the VIS */
-			if (gravi_param_get_bool (parlist,"gravity.dfs.vis-file")) {
-			  
-    			gravi_data_save_new (tmpvis_data, frameset, NULL, NULL, parlist,
+			if (gravi_param_get_bool (parlist,"gravity.dfs.vis-file")) {                
+                /* Compute QC parameters (for this frame individually) */
+                /* need to manually preserve MJD-OBS in header */
+                cpl_propertylist * vis_header = gravi_data_get_header (tmpvis_data);
+                double mjd_obs = gravi_pfits_get_mjd(vis_header);
+                gravi_compute_vis_qc (tmpvis_data, current_frameset, &p2vm_qcs[ivis], 1);
+                cpl_propertylist_append_double(vis_header, "MJD-OBS", mjd_obs);
+
+                gravi_data_save_new (tmpvis_data, frameset, NULL, NULL, parlist,
 									 current_frameset, frame, "gravity_disp",
                                      NULL, GRAVI_VIS_SINGLE_CALIB);
 				
@@ -595,7 +598,8 @@ static int gravity_disp(cpl_frameset            * frameset,
 		/* End loop on the input files to reduce */
 
         /* Compute QC parameters (for all frames averaged) */
-        gravi_compute_vis_qc (tmpvis_data, used_frameset, p2vm_qcs, nb_frame);
+        gravi_compute_vis_qc (vis_data, used_frameset, p2vm_qcs, nb_frame);
+        CPLCHECK_CLEAN("Cannot compute VIS QCs");
 
 		/* Recompute the TIME column from the MJD column
 		 * in all OIFITS tables to follow standard */
@@ -616,7 +620,7 @@ static int gravity_disp(cpl_frameset            * frameset,
 							 used_frameset, frame, "gravity_disp",
 							 NULL, GRAVI_DISP_VIS);
 		
-		CPLCHECK_CLEAN("Could not save the VIS_SINGLE product");
+		CPLCHECK_CLEAN("Cannot save the VIS_SINGLE product");
 
     	FREE (gravi_data_delete, profile_map);
     	FREE (gravi_data_delete, dark_map);
@@ -634,7 +638,7 @@ static int gravity_disp(cpl_frameset            * frameset,
     }
     else {
 
-    	/* Load the DIS_VIS already computed */
+    	/* Load the DISP_VIS already computed */
 		frame = cpl_frameset_get_position (dispvis_frameset, 0);
 		vis_data = gravi_data_load_frame (frame, used_frameset);
 		
