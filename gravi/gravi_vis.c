@@ -3036,7 +3036,6 @@ cpl_error_code gravi_average_vis (gravi_data * oi_data)
   cpl_msg_warning (cpl_func, "FIXME: Weightening of UVCOORD and MJD is not done properly yet !");
   cpl_msg_warning (cpl_func, "FIXME: Integration of INT_TIME is not done properly yet !");
 
-  int nbase = 6;
   cpl_table * oi_table;
 
   /* Create output data */

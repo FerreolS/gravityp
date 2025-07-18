@@ -49,7 +49,6 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
                                       cpl_frameset * frameset)
 {
     cpl_propertylist * idp_plist = cpl_propertylist_new ();
-    int nbase = 6;
 
     int npol_sc = gravi_pfits_get_pola_num (header, GRAVI_SC);
     char qc_name[100];

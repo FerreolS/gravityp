@@ -293,7 +293,6 @@ double gravi_table_get_column_flagged_max (cpl_table * table, const char * name)
   cpl_ensure (name,  CPL_ERROR_NULL_INPUT, 0.0);
 
   double max = 0.0;
-  cpl_size valid_elem = 0;
   int valid;
   cpl_size nrow = cpl_table_get_nrow (table);
   cpl_ensure (nrow,  CPL_ERROR_ILLEGAL_INPUT, 0.0);
