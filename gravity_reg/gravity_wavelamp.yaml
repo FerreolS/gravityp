@@ -1,0 +1,21 @@
+# log default parameters
+PreExec:
+  - "esorex --man gravity_piezo"
+
+Defaults:
+  EsorexTests:
+    result:
+      fitsdiff:
+
+EsorexTests:
+
+   - 700.gravity_piezo.MEDIUM_ins_COMBINED_ft_COMBINED:
+      recipe: gravity_piezo
+      sof:
+        - ["gravity_wavelamp/MEDIUM_ins_COMBINED_ft_COMBINED/GRAVI.2024-05-06T13:20:28.000.fits", WAVELAMP_RAW]
+        - ["gravity_wavelamp/MEDIUM_ins_COMBINED_ft_COMBINED/GRAVI.2024-05-06T13:31:01.027_dark.fits", DARK]
+        - ["gravity_wavelamp/MEDIUM_ins_COMBINED_ft_COMBINED/GRAVI.2024-05-02T13:10:29.194_dark_bad.fits", BAD]
+        - ["gravity_wavelamp/MEDIUM_ins_COMBINED_ft_COMBINED/GRAVI.2024-05-02T13:11:56.198_flat.fits", FLAT]
+        - ["gravity_wavelamp/MEDIUM_ins_COMBINED_ft_COMBINED/GRAVI.2024-05-02T13:16:17.208_wave.fits", WAVE]
+        - ["gravity_wavelamp/MEDIUM_ins_COMBINED_ft_COMBINED/GRAVI.2024-05-02T13:27:35.238_p2vm.fits", P2VM]
+        - ["datastatic/GRAVI_WAVE_2019-10-12.fits", WAVE_PARAM]
