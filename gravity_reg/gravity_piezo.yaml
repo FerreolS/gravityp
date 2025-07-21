@@ -1,0 +1,15 @@
+# log default parameters
+PreExec:
+  - "esorex --man gravity_piezo"
+
+Defaults:
+  EsorexTests:
+    result:
+      fitsdiff:
+
+EsorexTests:
+
+   - 600.gravity_piezo.MEDIUM_ins_SPLIT_ft_SPLIT:
+      recipe: gravity_piezo
+      sof:
+        - ["gravity_piezo/MEDIUM_ins_SPLIT_ft_SPLIT/GRAVI.2024-05-07T09:55:45.322.fits", DISP_RAW]
