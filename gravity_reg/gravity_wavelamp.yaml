@@ -1,6 +1,6 @@
 # log default parameters
 PreExec:
-  - "esorex --man gravity_piezo"
+  - "esorex --man gravity_wavelamp"
 
 Defaults:
   EsorexTests:
@@ -9,8 +9,8 @@ Defaults:
 
 EsorexTests:
 
-   - 700.gravity_piezo.MEDIUM_ins_COMBINED_ft_COMBINED:
-      recipe: gravity_piezo
+   - 700.gravity_wavelamp.MEDIUM_ins_COMBINED_ft_COMBINED:
+      recipe: gravity_wavelamp
       sof:
         - ["gravity_wavelamp/MEDIUM_ins_COMBINED_ft_COMBINED/GRAVI.2024-05-06T13:20:28.000.fits", WAVELAMP_RAW]
         - ["gravity_wavelamp/MEDIUM_ins_COMBINED_ft_COMBINED/GRAVI.2024-05-06T13:31:01.027_dark.fits", DARK]
