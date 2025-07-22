@@ -25,3 +25,11 @@ EsorexTests:
       recipe: gravity_dark
       sof:
         - ["gravity_dark/LOW_ins_SPLIT_ft_SPLIT_dit2_0.3000000_dit3_0.0008500_fddl_0.1000/GRAVITY.2015-06-01T08:21:38.445.fits", DARK_RAW]
+   - 120.gravity_dark.HIGH_ins_SPLIT_ft_SPLIT_dit2_120.0000000_dit3_0.0100000_fddl_0.1000:
+      recipe: gravity_dark
+      sof:
+        - ["gravity_dark/HIGH_ins_SPLIT_ft_SPLIT_dit2_120.0000000_dit3_0.0100000_fddl_0.1000/GRAVI.2024-05-02T13:10:29.194.fits", DARK_RAW]
+   - 125.gravity_dark.MEDIUM_ins_SPLIT_ft_SPLIT_dit2_0.3000000_dit3_0.0008500_fddl_0.1000:
+      recipe: gravity_dark
+      sof:
+        - ["gravity_dark/MEDIUM_ins_SPLIT_ft_SPLIT_dit2_0.3000000_dit3_0.0008500_fddl_0.1000/GRAVI.2024-05-26T12:18:46.278.fits", DARK_RAW]
