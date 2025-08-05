@@ -530,19 +530,19 @@ static int gravity_viscal(cpl_frameset            * frameset,
      */
     
     if ( nb_calib > 1 ) { 
-      cpl_msg_info (cpl_func, "*** Compute the zero of the metrology -- FIXME: to be done ***");
-      zero_data = gravi_compute_zp (vis_calibs, nb_calib);
+        cpl_msg_info (cpl_func, "*** Compute the zero of the metrology -- FIXME: to be done ***");
+        zero_data = gravi_compute_zp (vis_calibs, nb_calib);
+
+        CPLCHECK_GOTO("Cannot compute ZP", cleanup_zp);
       
-      CPLCHECK_GOTO("Cannot compute ZP", cleanup_zp);
+        gravi_data_save_new (zero_data, frameset, "output.fits", NULL, parlist,
+                             used_frameset, NULL, "gravity_viscal",
+                             NULL, GRAVI_ZP_CAL);
       
-      gravi_data_save_new (zero_data, frameset, "output.fits", NULL, parlist,
-                           used_frameset, NULL, "gravity_viscal",
-                           NULL, GRAVI_ZP_CAL);
-      
-      CPLCHECK_GOTO("Cannot save ZP", cleanup_zp);
+        CPLCHECK_GOTO("Cannot save ZP", cleanup_zp);
       
     cleanup_zp:
-      FREE (gravi_data_delete,zero_data);
+        FREE (gravi_data_delete,zero_data);
     }
     
         
@@ -589,6 +589,9 @@ static int gravity_viscal(cpl_frameset            * frameset,
         
         /* Save TF interpolated at the science visibilities */
         data_mode = gravi_data_frame_get_mode (frame);
+        cpl_propertylist * hdr = gravi_data_get_extra_primary_header (tf_science);
+        cpl_propertylist_update_string (hdr, "PRODCATG", "ANCILLARY.TRANSFERFUNC");
+        cpl_propertylist_set_comment (hdr, "PRODCATG", "Data product category");
         
         gravi_data_save_new (tf_science, frameset, NULL, NULL, parlist,
                              current_frameset, frame, "gravity_viscal", NULL,

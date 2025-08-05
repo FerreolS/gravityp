@@ -192,7 +192,7 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
     }
 
     /* PRODCATG */
-    cpl_propertylist_update_string (idp_plist, "PRODCATG", "SCIENCE.VISIBILITY.UNCALIBRATED");
+    cpl_propertylist_update_string (idp_plist, "PRODCATG", "SCIENCE.VISIBILITY");
     cpl_propertylist_set_comment (idp_plist, "PRODCATG", "Data product category");
 
     /* VISCAL */
@@ -353,7 +353,9 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
             if (strcmp(cpl_frame_get_tag(frame), GRAVI_SINGLE_SCIENCE_RAW) == 0 || 
                 strcmp(cpl_frame_get_tag(frame), GRAVI_DUAL_SCIENCE_RAW) == 0 || 
                 strcmp(cpl_frame_get_tag(frame), GRAVI_SINGLE_CALIB_RAW) == 0 || 
-                strcmp(cpl_frame_get_tag(frame), GRAVI_DUAL_CALIB_RAW) == 0)
+                strcmp(cpl_frame_get_tag(frame), GRAVI_DUAL_CALIB_RAW) == 0 ||
+                strcmp(cpl_frame_get_tag(frame), GRAVI_VIS_DUAL_SCIENCE) == 0 || 
+                strcmp(cpl_frame_get_tag(frame), GRAVI_VIS_SINGLE_SCIENCE) == 0)
             {
                 snprintf(prov_keyword, 7, "PROV%zu",i_prov);
                 const char * filename = cpl_frame_get_filename(frame);
