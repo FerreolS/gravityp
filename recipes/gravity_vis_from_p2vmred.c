@@ -314,36 +314,36 @@ static int gravity_vis_from_p2vmred_destroy(cpl_plugin * plugin)
  */
 /*----------------------------------------------------------------------------*/
 static int gravity_vis_from_p2vmred(cpl_frameset * frameset,
-					                cpl_parameterlist * parlist)
+                                    cpl_parameterlist * parlist)
 {
     cpl_frameset * recipe_frameset=NULL, *pcacalib_frameset=NULL, *used_frameset=NULL;
-	
-	cpl_frame * frame=NULL;
-	
-	const char * frame_tag=NULL;
-	char * proCatg = NULL, * mode=NULL;
-	
-	gravi_data * p2vmred_data=NULL, * vis_data=NULL, * tmpvis_data=NULL, * pca_calib_data=NULL;
-    cpl_propertylist ** p2vm_qcs = NULL;
-	
-	int nb_frame;
 
-	/* Message */
-	gravity_print_banner (); 
-	gravi_msg_function_start(1);
+    cpl_frame * frame=NULL;
+    const char * frame_tag=NULL;
+    char * proCatg = NULL, * mode=NULL;
+
+    gravi_data * p2vmred_data=NULL, * vis_data=NULL, * tmpvis_data=NULL, * pca_calib_data=NULL;
+    cpl_propertylist ** p2vm_qcs = NULL;
+
+    int nb_frame;
+    char * input_data_type;
+
+    /* Message */
+    gravity_print_banner (); 
+    gravi_msg_function_start(1);
 
     cpl_ensure_code(gravi_dfs_set_groups(frameset) == CPL_ERROR_NONE,
-					cpl_error_get_code()) ;
+                    cpl_error_get_code()) ;
 
     /* Dispatch the frameset */
     recipe_frameset = gravi_frameset_extract_p2vmred_data (frameset);
     pcacalib_frameset = gravi_frameset_extract_pca_calib (frameset);
 
-	/* To use this recipe the frameset must contain a P2VMREDUCED file. */
+    /* To use this recipe the frameset must contain a P2VMREDUCED file. */
     if ( cpl_frameset_get_size (recipe_frameset) < 1 ) {
-	  cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
-							 "Illegal number of P2VMREDUCED file on the frameset");
-	  goto cleanup;
+        cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
+                               "Illegal number of P2VMREDUCED file on the frameset");
+        goto cleanup;
     }
 
     /* Force some options if phase flattening is to be performed */
@@ -362,8 +362,8 @@ static int gravity_vis_from_p2vmred(cpl_frameset * frameset,
         }
     }
 
-	/* Insert calibration frame into the used frameset */
-	used_frameset = cpl_frameset_new();
+    /* Insert calibration frame into the used frameset */
+    used_frameset = cpl_frameset_new();
 
     if ( !cpl_frameset_is_empty (pcacalib_frameset)) {
         frame = cpl_frameset_get_position (pcacalib_frameset, 0);
@@ -371,34 +371,38 @@ static int gravity_vis_from_p2vmred(cpl_frameset * frameset,
     } else
       cpl_msg_info (cpl_func, "There is no PHASE_PCA in the frameset");
 
-	/* 
-	 * Select the PRO CATG (based on first frame) 
-	 */
-   
-	frame_tag = cpl_frame_get_tag (cpl_frameset_get_position (recipe_frameset, 0));
+    /* 
+     * Select the PRO CATG (based on first frame) 
+     */
 
-	if ((strcmp(frame_tag, GRAVI_P2VMRED_DUAL_CALIB) == 0)) {
-	  proCatg = cpl_sprintf (GRAVI_VIS_DUAL_CALIB);
-	  mode = cpl_sprintf ("gravi_dual");
-	}
-	else if ((strcmp(frame_tag, GRAVI_P2VMRED_DUAL_SCIENCE) == 0)) {
-	  proCatg = cpl_sprintf (GRAVI_VIS_DUAL_SCIENCE);
-	  mode = cpl_sprintf ("gravi_dual"); 
-	}
-	else if ((strcmp(frame_tag, GRAVI_P2VMRED_SINGLE_CALIB) == 0)) {
-	  proCatg = cpl_sprintf (GRAVI_VIS_SINGLE_CALIB);
-	  mode = cpl_sprintf ("gravi_single");
-	}
-	else if ((strcmp(frame_tag, GRAVI_P2VMRED_SINGLE_SCIENCE) == 0)) {
-	  proCatg = cpl_sprintf (GRAVI_VIS_SINGLE_SCIENCE);
-	  mode = cpl_sprintf ("gravi_single");
-	}
-	else {
-	  proCatg = cpl_sprintf ("UNKNOWN");
-	  mode = cpl_sprintf ("gravi_single");
-	}
+    frame_tag = cpl_frame_get_tag (cpl_frameset_get_position (recipe_frameset, 0));
 
-	cpl_msg_info (cpl_func,"Mode of the first frame is: %s (will be used for all frames)", mode);
+    if ((strcmp(frame_tag, GRAVI_P2VMRED_DUAL_CALIB) == 0)) {
+        proCatg = cpl_sprintf (GRAVI_VIS_DUAL_CALIB);
+        mode = cpl_sprintf ("gravi_dual");
+        input_data_type = cpl_sprintf ("raw_calibrator");
+    }
+    else if ((strcmp(frame_tag, GRAVI_P2VMRED_DUAL_SCIENCE) == 0)) {
+        proCatg = cpl_sprintf (GRAVI_VIS_DUAL_SCIENCE);
+        mode = cpl_sprintf ("gravi_dual"); 
+        input_data_type = cpl_sprintf ("raw_science");
+    }
+    else if ((strcmp(frame_tag, GRAVI_P2VMRED_SINGLE_CALIB) == 0)) {
+        proCatg = cpl_sprintf (GRAVI_VIS_SINGLE_CALIB);
+        mode = cpl_sprintf ("gravi_single");
+        input_data_type = cpl_sprintf ("raw_calibrator");
+    }
+    else if ((strcmp(frame_tag, GRAVI_P2VMRED_SINGLE_SCIENCE) == 0)) {
+        proCatg = cpl_sprintf (GRAVI_VIS_SINGLE_SCIENCE);
+        mode = cpl_sprintf ("gravi_single");
+        input_data_type = cpl_sprintf ("raw_science");
+    }
+    else {
+        proCatg = cpl_sprintf ("UNKNOWN");
+        mode = cpl_sprintf ("gravi_single");
+    }
+
+    cpl_msg_info (cpl_func,"Mode of the first frame is: %s (will be used for all frames)", mode);
 
 	/*
 	 * Loop on input RAW frames to be reduced 
@@ -486,7 +490,7 @@ static int gravity_vis_from_p2vmred(cpl_frameset * frameset,
     }
 
     /* Compute QC parameters */
-    gravi_compute_vis_qc (vis_data, used_frameset, p2vm_qcs, nb_frame);
+    gravi_compute_vis_qc (vis_data, used_frameset, p2vm_qcs, nb_frame, input_data_type);
     
 	/* Perform the normalisation of the SC vis2 and visamp
 	 * to match those of the FT */
@@ -538,6 +542,7 @@ cleanup:
 	FREE (cpl_frameset_delete,used_frameset);
     FREE (cpl_free,proCatg);
     FREE (cpl_free,mode);
+    FREE (cpl_free,input_data_type);
     FREELOOP(cpl_propertylist_delete, p2vm_qcs, nb_frame);
 	
 	gravi_msg_function_exit(1);

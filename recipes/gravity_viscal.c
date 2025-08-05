@@ -568,8 +568,11 @@ static int gravity_viscal(cpl_frameset            * frameset,
         
         /* Compute QC parameters */
         cpl_msg_info (cpl_func, "Computing QC parameters for calibrated visibilities");
+        char * input_data_type = cpl_sprintf ("vis_science");
+
         cpl_propertylist * idp_hdr = gravi_idp_compute(calibrated,  gravi_data_get_header (calibrated),
-                    current_frameset);
+                    current_frameset, input_data_type);
+        cpl_free(input_data_type);
         /* For this product only 1 input is used, i.e., 
          there is a 1-1 relation between uncalibrated and calibrated science */
         cpl_propertylist_update_int (idp_hdr, "NCOMBINE", 1);

@@ -410,6 +410,7 @@ static int gravity_vis(cpl_frameset * frameset,
     cpl_propertylist ** p2vm_qcs = NULL;
 	
 	int nb_frame, nb_sky;
+    char * input_data_type;
 
 	/* Message */
 	gravity_print_banner (); 
@@ -573,43 +574,47 @@ static int gravity_vis(cpl_frameset * frameset,
 	
 	CPLCHECK_CLEAN ("Error while loading the calibration maps");
 
-	/* 
-	 * Select the PRO CATG (based on first frame) 
-	 */
-	
-	frame_tag = cpl_frame_get_tag (cpl_frameset_get_position (recipe_frameset, 0));
+    /* 
+     * Select the PRO CATG (based on first frame) 
+     */
 
-	if ((strcmp(frame_tag, GRAVI_DUAL_CALIB_RAW) == 0)) {
-	  redCatg = cpl_sprintf (GRAVI_P2VMRED_DUAL_CALIB);
-	  proCatg = cpl_sprintf (GRAVI_VIS_DUAL_CALIB);
-      skyCatg = cpl_sprintf (GRAVI_DUAL_SKY_MAP);
-	  mode = cpl_sprintf ("gravi_dual");
-	}
-	else if ((strcmp(frame_tag, GRAVI_DUAL_SCIENCE_RAW) == 0)) {
-	  redCatg = cpl_sprintf (GRAVI_P2VMRED_DUAL_SCIENCE);
-	  proCatg = cpl_sprintf (GRAVI_VIS_DUAL_SCIENCE);
-      skyCatg = cpl_sprintf (GRAVI_DUAL_SKY_MAP);
-	  mode = cpl_sprintf ("gravi_dual"); 
-	}
-	else if ((strcmp(frame_tag, GRAVI_SINGLE_CALIB_RAW) == 0)) {
-	  redCatg = cpl_sprintf (GRAVI_P2VMRED_SINGLE_CALIB);
-	  proCatg = cpl_sprintf (GRAVI_VIS_SINGLE_CALIB);
-      skyCatg = cpl_sprintf (GRAVI_SINGLE_SKY_MAP);
-	  mode = cpl_sprintf ("gravi_single");
-	}
-	else if ((strcmp(frame_tag, GRAVI_SINGLE_SCIENCE_RAW) == 0)) {
-	  redCatg = cpl_sprintf (GRAVI_P2VMRED_SINGLE_SCIENCE);
-	  proCatg = cpl_sprintf (GRAVI_VIS_SINGLE_SCIENCE);
-      skyCatg = cpl_sprintf (GRAVI_SINGLE_SKY_MAP);
-	  mode = cpl_sprintf ("gravi_single");
-	}
-	else {
+    frame_tag = cpl_frame_get_tag (cpl_frameset_get_position (recipe_frameset, 0));
+
+    if ((strcmp(frame_tag, GRAVI_DUAL_CALIB_RAW) == 0)) {
+        redCatg = cpl_sprintf (GRAVI_P2VMRED_DUAL_CALIB);
+        proCatg = cpl_sprintf (GRAVI_VIS_DUAL_CALIB);
+        skyCatg = cpl_sprintf (GRAVI_DUAL_SKY_MAP);
+        mode = cpl_sprintf ("gravi_dual");
+        input_data_type = cpl_sprintf ("raw_calibrator");
+    }
+    else if ((strcmp(frame_tag, GRAVI_DUAL_SCIENCE_RAW) == 0)) {
+        redCatg = cpl_sprintf (GRAVI_P2VMRED_DUAL_SCIENCE);
+        proCatg = cpl_sprintf (GRAVI_VIS_DUAL_SCIENCE);
+        skyCatg = cpl_sprintf (GRAVI_DUAL_SKY_MAP);
+        mode = cpl_sprintf ("gravi_dual");
+        input_data_type = cpl_sprintf ("raw_science");
+    }
+    else if ((strcmp(frame_tag, GRAVI_SINGLE_CALIB_RAW) == 0)) {
+        redCatg = cpl_sprintf (GRAVI_P2VMRED_SINGLE_CALIB);
+        proCatg = cpl_sprintf (GRAVI_VIS_SINGLE_CALIB);
+        skyCatg = cpl_sprintf (GRAVI_SINGLE_SKY_MAP);
+        mode = cpl_sprintf ("gravi_single");
+        input_data_type = cpl_sprintf ("raw_calibrator");
+    }
+    else if ((strcmp(frame_tag, GRAVI_SINGLE_SCIENCE_RAW) == 0)) {
+        redCatg = cpl_sprintf (GRAVI_P2VMRED_SINGLE_SCIENCE);
+        proCatg = cpl_sprintf (GRAVI_VIS_SINGLE_SCIENCE);
+        skyCatg = cpl_sprintf (GRAVI_SINGLE_SKY_MAP);
+        mode = cpl_sprintf ("gravi_single");
+        input_data_type = cpl_sprintf ("raw_science");
+    }
+    else {
         cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
                                "Cannot recognize the input DO.CATG");
         goto cleanup;
-	}
+    }
 
-	cpl_msg_info (cpl_func,"Mode of the first frame is: %s (will be used for all frames)", mode);
+    cpl_msg_info (cpl_func,"Mode of the first frame is: %s (will be used for all frames)", mode);
 
     /*
      * Mode for the SKY
@@ -941,7 +946,7 @@ static int gravity_vis(cpl_frameset * frameset,
 
     /* Compute QC parameters */
     cpl_msg_info (cpl_func, "Computing QC parameters for visibilities");
-    gravi_compute_vis_qc (vis_data, frameset, p2vm_qcs, nb_frame);
+    gravi_compute_vis_qc (vis_data, frameset, p2vm_qcs, nb_frame, input_data_type);
     CPLCHECK_CLEAN ("Cannot compute VIS QCs");
 
     /* Compute the QC parameters of the TF 
@@ -1065,6 +1070,7 @@ cleanup:
     FREE (cpl_free,redCatg);
     FREE (cpl_free,skyCatg);
     FREE (cpl_free,mode);
+    FREE (cpl_free,input_data_type);
     FREELOOP(cpl_propertylist_delete, p2vm_qcs, nb_frame);
 
 	

@@ -540,44 +540,42 @@ static int gravity_disp(cpl_frameset            * frameset,
 				CPLCHECK_CLEAN ("Cannot save the P2VMREDUCED product");
 			}
 
-
             /* Loop on the wanted sub-integration */
             cpl_size current_frame = 0;
             while (current_frame >= 0)
             {
-            
-            /* Visibility and flux are averaged and the followings
-			 * are saved in Visibility data in tables VIS, VIS2 and T3 */
-			tmpvis_data = gravi_compute_vis (p2vmred_data, parlist, &current_frame);
-			CPLCHECK_CLEAN ("Cannot average the visibilities");
 
-			/* Save the VIS */
-			if (gravi_param_get_bool (parlist,"gravity.dfs.vis-file")) {                
-                /* Compute QC parameters (for this frame individually) */
-                /* need to manually preserve MJD-OBS in header */
-                cpl_propertylist * vis_header = gravi_data_get_header (tmpvis_data);
-                double mjd_obs = gravi_pfits_get_mjd(vis_header);
-                gravi_compute_vis_qc (tmpvis_data, current_frameset, &p2vm_qcs[ivis], 1);
-                cpl_propertylist_append_double(vis_header, "MJD-OBS", mjd_obs);
+                /* Visibility and flux are averaged and the followings
+                 * are saved in Visibility data in tables VIS, VIS2 and T3 */
+                tmpvis_data = gravi_compute_vis (p2vmred_data, parlist, &current_frame);
+                CPLCHECK_CLEAN ("Cannot average the visibilities");
 
-                gravi_data_save_new (tmpvis_data, frameset, NULL, NULL, parlist,
-									 current_frameset, frame, "gravity_disp",
-                                     NULL, GRAVI_VIS_SINGLE_CALIB);
-				
-				CPLCHECK_CLEAN ("Cannot save the VIS product");
-			}
+                /* Save the VIS */
+                if (gravi_param_get_bool (parlist,"gravity.dfs.vis-file")) {                
+                    /* Compute QC parameters (for this frame individually) */
+                    /* need to manually preserve MJD-OBS in header */
+                    cpl_propertylist * vis_header = gravi_data_get_header (tmpvis_data);
+                    double mjd_obs = gravi_pfits_get_mjd(vis_header);
+                    gravi_compute_vis_qc (tmpvis_data, current_frameset, &p2vm_qcs[ivis], 1, NULL);
+                    cpl_propertylist_append_double(vis_header, "MJD-OBS", mjd_obs);
 
-            /* Merge with already existing */
-            if (vis_data == NULL) {
-                vis_data = tmpvis_data; tmpvis_data = NULL;
-            }
-            else {
-                cpl_msg_info (cpl_func,"Merge with previous OI_VIS");
-                gravi_data_append (vis_data, tmpvis_data, 1);
-                FREE (gravi_data_delete, tmpvis_data);
-            }
-			CPLCHECK_CLEAN ("Cannot merge the visibilities");
+                    gravi_data_save_new (tmpvis_data, frameset, NULL, NULL, parlist,
+                                         current_frameset, frame, "gravity_disp",
+                                         NULL, GRAVI_VIS_SINGLE_CALIB);
 
+                    CPLCHECK_CLEAN ("Cannot save the VIS product");
+                }
+
+                /* Merge with already existing */
+                if (vis_data == NULL) {
+                    vis_data = tmpvis_data; tmpvis_data = NULL;
+                }
+                else {
+                    cpl_msg_info (cpl_func,"Merge with previous OI_VIS");
+                    gravi_data_append (vis_data, tmpvis_data, 1);
+                    FREE (gravi_data_delete, tmpvis_data);
+                }
+                CPLCHECK_CLEAN ("Cannot merge the visibilities");
             }
             
             /* Save the astro file, which is a lighter version of the p2vmreduced */
@@ -591,47 +589,47 @@ static int gravity_disp(cpl_frameset            * frameset,
                 CPLCHECK_CLEAN ("Cannot save the ASTROREDUCED product");
             }
             
-			cpl_msg_info (cpl_func,"Free the p2vmreduced");
-			FREE (cpl_frameset_delete, current_frameset);
-    		FREE (gravi_data_delete, p2vmred_data);
+            cpl_msg_info (cpl_func,"Free the p2vmreduced");
+            FREE (cpl_frameset_delete, current_frameset);
+            FREE (gravi_data_delete, p2vmred_data);
         }
-		/* End loop on the input files to reduce */
+        /* End loop on the input files to reduce */
 
         /* Compute QC parameters (for all frames averaged) */
-        gravi_compute_vis_qc (vis_data, used_frameset, p2vm_qcs, nb_frame);
+        gravi_compute_vis_qc (vis_data, used_frameset, p2vm_qcs, nb_frame, NULL);
         CPLCHECK_CLEAN("Cannot compute VIS QCs");
 
-		/* Recompute the TIME column from the MJD column
-		 * in all OIFITS tables to follow standard */
-		gravi_vis_mjd_to_time (vis_data);
+        /* Recompute the TIME column from the MJD column
+         * in all OIFITS tables to follow standard */
+        gravi_vis_mjd_to_time (vis_data);
 
-		/* Identify the WAVELAMP in the input frameset */
-    	frame = cpl_frameset_get_position (wavelampcalib_frameset, 0);
-		argon_data = gravi_data_load_frame (frame, used_frameset);
+        /* Identify the WAVELAMP in the input frameset */
+        frame = cpl_frameset_get_position (wavelampcalib_frameset, 0);
+        argon_data = gravi_data_load_frame (frame, used_frameset);
 
-		/* Duplicate POS_ARGON into the VIS file */
+        /* Duplicate POS_ARGON into the VIS file */
         gravi_data_copy_ext (vis_data, argon_data, "POS_ARGON");
-		
-		/* Save the output data file based on the first frame of the frameset */
-		cpl_frameset_join (used_frameset, disp_frameset);
-		frame = cpl_frameset_get_position (disp_frameset, 0);
-		
-    	gravi_data_save_new (vis_data, frameset, NULL, NULL, parlist,
-							 used_frameset, frame, "gravity_disp",
-							 NULL, GRAVI_DISP_VIS);
-		
-		CPLCHECK_CLEAN("Cannot save the VIS_SINGLE product");
 
-    	FREE (gravi_data_delete, profile_map);
-    	FREE (gravi_data_delete, dark_map);
-    	FREE (gravi_data_delete, wave_map);
-    	FREE (gravi_data_delete, badpix_map);
-    	FREE (gravi_data_delete, p2vm_map);
-    	FREE (cpl_frameset_delete, darkcalib_frameset);
-    	FREE (cpl_frameset_delete, wavecalib_frameset);
-    	FREE (cpl_frameset_delete, dark_frameset);
-    	FREE (cpl_frameset_delete, flatcalib_frameset);
-    	FREE (cpl_frameset_delete, badcalib_frameset);
+        /* Save the output data file based on the first frame of the frameset */
+        cpl_frameset_join (used_frameset, disp_frameset);
+        frame = cpl_frameset_get_position (disp_frameset, 0);
+
+        gravi_data_save_new (vis_data, frameset, NULL, NULL, parlist,
+                             used_frameset, frame, "gravity_disp",
+                             NULL, GRAVI_DISP_VIS);
+
+        CPLCHECK_CLEAN("Cannot save the VIS_SINGLE product");
+
+        FREE (gravi_data_delete, profile_map);
+        FREE (gravi_data_delete, dark_map);
+        FREE (gravi_data_delete, wave_map);
+        FREE (gravi_data_delete, badpix_map);
+        FREE (gravi_data_delete, p2vm_map);
+        FREE (cpl_frameset_delete, darkcalib_frameset);
+        FREE (cpl_frameset_delete, wavecalib_frameset);
+        FREE (cpl_frameset_delete, dark_frameset);
+        FREE (cpl_frameset_delete, flatcalib_frameset);
+        FREE (cpl_frameset_delete, badcalib_frameset);
         FREE (cpl_frameset_delete, p2vmcalib_frameset);
         FREE (cpl_frameset_delete, wavelampcalib_frameset);
         FREELOOP(cpl_propertylist_delete, p2vm_qcs, nb_frame);

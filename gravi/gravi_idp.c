@@ -46,7 +46,8 @@
 /*-----------------------------------------------------------------------------*/
 cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
                                       cpl_propertylist * header,
-                                      cpl_frameset * frameset)
+                                      cpl_frameset * frameset,
+                                      char * input_data_type)
 {
     cpl_propertylist * idp_plist = cpl_propertylist_new ();
 
@@ -193,6 +194,21 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
     /* PRODCATG */
     cpl_propertylist_update_string (idp_plist, "PRODCATG", "SCIENCE.VISIBILITY.UNCALIBRATED");
     cpl_propertylist_set_comment (idp_plist, "PRODCATG", "Data product category");
+
+    /* VISCAL */
+    if(input_data_type != NULL)
+    {
+        if(strcmp(input_data_type, "raw_science") == 0  || strcmp(input_data_type, "raw_calibrator") == 0 )
+        {
+            cpl_propertylist_update_string (idp_plist, "VISCAL", "UNCALIBRATED");
+            cpl_propertylist_set_comment (idp_plist, "VISCAL", "Type of visibilities");
+        }
+        if(strcmp(input_data_type, "vis_science") == 0  || strcmp(input_data_type, "vis_calibrator") == 0 )
+        {
+            cpl_propertylist_update_string (idp_plist, "VISCAL", "CALIBRATED");
+            cpl_propertylist_set_comment (idp_plist, "VISCAL", "Type of visibilities");
+        }
+    }
 
     /* MJD-OBS */
     double mjd_obs_first = DBL_MAX;

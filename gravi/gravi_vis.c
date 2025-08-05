@@ -2235,7 +2235,8 @@ gravi_data * gravi_compute_vis (gravi_data * p2vmred_data,
 /*----------------------------------------------------------------------------*/
 
 cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data, cpl_frameset* frameset,
-                                     cpl_propertylist **frame_qcs, cpl_size nb_frame)
+                                     cpl_propertylist **frame_qcs, cpl_size nb_frame,
+                                     char * input_data_type)
 {
   gravi_msg_function_start(1);
   cpl_ensure_code (vis_data, CPL_ERROR_NULL_INPUT);
@@ -2506,7 +2507,7 @@ cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data, cpl_frameset* frames
         cpl_msg_info (cpl_func, "Compute IDP parameters");
 
         /* Compute additional idp parameters */
-        cpl_propertylist * idp_hdr = gravi_idp_compute(vis_data, vis_header, frameset);
+        cpl_propertylist * idp_hdr = gravi_idp_compute(vis_data, vis_header, frameset, input_data_type);
         cpl_propertylist_append(plist, idp_hdr);
         cpl_propertylist_delete(idp_hdr);
 

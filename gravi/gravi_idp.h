@@ -32,7 +32,8 @@
  -----------------------------------------------------------------------------*/
 cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
                                       cpl_propertylist * header,
-                                      cpl_frameset * frameset);
+                                      cpl_frameset * frameset,
+                                      char * input_data_type);
 
 
 
