@@ -1,9 +1,3 @@
-class GravityReportMixin(object):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._version = "TBD"
-
-
 from . import gravity_master_dark
 from . import gravity_wavelength
 from . import gravity_rawdisp

@@ -1,10 +1,7 @@
 from adari_core.data_libs.master_rawdisp import MasterRawdispReport
 import os
 from .gravity_util import GravitySetupInfo, data_reader
-from adari_core.plots.cut import CutPlot
-from adari_core.plots.images import ImagePlot
-from adari_core.utils.utils import fetch_kw_or_default
-from . import GravityReportMixin
+from .gravity_util import GravityReportMixin
 
 
 class GravityRawdispReport(GravityReportMixin, MasterRawdispReport):
@@ -44,9 +41,8 @@ class GravityRawdispReport(GravityReportMixin, MasterRawdispReport):
                     file_lists.append({"filename": filename})
                     added[catg] = self.tasks[catg]
                     self.sof_tag.append(catg)
-                    self.extensions.append(ext)        
+                    self.extensions.append(ext)
         return file_lists
-
 
     def generate_panels(self, **kwargs):
         panels = {}
@@ -57,8 +53,8 @@ class GravityRawdispReport(GravityReportMixin, MasterRawdispReport):
             try:
                 task_name = panel_descr["task_name"]
                 if task_name != "dark":
-                    panel.pop(8,3) # delete X-direction cut
-            except KeyError as e:
+                    panel.pop(8, 3)  # delete X-direction cut
+            except KeyError:
                 raise RuntimeError(
                     "A report has been created by "
                     "MasterRawdispReport that did "
@@ -84,4 +80,3 @@ class GravityRawdispReport(GravityReportMixin, MasterRawdispReport):
 
 
 rep = GravityRawdispReport()
-
