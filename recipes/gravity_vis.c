@@ -41,9 +41,6 @@
 #include <stdio.h>
 #include <string.h>
 #include <time.h>
-#if defined(__linux__) && defined(__GLIBC__)
-#include <malloc.h> //Needed for malloc_trim()
-#endif
 
 #include "gravi_data.h"
 #include "gravi_pfits.h"
@@ -1069,17 +1066,6 @@ cleanup:
     FREE (cpl_free,skyCatg);
     FREE (cpl_free,mode);
     FREELOOP(cpl_propertylist_delete, p2vm_qcs, nb_frame);
-    //This is a workaround to aliviate PIPE-6316. For some reason the allocation
-    //pattern of the recipe causes malloc to keep many pages in the allocation
-    //arena which are not returned to the OS (typically calling brk()).
-    //This causes issues if there is a fork() call, since then the whole 
-    //address space of the parent is duplicated in the child. This is actually
-    //the case with the system() call in esorex.
-    //malloc_trim() is specific to GLIBC and will ask malloc() to return 
-    //as many pages as possible. The code is not portable, hence the guards
-#if defined(__linux__) && defined(__GLIBC__)
-    malloc_trim(0);
-#endif
 
 	
 	gravi_msg_function_exit(1);
