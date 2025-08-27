@@ -75,85 +75,82 @@ void gravity_print_banner (void)
  */
 /*----------------------------------------------------------------------------*/
 
-cpl_error_code gravi_dfs_set_groups(cpl_frameset * set)
-{
-    cpl_ensure_code (set, CPL_ERROR_NULL_INPUT);
-  
-    cpl_errorstate prestate = cpl_errorstate_get();
-    cpl_frame * frame = NULL;
-    int         i, nb_frame;
-    nb_frame = cpl_frameset_get_size(set);
+cpl_error_code gravi_dfs_set_groups(cpl_frameset *set) {
+    cpl_ensure_code(set, CPL_ERROR_NULL_INPUT);
 
+    cpl_errorstate prestate = cpl_errorstate_get();
+    cpl_frame *frame = NULL;
+    int i, nb_frame;
+    nb_frame = cpl_frameset_get_size(set);
 
     /* Loop on frames */
     for (i = 0; i < nb_frame; i++) {
 
-    	frame = cpl_frameset_get_position(set, i);
-        const char * tag = cpl_frame_get_tag(frame);
+        frame = cpl_frameset_get_position(set, i);
+        const char *tag = cpl_frame_get_tag(frame);
 
         if (tag == NULL) {
             cpl_msg_warning(cpl_func, "Frame %d has no tag", i);
         } else if ((!strcmp(tag, GRAVI_DARK_RAW)) ||
-				   (!strcmp(tag, GRAVI_FLAT_RAW)) ||
-				   (!strcmp(tag, GRAVI_WAVE_RAW)) ||
-				   (!strcmp(tag, GRAVI_WAVELAMP_RAW)) ||
-           (!strcmp(tag, GRAVI_P2VM_RAW)) ||
-           (!strcmp(tag, GRAVI_PIEZOTF_RAW)) ||
-				   (!strcmp(tag, GRAVI_SINGLE_SCIENCE_RAW)) ||
-				   (!strcmp(tag, GRAVI_SINGLE_CALIB_RAW)) ||
-				   (!strcmp(tag, GRAVI_DUAL_SCIENCE_RAW)) ||
-				   (!strcmp(tag, GRAVI_DUAL_CALIB_RAW))||
-				   (!strcmp(tag, GRAVI_DUAL_SKY_RAW)) ||
-				   (!strcmp(tag, GRAVI_SINGLE_SKY_RAW))||
-           (!strcmp(tag, GRAVI_VIS_SINGLE_CALIB)) ||
-           (!strcmp(tag, GRAVI_VISPHI_SINGLE_CALIB)) ||
-				   (!strcmp(tag, GRAVI_VIS_SINGLE_SCIENCE)) ||
-           (!strcmp(tag, GRAVI_VIS_DUAL_CALIB)) ||
-           (!strcmp(tag, GRAVI_VISPHI_DUAL_CALIB)) ||
-           (!strcmp(tag, GRAVI_VIS_DUAL_SCIENCE)) ||
-				   (!strcmp(tag, GRAVI_P2VMRED_SINGLE_CALIB)) ||
-				   (!strcmp(tag, GRAVI_P2VMRED_SINGLE_SCIENCE)) ||
-				   (!strcmp(tag, GRAVI_P2VMRED_DUAL_CALIB)) ||
-				   (!strcmp(tag, GRAVI_P2VMRED_DUAL_SCIENCE)) ||
-				   (!strcmp(tag, GRAVI_MIRA_INPUT_PROCATG))||
-				   (!strcmp(tag, GRAVI_VIS_SINGLE_CALIBRATED)) ||
-				   (!strcmp(tag, GRAVI_VIS_DUAL_CALIBRATED)) ||
-				   (!strcmp(tag, GRAVI_DISP_RAW))  ){
-		  /* RAW frames */
-		  cpl_frame_set_group(frame, CPL_FRAME_GROUP_RAW);
-        }else if ((!strcmp(tag, GRAVI_DARK_MAP)) ||
-				  (!strcmp(tag, GRAVI_FLAT_MAP)) ||
-				  (!strcmp(tag, GRAVI_WAVE_MAP)) ||
-				  (!strcmp(tag, GRAVI_P2VM_MAP)) ||
-				  (!strcmp(tag, GRAVI_BAD_MAP)) ||
-          (!strcmp(tag, GRAVI_BIASMASK_MAP)) ||
-          (!strcmp(tag, GRAVI_PIEZOTF_MAP)) ||
-				  (!strcmp(tag, GRAVI_PREPROC)) ||
-				  (!strcmp(tag, GRAVI_TF_SINGLE_SCIENCE)) ||
-				  (!strcmp(tag, GRAVI_TF_SINGLE_CALIB)) ||
-          (!strcmp(tag, GRAVI_VISPHI_TF_SINGLE_CALIB)) ||
-				  (!strcmp(tag, GRAVI_WAVELAMP_MAP)) ||
-				  (!strcmp(tag, GRAVI_TF_DUAL_SCIENCE))  ||
-				  (!strcmp(tag, GRAVI_TF_DUAL_CALIB)) || 
-          (!strcmp(tag, GRAVI_VISPHI_TF_DUAL_CALIB)) ||
-				  (!strcmp(tag, GRAVI_ZP_CAL)) ||
-				  (!strcmp(tag, GRAVI_DISP_VIS)) ||
-				  (!strcmp(tag, GRAVI_DIAMETER_CAT)) ||
-				  (!strcmp(tag, GRAVI_DISP_MODEL)) ||
-				  (!strcmp(tag, GRAVI_DIODE_POSITION))||
-	        (!strcmp(tag, GRAVI_KEY_PATCH)) ||
-	        (!strcmp(tag, GRAVI_ASTRO_CAL_PHASEREF)) ||
-	        (!strcmp(tag, GRAVI_ASTRO_TARGET)) ||
-          (!strcmp(tag, GRAVI_ASTRO_SWAP))){
-        	/* CALIB frames */
-        	cpl_frame_set_group(frame, CPL_FRAME_GROUP_CALIB);
-        }else if (
-        		(!strcmp(tag, GRAVI_MIRA_OUTPUT_PROCATG)) ||
-                (!strcmp(tag, GRAVI_NAB_CAL)) ){
-        	/* PRODUCT frames */
-        	cpl_frame_set_group(frame, CPL_FRAME_GROUP_PRODUCT);
+                   (!strcmp(tag, GRAVI_FLAT_RAW)) ||
+                   (!strcmp(tag, GRAVI_WAVE_RAW)) ||
+                   (!strcmp(tag, GRAVI_WAVESC_RAW)) ||
+                   (!strcmp(tag, GRAVI_WAVELAMP_RAW)) ||
+                   (!strcmp(tag, GRAVI_P2VM_RAW)) ||
+                   (!strcmp(tag, GRAVI_PIEZOTF_RAW)) ||
+                   (!strcmp(tag, GRAVI_SINGLE_SCIENCE_RAW)) ||
+                   (!strcmp(tag, GRAVI_SINGLE_CALIB_RAW)) ||
+                   (!strcmp(tag, GRAVI_DUAL_SCIENCE_RAW)) ||
+                   (!strcmp(tag, GRAVI_DUAL_CALIB_RAW)) ||
+                   (!strcmp(tag, GRAVI_DUAL_SKY_RAW)) ||
+                   (!strcmp(tag, GRAVI_SINGLE_SKY_RAW)) ||
+                   (!strcmp(tag, GRAVI_VIS_SINGLE_CALIB)) ||
+                   (!strcmp(tag, GRAVI_VISPHI_SINGLE_CALIB)) ||
+                   (!strcmp(tag, GRAVI_VIS_SINGLE_SCIENCE)) ||
+                   (!strcmp(tag, GRAVI_VIS_DUAL_CALIB)) ||
+                   (!strcmp(tag, GRAVI_VISPHI_DUAL_CALIB)) ||
+                   (!strcmp(tag, GRAVI_VIS_DUAL_SCIENCE)) ||
+                   (!strcmp(tag, GRAVI_P2VMRED_SINGLE_CALIB)) ||
+                   (!strcmp(tag, GRAVI_P2VMRED_SINGLE_SCIENCE)) ||
+                   (!strcmp(tag, GRAVI_P2VMRED_DUAL_CALIB)) ||
+                   (!strcmp(tag, GRAVI_P2VMRED_DUAL_SCIENCE)) ||
+                   (!strcmp(tag, GRAVI_MIRA_INPUT_PROCATG)) ||
+                   (!strcmp(tag, GRAVI_VIS_SINGLE_CALIBRATED)) ||
+                   (!strcmp(tag, GRAVI_VIS_DUAL_CALIBRATED)) ||
+                   (!strcmp(tag, GRAVI_DISP_RAW))) {
+            /* RAW frames */
+            cpl_frame_set_group(frame, CPL_FRAME_GROUP_RAW);
+        } else if ((!strcmp(tag, GRAVI_DARK_MAP)) ||
+                   (!strcmp(tag, GRAVI_FLAT_MAP)) ||
+                   (!strcmp(tag, GRAVI_WAVE_MAP)) ||
+                   (!strcmp(tag, GRAVI_P2VM_MAP)) ||
+                   (!strcmp(tag, GRAVI_BAD_MAP)) ||
+                   (!strcmp(tag, GRAVI_BIASMASK_MAP)) ||
+                   (!strcmp(tag, GRAVI_PIEZOTF_MAP)) ||
+                   (!strcmp(tag, GRAVI_PREPROC)) ||
+                   (!strcmp(tag, GRAVI_TF_SINGLE_SCIENCE)) ||
+                   (!strcmp(tag, GRAVI_TF_SINGLE_CALIB)) ||
+                   (!strcmp(tag, GRAVI_VISPHI_TF_SINGLE_CALIB)) ||
+                   (!strcmp(tag, GRAVI_WAVELAMP_MAP)) ||
+                   (!strcmp(tag, GRAVI_TF_DUAL_SCIENCE)) ||
+                   (!strcmp(tag, GRAVI_TF_DUAL_CALIB)) ||
+                   (!strcmp(tag, GRAVI_VISPHI_TF_DUAL_CALIB)) ||
+                   (!strcmp(tag, GRAVI_ZP_CAL)) ||
+                   (!strcmp(tag, GRAVI_DISP_VIS)) ||
+                   (!strcmp(tag, GRAVI_DIAMETER_CAT)) ||
+                   (!strcmp(tag, GRAVI_DISP_MODEL)) ||
+                   (!strcmp(tag, GRAVI_DIODE_POSITION)) ||
+                   (!strcmp(tag, GRAVI_KEY_PATCH)) ||
+                   (!strcmp(tag, GRAVI_ASTRO_CAL_PHASEREF)) ||
+                   (!strcmp(tag, GRAVI_ASTRO_TARGET)) ||
+                   (!strcmp(tag, GRAVI_ASTRO_SWAP))) {
+            /* CALIB frames */
+            cpl_frame_set_group(frame, CPL_FRAME_GROUP_CALIB);
+        } else if ((!strcmp(tag, GRAVI_MIRA_OUTPUT_PROCATG)) ||
+                   (!strcmp(tag, GRAVI_NAB_CAL))) {
+            /* PRODUCT frames */
+            cpl_frame_set_group(frame, CPL_FRAME_GROUP_PRODUCT);
         }
-
     }
 
     if (!cpl_errorstate_is_equal(prestate)) {
