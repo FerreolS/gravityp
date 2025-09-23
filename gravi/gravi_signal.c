@@ -3329,11 +3329,21 @@ cpl_error_code gravi_compute_signals (gravi_data * p2vmred_data,
         double vmean = gravi_table_get_column_mean (vis_SC, "V_FACTOR_WL", base, nbase);
         cpl_propertylist_update_double (p2vmred_header, qc_name, vmean);
         cpl_propertylist_set_comment (p2vmred_header, qc_name, "mean v-factor");
-        
+
+        sprintf (qc_name, "ESO QC VFACTOR%s_P%d STD", GRAVI_BASE_NAME[base], pol+1);
+        double vstd = gravi_table_get_column_std (vis_SC, "V_FACTOR_WL", base, nbase);
+        cpl_propertylist_update_double (p2vmred_header, qc_name, vstd);
+        cpl_propertylist_set_comment (p2vmred_header, qc_name, "standard deviation of v-factor");
+
         sprintf (qc_name, "ESO QC PFACTOR%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
         double pmean = gravi_table_get_column_mean (vis_SC, "P_FACTOR", base, nbase);
         cpl_propertylist_update_double (p2vmred_header, qc_name, pmean);
         cpl_propertylist_set_comment (p2vmred_header, qc_name, "mean p-factor");
+
+        sprintf (qc_name, "ESO QC PFACTOR%s_P%d STD", GRAVI_BASE_NAME[base], pol+1);
+        double pstd = gravi_table_get_column_std (vis_SC, "P_FACTOR", base, nbase);
+        cpl_propertylist_update_double (p2vmred_header, qc_name, pstd);
+        cpl_propertylist_set_comment (p2vmred_header, qc_name, "standard deviation of p-factor");
     }
 
     for (int closure = 0; closure < nclo; closure++) {        
@@ -3627,6 +3637,7 @@ cpl_error_code gravi_compute_rejection (gravi_data * p2vmred_data,
       /* Get the SC rejection parameters */
       double minlockratio_sc = gravi_param_get_double (parlist, "gravity.signal.tracking-min-sc");
       double minvfactor_sc = gravi_param_get_double (parlist, "gravity.signal.vfactor-min-sc");
+      double maxvfactor_sc = 1.1; /* hard-coded maximum since vf>1 should be impossible, but there could be some noise */
       
       cpl_msg_info (cpl_func,"Fringe-detection ratio to discard frame on SC: %g", minlockratio_sc);
       cpl_msg_info (cpl_func,"vFactor threshold to discard frame on SC: %g", minvfactor_sc);
@@ -3681,7 +3692,7 @@ cpl_error_code gravi_compute_rejection (gravi_data * p2vmred_data,
               
               /* Rejection based in the white-light vFactor (second bit) */
               int vfactor_bit = 1;
-              if ( vFactor_wl[row_sc] < minvfactor_sc )
+              if ( vFactor_wl[row_sc] < minvfactor_sc || vFactor_wl[row_sc] > maxvfactor_sc )
               {
                   gravi_bit_set (reject_flag_sc[row_sc], vfactor_bit);
                   reject = 1;

@@ -2377,24 +2377,38 @@ cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data, cpl_frameset* frames
             cpl_table * oi_vis_SC = gravi_data_get_oi_vis (vis_data, GRAVI_SC, pol, npol_sc);
             
             for (int base = 0; base < GRAVI_NBASE; base++) {
-              double pfactor = 0, vfactor = 0;
+              double pfactor = 0, vfactor = 0, std_pfactor = 0, std_vfactor = 0;
               cpl_size total_weight = 0;
               for (int frame = 0; frame < nb_frame; frame++) {
                 cpl_size weight = cpl_propertylist_get_long_long(frame_qcs[frame], "NROW");
                 total_weight += weight;
                 sprintf (qc_name, "ESO QC VFACTOR%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
                 vfactor += weight * cpl_propertylist_get_double(frame_qcs[frame], qc_name);
+                sprintf (qc_name, "ESO QC VFACTOR%s_P%d STD", GRAVI_BASE_NAME[base], pol+1);
+                std_vfactor += weight * cpl_propertylist_get_double(frame_qcs[frame], qc_name);
                 sprintf (qc_name, "ESO QC PFACTOR%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
                 pfactor += weight * cpl_propertylist_get_double(frame_qcs[frame], qc_name);
+                sprintf (qc_name, "ESO QC PFACTOR%s_P%d STD", GRAVI_BASE_NAME[base], pol+1);
+                std_pfactor += weight * cpl_propertylist_get_double(frame_qcs[frame], qc_name);
               }
               vfactor /= total_weight;
+              std_vfactor /= total_weight;
               pfactor /= total_weight;
+              std_pfactor /= total_weight;
 
               sprintf (qc_name, "ESO QC VFACTOR%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
               cpl_propertylist_update_double(plist, qc_name, vfactor);
               cpl_propertylist_set_comment (plist, qc_name, "mean v-factor");
 
+              sprintf (qc_name, "ESO QC VFACTOR%s_P%d STD", GRAVI_BASE_NAME[base], pol+1);
+              cpl_propertylist_update_double(plist, qc_name, vfactor);
+              cpl_propertylist_set_comment (plist, qc_name, "mean v-factor");
+
               sprintf (qc_name, "ESO QC PFACTOR%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
+              cpl_propertylist_update_double(plist, qc_name, pfactor);
+              cpl_propertylist_set_comment (plist, qc_name, "mean p-factor");
+
+              sprintf (qc_name, "ESO QC PFACTOR%s_P%d STD", GRAVI_BASE_NAME[base], pol+1);
               cpl_propertylist_update_double(plist, qc_name, pfactor);
               cpl_propertylist_set_comment (plist, qc_name, "mean p-factor");
               
