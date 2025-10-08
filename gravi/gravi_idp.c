@@ -112,11 +112,11 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
 
         sprintf (qc_name, "BASE_MAX");
         cpl_propertylist_update_double (idp_plist, qc_name, base_max);
-        cpl_propertylist_set_comment (idp_plist, qc_name, "Maximum baseline [m]");
+        cpl_propertylist_set_comment (idp_plist, qc_name, "[m] Maximum baseline");
 
         sprintf (qc_name, "BASE_MIN");
         cpl_propertylist_update_double (idp_plist, qc_name, base_min);
-        cpl_propertylist_set_comment (idp_plist, qc_name, "Minimum baseline [m]");
+        cpl_propertylist_set_comment (idp_plist, qc_name, "[m] Minimum baseline");
 
         /* The rows in oi_wave_SC_allpol contain each wavelenght npol_sc times,
            since it has been aggregated. Therefore dividing by npol_sc times */
@@ -141,6 +141,11 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
         double band_min_eff_wave = cpl_table_get_float(oi_wave_SC_allpol, "EFF_BAND", min_eff_wave_pos, &null_flag);
         cpl_propertylist_update_double (idp_plist, qc_name, (min_eff_wave - band_min_eff_wave / 2.) * 1e9);
         cpl_propertylist_set_comment (idp_plist, qc_name, "[nm] Minimum wavelength");
+
+        double spec_bin = cpl_table_get_column_mean(oi_wave_SC_allpol, "EFF_BAND");
+        sprintf (qc_name, "SPEC_BIN");
+        cpl_propertylist_update_double (idp_plist, qc_name, spec_bin * 1e9);
+        cpl_propertylist_set_comment (idp_plist, qc_name, "[nm] Average spectral coordinate bin size [nm]");
 
         cpl_table_duplicate_column(oi_wave_SC_allpol, "SPEC_RES", oi_wave_SC_allpol, "EFF_WAVE");
         cpl_table_divide_columns(oi_wave_SC_allpol,"SPEC_RES", "EFF_BAND");
