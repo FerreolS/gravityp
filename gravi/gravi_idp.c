@@ -99,23 +99,24 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
         double min_uvcoord, max_uvcoord;
         gravi_data_get_minmax_uvcoord(oi_vis2_SC_allpol, &min_uvcoord, &max_uvcoord);
 
-        double min_eff_wave = cpl_table_get_column_min(oi_wave_SC_allpol, "EFF_WAVE");
-        double max_eff_wave = cpl_table_get_column_max(oi_wave_SC_allpol, "EFF_WAVE");
-
-        double base_max = max_uvcoord / min_eff_wave;
-        double base_min = min_uvcoord / max_eff_wave;
-        if(isnan(base_max) || isinf(base_max))
-            base_max = 0;
-        if(isnan(base_min) || isinf(base_min))
-            base_min = 0;
+        cpl_vector * baselines = cpl_vector_new(GRAVI_NBASE*2);
+        for (cpl_size ibase=0; ibase < GRAVI_NBASE; ibase++)
+        {
+            double bl_start = gravi_pfits_get_projected_baseline_start(header, GRAVI_BASE_TEL[ibase][0]+1, GRAVI_BASE_TEL[ibase][1]+1);
+            double bl_end   = gravi_pfits_get_projected_baseline_end(header, GRAVI_BASE_TEL[ibase][0]+1, GRAVI_BASE_TEL[ibase][1]+1);
+            cpl_vector_set(baselines, 2*ibase, bl_start);
+            cpl_vector_set(baselines, 2*ibase + 1, bl_end);
+        }
+        double base_max = cpl_vector_get_max(baselines);
+        double base_min = cpl_vector_get_min(baselines);
 
         sprintf (qc_name, "BASE_MAX");
         cpl_propertylist_update_double (idp_plist, qc_name, base_max);
-        cpl_propertylist_set_comment (idp_plist, qc_name, "Maximum baseline / Minimum effective wavelenth");
+        cpl_propertylist_set_comment (idp_plist, qc_name, "Maximum baseline [m]");
 
         sprintf (qc_name, "BASE_MIN");
         cpl_propertylist_update_double (idp_plist, qc_name, base_min);
-        cpl_propertylist_set_comment (idp_plist, qc_name, "Minimum baseline / Maximum effective wavelenth");
+        cpl_propertylist_set_comment (idp_plist, qc_name, "Minimum baseline [m]");
 
         /* The rows in oi_wave_SC_allpol contain each wavelenght npol_sc times,
            since it has been aggregated. Therefore dividing by npol_sc times */
@@ -124,6 +125,8 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
         cpl_propertylist_set_comment (idp_plist, qc_name, "Number of wavelength channels");
 
         /* Compute wavelength range */
+        double min_eff_wave = cpl_table_get_column_min(oi_wave_SC_allpol, "EFF_WAVE");
+        double max_eff_wave = cpl_table_get_column_max(oi_wave_SC_allpol, "EFF_WAVE");
         int null_flag;
         sprintf (qc_name, "WAVELMAX");
         cpl_size max_eff_wave_pos;

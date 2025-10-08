@@ -791,6 +791,28 @@ double gravi_pfits_get_drotoff (const cpl_propertylist * plist, int tel)
     return drottoff;
 }
 
+double gravi_pfits_get_projected_baseline_start (const cpl_propertylist * plist, int tel1, int tel2)
+{
+    char name[90];
+
+    /* Projected baseline between telescopes tel1 and tel2 at start of observation */
+    sprintf (name, "ESO ISS PBL%i%i START", tel1, tel2);
+    double pbl = cpl_propertylist_get_double (plist, name);
+
+    return pbl;
+}
+
+double gravi_pfits_get_projected_baseline_end (const cpl_propertylist * plist, int tel1, int tel2)
+{
+    char name[90];
+
+    /* Projected baseline between telescopes tel1 and tel2 at end of observation */
+    sprintf (name, "ESO ISS PBL%i%i END", tel1, tel2);
+    double pbl = cpl_propertylist_get_double (plist, name);
+
+    return pbl;
+}
+
 double gravi_pfits_get_northangle_acqcam (const cpl_propertylist * plist, int tel)
 {
     double fangle = 0.0;

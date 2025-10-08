@@ -257,6 +257,9 @@ double gravi_pfits_get_diameter(const cpl_propertylist * plist, int type_data);
 
 double gravi_pfits_get_ptfc_acqcam (const cpl_propertylist * plist, int spot);
 double gravi_pfits_get_drotoff (const cpl_propertylist * plist, int tel);
+double gravi_pfits_get_projected_baseline_start (const cpl_propertylist * plist, int tel1, int tel2);
+double gravi_pfits_get_projected_baseline_end (const cpl_propertylist * plist, int tel1, int tel2);
+
 double gravi_pfits_get_northangle_acqcam (const cpl_propertylist * plist, int tel);
 double gravi_pfits_get_zenithangle_beamb_acqcam (const cpl_propertylist * plist, int tel, int n, int nrow);
 
