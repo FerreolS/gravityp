@@ -123,13 +123,20 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
         cpl_propertylist_update_int (idp_plist, qc_name, cpl_table_get_nrow(oi_wave_SC_allpol) / npol_sc );
         cpl_propertylist_set_comment (idp_plist, qc_name, "Number of wavelength channels");
 
+        /* Compute wavelength range */
+        int null_flag;
         sprintf (qc_name, "WAVELMAX");
-        double avg_band = cpl_table_get_column_mean(oi_wave_SC_allpol, "EFF_BAND");
-        cpl_propertylist_update_double (idp_plist, qc_name, (max_eff_wave + avg_band / 2.) * 1e9);
+        cpl_size max_eff_wave_pos;
+        cpl_table_get_column_maxpos(oi_wave_SC_allpol, "EFF_WAVE", &max_eff_wave_pos);
+        double band_max_eff_wave = cpl_table_get_float(oi_wave_SC_allpol, "EFF_BAND", max_eff_wave_pos, &null_flag);
+        cpl_propertylist_update_double (idp_plist, qc_name, (max_eff_wave + band_max_eff_wave / 2.) * 1e9);
         cpl_propertylist_set_comment (idp_plist, qc_name, "[nm] Maximum wavelength");
 
         sprintf (qc_name, "WAVELMIN");
-        cpl_propertylist_update_double (idp_plist, qc_name, (min_eff_wave - avg_band / 2.) * 1e9);
+        cpl_size min_eff_wave_pos;
+        cpl_table_get_column_minpos(oi_wave_SC_allpol, "EFF_WAVE", &min_eff_wave_pos);
+        double band_min_eff_wave = cpl_table_get_float(oi_wave_SC_allpol, "EFF_BAND", min_eff_wave_pos, &null_flag);
+        cpl_propertylist_update_double (idp_plist, qc_name, (min_eff_wave - band_min_eff_wave / 2.) * 1e9);
         cpl_propertylist_set_comment (idp_plist, qc_name, "[nm] Minimum wavelength");
 
         cpl_table_duplicate_column(oi_wave_SC_allpol, "SPEC_RES", oi_wave_SC_allpol, "EFF_WAVE");
