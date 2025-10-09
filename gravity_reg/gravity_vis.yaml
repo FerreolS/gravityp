@@ -1,0 +1,25 @@
+# log default parameters
+PreExec:
+  - "esorex --man gravity_vis"
+
+Defaults:
+  EsorexTests:
+    result:
+      fitsdiff:
+
+EsorexTests:
+
+   - 350.gravity_vis.calibrator_HIGH_COMBINED_COMBINED:
+      recipe: gravity_vis
+      sof:
+        - ["gravity_vis/calibrator_HIGH_COMBINED_COMBINED/GRAVI.2024-05-26T04:26:53.354.fits", SINGLE_CAL_RAW]
+        - ["gravity_vis/calibrator_HIGH_COMBINED_COMBINED/GRAVI.2024-05-26T04:33:32.370.fits", SINGLE_SKY_RAW]
+        - ["gravity_vis/calibrator_HIGH_COMBINED_COMBINED/GRAVI.2024-05-26T10:19:00.370_dark.fits", DARK]
+        - ["gravity_vis/calibrator_HIGH_COMBINED_COMBINED/GRAVI.2024-05-26T11:41:06.578_dark_bad.fits", BAD]
+        - ["gravity_vis/calibrator_HIGH_COMBINED_COMBINED/GRAVI.2024-05-26T11:42:42.582_flat.fits", FLAT]
+        - ["gravity_vis/calibrator_HIGH_COMBINED_COMBINED/GRAVI.2024-05-26T11:47:27.594_wave.fits", WAVE]
+        - ["gravity_vis/calibrator_HIGH_COMBINED_COMBINED/GRAVI.2024-05-26T11:56:48.618_p2vm.fits", P2VM]
+        - ["datastatic/GRAVI_DISP_MODEL_2019-10-17.fits", DISP_MODEL]
+        - ["datastatic/GRAVI_STATIC_CALIB_2019-10-12.fits", STATIC_PARAM]
+        - ["datastatic/GRAVI_EOP_PARAM.2024-09-26T00:00:00.000.fits", EOP_PARAM]
+        - ["datastatic/GRAVI_FAINT_CALIBRATORS.fits", DIAMETER_CAT]
