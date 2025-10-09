@@ -9,6 +9,19 @@ Defaults:
 
 EsorexTests:
 
+   - 345.gravity_vis.science_DUAL_LOW_SPLIT_SPLIT:
+      recipe: gravity_vis
+      sof:
+        - ["gravity_vis/science_DUAL_LOW_SPLIT_SPLIT/GRAVI.2023-06-02T04:51:52.955.fits", DUAL_SCI_RAW]
+        - ["gravity_vis/science_DUAL_LOW_SPLIT_SPLIT/GRAVI.2023-06-02T04:30:40.897.fits", DUAL_SKY_RAW]
+        - ["gravity_vis/science_DUAL_LOW_SPLIT_SPLIT/GRAVI.2023-06-02T11:49:09.214_dark.fits", DARK]
+        - ["gravity_vis/science_DUAL_LOW_SPLIT_SPLIT/GRAVI.2023-06-02T11:49:09.214_bad.fits", BAD]
+        - ["gravity_vis/science_DUAL_LOW_SPLIT_SPLIT/GRAVI.2023-06-02T11:50:45.219_flat.fits", FLAT]
+        - ["gravity_vis/science_DUAL_LOW_SPLIT_SPLIT/GRAVI.2023-06-02T11:57:33.236_wave.fits", WAVE]
+        - ["gravity_vis/science_DUAL_LOW_SPLIT_SPLIT/GRAVI.2023-06-02T12:11:06.271_p2vm.fits", P2VM]
+        - ["datastatic/GRAVI_DISP_MODEL_2019-10-17.fits", DISP_MODEL]
+        - ["datastatic/GRAVI_STATIC_CALIB_2019-10-12.fits", STATIC_PARAM]
+
    - 350.gravity_vis.calibrator_HIGH_COMBINED_COMBINED:
       recipe: gravity_vis
       sof:
@@ -98,5 +111,22 @@ EsorexTests:
         - ["datastatic/GRAVI_DISP_MODEL_2019-10-17.fits", DISP_MODEL]
         - ["datastatic/GRAVI_STATIC_CALIB_2019-10-12.fits", STATIC_PARAM]
         - ["datastatic/GRAVI_EOP_PARAM.2024-09-26T00:00:00.000.fits", EOP_PARAM]
+        - ["datastatic/GRAVI_FAINT_CALIBRATORS.fits", DIAMETER_CAT]
+
+   - 380.gravity_vis.calibrator_SINGLE_MEDIUM_COMBINED_COMBINED_diode:
+      recipe: gravity_vis
+      sof:
+        - ["gravity_vis/calibrator_SINGLE_MEDIUM_COMBINED_COMBINED/GRAVI.2019-04-23T00:01:03.628.fits", SINGLE_CAL_RAW]
+        - ["gravity_vis/calibrator_SINGLE_MEDIUM_COMBINED_COMBINED/GRAVI.2019-04-23T00:03:42.635.fits", SINGLE_SKY_RAW]
+        - ["gravity_vis/calibrator_SINGLE_MEDIUM_COMBINED_COMBINED/GRAVI.2019-04-23T00:06:30.642.fits", SINGLE_CAL_RAW]
+        - ["gravity_vis/calibrator_SINGLE_MEDIUM_COMBINED_COMBINED/GRAVI.2019-04-23T00:09:09.648.fits", SINGLE_CAL_RAW]
+        - ["gravity_vis/calibrator_SINGLE_MEDIUM_COMBINED_COMBINED/GRAVI.2019-04-22T12:17:41.748_dark.fits", DARK]
+        - ["gravity_vis/calibrator_SINGLE_MEDIUM_COMBINED_COMBINED/GRAVI.2019-04-22T12:17:41.748_bad.fits", BAD]
+        - ["gravity_vis/calibrator_SINGLE_MEDIUM_COMBINED_COMBINED/GRAVI.2019-04-22T12:19:02.751_flat.fits", FLAT]
+        - ["gravity_vis/calibrator_SINGLE_MEDIUM_COMBINED_COMBINED/GRAVI.2019-04-22T12:21:47.758_wave.fits", WAVE]
+        - ["gravity_vis/calibrator_SINGLE_MEDIUM_COMBINED_COMBINED/RAVI.2019-04-22T12:32:56.786_p2vm.fitss", P2VM]
+        - ["datastatic/GRAVI_DISP_MODEL_2019-10-17.fits", DISP_MODEL]
+        - ["datastatic/GRAVI_STATIC_CALIB_2019-10-12.fits", STATIC_PARAM]
+        - ["datastatic/GRAVI_DIODE_POSITION.fits", DIODE_POSITION]
         - ["datastatic/GRAVI_FAINT_CALIBRATORS.fits", DIAMETER_CAT]
 
