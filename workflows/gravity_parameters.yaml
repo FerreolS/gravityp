@@ -20,14 +20,14 @@ default_parameters: &default
     $match_exposure_time: "instrume"
   recipe_parameters: &default_r
     target_visibilities:
-      gravity.test.reduce-acq-cam: "FALSE"
+      gravity.test.reduce-acq-cam: "QC"
       gravity.dfs.astro-file: "TRUE"
       gravity.signal.opd-pupil-stddev-max-sc: 0
       gravity.vis.vis-correction-sc: "NONE"
       gravity.vis.phase-ref-sc: "SELF_REF"
       gravity.vis.output-phase-sc: "SELF_VISPHI"
     calibrator_visibilities:
-      gravity.test.reduce-acq-cam: "FALSE"
+      gravity.test.reduce-acq-cam: "QC"
       gravity.dfs.astro-file: "TRUE"
       gravity.signal.opd-pupil-stddev-max-sc: 0
       gravity.vis.vis-correction-sc: "NONE"
