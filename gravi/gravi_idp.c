@@ -142,10 +142,16 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
         cpl_propertylist_update_double (idp_plist, qc_name, (min_eff_wave - band_min_eff_wave / 2.) * 1e9);
         cpl_propertylist_set_comment (idp_plist, qc_name, "[nm] Minimum wavelength");
 
-        double spec_bin = cpl_table_get_column_mean(oi_wave_SC_allpol, "EFF_BAND");
+        double spec_bin =0;
+        for (int pol = 0; pol < npol_sc; pol++) {
+            cpl_table * this_wave_table = gravi_data_get_oi_wave (vis_data, GRAVI_SC, pol, npol_sc);
+            double this_spec_bin = cpl_table_get_column_mean(this_wave_table, "EFF_BAND");
+            if (this_spec_bin > spec_bin) 
+                spec_bin = this_spec_bin;
+        }
         sprintf (qc_name, "SPEC_BIN");
         cpl_propertylist_update_double (idp_plist, qc_name, spec_bin * 1e9);
-        cpl_propertylist_set_comment (idp_plist, qc_name, "[nm] Average spectral coordinate bin size [nm]");
+        cpl_propertylist_set_comment (idp_plist, qc_name, "[nm] Average spectral coordinate bin size");
 
         cpl_table_duplicate_column(oi_wave_SC_allpol, "SPEC_RES", oi_wave_SC_allpol, "EFF_WAVE");
         cpl_table_divide_columns(oi_wave_SC_allpol,"SPEC_RES", "EFF_BAND");
