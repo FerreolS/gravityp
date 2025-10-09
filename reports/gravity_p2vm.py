@@ -498,11 +498,16 @@ class GravityP2vmReport(GravityReportMixin, AdariReportBase):
         panels = {}
 
         p1, p2 = self.panel_images_cuts_sc(5, "flat", 1)
+        input_files = [self.hdus[0]["p2vm"].filename(), 
+                       self.hdus[0]["flat"].filename()] 
+        for i in range(4):
+            input_files.append(self.hdus[0][f"flat_raw_{i + 1}"].filename())
         addme1 = {
             "panel": "first panel",
             "report_name": "gravity_FLAT_SC_images",
             "report_description": "GRAVITY p2vm panel 1",
             "report_tags": [],
+            "input_files": input_files
         }
 
         addme2 = {
@@ -510,14 +515,19 @@ class GravityP2vmReport(GravityReportMixin, AdariReportBase):
             "report_name": "gravity_FLAT_SC_plots",
             "report_description": "GRAVITY p2vm panel 2",
             "report_tags": [],
+            "input_files": input_files
         }
 
         p3, p4 = self.panel_images_cuts_sc(6, "p2vm", 0)
+        input_files = [self.hdus[0]["p2vm"].filename()] 
+        for i in range(6):
+            input_files.append(self.hdus[0][f"p2vm_raw_{i + 1}"].filename())
         addme3 = {
             "panel": "third panel",
             "report_name": "gravity_P2VM_SC_images",
             "report_description": "GRAVITY p2vm panel 3",
             "report_tags": [],
+            "input_files": input_files
         }
 
         addme4 = {
@@ -525,62 +535,80 @@ class GravityP2vmReport(GravityReportMixin, AdariReportBase):
             "report_name": "gravity_P2VM_SC_plots",
             "report_description": "GRAVITY p2vm panel 4",
             "report_tags": [],
+            "input_files": input_files
         }
 
         p5 = self.panel_images_cuts_ft(5, "flat", 1)
+        input_files = [self.hdus[0]["p2vm"].filename(), 
+               self.hdus[0]["flat"].filename()] 
+        for i in range(4):
+            input_files.append(self.hdus[0][f"flat_raw_{i + 1}"].filename())
         addme5 = {
             "panel": "fifth panel",
             "report_name": "gravity_FLAT_FT_images",
             "report_description": "GRAVITY p2vm panel 5",
             "report_tags": [],
+            "input_files": input_files
         }
 
         p6 = self.panel_images_cuts_ft(6, "p2vm", 0)
+        input_files = [self.hdus[0]["p2vm"].filename()] 
+        for i in range(6):
+            input_files.append(self.hdus[0][f"p2vm_raw_{i + 1}"].filename())
         addme6 = {
             "panel": "sixth panel",
             "report_name": "gravity_P2VM_FT_images",
             "report_description": "GRAVITY p2vm panel 6",
             "report_tags": [],
+            "input_files": input_files
         }
 
         p7, p9, p11 = self.panel_line_plots("P2VM_SC")
+        input_files = [self.hdus[0]["p2vm"].filename()] 
         addme7 = {
             "panel": "seventh panel",
             "report_name": "gravity_P2VM_SC_plots_2",
             "report_description": "GRAVITY p2vm panel 7",
             "report_tags": [],
+            "input_files": input_files
         }
         addme9 = {
             "panel": "ninth panel",
             "report_name": "gravity_P2VM_SC_plots_3",
             "report_description": "GRAVITY p2vm panel 9",
             "report_tags": [],
+            "input_files": input_files
         }
         addme11 = {
             "panel": "eleventh panel",
             "report_name": "gravity_P2VM_SC_plots_4",
             "report_description": "GRAVITY p2vm panel 11",
             "report_tags": [],
+            "input_files": input_files
         }
 
         p8, p10, p12 = self.panel_line_plots("P2VM_FT")
+        input_files = [self.hdus[0]["p2vm"].filename()] 
         addme8 = {
             "panel": "eight panel",
             "report_name": "gravity_P2VM_FT_plots_2",
             "report_description": "GRAVITY p2vm panel 8",
             "report_tags": [],
+            "input_files": input_files
         }
         addme10 = {
             "panel": "tenth panel",
             "report_name": "gravity_P2VM_FT_plots_3",
             "report_description": "GRAVITY p2vm panel 10",
             "report_tags": [],
+            "input_files": input_files
         }
         addme12 = {
             "panel": "twelfth panel",
             "report_name": "gravity_P2VM_FT_plots_4",
             "report_description": "GRAVITY p2vm panel 12",
             "report_tags": [],
+            "input_files": input_files
         }
 
         panels[p1] = addme1

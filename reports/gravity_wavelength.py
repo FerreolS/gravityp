@@ -248,6 +248,8 @@ class GravityArcReport(GravityReportMixin, AdariReportBase):
         t3.add_data(col3)
 
         pola_mode = hdr.get("HIERARCH ESO FT POLA MODE")
+
+        input_files = [wavelamp.filename()]
         if pola_mode == "SPLIT":
             p1 = self.first_panel()
             p1.assign_plot(t1a, 0, 0, xext=2)
@@ -264,6 +266,7 @@ class GravityArcReport(GravityReportMixin, AdariReportBase):
                 "report_name": f"gravity_{wavelamp_procatg}_1",
                 "report_description": "GRAVITY arc wavelength panel 1",
                 "report_tags": [],
+                "input_files": input_files                
             }
 
             addme2 = {
@@ -271,6 +274,7 @@ class GravityArcReport(GravityReportMixin, AdariReportBase):
                 "report_name": f"gravity_{wavelamp_procatg}_2",
                 "report_description": "GRAVITY arc wavelength panel 2",
                 "report_tags": [],
+                "input_files": input_files
             }
 
             panels[p1] = addme1
@@ -287,6 +291,7 @@ class GravityArcReport(GravityReportMixin, AdariReportBase):
                 "report_name": f"gravity_{wavelamp_procatg}",
                 "report_description": "GRAVITY arc wavelength panel",
                 "report_tags": [],
+                "input_files": input_files
             }
 
             panels[p1] = addme
