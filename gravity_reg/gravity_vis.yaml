@@ -14,7 +14,6 @@ EsorexTests:
       sof:
         - ["gravity_vis/science_SINGLE_MEDIUM_COMBINED_COMBINED/GRAVI.2023-11-26T05:59:53.985.fits", SINGLE_SCI_RAW]
         - ["gravity_vis/science_SINGLE_MEDIUM_COMBINED_COMBINED/GRAVI.2023-11-26T06:19:51.036.fits", SINGLE_SKY_RAW]
-        - ["gravity_vis/science_SINGLE_MEDIUM_COMBINED_COMBINED/GRAVI.2023-11-26T06:19:51.036.fits", SINGLE_SKY_RAW]
         - ["gravity_vis/science_SINGLE_MEDIUM_COMBINED_COMBINED/GRAVI.2023-11-26T09:19:24.491_dark.fits", DARK]
         - ["gravity_vis/science_SINGLE_MEDIUM_COMBINED_COMBINED/GRAVI.2023-11-26T09:19:24.491_bad.fits", BAD]
         - ["gravity_vis/science_SINGLE_MEDIUM_COMBINED_COMBINED/GRAVI.2023-11-26T09:20:48.496_flat.fits", FLAT]
