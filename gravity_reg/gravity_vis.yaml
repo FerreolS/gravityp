@@ -78,7 +78,7 @@ EsorexTests:
         - ["gravity_vis/calibrator_SINGLE_MEDIUM_COMBINED_COMBINED_diode/GRAVI.2019-04-22T12:17:41.748_bad.fits", BAD]
         - ["gravity_vis/calibrator_SINGLE_MEDIUM_COMBINED_COMBINED_diode/GRAVI.2019-04-22T12:19:02.751_flat.fits", FLAT]
         - ["gravity_vis/calibrator_SINGLE_MEDIUM_COMBINED_COMBINED_diode/GRAVI.2019-04-22T12:21:47.758_wave.fits", WAVE]
-        - ["gravity_vis/calibrator_SINGLE_MEDIUM_COMBINED_COMBINED_diode/RAVI.2019-04-22T12:32:56.786_p2vm.fitss", P2VM]
+        - ["gravity_vis/calibrator_SINGLE_MEDIUM_COMBINED_COMBINED_diode/GRAVI.2019-04-22T12:32:56.786_p2vm.fitss", P2VM]
         - ["datastatic/GRAVI_DISP_MODEL_2019-10-17.fits", DISP_MODEL]
         - ["datastatic/GRAVI_STATIC_CALIB_2019-10-12.fits", STATIC_PARAM]
         - ["datastatic/GRAVI_DIODE_POSITION.fits", DIODE_POSITION]
