@@ -458,7 +458,8 @@ static int gravity_vis_from_p2vmred(cpl_frameset * frameset,
         }
             
         /* Copy the acquisition camera if requested */
-        if (current_frame < 0 && !strcmp (gravi_param_get_string (parlist, "gravity.test.reduce-acq-cam"), "TRUE"))
+        if (current_frame < 0 && ( !strcmp (gravi_param_get_string (parlist, "gravity.test.reduce-acq-cam"), "TRUE") || 
+                                   !strcmp (gravi_param_get_string (parlist, "gravity.test.reduce-acq-cam"), "true")))
         {
    	    cpl_msg_info (cpl_func, "Copy ACQ into the VIS file");
             gravi_data_copy_ext_insname (tmpvis_data, p2vmred_data, GRAVI_IMAGING_DATA_ACQ_EXT, INSNAME_ACQ);

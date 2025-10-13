@@ -257,7 +257,7 @@ static int gravity_vis_create(cpl_plugin * plugin)
                                 "the QC parameters of the field part. If FALSE, ignore\n " 
                                 "completely the acquisition camera.",
                                 "gravity.test", "FALSE",
-                                3, "TRUE", "FALSE", "QC");
+                                6, "TRUE", "true", "FALSE", "false", "QC", "qc");
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "reduce-acq-cam");
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
     cpl_parameterlist_append (recipe->parameters, p);
@@ -772,7 +772,9 @@ static int gravity_vis(cpl_frameset * frameset,
         
         /* Preproc the Acquisition Camera */
         if (!strcmp (gravi_param_get_string (parlist, "gravity.test.reduce-acq-cam"), "TRUE") ||
-            !strcmp (gravi_param_get_string (parlist, "gravity.test.reduce-acq-cam"), "QC")) {
+            !strcmp (gravi_param_get_string (parlist, "gravity.test.reduce-acq-cam"), "true") ||
+            !strcmp (gravi_param_get_string (parlist, "gravity.test.reduce-acq-cam"), "QC") ||
+            !strcmp (gravi_param_get_string (parlist, "gravity.test.reduce-acq-cam"), "qc")) {
             gravi_preproc_acqcam (preproc_data, data, badpix_map);
             CPLCHECK_CLEAN ("Cannot preproc ACQ");
         }
@@ -814,11 +816,13 @@ static int gravity_vis(cpl_frameset * frameset,
 		CPLCHECK_CLEAN ("Cannot apply p2vm to the preproc data");
 
         /* Reduce the Acquisition Camera */
-        if (!strcmp (gravi_param_get_string (parlist, "gravity.test.reduce-acq-cam"), "TRUE")) {
+        if (!strcmp (gravi_param_get_string (parlist, "gravity.test.reduce-acq-cam"), "TRUE") ||
+            !strcmp (gravi_param_get_string (parlist, "gravity.test.reduce-acq-cam"), "true")) {
             int saveAcqTable = 1;
             gravi_reduce_acqcam (p2vmred_data, preproc_data, sky_maps[isky], dark_map, static_param_data, saveAcqTable);
         }
-        else if (!strcmp (gravi_param_get_string (parlist, "gravity.test.reduce-acq-cam"), "QC")) {
+        else if (!strcmp (gravi_param_get_string (parlist, "gravity.test.reduce-acq-cam"), "QC") ||
+                 !strcmp (gravi_param_get_string (parlist, "gravity.test.reduce-acq-cam"), "qc")) {
             int saveAcqTable = 0;
             gravi_reduce_acqcam (p2vmred_data, preproc_data, sky_maps[isky], dark_map, static_param_data, saveAcqTable);
         }
@@ -902,7 +906,8 @@ static int gravity_vis(cpl_frameset * frameset,
             }
 
             /* Copy the acquisition camera if requested. */
-            if (current_frame < 0 && !strcmp (gravi_param_get_string (parlist, "gravity.test.reduce-acq-cam"), "TRUE"))
+            if (current_frame < 0 && ( !strcmp (gravi_param_get_string (parlist, "gravity.test.reduce-acq-cam"), "TRUE") || 
+                                       !strcmp (gravi_param_get_string (parlist, "gravity.test.reduce-acq-cam"), "true")))
             {
                 cpl_msg_info (cpl_func, "Copy ACQ into the VIS file");
                 gravi_data_copy_ext_insname (tmpvis_data, p2vmred_data, GRAVI_IMAGING_DATA_ACQ_EXT, INSNAME_ACQ);
