@@ -1035,50 +1035,51 @@ static int gravity_vis(cpl_frameset * frameset,
 
 cleanup:
 	/* Deallocation of all variables */
-	cpl_msg_info(cpl_func,"Memory cleanup");
+    cpl_msg_info(cpl_func,"Memory cleanup");
 
-	FREELOOP (gravi_data_delete,sky_maps,nb_sky);
-	FREE (gravi_data_delete,dark_map);
-	FREE (gravi_data_delete,data);
-	FREE (gravi_data_delete,preproc_data);
-	FREE (gravi_data_delete,profile_map);
-	FREE (gravi_data_delete,disp_map);
-	FREE (gravi_data_delete,wave_map);
-	FREE (gravi_data_delete,badpix_map);
-	FREE (gravi_data_delete,p2vm_map);
-	FREE (gravi_data_delete,p2vmred_data);
-	FREE (gravi_data_delete,vis_data);
-	FREE (gravi_data_delete,tmpvis_data);
-	FREE (gravi_data_delete,diamcat_data);
-	FREE (gravi_data_delete,static_param_data);
-	FREE (gravi_data_delete,diodepos_data);
-	FREE (gravi_data_delete,pca_calib_data);
-	FREE (gravi_data_delete,eop_map);
-	FREE (cpl_frameset_delete,darkcalib_frameset);
-	FREE (cpl_frameset_delete,wavecalib_frameset);
-	FREE (cpl_frameset_delete,flatcalib_frameset);
-	FREE (cpl_frameset_delete,badcalib_frameset);
-	FREE (cpl_frameset_delete,p2vmcalib_frameset);
-	FREE (cpl_frameset_delete,metpos_frameset);
-	FREE (cpl_frameset_delete,dark_frameset);
-	FREE (cpl_frameset_delete,diamcat_frameset);
-	FREE (cpl_frameset_delete,sky_frameset);
-	FREE (cpl_frameset_delete,dispcalib_frameset);
-	FREE (cpl_frameset_delete,pcacalib_frameset);
+    FREELOOP (gravi_data_delete,sky_maps,nb_sky);
+    FREE (gravi_data_delete,dark_map);
+    FREE (gravi_data_delete,data);
+    FREE (gravi_data_delete,preproc_data);
+    FREE (gravi_data_delete,profile_map);
+    FREE (gravi_data_delete,disp_map);
+    FREE (gravi_data_delete,wave_map);
+    FREE (gravi_data_delete,badpix_map);
+    FREE (gravi_data_delete,p2vm_map);
+    FREE (gravi_data_delete,p2vmred_data);
+    FREE (gravi_data_delete,vis_data);
+    FREE (gravi_data_delete,tmpvis_data);
+    FREE (gravi_data_delete,diamcat_data);
+    FREE (gravi_data_delete,static_param_data);
+    FREE (gravi_data_delete,diodepos_data);
+    FREE (gravi_data_delete,pca_calib_data);
+    FREE (gravi_data_delete,eop_map);
+    FREE (cpl_frameset_delete,darkcalib_frameset);
+    FREE (cpl_frameset_delete,wavecalib_frameset);
+    FREE (cpl_frameset_delete,flatcalib_frameset);
+    FREE (cpl_frameset_delete,badcalib_frameset);
+    FREE (cpl_frameset_delete,p2vmcalib_frameset);
+    FREE (cpl_frameset_delete,metpos_frameset);
+    FREE (cpl_frameset_delete,dark_frameset);
+    FREE (cpl_frameset_delete,diamcat_frameset);
+    FREE (cpl_frameset_delete,sky_frameset);
+    FREE (cpl_frameset_delete,dispcalib_frameset);
+    FREE (cpl_frameset_delete,pcacalib_frameset);
     FREE (cpl_frameset_delete,eop_frameset);
     FREE (cpl_frameset_delete,patch_frameset);
     FREE (cpl_frameset_delete,static_param_frameset);
-	FREE (cpl_frameset_delete,recipe_frameset);
-	FREE (cpl_frameset_delete,current_frameset);
-	FREE (cpl_frameset_delete,used_frameset);
+    FREE (cpl_frameset_delete,recipe_frameset);
+    FREE (cpl_frameset_delete,current_frameset);
+    FREE (cpl_frameset_delete,used_frameset);
     FREE (cpl_free,proCatg);
     FREE (cpl_free,redCatg);
     FREE (cpl_free,skyCatg);
     FREE (cpl_free,mode);
     FREE (cpl_free,input_data_type);
-    FREELOOP(cpl_propertylist_delete, p2vm_qcs, nb_frame);
+    if(nb_frame)
+        FREELOOP(cpl_propertylist_delete, p2vm_qcs, nb_frame);
 
 	
-	gravi_msg_function_exit(1);
+    gravi_msg_function_exit(1);
     return (int)cpl_error_get_code();
 }
