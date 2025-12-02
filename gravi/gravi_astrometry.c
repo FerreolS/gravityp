@@ -951,122 +951,58 @@ cpl_error_code gravi_astrometry_create_phase_reference(astro_data *self, astro_d
 /**
  * Return CPL table with the final astrometric phase reference.
 */
-// cpl_table *gravi_astrometry_get_phase_reference(astro_data *self)
-// {
-//     cpl_table *table = cpl_table_new(self->nchannel);
-//     cpl_table_new_column_array(table, "ASTRO_VISREF", CPL_TYPE_DOUBLE_COMPLEX, self->nwave);
-//     cpl_table_new_column_array(table, "ASTRO_AMPREF", CPL_TYPE_DOUBLE, self->nwave);
-//     cpl_table_new_column_array(table, "ASTRO_COV", CPL_TYPE_DOUBLE, self->ndit * self->nwave);
-//     cpl_table_new_column_array(table, "ASTRO_PCOV", CPL_TYPE_DOUBLE_COMPLEX, self->ndit * self->nwave);
-
-//     cpl_array *tmp_arr = cpl_array_new(self->nwave, CPL_TYPE_DOUBLE_COMPLEX);
-//     for (int i = 0; i < self->nchannel; i++) {
-//         for (int j = 0; j < self->nwave; j++) {
-//             gsl_complex val = gsl_matrix_complex_get(self->phase_ref_astro, i, j);
-//             cpl_array_set_complex(tmp_arr, j, GSL_REAL(val) + I * GSL_IMAG(val));
-//         }
-//         cpl_table_set_array(table, "ASTRO_VISREF", i, tmp_arr);
-//     }
-//     FREE(cpl_array_delete, tmp_arr);
-
-//     tmp_arr = cpl_array_new(self->nwave, CPL_TYPE_DOUBLE);
-//     for (int i = 0; i < self->nchannel; i++) {
-//         for (int j = 0; j < self->nwave; j++) {
-//             double val = gsl_matrix_get(self->amp_ref_astro, i, j);
-//             cpl_array_set(tmp_arr, j, val);
-//         }
-//         cpl_table_set_array(table, "ASTRO_AMPREF", i, tmp_arr);
-//     }
-//     FREE(cpl_array_delete, tmp_arr);
-
-//     // vis_ref_cov is array of size ndit * nchannel, of vectors of length nwave
-//     tmp_arr = cpl_array_new(self->ndit * self->nwave, CPL_TYPE_DOUBLE);
-//     for (int i = 0; i < self->nchannel; i++) {
-//         for (int j = 0; j < self->ndit; j++) {
-//             for (int k = 0; k < self->nwave; k++) {
-//                 double val = gsl_vector_get(self->vis_ref_cov[i + j * self->nchannel], k);
-//                 cpl_array_set(tmp_arr, k + j * self->nwave, val);
-//             }
-//         }
-//         cpl_table_set_array(table, "ASTRO_COV", i, tmp_arr);
-//     }
-//     CPLCHECK_NUL("Could not add ASTRO_COV");
-//     FREE(cpl_array_delete, tmp_arr);
-
-//     // vis_ref_pcov is array of size ndit * nchannel, of complex vectors of length nwave
-//     tmp_arr = cpl_array_new(self->ndit * self->nwave, CPL_TYPE_DOUBLE_COMPLEX);
-//     for (int i = 0; i < self->nchannel; i++) {
-//         for (int j = 0; j < self->ndit; j++) {
-//             for (int k = 0; k < self->nwave; k++) {
-//                 gsl_complex val = gsl_vector_complex_get(self->vis_ref_pcov[i + j * self->nchannel], k);
-//                 cpl_array_set_complex(tmp_arr, k + j * self->nwave, GSL_REAL(val) + I * GSL_IMAG(val));
-//             }
-//         }
-//         cpl_table_set_array(table, "ASTRO_PCOV", i, tmp_arr);
-//     }
-//     CPLCHECK_NUL("Could not add ASTRO_PCOV");
-//     FREE(cpl_array_delete, tmp_arr);
-
-//     return table;
-// }
-
-/**
- * Return CPL table with the final astrometric phase reference.
- * 
- * @param self astro_data to extract table from.
- * 
- * @note Row axis of table corresponds to wavelength.
- */
 cpl_table *gravi_astrometry_get_phase_reference(astro_data *self)
 {
-    cpl_table *table = cpl_table_new(self->nwave);
-    cpl_table_new_column_array(table, "ASTRO_VISREF", CPL_TYPE_DOUBLE_COMPLEX, self->nchannel);
-    cpl_table_new_column_array(table, "ASTRO_AMPREF", CPL_TYPE_DOUBLE, self->nchannel);
-    cpl_table_new_column_array(table, "ASTRO_COV", CPL_TYPE_DOUBLE, self->ndit * self->nchannel);
-    cpl_table_new_column_array(table, "ASTRO_PCOV", CPL_TYPE_DOUBLE_COMPLEX, self->ndit * self->nchannel);
+    cpl_table *table = cpl_table_new(self->nchannel);
+    cpl_table_new_column_array(table, "ASTRO_VISREF", CPL_TYPE_DOUBLE_COMPLEX, self->nwave);
+    cpl_table_new_column_array(table, "ASTRO_AMPREF", CPL_TYPE_DOUBLE, self->nwave);
+    cpl_table_new_column_array(table, "ASTRO_COV", CPL_TYPE_DOUBLE, self->ndit * self->nwave);
+    cpl_table_new_column_array(table, "ASTRO_PCOV", CPL_TYPE_DOUBLE_COMPLEX, self->ndit * self->nwave);
 
-    cpl_array *tmp_arr = cpl_array_new(self->nchannel, CPL_TYPE_DOUBLE_COMPLEX);
-    for (int j = 0; j < self->nwave; j++) {
-        for (int i = 0; i < self->nchannel; i++) {
+    cpl_array *tmp_arr = cpl_array_new(self->nwave, CPL_TYPE_DOUBLE_COMPLEX);
+    for (int i = 0; i < self->nchannel; i++) {
+        for (int j = 0; j < self->nwave; j++) {
             gsl_complex val = gsl_matrix_complex_get(self->phase_ref_astro, i, j);
-            cpl_array_set_complex(tmp_arr, i, GSL_REAL(val) + I * GSL_IMAG(val));
+            cpl_array_set_complex(tmp_arr, j, GSL_REAL(val) + I * GSL_IMAG(val));
         }
-        cpl_table_set_array(table, "ASTRO_VISREF", j, tmp_arr);
+        cpl_table_set_array(table, "ASTRO_VISREF", i, tmp_arr);
     }
-    CPLCHECK_NUL("Could not add ASTRO_VISREF");
     FREE(cpl_array_delete, tmp_arr);
 
-    tmp_arr = cpl_array_new(self->nchannel, CPL_TYPE_DOUBLE);
-    for (int j = 0; j < self->nwave; j++) {
-        for (int i = 0; i < self->nchannel; i++) {
+    tmp_arr = cpl_array_new(self->nwave, CPL_TYPE_DOUBLE);
+    for (int i = 0; i < self->nchannel; i++) {
+        for (int j = 0; j < self->nwave; j++) {
             double val = gsl_matrix_get(self->amp_ref_astro, i, j);
-            cpl_array_set(tmp_arr, i, val);
+            cpl_array_set(tmp_arr, j, val);
         }
-        cpl_table_set_array(table, "ASTRO_AMPREF", j, tmp_arr);
+        cpl_table_set_array(table, "ASTRO_AMPREF", i, tmp_arr);
     }
-    CPLCHECK_NUL("Could not add ASTRO_AMPREF");
     FREE(cpl_array_delete, tmp_arr);
 
     // vis_ref_cov is array of size ndit * nchannel, of vectors of length nwave
-    tmp_arr = cpl_array_new(self->ndit * self->nchannel, CPL_TYPE_DOUBLE);
-    for (int j = 0; j < self->nwave; j++) {
-        for (int i = 0; i < self->ndit * self->nchannel; i++) {
-            double val = gsl_vector_get(self->vis_ref_cov[i], j);
-            cpl_array_set(tmp_arr, i, val);
+    tmp_arr = cpl_array_new(self->ndit * self->nwave, CPL_TYPE_DOUBLE);
+    for (int i = 0; i < self->nchannel; i++) {
+        for (int j = 0; j < self->ndit; j++) {
+            for (int k = 0; k < self->nwave; k++) {
+                double val = gsl_vector_get(self->vis_ref_cov[i + j * self->nchannel], k);
+                cpl_array_set(tmp_arr, k + j * self->nwave, val);
+            }
         }
-        cpl_table_set_array(table, "ASTRO_COV", j, tmp_arr);
+        cpl_table_set_array(table, "ASTRO_COV", i, tmp_arr);
     }
     CPLCHECK_NUL("Could not add ASTRO_COV");
     FREE(cpl_array_delete, tmp_arr);
 
-    // vis_ref_pcov is array of size ndit * nchannel, of vectors of length nwave
-    tmp_arr = cpl_array_new(self->ndit * self->nchannel, CPL_TYPE_DOUBLE_COMPLEX);
-    for (int j = 0; j < self->nwave; j++) {
-        for (int i = 0; i < self->ndit * self->nchannel; i++) {
-            gsl_complex val = gsl_vector_complex_get(self->vis_ref_pcov[i], j);
-            cpl_array_set_complex(tmp_arr, i, GSL_REAL(val) + I * GSL_IMAG(val));
+    // vis_ref_pcov is array of size ndit * nchannel, of complex vectors of length nwave
+    tmp_arr = cpl_array_new(self->ndit * self->nwave, CPL_TYPE_DOUBLE_COMPLEX);
+    for (int i = 0; i < self->nchannel; i++) {
+        for (int j = 0; j < self->ndit; j++) {
+            for (int k = 0; k < self->nwave; k++) {
+                gsl_complex val = gsl_vector_complex_get(self->vis_ref_pcov[i + j * self->nchannel], k);
+                cpl_array_set_complex(tmp_arr, k + j * self->nwave, GSL_REAL(val) + I * GSL_IMAG(val));
+            }
         }
-        cpl_table_set_array(table, "ASTRO_PCOV", j, tmp_arr);
+        cpl_table_set_array(table, "ASTRO_PCOV", i, tmp_arr);
     }
     CPLCHECK_NUL("Could not add ASTRO_PCOV");
     FREE(cpl_array_delete, tmp_arr);
