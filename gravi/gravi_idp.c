@@ -109,6 +109,7 @@ cpl_propertylist * gravi_idp_compute (gravi_data * vis_data,
         }
         double base_max = cpl_vector_get_max(baselines);
         double base_min = cpl_vector_get_min(baselines);
+        cpl_vector_delete(baselines);
 
         sprintf (qc_name, "BASE_MAX");
         cpl_propertylist_update_double (idp_plist, qc_name, base_max);
