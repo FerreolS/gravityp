@@ -954,9 +954,9 @@ static int gravity_vis(cpl_frameset * frameset,
     gravi_compute_vis_qc (vis_data, frameset, p2vm_qcs, nb_frame, input_data_type);
     CPLCHECK_CLEAN ("Cannot compute VIS QCs");
 
-    /* Compute the QC parameters of the TF 
-     * FIXME: compute QC TF only for CALIB star */
-    gravi_compute_tf_qc (vis_data, diamcat_data);
+    /* Compute the QC parameters of the TF */
+    if(! strcmp(input_data_type, "raw_calibrator") )
+      gravi_compute_tf_qc (vis_data, diamcat_data);
 
     /* Eventually flatten the OI_FLUX */
     if (gravi_param_get_bool (parlist, "gravity.vis.flat-flux")) {
