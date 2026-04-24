@@ -16,6 +16,7 @@ from .gravity_classification import *
 
 dit_keywords = [kwd.dit1, kwd.dit2, kwd.dit3]
 polar_keywords = [kwd.ins_polar_mode, kwd.ft_polar_mode]
+pointing_keywords = [kwd.ins_sobj_offx, kwd.ins_sobj_offy]
 group_dark = dit_keywords + polar_keywords + [kwd.ins_spec_res, kwd.tpl_start, kwd.ins_fddl_window + kwd.tpl_id]
 setup_dark = dit_keywords + polar_keywords + [kwd.ins_spec_res, kwd.ins_fddl_window]
 match_dark = polar_keywords + [kwd.dit2, kwd.ins_spec_res, kwd.ins_fddl_window]
@@ -25,6 +26,7 @@ telescope_keywords = [kwd.iss_conf_station1, kwd.iss_conf_station2, kwd.iss_conf
 match_p2vm = polar_keywords + [kwd.ins_spec_res]
 setup = polar_keywords + [kwd.dit2, kwd.dit3, kwd.ins_spec_res, kwd.gain]
 group = polar_keywords + [kwd.dit2, kwd.dit3, kwd.ins_spec_res, kwd.gain, kwd.tpl_start]
+group_science = polar_keywords + pointing_keywords + [kwd.dit2, kwd.dit3, kwd.ins_spec_res, kwd.gain, kwd.tpl_start]
 setup_dispersion = polar_keywords + [kwd.dit1, kwd.dit2, kwd.dit3, kwd.ins_spec_res]
 
 ONE_AND_HALF_DAYS = RelativeTimeRange(-1.5, 1.5)
@@ -99,25 +101,39 @@ raw_dispersion = (data_source("DISPERSION")
                   .with_match_keywords(match_p2vm, time_range=ONE_MONTH, level=3)
                   .build())
 
-# Standard star or science target
+# Standard calibrator
 raw_cal_object = (data_source("CALIBRATOR")
                   .with_classification_rule(single_calib_class)
                   .with_classification_rule(dual_calib_class)
-                  .with_classification_rule(single_sky_calib_class)
-                  .with_classification_rule(dual_sky_calib_class)
                   .with_setup_keywords(setup + telescope_keywords)
                   .with_grouping_keywords(group)
                   .with_match_keywords([kwd.ins_spec_res, kwd.ins_polar_mode, kwd.ft_polar_mode,
-                                        kwd.telescop, "night", "$associate_calibrators", "$match_exposure_time"],
-                                       level=0, time_range=ONE_DAY).build())
+                                        kwd.telescop, kwd.night, "$associate_calibrators", "$match_exposure_time"],
+                                       level=0, time_range=ONE_DAY)
+                  .build())
 
+raw_cal_sky = (data_source("CALIBRATOR_SKY")
+               .with_classification_rule(single_sky_calib_class)
+               .with_classification_rule(dual_sky_calib_class)
+               .with_match_keywords([kwd.ins_spec_res, kwd.ins_polar_mode, kwd.ft_polar_mode,
+                                     kwd.telescop, kwd.tpl_start], level=0, time_range=ONE_DAY)
+               .build())
+
+raw_sci_sky = (data_source("SKY")
+               .with_classification_rule(single_sky_science_class)
+               .with_classification_rule(dual_sky_science_class)
+               .with_match_keywords([kwd.tpl_start])
+               .build())
+
+# Science target. Note that this is grouped by
+# target within the same OB (equal INS.SOBJ.OFFX and INS.SOBJ.OFFY keywords)
+# These keywords were added in 2017. Previous data with missing keywords
+# will be processed with all the objects from the same TPL together.
 raw_sci_object = (data_source("OBJECT")
                   .with_classification_rule(single_sci_class)
                   .with_classification_rule(dual_science_class)
-                  .with_classification_rule(single_sky_science_class)
-                  .with_classification_rule(dual_sky_science_class)
                   .with_setup_keywords(setup + telescope_keywords)
-                  .with_grouping_keywords(group)
+                  .with_grouping_keywords(group_science)
                   .build())
 
 # Pre-reduced uncalibrated visibility of the scientific target and calibrator (e.g. IDPs) downloaded from the archive.

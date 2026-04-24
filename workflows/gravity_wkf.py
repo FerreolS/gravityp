@@ -40,6 +40,7 @@ calibrator_visibilities = (task('calibrator_visibilities')
                            .with_report('gravity_rawdisp', ReportInput.RECIPE_INPUTS)
                            .with_report('gravity_calibrator', ReportInput.RECIPE_INPUTS_OUTPUTS)
                            .with_main_input(raw_cal_object)
+                           .with_associated_input(raw_cal_sky, min_ret=0, max_ret=10)
                            .with_associated_input(calib_dark, [DARK], match_rules=match_dark_normal)
                            .with_associated_input(pixel_to_visibility,
                                                   [MASTER_FLAT, MASTER_WAVE, MASTER_P2VM, MASTER_BAD])
@@ -51,9 +52,11 @@ calibrator_visibilities = (task('calibrator_visibilities')
                            .build())
 
 # - Task that computes the uncalibrated visibilites for the science target
+#   The closest in time SKY from the same template is associated (if present)
 target_visiblities = (task('target_visibilities')
                       .with_recipe('gravity_vis')
                       .with_main_input(raw_sci_object)
+                      .with_associated_input(raw_sci_sky, min_ret=0, max_ret=1)
                       .with_associated_input(calib_dark, [DARK], match_rules=match_dark_normal)
                       .with_associated_input(pixel_to_visibility,
                                              [MASTER_FLAT, MASTER_WAVE, MASTER_P2VM, MASTER_BAD])
