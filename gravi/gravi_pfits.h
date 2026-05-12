@@ -315,9 +315,10 @@ cpl_propertylist *  gravi_plist_get_qc (cpl_propertylist * );
 cpl_propertylist *  gravi_plist_get_oifits_keywords (cpl_propertylist * header);
 
 double gravi_pfits_get_double(const cpl_propertylist * self, const char * name);
-double gravi_pfits_get_double_default(const cpl_propertylist * plist, const char *name,double def);
-double gravi_pfits_get_double_silentdefault(const cpl_propertylist * plist, const char *name,double def);
+double gravi_pfits_get_double_default(const cpl_propertylist * plist, const char *name, double def);
+double gravi_pfits_get_double_silentdefault(const cpl_propertylist * plist, const char *name, double def);
 const char * gravi_pfits_get_string_default (const cpl_propertylist * plist, const char *name, const char *def);
+const char * gravi_pfits_get_string_silentdefault (const cpl_propertylist * plist, const char *name, const char *def);
 
 cpl_error_code gravi_pfits_add_check (cpl_propertylist * header, const char *msg);
 cpl_error_code gravi_pfits_add_pipe_build (cpl_propertylist * header);

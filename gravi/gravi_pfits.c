@@ -358,7 +358,7 @@ double gravi_pfits_get_met_wavelength (const cpl_propertylist * plist)
 
 int gravi_pfits_get_met_mode (const cpl_propertylist * plist)
 {
-    const char * value = gravi_pfits_get_string_default (plist, "ESO INS MET MODE","ON");
+    const char * value = gravi_pfits_get_string_silentdefault (plist, "ESO INS MET MODE","ON");
 
     if ( !strcmp(value, "FAINT") ) {
         return MET_FAINT_HEADER;
@@ -1602,6 +1602,23 @@ const char * gravi_pfits_get_string_default (const cpl_propertylist * plist,
         else
             cpl_msg_info (cpl_func, "Can't find keyword %s (use '%s')", name, def);
     }
+
+    return output;
+}
+
+const char * gravi_pfits_get_string_silentdefault (const cpl_propertylist * plist,
+                                                   const char *name,
+                                                   const char *def)
+{
+    cpl_ensure (plist, CPL_ERROR_NULL_INPUT, def);
+    cpl_ensure (name,  CPL_ERROR_NULL_INPUT, def);
+
+    const char *output;
+
+    if (cpl_propertylist_has(plist, name))
+        output = cpl_propertylist_get_string(plist, name);
+    else
+        output = def;
 
     return output;
 }
