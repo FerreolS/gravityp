@@ -447,6 +447,8 @@ static int gravity_viscal(cpl_frameset            * frameset,
         data_mode = gravi_data_frame_get_mode (frame);
         
         /* Store this successfull TF */
+        char fsuffix[20];
+        snprintf(fsuffix, 16, "%d", j);
         if (!strcmp(cpl_frame_get_tag(frame), GRAVI_VISPHI_SINGLE_CALIB) ||
             !strcmp(cpl_frame_get_tag(frame), GRAVI_VISPHI_DUAL_CALIB)) {
             if (!gravi_param_get_bool (parlist, "gravity.viscal.separate-phase-calib")) {
@@ -456,7 +458,7 @@ static int gravity_viscal(cpl_frameset            * frameset,
             } else {
                 cpl_msg_info (cpl_func, "*** TF %i over %i to be used for visphi ***", j+1, nb_frame_calib);
 
-                gravi_data_save_new (vis_calib, frameset, NULL, NULL, parlist,
+                gravi_data_save_new (vis_calib, frameset, NULL, fsuffix, parlist,
                              NULL, frame, "gravity_viscal",
                              NULL, GRAVI_VISPHI_TF_CALIB(data_mode));
                 CPLCHECK_GOTO ("Cannot save the TF", cleanup_rawtf);
@@ -465,7 +467,7 @@ static int gravity_viscal(cpl_frameset            * frameset,
                 vis_calib = NULL;
             }
         } else {
-            gravi_data_save_new (vis_calib, frameset, NULL, NULL, parlist,
+            gravi_data_save_new (vis_calib, frameset, NULL, fsuffix, parlist,
                              NULL, frame, "gravity_viscal",
                              NULL, GRAVI_TF_CALIB(data_mode));
             CPLCHECK_GOTO ("Cannot save the TF", cleanup_rawtf);
@@ -581,7 +583,9 @@ static int gravity_viscal(cpl_frameset            * frameset,
         cpl_propertylist_append(extra_header, idp_hdr);
         cpl_propertylist_delete(idp_hdr);
 
-        gravi_data_save_new (calibrated, frameset, NULL, NULL, parlist,
+        char fsuffix[20];
+        snprintf(fsuffix, 16, "%d", i);
+        gravi_data_save_new (calibrated, frameset, NULL, fsuffix, parlist,
                              current_frameset, frame, "gravity_viscal",
                              NULL, GRAVI_VIS_CALIBRATED(data_mode));
         
@@ -593,7 +597,7 @@ static int gravity_viscal(cpl_frameset            * frameset,
         cpl_propertylist_update_string (hdr, "PRODCATG", "ANCILLARY.TRANSFERFUNC");
         cpl_propertylist_set_comment (hdr, "PRODCATG", "Data product category");
         
-        gravi_data_save_new (tf_science, frameset, NULL, NULL, parlist,
+        gravi_data_save_new (tf_science, frameset, NULL, fsuffix, parlist,
                              current_frameset, frame, "gravity_viscal", NULL,
                              GRAVI_TF_SCIENCE(data_mode));
         
