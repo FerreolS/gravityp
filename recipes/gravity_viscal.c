@@ -448,7 +448,7 @@ static int gravity_viscal(cpl_frameset            * frameset,
         
         /* Store this successfull TF */
         char fsuffix[20];
-        snprintf(fsuffix, 16, "%d", j);
+        snprintf(fsuffix, 16, "%d", j+1);
         if (!strcmp(cpl_frame_get_tag(frame), GRAVI_VISPHI_SINGLE_CALIB) ||
             !strcmp(cpl_frame_get_tag(frame), GRAVI_VISPHI_DUAL_CALIB)) {
             if (!gravi_param_get_bool (parlist, "gravity.viscal.separate-phase-calib")) {
@@ -584,7 +584,7 @@ static int gravity_viscal(cpl_frameset            * frameset,
         cpl_propertylist_delete(idp_hdr);
 
         char fsuffix[20];
-        snprintf(fsuffix, 16, "%d", i);
+        snprintf(fsuffix, 16, "%d", i+1);
         gravi_data_save_new (calibrated, frameset, NULL, fsuffix, parlist,
                              current_frameset, frame, "gravity_viscal",
                              NULL, GRAVI_VIS_CALIBRATED(data_mode));
