@@ -392,29 +392,30 @@ static int gravity_vis(cpl_frameset * frameset,
                        cpl_parameterlist * parlist)
 {
     cpl_frameset * recipe_frameset=NULL, * wavecalib_frameset=NULL, * dark_frameset=NULL,
-	  * darkcalib_frameset=NULL, * sky_frameset=NULL, * flatcalib_frameset=NULL, * p2vmcalib_frameset=NULL,
-	  * badcalib_frameset=NULL, *used_frameset=NULL, * current_frameset=NULL, * dispcalib_frameset=NULL,
-	  * metpos_frameset=NULL, * diamcat_frameset = NULL, *eop_frameset = NULL, *patch_frameset = NULL,
-	  * static_param_frameset=NULL, * pcacalib_frameset = NULL;
-	
-	cpl_frame * frame=NULL;
-	
-	const char * frame_tag=NULL;
-	char * proCatg = NULL, * mode=NULL, * redCatg = NULL, * skyCatg = NULL;
-	
-	gravi_data * p2vm_map=NULL, * data=NULL, * wave_map=NULL, * dark_map=NULL,
+                 * darkcalib_frameset=NULL, * sky_frameset=NULL, * flatcalib_frameset=NULL, * p2vmcalib_frameset=NULL,
+                 * badcalib_frameset=NULL, *used_frameset=NULL, * current_frameset=NULL, * dispcalib_frameset=NULL,
+                 * metpos_frameset=NULL, * diamcat_frameset = NULL, *eop_frameset = NULL, *patch_frameset = NULL,
+                 * static_param_frameset=NULL, * pcacalib_frameset = NULL;
+
+    cpl_frame * frame=NULL;
+
+    const char * frame_tag=NULL;
+    char * proCatg = NULL;
+    char * mode=NULL, * redCatg = NULL, * skyCatg = NULL;
+
+    gravi_data * p2vm_map=NULL, * data=NULL, * wave_map=NULL, * dark_map=NULL,
         * profile_map=NULL, * badpix_map=NULL, * preproc_data=NULL, * p2vmred_data=NULL, * tmpvis_data=NULL,
         * vis_data=NULL, * disp_map=NULL, * diodepos_data=NULL, * diamcat_data=NULL, *eop_map=NULL,
         * static_param_data=NULL, * pca_calib_data=NULL;
-	gravi_data ** sky_maps = NULL;
+    gravi_data ** sky_maps = NULL;
     cpl_propertylist ** p2vm_qcs = NULL;
-	
-	int nb_frame, nb_sky;
-    char * input_data_type;
 
-	/* Message */
-	gravity_print_banner (); 
-	gravi_msg_function_start(1);
+    int nb_frame, nb_sky;
+    char * input_data_type = NULL;
+
+    /* Message */
+    gravity_print_banner (); 
+    gravi_msg_function_start(1);
 
     cpl_ensure_code(gravi_dfs_set_groups(frameset) == CPL_ERROR_NONE,
 					cpl_error_get_code()) ;
@@ -426,32 +427,39 @@ static int gravity_vis(cpl_frameset * frameset,
     dark_frameset = gravi_frameset_extract_dark_data (frameset);
     flatcalib_frameset = gravi_frameset_extract_flat_map (frameset);
     badcalib_frameset = gravi_frameset_extract_bad_map (frameset);
-	dispcalib_frameset = gravi_frameset_extract_disp_map (frameset);
+    dispcalib_frameset = gravi_frameset_extract_disp_map (frameset);
     pcacalib_frameset = gravi_frameset_extract_pca_calib (frameset);
-	metpos_frameset = gravi_frameset_extract_met_pos (frameset);
-	diamcat_frameset = gravi_frameset_extract_diamcat_map (frameset);
-	eop_frameset = gravi_frameset_extract_eop_map (frameset);
-	patch_frameset = gravi_frameset_extract_patch (frameset);
+    metpos_frameset = gravi_frameset_extract_met_pos (frameset);
+    diamcat_frameset = gravi_frameset_extract_diamcat_map (frameset);
+    eop_frameset = gravi_frameset_extract_eop_map (frameset);
+    patch_frameset = gravi_frameset_extract_patch (frameset);
     static_param_frameset = gravi_frameset_extract_static_param (frameset);
 
     recipe_frameset = gravi_frameset_extract_fringe_data (frameset);
     sky_frameset = gravi_frameset_extract_sky_data (frameset);
 
-	/* To use this recipe the frameset must contain the p2vm, wave and
-	 * gain calibration file. */
+    /* To use this recipe the frameset must contain the p2vm, wave and
+     * gain calibration file. */
+    if ( cpl_frameset_is_empty (recipe_frameset) ) {
+        cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
+            "Input SOF must contain at least a calibrator or science file");
+        cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
+            "See online help:  esorex --man gravity_vis");
+        goto cleanup;
+    }
+
     if ( cpl_frameset_get_size (p2vmcalib_frameset) !=1 ||
-		 cpl_frameset_get_size (wavecalib_frameset) !=1 ||
-		 cpl_frameset_get_size (flatcalib_frameset) !=1 ||
-		 cpl_frameset_get_size (badcalib_frameset) != 1 ||
-		 cpl_frameset_get_size (recipe_frameset) < 1 ||
-		 (cpl_frameset_is_empty (dark_frameset) &&
-		  cpl_frameset_is_empty (darkcalib_frameset) &&
-		  cpl_frameset_is_empty (sky_frameset)) ) {
-	  cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
-							 "Illegal number of P2VM, FLAT, WAVE, BAD, DARK or SKY, OBJECT file on the frameset");
-	  cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
-							 "See online help:  esorex --man gravity_vis");
-	  goto cleanup;
+        cpl_frameset_get_size (wavecalib_frameset) !=1 ||
+        cpl_frameset_get_size (flatcalib_frameset) !=1 ||
+        cpl_frameset_get_size (badcalib_frameset) != 1 ||
+        (cpl_frameset_is_empty (dark_frameset) &&
+        cpl_frameset_is_empty (darkcalib_frameset) &&
+        cpl_frameset_is_empty (sky_frameset)) ) {
+        cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
+            "Illegal number of P2VM, FLAT, WAVE, BAD, DARK or SKY, OBJECT file on the frameset");
+        cpl_error_set_message (cpl_func, CPL_ERROR_ILLEGAL_INPUT,
+            "See online help:  esorex --man gravity_vis");
+        goto cleanup;
     }
 
     /* Force some options if phase flattening is to be performed */
