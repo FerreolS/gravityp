@@ -871,10 +871,6 @@ static int gravity_vis(cpl_frameset * frameset,
 		gravi_compute_signals (p2vmred_data, disp_map, parlist);
 		CPLCHECK_MSG ("Cannot compute signals");
 
-        /* Temporary copy to allow averaging over all frames */
-        gravi_copy_p2vm_qcs(p2vmred_data, p2vm_qcs[ivis]);
-		CPLCHECK_MSG ("Cannot copy QC for averaging");
-
 		/* Compute rejection flags for averaging */
 		gravi_compute_rejection (p2vmred_data, parlist);
 		CPLCHECK_MSG ("Cannot compute rejection flags signals");
@@ -888,6 +884,10 @@ static int gravity_vis(cpl_frameset * frameset,
 
 			CPLCHECK_CLEAN ("Cannot save the P2VMREDUCED product");
 		}
+
+        /* Extract QCs from the p2vmreduced and store them for later averaging */
+        gravi_move_p2vm_qcs(p2vmred_data, p2vm_qcs[ivis]);
+        CPLCHECK_MSG ("Cannot copy QC for averaging");
 
         /* Loop on the wanted sub-integration */
         cpl_size current_frame = 0;

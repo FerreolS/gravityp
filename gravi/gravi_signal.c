@@ -3427,7 +3427,7 @@ cpl_error_code gravi_compute_signals (gravi_data * p2vmred_data,
  */
 /*----------------------------------------------------------------------------*/
 
-cpl_error_code gravi_copy_p2vm_qcs(gravi_data *p2vmred_data, cpl_propertylist *plist) {
+cpl_error_code gravi_move_p2vm_qcs(gravi_data *p2vmred_data, cpl_propertylist *plist) {
   cpl_ensure_code(p2vmred_data, CPL_ERROR_NULL_INPUT);
   cpl_ensure_code(plist, CPL_ERROR_NULL_INPUT);
 
@@ -3448,10 +3448,12 @@ cpl_error_code gravi_copy_p2vm_qcs(gravi_data *p2vmred_data, cpl_propertylist *p
         sprintf (qc_name, "ESO QC VFACTOR%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
         const cpl_property *qc_val = cpl_propertylist_get_property_const(p2vmred_header, qc_name);
         cpl_propertylist_append_property(plist, qc_val);
+        cpl_propertylist_erase(p2vmred_header, qc_name);
 
         sprintf (qc_name, "ESO QC PFACTOR%s_P%d AVG", GRAVI_BASE_NAME[base], pol+1);
         qc_val = cpl_propertylist_get_property_const(p2vmred_header, qc_name);
         cpl_propertylist_append_property(plist, qc_val);
+        cpl_propertylist_erase(p2vmred_header, qc_name);
     }
     CPLCHECK_MSG("Could not copy PFACTOR/VFACTOR");
 
@@ -3461,6 +3463,7 @@ cpl_error_code gravi_copy_p2vm_qcs(gravi_data *p2vmred_data, cpl_propertylist *p
         sprintf (qc_name, "ESO QC P3FACTOR%s_P%d AVG", GRAVI_CLO_NAME[closure], pol+1);
         const cpl_property *qc_val = cpl_propertylist_get_property_const(p2vmred_header, qc_name);
         cpl_propertylist_append_property(plist, qc_val);
+        cpl_propertylist_erase(p2vmred_header, qc_name);
     }
     CPLCHECK_INT("Could not copy P3FACTOR");
   }
