@@ -275,7 +275,7 @@ static int gravity_vis_create(cpl_plugin * plugin)
                                  "If TRUE, the output products will be fully OIFITS2 compliant. "
                                  "Note that TRUE will be the default and eventually the "
                                  "parameter will be removed in the future",
-                                 "gravity.vis", FALSE);
+                                 "gravity.vis", TRUE);
     cpl_parameter_set_alias (p, CPL_PARAMETER_MODE_CLI, "oifits2");
     cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
     cpl_parameterlist_append (recipe->parameters, p);
