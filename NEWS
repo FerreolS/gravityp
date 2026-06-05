@@ -1,4 +1,17 @@
 ------------------------------------------
+2026/06/05 : New version 1.10.1
+------------------------------------------
+
+- Add WAVESC_RAW to the PRO.REC keywords
+- Fix segmentation fault in gravity_disp recipe
+- Compute P2VM QCs across all frames when averaging, instead of copying them from the first
+- Add QCs for std pfactor/vfactor and flag frames with vfactor>1
+- Add the reduce-acq-cam=QC option in gravity_vis
+- Change EDPS workflow parameters for QC0
+- Do not overwrite outputfiles in case static-name=true
+- Update keywords for IDP products (VISCAL, PRODCATG, PROV, SPEC_BIN, BASE_MIN, BASE_MAX, WAVELMIN, WAVELMAX)
+
+------------------------------------------
 2025/04/11 : New version 1.9.1
 ------------------------------------------
 
