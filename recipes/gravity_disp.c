@@ -559,6 +559,9 @@ static int gravity_disp(cpl_frameset            * frameset,
                     gravi_compute_vis_qc (tmpvis_data, current_frameset, &p2vm_qcs[ivis], 1, NULL);
                     cpl_propertylist_append_double(vis_header, "MJD-OBS", mjd_obs);
 
+                    /** TODO: This does not work correctly if sub-integrations are used.
+                     * Each sub-integration will overwrite the same file.
+                     **/
                     gravi_data_save_new (tmpvis_data, frameset, NULL, NULL, parlist,
                                          current_frameset, frame, "gravity_disp",
                                          NULL, GRAVI_VIS_SINGLE_CALIB);
