@@ -98,4 +98,4 @@ EsorexTests:
         - ["gravity_disp/HIGH_ins_SPLIT_ft_SPLIT/GRAVI.2023-05-05T22:55:14.765_wave.fits", WAVE]
         - ["gravity_disp/HIGH_ins_SPLIT_ft_SPLIT/GRAVI.2023-05-05T23:03:44.787_p2vm.fits", P2VM]
         - ["gravity_disp/HIGH_ins_SPLIT_ft_SPLIT/GRAVI.2023-05-04T01:21:59.367_wavelamp.fits", WAVELAMP]
-        - ["datastatic/GRAVI_STATIC_CALIB_2019-10-12.fits STATIC_PARAM", STATIC_PARAM]
+        - ["datastatic/GRAVI_STATIC_CALIB_2019-10-12.fits", STATIC_PARAM]
