@@ -294,7 +294,7 @@ cpl_table * gravi_table_oi_create (int nwave, int nrow, const char * oi_name)
 		cpl_table_new_column_array (oi_table, "STA_INDEX", CPL_TYPE_INT, 3);
 		cpl_table_set_column_savetype(oi_table, "STA_INDEX", CPL_TYPE_SHORT);
 	}
-	else if (!strcmp(oi_name, GRAVI_OI_FLUX_EXT)) {
+	else if (!strcmp(oi_name, GRAVI_P2VM_FLUX)) { // For P2VM product the flux column is still called FLUX
 		oi_table = cpl_table_new(nrow * 4);
 		cpl_table_new_column (oi_table, "TARGET_ID", CPL_TYPE_INT);
 		cpl_table_set_column_savetype(oi_table, "TARGET_ID", CPL_TYPE_SHORT);
@@ -312,6 +312,31 @@ cpl_table * gravi_table_oi_create (int nwave, int nrow, const char * oi_name)
 														  0, nrow * 4, 0.0);
 		cpl_table_new_column_array (oi_table, "FLUX",CPL_TYPE_DOUBLE, nwave);
 		cpl_table_set_column_unit (oi_table, "FLUX", "e");
+		cpl_table_new_column_array (oi_table, "FLUXERR",CPL_TYPE_DOUBLE, nwave);
+		cpl_table_set_column_unit (oi_table, "FLUXERR", "e");
+		cpl_table_new_column (oi_table, "STA_INDEX", CPL_TYPE_INT);
+		cpl_table_set_column_savetype(oi_table, "STA_INDEX", CPL_TYPE_SHORT);
+		if(init) cpl_table_fill_column_window_int (oi_table, "STA_INDEX",
+												0, nrow * 4, 0);
+	}
+	else if (!strcmp(oi_name, GRAVI_OI_FLUX_EXT)) {
+		oi_table = cpl_table_new(nrow * 4);
+		cpl_table_new_column (oi_table, "TARGET_ID", CPL_TYPE_INT);
+		cpl_table_set_column_savetype(oi_table, "TARGET_ID", CPL_TYPE_SHORT);
+		if(init) cpl_table_fill_column_window_int (oi_table, "TARGET_ID",
+															0, nrow * 4, 0);
+		cpl_table_new_column (oi_table, "TIME", CPL_TYPE_DOUBLE);
+		cpl_table_set_column_unit (oi_table, "TIME", "s");
+		if(init) cpl_table_fill_column_window_double (oi_table, "TIME", 0, nrow * 4, 0);
+		cpl_table_new_column (oi_table, "MJD", CPL_TYPE_DOUBLE);
+		cpl_table_set_column_unit (oi_table, "MJD", "d");
+		if(init) cpl_table_fill_column_window_double (oi_table, "MJD", 0, nrow * 4, 0.0);
+		cpl_table_new_column (oi_table, "INT_TIME", CPL_TYPE_DOUBLE);
+		cpl_table_set_column_unit (oi_table, "INT_TIME", "s");
+		if(init) cpl_table_fill_column_window_double (oi_table, "INT_TIME",
+														  0, nrow * 4, 0.0);
+		cpl_table_new_column_array (oi_table, "FLUXDATA",CPL_TYPE_DOUBLE, nwave);
+		cpl_table_set_column_unit (oi_table, "FLUXDATA", "e");
 		cpl_table_new_column_array (oi_table, "FLUXERR",CPL_TYPE_DOUBLE, nwave);
 		cpl_table_set_column_unit (oi_table, "FLUXERR", "e");
 		cpl_table_new_column (oi_table, "STA_INDEX", CPL_TYPE_INT);
