@@ -284,10 +284,10 @@ cpl_error_code gravi_flux_average_bootstrap(cpl_table * oi_flux_avg,
    /* parameters */
   int nv = 0, ntel = 4;
   cpl_size nrow = cpl_table_get_nrow (oi_flux) / ntel;
-  cpl_size nwave = cpl_table_get_column_depth (oi_flux, "FLUX");
+  cpl_size nwave = cpl_table_get_column_depth (oi_flux, "FLUXDATA");
 
   /* Pointer to columns, to speed-up */
-  cpl_array ** pFLUX     = cpl_table_get_data_array (oi_flux, "FLUX");
+  cpl_array ** pFLUX     = cpl_table_get_data_array (oi_flux, "FLUXDATA");
   cpl_array ** pFLUXERR  = cpl_table_get_data_array (oi_flux, "FLUXERR");
   cpl_array ** pFLAG     = cpl_table_get_data_array (oi_flux, "FLAG");
   double * pINTTIME = cpl_table_get_data_double (oi_flux, "INT_TIME");
@@ -461,12 +461,12 @@ cpl_error_code gravi_flux_average_bootstrap(cpl_table * oi_flux_avg,
    * (3) Save the results on the oi_flux_avg tables 
    */
 
-  cpl_table_set_array (oi_flux_avg, "FLUX", tel, flux_res[2]);
+  cpl_table_set_array (oi_flux_avg, "FLUXDATA", tel, flux_res[2]);
   cpl_table_set_array (oi_flux_avg, "FLUXERR", tel, flux_res[3]);
-  CPLCHECK_MSG("filling FLUX and FLUXERR");
+  CPLCHECK_MSG("filling FLUXDATA and FLUXERR");
 
   /* Flag the data with >100% error */
-  gravi_vis_flag_relative_threshold (oi_flux_avg, "FLUXERR", "FLUX", "FLAG", 1.0);
+  gravi_vis_flag_relative_threshold (oi_flux_avg, "FLUXERR", "FLUXDATA", "FLAG", 1.0);
   gravi_vis_flag_lower (oi_flux_avg, "FLUXERR", "FLAG", 0.0);
   CPLCHECK_MSG("cannot flag baddata data");
 
@@ -535,7 +535,7 @@ cpl_error_code gravi_t3_average_bootstrap(cpl_table * oi_t3_avg,
   /* Pointer to column, to speed-up */
   cpl_array ** pVISDATA = cpl_table_get_data_array (oi_vis, "VISDATA");
   cpl_array ** pVISERR  = cpl_table_get_data_array (oi_vis, "VISERR");
-  cpl_array ** pFLUX    = cpl_table_get_data_array (oi_flux, "FLUX");
+  cpl_array ** pFLUX    = cpl_table_get_data_array (oi_flux, "FLUXDATA");
   cpl_array ** pFLAG    = cpl_table_get_data_array (oi_vis, "FLAG");
   double * pINTTIME = cpl_table_get_data_double (oi_vis, "INT_TIME");
   double * pMJD     = cpl_table_get_data_double (oi_vis, "MJD");
@@ -2334,7 +2334,7 @@ cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data, cpl_frameset* frames
             for (int tel = 0; tel < ntel; tel++){
                 
                 sprintf (qc_name, "ESO QC FLUX_FT%d_P%d AVG", tel+1, pol+1);
-                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_flux_FT, "FLUX", tel, ntel));
+                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_flux_FT, "FLUXDATA", tel, ntel));
                 cpl_propertylist_set_comment (plist, qc_name, "[e/total_int_time] mean over lbd");
                 
                 sprintf (qc_name, "ESO QC FLUXERR_FT%d_P%d AVG", tel+1, pol+1);
@@ -2342,8 +2342,8 @@ cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data, cpl_frameset* frames
                 cpl_propertylist_set_comment (plist, qc_name, "[e/total_int_time] mean over lbd");
                 
                 sprintf (qc_name, "ESO QC FLUXRATE_FT%d_P%d SUM", tel+1, pol+1);
-                double flux_rate = cpl_array_get_mean (cpl_table_get_array (oi_flux_FT, "FLUX", tel)) *
-                    cpl_array_get_size (cpl_table_get_array (oi_flux_FT, "FLUX", tel)) / cpl_table_get_double (oi_flux_FT, "INT_TIME", tel, &nv);
+                double flux_rate = cpl_array_get_mean (cpl_table_get_array (oi_flux_FT, "FLUXDATA", tel)) *
+                    cpl_array_get_size (cpl_table_get_array (oi_flux_FT, "FLUXDATA", tel)) / cpl_table_get_double (oi_flux_FT, "INT_TIME", tel, &nv);
                 cpl_propertylist_update_double (plist, qc_name, flux_rate);
                 cpl_propertylist_set_comment (plist, qc_name, "[e/s] sum over lbd");
                 
@@ -2496,7 +2496,7 @@ cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data, cpl_frameset* frames
             for (int tel = 0; tel < ntel; tel++){
                 
                 sprintf (qc_name, "ESO QC FLUX_SC%d_P%d AVG", tel+1, pol+1);
-                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_flux_SC, "FLUX", tel, ntel));
+                cpl_propertylist_update_double (plist, qc_name, gravi_table_get_column_mean (oi_flux_SC, "FLUXDATA", tel, ntel));
                 cpl_propertylist_set_comment (plist, qc_name, "[e/total_int_time] mean over lbd");
                 
                 sprintf (qc_name, "ESO QC FLUXERR_SC%d_P%d AVG", tel+1, pol+1);
@@ -2504,8 +2504,8 @@ cpl_error_code gravi_compute_vis_qc (gravi_data * vis_data, cpl_frameset* frames
                 cpl_propertylist_set_comment (plist, qc_name, "[e/total_int_time] mean over lbd");
                 
                 sprintf (qc_name, "ESO QC FLUXRATE_SC%d_P%d SUM", tel+1, pol+1);
-                double flux_rate = cpl_array_get_mean (cpl_table_get_array (oi_flux_SC, "FLUX", tel)) *
-                    cpl_array_get_size(cpl_table_get_array (oi_flux_SC, "FLUX", tel)) / cpl_table_get_double (oi_flux_SC, "INT_TIME", tel, &nv);
+                double flux_rate = cpl_array_get_mean (cpl_table_get_array (oi_flux_SC, "FLUXDATA", tel)) *
+                    cpl_array_get_size(cpl_table_get_array (oi_flux_SC, "FLUXDATA", tel)) / cpl_table_get_double (oi_flux_SC, "INT_TIME", tel, &nv);
                 cpl_propertylist_update_double (plist, qc_name, flux_rate);
                 cpl_propertylist_set_comment (plist, qc_name, "[e/s] sum over lbd");
                 
@@ -2773,12 +2773,12 @@ cpl_error_code gravi_flat_flux (gravi_data * vis_data, gravi_data * p2vm_map)
 	  int npol = gravi_pfits_get_pola_num (hdr_data, type_data);
 	  for (int pol= 0 ; pol < npol ; pol++ ) {
 
-		/* Calibrate the FLUX as a real quantity */
+		/* Calibrate the FLUXDATA as a real quantity */
 		double delta_t = 10000.0;
 		gravi_apply_tf_amp (vis_data, NULL, used_tf_data, num_used_tf,
 							GRAVI_OI_FLUX_EXT,
 							GRAVI_INSNAME(type_data, pol, npol),
-							"FLUX", "FLUXERR", 4, delta_t);
+							"FLUXDATA", "FLUXERR", 4, delta_t);
 		
 		CPLCHECK_MSG("Cannot apply normalize flux");
 
@@ -3113,7 +3113,7 @@ cpl_error_code gravi_average_vis (gravi_data * oi_data)
 	  gravi_vis_average_value (oi_table, "TIME", NULL, 4);
 	  gravi_vis_average_value (oi_table, "MJD", NULL, 4);
 	  gravi_vis_average_value (oi_table, "INT_TIME", NULL, 4);
-	  gravi_vis_average_amp (oi_table, "FLUX", "FLUXERR", 4);
+	  gravi_vis_average_amp (oi_table, "FLUXDATA", "FLUXERR", 4);
 	  cpl_table_erase_window (oi_table, 4, CPL_SIZE_MAX);
 	  
 	  CPLCHECK_MSG ("Cannot co-add OI_FLUX");
@@ -3642,9 +3642,9 @@ cpl_error_code gravi_vis_resamp (gravi_data * oi_data, cpl_size nsamp)
 
 	/* OI_FLUX */
 	oi_table = gravi_data_get_oi_flux (oi_data, type_data, pol, npol);
-	gravi_vis_resamp_amp (oi_table, "FLUX", "FLUXERR", nsamp, nwave_new);
+	gravi_vis_resamp_amp (oi_table, "FLUXDATA", "FLUXERR", nsamp, nwave_new);
 	cpl_table_set_column_depth (oi_table, "FLAG", nwave_new);
-	gravi_vis_flag_relative_threshold (oi_table, "FLUXERR", "FLUX", "FLAG", 1.0);
+	gravi_vis_flag_relative_threshold (oi_table, "FLUXERR", "FLUXDATA", "FLAG", 1.0);
 	CPLCHECK_MSG ("Cannot resamp OI_FLUX");
 
 	/* OI_VIS2 */
@@ -3692,7 +3692,7 @@ cpl_error_code gravi_vis_resamp (gravi_data * oi_data, cpl_size nsamp)
  */
 /*----------------------------------------------------------------------------*/
 
-cpl_error_code gravi_vis_copy_fluxdata (gravi_data * oi_data, int delete_flux)
+cpl_error_code gravi_vis_copy_flux (gravi_data * oi_data, int delete_flux)
 {
   gravi_msg_function_start(1);
   cpl_ensure_code (oi_data, CPL_ERROR_NULL_INPUT);
@@ -3716,15 +3716,15 @@ cpl_error_code gravi_vis_copy_fluxdata (gravi_data * oi_data, int delete_flux)
       oi_flux = gravi_data_get_oi_flux (oi_data, type_data, pol, npol);
 
       /* Delete column if existing */
-      if (cpl_table_has_column (oi_flux, "FLUXDATA") )
-        cpl_table_erase_column (oi_flux, "FLUXDATA");
+      if (cpl_table_has_column (oi_flux, "FLUX") )
+        cpl_table_erase_column (oi_flux, "FLUX");
 
       /* Duplicate FLUX into FLUXDATA */
-      cpl_table_duplicate_column (oi_flux, "FLUXDATA", oi_flux, "FLUX");
+      cpl_table_duplicate_column (oi_flux, "FLUX", oi_flux, "FLUXDATA");
 
       /* Delete original FLUX column if so requested */
       if(delete_flux)
-          cpl_table_erase_column(oi_flux, "FLUX");
+          cpl_table_erase_column(oi_flux, "FLUXDATA");
     } /* End loop on polarisation */
 
   } /* End loop on SC/FT */

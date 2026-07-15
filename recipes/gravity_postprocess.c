@@ -177,9 +177,6 @@ static int gravity_postprocess_create(cpl_plugin * plugin)
     gravi_parameter_add_average_vis (recipe->parameters);
     gravi_parameter_add_force_uncertainties (recipe->parameters);
 
-    /* Copy fluxdata */
-    gravi_parameter_copy_fluxdata (recipe->parameters);
-    
     /* Force */
     p = cpl_parameter_new_value ("gravity.postprocess.force-merge", CPL_TYPE_BOOL,
                                  "Force merging even if inconsistent data",
@@ -440,12 +437,6 @@ static int gravity_postprocess(cpl_frameset * frameset,
 	  
 	  CPLCHECK_CLEAN ("Cannot resamp SC");
 	}
-
-        /* Add the FLUXDATA column for OIFITS2 standard */
-    if (gravi_param_get_bool (parlist, "gravity.postprocess.copy-fluxdata"))
-    {
-      gravi_vis_copy_fluxdata (data_merged, 0);
-    }
 
 	/* Recompute the TIME column from the MJD column
 	 * in all OIFITS tables to follow standard */

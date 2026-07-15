@@ -750,7 +750,7 @@ gravi_data * gravi_compute_p2vmred (gravi_data * preproc_data, gravi_data * p2vm
 			CPLCHECK_NUL ("Cannot get data");
 
 			/* Get the pointers to the output data */
-			cpl_array** tFlux    = cpl_table_get_data_array (oi_flux, "FLUX");
+			cpl_array** tFlux    = cpl_table_get_data_array (oi_flux, "FLUXDATA");
 			cpl_array** tFluxErr = cpl_table_get_data_array (oi_flux, "FLUXERR");
 			cpl_array** tVis    = cpl_table_get_data_array (oi_vis, "VISDATA");
 			cpl_array** tVisErr = cpl_table_get_data_array (oi_vis, "VISERR");
@@ -1255,7 +1255,7 @@ cpl_error_code gravi_compute_qc_injection (gravi_data * data)
   int ntel = 4, hw = 2;
 
   /* Create the kernel to smooth the flux series */
-  cpl_msg_info (cpl_func, "Smooth flux sery over %i samples", hw);
+  cpl_msg_info (cpl_func, "Smooth flux series over %i samples", hw);
 
   /* How many rows do we have per telescope */
   cpl_table * table = gravi_data_get_oi_flux (data, GRAVI_FT, 0, npol);
@@ -1273,7 +1273,7 @@ cpl_error_code gravi_compute_qc_injection (gravi_data * data)
 
         /* Get table */
         cpl_table * table = gravi_data_get_oi_flux (data, GRAVI_FT, pol, npol);
-        const cpl_array ** flux_array = cpl_table_get_data_array_const (table, "FLUX");
+        const cpl_array ** flux_array = cpl_table_get_data_array_const (table, "FLUXDATA");
         
         for (int row = 0; row<nrow; row++)
             cpl_vector_set (raw_flux, row, cpl_vector_get (raw_flux, row) +

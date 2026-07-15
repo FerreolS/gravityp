@@ -1029,8 +1029,8 @@ static int gravity_vis(cpl_frameset * frameset,
 
 	cpl_frameset_join (used_frameset, recipe_frameset);
 	
-    if(gravi_param_get_bool (parlist, "gravity.vis.oifits2") ) {
-        gravi_vis_copy_fluxdata(vis_data, 1);
+    if(!gravi_param_get_bool (parlist, "gravity.vis.oifits2") ) {
+        gravi_vis_copy_flux(vis_data, 1);
     }
 	gravi_data_save_new (vis_data, frameset, NULL, NULL, parlist,
 			     used_frameset, frame, "gravity_vis", NULL, proCatg);

@@ -596,7 +596,7 @@ cpl_table * gravi_fit_dispersion (cpl_table * oiflux_table,
     
     cpl_size nbase = 6, ntel = 4;
 	cpl_size nrow  = cpl_table_get_nrow (oiflux_table) / 4;
-    cpl_size nwave = cpl_table_get_column_depth (oiflux_table, "FLUX");
+    cpl_size nwave = cpl_table_get_column_depth (oiflux_table, "FLUXDATA");
     CPLCHECK_NUL ("Cannot get data");
 
     /* 

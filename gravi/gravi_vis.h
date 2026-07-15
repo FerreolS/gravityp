@@ -66,7 +66,7 @@ cpl_error_code gravi_vis_flag_lower (cpl_table * oi_table, const char * data, co
 cpl_error_code gravi_force_uncertainties (gravi_data * oi_data,
                                           const cpl_parameterlist * parlist);
 
-cpl_error_code gravi_vis_copy_fluxdata (gravi_data * oi_data, int delete_flux);
+cpl_error_code gravi_vis_copy_flux (gravi_data * oi_data, int delete_flux);
 
 cpl_error_code gravi_vis_erase_obs (cpl_table * oi_table, cpl_array *flag_array, cpl_size ntel);
 cpl_error_code gravi_vis_force_time (gravi_data * oi_data);

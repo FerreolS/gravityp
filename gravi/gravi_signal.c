@@ -555,7 +555,7 @@ cpl_error_code gravi_compute_outliers (gravi_data * p2vmred_data,
         cpl_table * oi_vis  = gravi_data_get_oi_vis (p2vmred_data, type_data, pol, npol);
         cpl_table * oi_flux = gravi_data_get_oi_flux (p2vmred_data, type_data, pol, npol);
 	cpl_size nrow = cpl_table_get_nrow (oi_flux) / ntel;
-	cpl_size nwave = cpl_table_get_column_depth (oi_flux, "FLUX");
+	cpl_size nwave = cpl_table_get_column_depth (oi_flux, "FLUXDATA");
         CPLCHECK_MSG ("Cannot get data");
 
 	if (type_data == GRAVI_FT)
@@ -1051,8 +1051,8 @@ cpl_error_code gravi_vis_create_pfactor_ft (cpl_table * vis_FT, cpl_table * flux
   cpl_size nrow_ft = cpl_table_get_nrow (vis_FT) / nbase;
 
   /* Get FT data (using unsmoothed flux) */
-  cpl_size nwave_ft = cpl_table_get_column_depth (flux_FT, "FLUX");
-  cpl_array **p_flux = cpl_table_get_data_array (flux_FT, "FLUX");
+  cpl_size nwave_ft = cpl_table_get_column_depth (flux_FT, "FLUXDATA");
+  cpl_array **p_flux = cpl_table_get_data_array (flux_FT, "FLUXDATA");
 
   /* Create the column */
   gravi_table_init_column_array(vis_FT, "P_FACTOR", NULL, CPL_TYPE_DOUBLE, nwave_ft);
@@ -1135,10 +1135,10 @@ cpl_error_code gravi_vis_create_f1f2_sc (cpl_table * vis_SC, cpl_table * flux_SC
 
   cpl_size nbase = 6, ntel = 4;
   cpl_size nrow_sc = cpl_table_get_nrow (flux_SC) / ntel;
-  cpl_size nwave_sc = cpl_table_get_column_depth (flux_SC, "FLUX");
+  cpl_size nwave_sc = cpl_table_get_column_depth (flux_SC, "FLUXDATA");
 
   /* Get pointer to data */
-  cpl_array ** flux_sc = cpl_table_get_data_array (flux_SC, "FLUX");
+  cpl_array ** flux_sc = cpl_table_get_data_array (flux_SC, "FLUXDATA");
 
   CPLCHECK_MSG ("Cannot get data");
   
@@ -1183,11 +1183,11 @@ cpl_error_code gravi_vis_create_f1f2_ft (cpl_table * vis_FT, cpl_table * flux_FT
 
   cpl_size ntel = 4, nbase = 6;
   cpl_size nrow_ft = cpl_table_get_nrow (flux_FT) / ntel;
-  cpl_size nwave_ft = cpl_table_get_column_depth (flux_FT, "FLUX");
+  cpl_size nwave_ft = cpl_table_get_column_depth (flux_FT, "FLUXDATA");
 
   /* Get pointer to data */
   double * total_flux_ft = cpl_table_get_data_double (flux_FT, "TOTALFLUX");
-  cpl_array ** flux_ft = cpl_table_get_data_array (flux_FT, "FLUX");
+  cpl_array ** flux_ft = cpl_table_get_data_array (flux_FT, "FLUXDATA");
 
   CPLCHECK_MSG ("Cannot get data");
   
@@ -2164,16 +2164,16 @@ cpl_error_code gravi_flux_create_totalflux_sc (cpl_table * flux_SC, cpl_table * 
 
   cpl_size ntel = 4;
   cpl_size nrow_sc  = cpl_table_get_nrow (flux_SC) / ntel;
-  cpl_size nwave_sc = cpl_table_get_column_depth (flux_SC, "FLUX");
-  cpl_size nwave_ft = cpl_table_get_column_depth (flux_FT, "FLUX");
+  cpl_size nwave_sc = cpl_table_get_column_depth (flux_SC, "FLUXDATA");
+  cpl_size nwave_ft = cpl_table_get_column_depth (flux_FT, "FLUXDATA");
 
   /* Get SC and FT data */
   int * first_ft = cpl_table_get_data_int (flux_SC, "FIRST_FT");
   int * last_ft  = cpl_table_get_data_int (flux_SC, "LAST_FT");
   
   cpl_array ** flag_sc = cpl_table_get_data_array (flux_SC, "FLAG");
-  cpl_array ** flux_sc = cpl_table_get_data_array (flux_SC, "FLUX");
-  cpl_array ** flux_ft = cpl_table_get_data_array (flux_FT, "FLUX");
+  cpl_array ** flux_sc = cpl_table_get_data_array (flux_SC, "FLUXDATA");
+  cpl_array ** flux_ft = cpl_table_get_data_array (flux_FT, "FLUXDATA");
   
   CPLCHECK_MSG("Cannot get data");
 
@@ -2639,7 +2639,7 @@ cpl_error_code gravi_create_outlier_flag_sc (cpl_table * flux_SC,
 
   cpl_size ntel = 4;
   cpl_size nrow = cpl_table_get_nrow (flux_SC) / ntel;
-  cpl_size nwave = cpl_table_get_column_depth (flux_SC, "FLUX");
+  cpl_size nwave = cpl_table_get_column_depth (flux_SC, "FLUXDATA");
 
   cpl_array ** chi2 = cpl_table_get_data_array (flux_SC, "CHI2");
 
@@ -3265,7 +3265,7 @@ cpl_error_code gravi_compute_signals (gravi_data * p2vmred_data,
     * (2) Create the signals for FLUX_FT
     */
     
-    cpl_array ** flux_ft = cpl_table_get_data_array (flux_FT, "FLUX");
+    cpl_array ** flux_ft = cpl_table_get_data_array (flux_FT, "FLUXDATA");
     cpl_size nwave_ft = cpl_table_get_column_depth (vis_FT, "VISDATA");
     cpl_size nrow_ft  = cpl_table_get_nrow (vis_FT) / nbase;
 

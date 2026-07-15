@@ -1567,12 +1567,13 @@ cpl_error_code gravi_p2vm_transmission (gravi_data * p2vm_map, gravi_data * p2vm
 		
 		/* Get FLUX data */
 		cpl_table * flux_tbl = gravi_data_get_oi_flux (p2vmred_data, type_data, pol, npol);
-		cpl_array ** flux = cpl_table_get_data_array (flux_tbl, "FLUX");
+		cpl_array ** flux = cpl_table_get_data_array (flux_tbl, "FLUXDATA");
 		cpl_size nwave = cpl_array_get_size (flux[0]);
 		cpl_size nrow  = cpl_table_get_nrow (flux_tbl) / 4;
 
-		/* Create OI_FLUX table */
-		cpl_table * oi_flux = gravi_table_oi_create (nwave, 1, GRAVI_OI_FLUX_EXT);
+		/* Create OI_FLUX table. It is called with special name GRAVI_P2VM_FLUX 
+           because the flux column is called FLUX, rather than FLUXDATA as in science */
+		cpl_table * oi_flux = gravi_table_oi_create (nwave, 1, GRAVI_P2VM_FLUX);
 		cpl_array * flux_mean = cpl_array_new (nwave, CPL_TYPE_DOUBLE);
 
 		CPLCHECK_MSG("Cannot get data");
