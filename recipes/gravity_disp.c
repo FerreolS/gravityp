@@ -617,14 +617,6 @@ static int gravity_disp(cpl_frameset            * frameset,
         cpl_frameset_join (used_frameset, disp_frameset);
         frame = cpl_frameset_get_position (disp_frameset, 0);
 
-        FILE *f = fopen("primary_header.txt", "w");
-        cpl_propertylist_dump(gravi_data_get_header(vis_data), f);
-        fclose(f);
-        
-        f = fopen("extra_header.txt", "w");
-        cpl_propertylist_dump(gravi_data_get_extra_primary_header(vis_data), f);
-        fclose(f);
-
         gravi_data_save_new (vis_data, frameset, NULL, NULL, parlist,
                              used_frameset, frame, "gravity_disp",
                              NULL, GRAVI_DISP_VIS);
