@@ -2778,7 +2778,7 @@ cpl_error_code gravi_flat_flux (gravi_data * vis_data, gravi_data * p2vm_map)
 		gravi_apply_tf_amp (vis_data, NULL, used_tf_data, num_used_tf,
 							GRAVI_OI_FLUX_EXT,
 							GRAVI_INSNAME(type_data, pol, npol),
-							"FLUXDATA", "FLUXERR", 4, delta_t);
+							"FLUX", "FLUXERR", 4, delta_t);
 		
 		CPLCHECK_MSG("Cannot apply normalize flux");
 
