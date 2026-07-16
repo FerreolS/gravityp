@@ -1287,17 +1287,20 @@ cpl_error_code gravi_data_detector_cleanup (gravi_data * data,
   // together to the raw data.
   // If those keywords are present then we use MASKED_MEDIAN_PER_COLUMN
   // Otherwise we use MEDIAN
-  if (cpl_table_has_column(detector_table, "LEFT") )
+  if (!strcmp(bias_method, "AUTO"))
   {
-      bias_method = "MASKED_MEDIAN_PER_COLUMN";
-      cpl_msg_info (cpl_func, "New data format found. "
-          "Using MASKED_MEDIAN_PER_COLUMNM bias method");
-  }
-  else
-  {
-      bias_method = "MEDIAN";
-      cpl_msg_info (cpl_func, "Old data format found. "
-          "Using MEDIAN bias method");
+    if (cpl_table_has_column(detector_table, "LEFT") )
+    {
+        bias_method = "MASKED_MEDIAN_PER_COLUMN";
+        cpl_msg_info (cpl_func, "New data format found. "
+            "Using MASKED_MEDIAN_PER_COLUMNM bias method");
+    }
+    else
+    {
+        bias_method = "MEDIAN";
+        cpl_msg_info (cpl_func, "Old data format found. "
+            "Using MEDIAN bias method");
+    }
   }
   /* Case --bias-method=MASKED_MEDIAN_PER_COLUMN */
   if (  !strcmp (bias_method, "MASKED_MEDIAN_PER_COLUMN")) {
