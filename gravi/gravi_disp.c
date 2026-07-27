@@ -118,6 +118,7 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
     /* Get data */
     cpl_size ntel = 4;
     cpl_propertylist * vis_header = gravi_data_get_header (vis_data);
+    cpl_propertylist * vis_header_extra = gravi_data_get_extra_primary_header (vis_data);
     cpl_size npol = gravi_pfits_get_pola_num (vis_header, GRAVI_SC);
 	cpl_table * oiflux_table = gravi_data_get_oi_flux (vis_data, GRAVI_SC, 0, npol);
     CPLCHECK_NUL ("Cannot get data");
@@ -142,6 +143,9 @@ gravi_data * gravi_compute_disp (gravi_data * vis_data)
     /* Set the input header */
     cpl_propertylist * disp_header = gravi_data_get_header (disp_map);
     cpl_propertylist_append (disp_header, vis_header);
+    
+    cpl_propertylist *disp_header_extra = gravi_data_get_extra_primary_header (disp_map);
+    cpl_propertylist_append (disp_header_extra, vis_header_extra);
 
     /* Set a QC parameter with the number of observations */
     const char * qc_name = "ESO QC DISP NEXP";
