@@ -55,7 +55,6 @@
 #include <stdio.h>
 #include <time.h>
 #include <math.h>
-#include <ctype.h>
 #include <complex.h>
 
 #include "gravi_data.h"
@@ -109,12 +108,6 @@ cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
                                int spatial_order,
                                int spectral_order,
                                double * rms_residuals);
-
-cpl_array* my_ft_discrete(const cpl_vector *x, const cpl_vector *y, const cpl_vector *freqs);
-
-cpl_table * gravi_wave_fit_bandpass(cpl_table * spectrum_table,
-                                    cpl_table * detector_table,
-                                    cpl_table * opd_table);
 
 cpl_table * gravi_wave_fit_individual (cpl_table * wave_individual_table,
                                           cpl_table * weight_individual_table,
@@ -1084,7 +1077,7 @@ cpl_table * gravi_wave_fibre (cpl_table * spectrum_table,
                 
                 /* If the computation of the ellipse fails, we continue with next wave */
                 if (phase == NULL) {
-                    cpl_msg_warning (cpl_func, "Cannot compute wave for channel %lld and base %d", wave, base);
+                    cpl_msg_warning (cpl_func, "Cannot compute wave for %lld and base %d", wave, base);
                     continue;
                 }
                 
@@ -1423,233 +1416,14 @@ cpl_table * gravi_wave_fit_2d (cpl_table * wavefibre_table,
 	return wavedata_table;
 }
 
-/*----------------------------------------------------------------------------*/
 
-/**
- * @brief Compute discrete fourier transform of input data.
- * 
- * @param x ordinates of input data (OPD).
- * @param y values of input data (counts).
- * @param freqs array of discrete frequencies to evaluate FT at.
- */
-/*----------------------------------------------------------------------------*/
-cpl_array * my_ft_discrete(
-    const cpl_vector *x, const cpl_vector *y, const cpl_vector *freqs
-) {
-    const cpl_size nx = cpl_vector_get_size(x);
-    const cpl_size ny = cpl_vector_get_size(y);
-    const cpl_size nf = cpl_vector_get_size(freqs);
-    
-    cpl_ensure(nx == ny, CPL_ERROR_INCOMPATIBLE_INPUT, NULL);
-
-    cpl_matrix *kern_re = cpl_matrix_new(nx, nf);
-    cpl_matrix *kern_im = cpl_matrix_new(nx, nf);
-
-    for (int j = 0; j < nx; j++) {
-        double xval = cpl_vector_get(x, j);
-        double yval = cpl_vector_get(y, j);
-        for (int i = 0; i < nf; i++) {
-            double fval = cpl_vector_get(freqs, i);
-            double complex Cval = yval * cexp(-2.0 * M_PI * I * fval * xval);
-            cpl_matrix_set(kern_re, j, i, creal(Cval));
-            cpl_matrix_set(kern_im, j, i, cimag(Cval));
-        }
-    }
-    CPLCHECK_NUL("Cannot compute fourier matrix");
-    
-    cpl_array *result_re = cpl_array_new(nf, CPL_TYPE_DOUBLE);
-    cpl_array *result_im = cpl_array_new(nf, CPL_TYPE_DOUBLE);
-    for (int i = 0; i < nf; i++) {
-        double re = 0;
-        double im = 0;
-        for (int j = 0; j < nx; j++) {
-            re += cpl_matrix_get(kern_re, j, i);
-            im += cpl_matrix_get(kern_im, j, i);
-        }
-        cpl_array_set(result_re, i, re);
-        cpl_array_set(result_im, i, im);
-    }
-    CPLCHECK_NUL("Cannot collapse fourier matrix");
-    cpl_array *result = cpl_array_new_complex_from_arrays(result_re, result_im);
-
-    cpl_matrix_delete(kern_re);
-    cpl_matrix_delete(kern_im);
-    cpl_array_delete(result_re);
-    cpl_array_delete(result_im);
-    return result;
-} CPL_ATTR_ALLOC;
-
-/*----------------------------------------------------------------------------*/
-/**
- * @brief Compute wavelength calibration using empirical bandpass.
- * 
- * @param spectrum_table    The input spectrum, with region DATA#
- * @param detector_table    The corresponding detector table
- * @param opd_table         The corresponding OPD modulation [m]
- * 
- * For each REGION, compute bandpass from fourier transform of OPD and counts.
- * Apply wavelength calibration using weighted average of transmission.
- */
-/*----------------------------------------------------------------------------*/
-cpl_table * gravi_wave_fit_bandpass(
-    cpl_table * spectrum_table, cpl_table * detector_table, cpl_table * opd_table
-) {
-    gravi_msg_function_start(1);
-    cpl_ensure (spectrum_table, CPL_ERROR_NULL_INPUT, NULL);
-    cpl_ensure (detector_table, CPL_ERROR_NULL_INPUT, NULL);
-    cpl_ensure (opd_table,      CPL_ERROR_NULL_INPUT, NULL);    
-    
-    /* Get the number of wavelength, region, polarisation... */
-    cpl_size nwave = cpl_table_get_column_depth (spectrum_table, "DATA1");
-    cpl_size nrow = cpl_table_get_nrow (spectrum_table);
-    cpl_size n_region = cpl_table_get_nrow (detector_table);
-    const int npol = (n_region > 24 ? 2 : 1);
-    
-    /* Create the output table */
-    cpl_table * wave_bandpass = cpl_table_new (1);
-
-    /* Create grid containing the full range of valid wavenumbers */
-    const double wave_min = 1.8 * 1e-6;
-    const double wave_max = 2.8 * 1e-6;
-    // const double delta_wavenumber = 0.001;
-    // const cpl_size ngrid = ((1.0 / wave_min) - (1.0 / wave_max)) / delta_wavenumber;
-    const cpl_size ngrid = 1000;
-    const double delta_wavenumber = ((1.0 / wave_max) - (1.0 / wave_min)) / ngrid;
-
-    cpl_vector *wavenumber = cpl_vector_new (ngrid);
-    for (int i = 0; i < ngrid; i++) {
-        double wn = (1.0 / wave_min) + i * delta_wavenumber;
-        cpl_vector_set (wavenumber, i, wn);
-    }
-
-    /* Create all table columns first to put them in order */
-    for (int reg = 0; reg < n_region; reg++) {
-        cpl_table_new_column_array (wave_bandpass, GRAVI_DATA[reg], CPL_TYPE_DOUBLE, nwave);
-    }
-
-    /*
-     * Calibration of each polarization and base
-     */
-    for (int pol = 0; pol < npol; pol++) {
-        for (int base = 0; base < GRAVI_NBASE; base ++) {
-            cpl_msg_info (cpl_func, "Compute bandpass for pol %i over %i, base %i over %i",
-                          pol+1, npol, base+1, GRAVI_NBASE);
-
-            /* Get the OPD */
-            cpl_vector * opd_vector = cpl_vector_new (nrow);
-            for (cpl_size row = 0; row < nrow; row ++ ) {
-                double value = cpl_table_get (opd_table, "OPD", row*GRAVI_NBASE+base, NULL);
-                cpl_vector_set (opd_vector, row, value);
-            }
-            CPLCHECK_NUL ("Cannot extract the OPD");
-
-            for (char pha = 'A'; pha <= 'D'; pha++) {
-                int reg = gravi_get_region (detector_table, base, pha, pol);
-                if (reg < 0)
-                    cpl_msg_warning (cpl_func, "Don't found the A, B, C or D !!!");
-                cpl_msg_debug(cpl_func, "REGION=%d", reg);
-                
-                /* Compute FT for this REGION */
-                cpl_array *reg_array = cpl_array_new(nwave, CPL_TYPE_DOUBLE);
-                for (int wave = 0; wave < nwave; wave++) {
-                    cpl_vector *counts = gravi_table_get_vector (spectrum_table, wave, GRAVI_DATA[reg]);
-                    cpl_array *ftrans = my_ft_discrete (opd_vector, counts, wavenumber);
-                    if (!ftrans) {
-                        cpl_error_set(cpl_func, CPL_ERROR_ILLEGAL_OUTPUT);
-                        CPLCHECK_NUL("Cannot compute fourier transform");
-                    }
-
-                    /* Take absolute value and find argmax */
-                    cpl_size argmax;
-                    cpl_array_abs (ftrans);
-                    cpl_array_get_maxpos (ftrans, &argmax);
-
-                    if (argmax != 0 && argmax != ngrid - 1) {
-                    //     /* Walk left to find turning point */
-                    //     int im;
-                    //     double x = cpl_array_get(ftrans, argmax, NULL);
-                    //     for (im = argmax; im > 0; im--) {
-                    //         double xm = cpl_array_get(ftrans, im, NULL);
-                    //         double dx = xm - x;
-                    //         if (dx > 0)
-                    //             break;
-                    //         x = xm;
-                    //     }
-
-                    //     /* Walk right to find turning point */
-                    //     int ip;
-                    //     x = cpl_array_get(ftrans, argmax, NULL);
-                    //     for (ip = argmax; ip < ngrid; ip++) {
-                    //         double xp = cpl_array_get(ftrans, ip, NULL);
-                    //         double dx = xp - x;
-                    //         if (dx > 0)
-                    //             break;
-                    //         x = xp;
-                    //     }
-                    //     if (!(im < ip)) {
-                    //         cpl_error_set(cpl_func, CPL_ERROR_ILLEGAL_OUTPUT);
-                    //         CPLCHECK_NUL("Cannot find minima of central peak in bandpass");
-                    //     }
-
-                    //     double avg = 0.0;
-                    //     double wgt = 0.0;
-                    //     for (int i = im; i < ip; i++) {
-                    //         double wn = cpl_vector_get(wavenumber, i);
-                    //         double w = cpl_array_get(ftrans, i, NULL);
-                    //         avg += wn * w;
-                    //         wgt += w;
-                    //     }
-                    //     avg /= wgt;
-
-                        cpl_array_set (reg_array, wave, 1.0 / cpl_vector_get(wavenumber, argmax));
-                        // cpl_array_set (reg_array, wave, 1.0 / avg);
-                    } else {
-                        cpl_array_set (reg_array, wave, 0.0);
-                    }
-                    
-                    cpl_vector_delete (counts);
-                    cpl_array_delete (ftrans);
-                    CPLCHECK_NUL ("Cannnot compute bandpass");
-                }
-                cpl_table_set_array(wave_bandpass, GRAVI_DATA[reg], 0, reg_array);
-                cpl_array_delete(reg_array);
-            }
-
-            cpl_vector_delete(opd_vector);
-        }
-    }
-
-    cpl_vector_delete(wavenumber);
-
-    /* Fix regions with no counts */
-    for (int reg = 0; reg < n_region; reg++) {
-        cpl_array *reg_arr = cpl_table_get_data_array(wave_bandpass, GRAVI_DATA[reg])[0];
-        for (int wave = 0; wave < nwave; wave++) {
-            cpl_vector *counts = gravi_table_get_vector (spectrum_table, wave, GRAVI_DATA[reg]);
-            if (cpl_vector_get_sum(counts) == 0.0) {
-                cpl_msg_warning(cpl_func, "region %s, pixel %d has no counts", GRAVI_DATA[reg], wave);
-
-                if (wave == 0)
-                    cpl_array_set(reg_arr, wave, cpl_array_get(reg_arr, 1, NULL));
-                else if (wave == nwave - 1)
-                    cpl_array_set(reg_arr, wave, cpl_array_get(reg_arr, nwave - 2, NULL));
-                else
-                    cpl_msg_error(cpl_func, "Invalid wave on intermediate pixel");
-            }
-            cpl_vector_delete (counts);
-        }
-    }
-
-    gravi_msg_function_exit(1);
-    return wave_bandpass;
-};
 
 /*----------------------------------------------------------------------------*/
 /*
- * @brief Compute wavelength calibration using independent polynomial fitting.
- * @param TBD 
+ * @brief TBD
  */
 /*----------------------------------------------------------------------------*/
+
 cpl_table * gravi_wave_fit_individual (cpl_table * wave_individual_table,
                                           cpl_table * weight_individual_table,
                                           cpl_table * wave_fitted_table,
@@ -2371,63 +2145,37 @@ cpl_error_code  gravi_compute_wave (gravi_data * wave_map,
     CPLCHECK_MSG ("Cannot fit 2d data");
     
     /*
-     * Addtional wavelength calibration for LOW mode.
-     * Default method: "New Wavelength interpolation made by sylvestre on January 30 2018"
-     * New method: fitting using empirically measured bandpass.
+     * New Wavelength interpolation made by sylvestre on January 30 2018 
      */
+    
     if (type_data == GRAVI_SC && !strcmp (gravi_pfits_get_spec_res(raw_header), "LOW"))
     {
-        char *wave_mode = cpl_strdup(cpl_parameter_get_string(
-            cpl_parameterlist_find_const(parlist, "gravity.calib.wave-mode")));
-        /* just in case: tolerate mixed/lower case arguments */
-        for(int i = 0; wave_mode[i]; i++)
-            wave_mode[i] = toupper(wave_mode[i]);
+        cpl_msg_info (cpl_func, "Additional Wavelength Fit");
+        cpl_table * wave_individual_table = cpl_table_new (1);
+        cpl_table * weight_individual_table   = cpl_table_new (1);
+        cpl_table * wave_fitted_table = cpl_table_new (1);
+        
+        gravi_wave_fit_individual (wave_individual_table,
+                                   weight_individual_table,
+                                   wave_fitted_table,
+                                   opd_table,
+                                   spectrum_table,
+                                   detector_table,
+                                   n0,n1,n2);
+        
+        cpl_msg_info (cpl_func,"Add tables in wave_map");
 
-        if (!strcmp(wave_mode, "INDIVIDUAL")) {
-            cpl_msg_info (cpl_func, "Wave calibration using independent polynomial fit");
-            cpl_table * wave_individual_table = cpl_table_new (1);
-            cpl_table * weight_individual_table = cpl_table_new (1);
-            cpl_table * wave_fitted_table = cpl_table_new (1);
-            
-            gravi_wave_fit_individual (wave_individual_table,
-                                       weight_individual_table,
-                                       wave_fitted_table,
-                                       opd_table,
-                                       spectrum_table,
-                                       detector_table,
-                                       n0,n1,n2);
-            
-            cpl_msg_info (cpl_func,"Add tables in wave_map");
-            
-            gravi_data_add_table (wave_map, cpl_propertylist_duplicate (spectrum_plist),
-                                  "WAVE_INDIV_SC", wave_individual_table);
-            gravi_data_add_table (wave_map, cpl_propertylist_duplicate (spectrum_plist),
-                                  "WAVE_WEIGHT_SC", weight_individual_table);
-            gravi_data_add_table (wave_map, cpl_propertylist_duplicate (spectrum_plist),
-                                  "WAVE_FITTED_SC", wavedata_table);
-            
-            gravi_data_add_table (wave_map, cpl_propertylist_duplicate (spectrum_plist),
-                                  GRAVI_WAVE_FIBRE_EXT(type_data), wavefibre_table);
-            gravi_data_add_table (wave_map, cpl_propertylist_duplicate (spectrum_plist),
-                                  GRAVI_WAVE_DATA_EXT(type_data), wave_fitted_table);
-        } else if (!strcmp(wave_mode, "BANDPASS")) {
-            cpl_msg_info (cpl_func, "Wave calibration using bandpass");
-            
-            cpl_table *wave_bandpass_table = gravi_wave_fit_bandpass(
-                spectrum_table, detector_table, opd_table);
-
-            cpl_msg_info (cpl_func,"Add tables in wave_map");
-
-            gravi_data_add_table (wave_map, cpl_propertylist_duplicate (spectrum_plist),
-                                  "WAVE_FITTED_SC", wavedata_table);
-            
-            gravi_data_add_table (wave_map, cpl_propertylist_duplicate (spectrum_plist),
-                                  GRAVI_WAVE_FIBRE_EXT(type_data), wavefibre_table);
-            gravi_data_add_table (wave_map, cpl_propertylist_duplicate (spectrum_plist),
-                                  GRAVI_WAVE_DATA_EXT(type_data), wave_bandpass_table);
-        }
-
-        cpl_free(wave_mode);
+        gravi_data_add_table (wave_map, cpl_propertylist_duplicate (spectrum_plist),
+                              "WAVE_INDIV_SC", wave_individual_table);
+        gravi_data_add_table (wave_map, cpl_propertylist_duplicate (spectrum_plist),
+                              "WAVE_WEIGHT_SC", weight_individual_table);
+        gravi_data_add_table (wave_map, cpl_propertylist_duplicate (spectrum_plist),
+                              "WAVE_FITTED_SC", wavedata_table);
+        
+        gravi_data_add_table (wave_map, cpl_propertylist_duplicate (spectrum_plist),
+                              GRAVI_WAVE_FIBRE_EXT(type_data), wavefibre_table);
+        gravi_data_add_table (wave_map, cpl_propertylist_duplicate (spectrum_plist),
+                              GRAVI_WAVE_DATA_EXT(type_data), wave_fitted_table);
     } else {
         /*
          * Add the WAVE_FIBRE and WAVE_DATA table in the wave_map
@@ -2441,6 +2189,9 @@ cpl_error_code  gravi_compute_wave (gravi_data * wave_map,
                               GRAVI_WAVE_DATA_EXT(type_data), wavedata_table);
 
     }
+
+
+
     
     CPLCHECK_MSG ("Cannot set data");
     

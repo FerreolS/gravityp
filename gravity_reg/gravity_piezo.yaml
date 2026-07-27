@@ -6,7 +6,6 @@ Defaults:
   EsorexTests:
     result:
       fitsdiff:
-fits_diff_tolerance_relative: 1.0e-10
 
 EsorexTests:
 

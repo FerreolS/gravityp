@@ -454,18 +454,6 @@ cpl_parameter * gravi_parameter_add_wave (cpl_parameterlist *self)
 //    cpl_parameter_disable (p, CPL_PARAMETER_MODE_ENV);
 //    cpl_parameterlist_append (self, p);
 
-    /* Method for extra calibration in LOW mode. */
-    p = cpl_parameter_new_enum("gravity.calib.wave-mode", CPL_TYPE_STRING,
-      "Method to use for additional per-pixel wavelength calibration in LOW mode.\n "
-      "INDIVIDUAL to fit wavelengths using an independent polynomial fit to each channel.\n "
-      "BANDPASS to fit wavelengths using the empirically measured bandpass (experimental).",
-      "gravity.calib", "INDIVIDUAL", 2,
-      "INDIVIDUAL", "BANDPASS"
-    );
-    cpl_parameter_set_alias(p, CPL_PARAMETER_MODE_CLI, "wave-mode");
-    cpl_parameter_disable(p, CPL_PARAMETER_MODE_ENV);
-    cpl_parameterlist_append(self, p);
-
     return p;
 }
 
