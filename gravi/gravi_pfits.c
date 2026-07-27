@@ -797,7 +797,7 @@ double gravi_pfits_get_projected_baseline_start (const cpl_propertylist * plist,
 
     /* Projected baseline between telescopes tel1 and tel2 at start of observation */
     sprintf (name, "ESO ISS PBL%i%i START", tel1, tel2);
-    double pbl = cpl_propertylist_get_double (plist, name);
+    double pbl = gravi_pfits_get_double_default(plist, name, 0.0);
 
     return pbl;
 }
@@ -808,7 +808,7 @@ double gravi_pfits_get_projected_baseline_end (const cpl_propertylist * plist, i
 
     /* Projected baseline between telescopes tel1 and tel2 at end of observation */
     sprintf (name, "ESO ISS PBL%i%i END", tel1, tel2);
-    double pbl = cpl_propertylist_get_double (plist, name);
+    double pbl = gravi_pfits_get_double_default(plist, name, 0.0);
 
     return pbl;
 }
