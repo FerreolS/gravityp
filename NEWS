@@ -1,4 +1,12 @@
 ------------------------------------------
+2026/07/29 : New version 1.11.0
+------------------------------------------
+
+- Add option for new bandpass calibration in LOW mode
+- Use OIFITS2 by default
+- Improve error message if no cailbrator or science is in the SOF
+
+------------------------------------------
 2026/06/05 : New version 1.10.1
 ------------------------------------------
 
