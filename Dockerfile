@@ -18,7 +18,7 @@ RUN dnf install dnf-plugins-core  libffi-devel java-latest-openjdk-devel wget  p
     cd $HOME && git clone https://gitlab.obspm.fr/gravity-devs/gravi_tools.git   && \
     export PATH=$PATH:$HOME/gravi_tools:$HOME/gravi_tools/gravi_shell:$HOME/gravi_tools/gravi_quicklook && \
     export PYTHONPATH=$HOME/gravi_tools:$PYTHONPATH && \
-    dnf remove  git -y
+    dnf remove  git java-latest-openjdk-devel wget awk -y
 WORKDIR /work/data
 ENV PATH=/root/.local/bin:/root/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/root/gravi_tools:/root/gravi_tools/gravi_shell:/root/gravi_tools/gravi_quicklook
 ENV PYTHONPATH=/root/gravi_tools
