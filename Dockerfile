@@ -13,17 +13,13 @@ RUN dnf install dnf-plugins-core  libffi-devel java-latest-openjdk-devel wget  p
     rm -rf gravity-calib-$GRAVITYVERSION && rm -rf cfitsio-* esorex-* fftw-* cpl-* erfa-* gsl-* wcslib-* &&\
     cd gravity-$GRAVITYVERSION/ && make clean && \
     mkdir -p /work/data && ln -s /usr/local/calib/gravity-$GRAVITYVERSION /work/common_calibration && \
-    cd $HOME  &&  wget  -nv https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh  && \
-    bash ./Miniconda3-latest-Linux-x86_64.sh -b  && rm -f Miniconda3-latest-Linux-x86_64.sh && \
-    export PATH=$PATH:$HOME/miniconda3/bin  && \
-    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/main && \
-    conda tos accept --override-channels --channel https://repo.anaconda.com/pkgs/r && \
-    conda install -y  -c conda-forge numpy matplotlib scipy astropy astroquery scikit-learn reportlab pdfrw svglib pypdf   && \
+    cd $HOME && /usr/sbin/python3 -m ensurepip --upgrade && \
+    /usr/sbin/python3 -m pip install --root-user-action=ignore  -U numpy matplotlib scipy astropy astroquery scikit-learn reportlab pdfrw svglib pypdf && \
     cd $HOME && git clone https://gitlab.obspm.fr/gravity-devs/gravi_tools.git   && \
     export PATH=$PATH:$HOME/gravi_tools:$HOME/gravi_tools/gravi_shell:$HOME/gravi_tools/gravi_quicklook && \
     export PYTHONPATH=$HOME/gravi_tools:$PYTHONPATH && \
     dnf remove  git -y
 WORKDIR /work/data
-ENV PATH=/root/.local/bin:/root/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/root/gravi_tools:/root/gravi_tools/gravi_shell:/root/gravi_tools/gravi_quicklook:/root/miniconda3/bin
+ENV PATH=/root/.local/bin:/root/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:/root/gravi_tools:/root/gravi_tools/gravi_shell:/root/gravi_tools/gravi_quicklook
 ENV PYTHONPATH=/root/gravi_tools
 ENTRYPOINT bash
